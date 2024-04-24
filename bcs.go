@@ -111,6 +111,11 @@ func (d *Deserializer) Error() error {
 	return d.err
 }
 
+// If the data is well formed but nonsense, UnmarshalBCS() code can set error
+func (d *Deserializer) SetError(err error) {
+	d.err = err
+}
+
 func (d *Deserializer) Remaining() int {
 	return len(d.source) - d.pos
 }
@@ -169,6 +174,12 @@ func (d *Deserializer) ReadFixedBytes(blen int) []byte {
 	copy(out, d.source[d.pos:d.pos+blen])
 	d.pos += blen
 	return out
+}
+
+func (d *Deserializer) ReadFixedBytesInto(dest []byte) {
+	blen := len(dest)
+	copy(dest, d.source[d.pos:d.pos+blen])
+	d.pos += blen
 }
 
 func (d *Deserializer) ReadString() string {

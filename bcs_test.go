@@ -2,9 +2,10 @@ package aptos
 
 import (
 	"encoding/hex"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_U8(t *testing.T) {
@@ -15,6 +16,7 @@ func Test_U8(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.U8())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -26,6 +28,7 @@ func Test_U16(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.U16())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -37,6 +40,7 @@ func Test_U32(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.U32())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -48,31 +52,34 @@ func Test_U64(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.U64())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
 func Test_U128(t *testing.T) {
-	// TODO: I don't know Go well enough yet
 	inputs := []string{"00000000000000000000000000000000", "01000000000000000000000000000000", "ff000000000000000000000000000000"}
 	expected := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
 	for i, input := range inputs {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
-		assert.Equal(t, expected[i], deserializer.U128())
+		tu := deserializer.U128()
+		assert.NoError(t, deserializer.Error())
+		assert.Equal(t, 0, expected[i].Cmp(&tu))
 
 	}
 }
 
 func Test_U256(t *testing.T) {
-	// TODO: I don't know Go well enough yet
 	inputs := []string{"0000000000000000000000000000000000000000000000000000000000000000", "0100000000000000000000000000000000000000000000000000000000000000", "ff00000000000000000000000000000000000000000000000000000000000000"}
 	expected := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
 	for i, input := range inputs {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
-		assert.Equal(t, *expected[i], deserializer.U256())
+		tu := deserializer.U256()
+		assert.NoError(t, deserializer.Error())
+		assert.Equal(t, 0, expected[i].Cmp(&tu))
 	}
 }
 
@@ -83,6 +90,7 @@ func Test_Uleb128(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.Uleb128())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -94,6 +102,7 @@ func Test_Bool(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.Bool())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -105,6 +114,7 @@ func Test_String(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		deserializer := Deserializer{source: bytes}
 		assert.Equal(t, expected[i], deserializer.ReadString())
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -117,6 +127,7 @@ func Test_FixedBytes(t *testing.T) {
 		deserializer := Deserializer{source: bytes}
 		expect, _ := hex.DecodeString(expected[i])
 		assert.Equal(t, expect, deserializer.ReadFixedBytes(len(bytes)))
+		assert.NoError(t, deserializer.Error())
 	}
 }
 
@@ -129,5 +140,6 @@ func Test_Bytes(t *testing.T) {
 		deserializer := Deserializer{source: bytes}
 		expect, _ := hex.DecodeString(expected[i])
 		assert.Equal(t, expect, deserializer.ReadBytes())
+		assert.NoError(t, deserializer.Error())
 	}
 }

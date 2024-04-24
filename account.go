@@ -35,6 +35,13 @@ func (aa AccountAddress) String() string {
 	}
 }
 
+func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
+	bcs.FixedBytes(aa[:])
+}
+func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
+	bcs.ReadFixedBytesInto((*aa)[:])
+}
+
 var ErrAddressTooShort = errors.New("AccountAddress too short")
 var ErrAddressTooLong = errors.New("AccountAddress too long")
 
