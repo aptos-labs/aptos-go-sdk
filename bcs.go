@@ -189,13 +189,13 @@ func (d *Deserializer) U16() uint16 {
 }
 
 func (d *Deserializer) U32() uint32 {
-	out := binary.LittleEndian.Uint32(d.source[d.pos : d.pos+2])
+	out := binary.LittleEndian.Uint32(d.source[d.pos : d.pos+4])
 	d.pos += 4
 	return out
 }
 
 func (d *Deserializer) U64() uint64 {
-	out := binary.LittleEndian.Uint64(d.source[d.pos : d.pos+2])
+	out := binary.LittleEndian.Uint64(d.source[d.pos : d.pos+8])
 	d.pos += 8
 	return out
 }
