@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+# emacs
+*~
+
+# build product
+cmd/goclient/goclient

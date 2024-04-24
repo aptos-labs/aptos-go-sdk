@@ -1,9 +1,12 @@
 package aptos
 
 import (
+	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"math/big"
+
+	"golang.org/x/crypto/sha3"
 )
 
 type RawTransaction struct {
@@ -36,6 +39,49 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
 	txn.GasUnitPrice = bcs.U64()
 	txn.ExpirationTimetampSeconds = bcs.U64()
 	txn.ChainId = bcs.U8()
+}
+func (txn *RawTransaction) SignableBytes() []byte {
+	ser := Serializer{}
+	txn.MarshalBCS(&ser)
+	prehash := RawTransactionPrehash()
+	txnbytes := ser.ToBytes()
+	signableBytes := make([]byte, len(prehash)+len(txnbytes))
+	copy(signableBytes, prehash)
+	copy(signableBytes[len(prehash):], txnbytes)
+	return signableBytes
+}
+func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) Authenticator {
+	signableBytes := txn.SignableBytes()
+	signature := ed25519.Sign(privateKey, signableBytes)
+	eauth := &Ed25519Authenticator{}
+	pubkey := privateKey.Public()
+	if pkb, ok := pubkey.(ed25519.PublicKey); ok {
+		copy(eauth.PublicKey[:], pkb[:])
+	} else {
+		panic(fmt.Sprintf("could not get bytes from pubkey: %T %#v", pubkey, pubkey))
+	}
+	copy(eauth.Signature[:], signature)
+	return Authenticator{
+		Kind: AuthenticatorEd25519,
+		Auth: eauth,
+	}
+}
+
+var rawTransactionPrehash []byte
+
+const rawTransactionPrehashStr = "APTOS::RawTransaction"
+
+// Return the sha3-256 prehash for RawTransaction
+// Do not write to the []byte returned
+func RawTransactionPrehash() []byte {
+	if rawTransactionPrehash == nil {
+		b32 := sha3.Sum256([]byte(rawTransactionPrehashStr))
+		out := make([]byte, len(b32))
+		copy(out, b32[:])
+		rawTransactionPrehash = out
+		return out
+	}
+	return rawTransactionPrehash
 }
 
 type TransactionPayload struct {
@@ -181,6 +227,7 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *Deserializer) {
 	}
 }
 
+// TODO: Python SDK doesn't implement this, so we don't need it yet either?
 type ModuleBundle struct {
 }
 
@@ -193,11 +240,30 @@ func (txn *ModuleBundle) UnmarshalBCS(bcs *Deserializer) {
 
 // TODO: Python calls this EntryFunction but constants are "Script function", which is better?
 type ScriptFunction struct {
+	Module   ModuleId
+	Function string
+	ArgTypes []TypeTag
+	Args     [][]byte
 }
 
 func (sf *ScriptFunction) MarshalBCS(bcs *Serializer) {
+	sf.Module.MarshalBCS(bcs)
+	bcs.WriteString(sf.Function)
+	SerializeSequence(sf.ArgTypes, bcs)
+	bcs.Uleb128(uint64(len(sf.Args)))
+	for _, a := range sf.Args {
+		bcs.WriteBytes(a)
+	}
 }
 func (sf *ScriptFunction) UnmarshalBCS(bcs *Deserializer) {
+	sf.Module.UnmarshalBCS(bcs)
+	sf.Function = bcs.ReadString()
+	sf.ArgTypes = DeserializeSequence[TypeTag](bcs)
+	alen := bcs.Uleb128()
+	sf.Args = make([][]byte, alen)
+	for i := range alen {
+		sf.Args[i] = bcs.ReadBytes()
+	}
 }
 
 type ModuleId struct {
@@ -212,4 +278,18 @@ func (mod *ModuleId) MarshalBCS(bcs *Serializer) {
 func (mod *ModuleId) UnmarshalBCS(bcs *Deserializer) {
 	mod.Address.UnmarshalBCS(bcs)
 	mod.Name = bcs.ReadString()
+}
+
+type SignedTransaction struct {
+	Transaction   RawTransaction
+	Authenticator Authenticator
+}
+
+func (txn *SignedTransaction) MarshalBCS(bcs *Serializer) {
+	txn.Transaction.MarshalBCS(bcs)
+	txn.Authenticator.MarshalBCS(bcs)
+}
+func (txn *SignedTransaction) UnmarshalBCS(bcs *Deserializer) {
+	txn.Transaction.UnmarshalBCS(bcs)
+	txn.Authenticator.UnmarshalBCS(bcs)
 }
