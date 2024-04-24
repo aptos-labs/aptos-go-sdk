@@ -14,6 +14,7 @@ var (
 	verbose    bool   = false
 	accountStr string = ""
 	baseUrl    string = ""
+	txnHash    string = ""
 )
 
 func main() {
@@ -32,6 +33,9 @@ func main() {
 			argi++
 		} else if arg == "-u" || arg == "--url" {
 			baseUrl = args[argi+1]
+			argi++
+		} else if arg == "-t" || arg == "--txn" {
+			txnHash = args[argi+1]
 			argi++
 		} else {
 			misc = append(misc, arg)
@@ -65,6 +69,14 @@ func main() {
 		if arg == "account" {
 			data, err := client.Account(account)
 			maybefail(err, "could not get account %s: %s", accountStr, err)
+			os.Stdout.WriteString(prettyJson(data))
+		} else if arg == "account_resources" {
+			resources, err := client.AccountResources(account)
+			maybefail(err, "could not get account resources %s: %s", accountStr, err)
+			os.Stdout.WriteString(prettyJson(resources))
+		} else if arg == "txn_by_hash" {
+			data, err := client.TransactionByHash(txnHash)
+			maybefail(err, "could not get txn %s: %s", txnHash, err)
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "info" {
 			data, err := client.Info()
