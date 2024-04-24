@@ -40,18 +40,25 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
 	txn.ExpirationTimetampSeconds = bcs.U64()
 	txn.ChainId = bcs.U8()
 }
-func (txn *RawTransaction) SignableBytes() []byte {
+func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	ser := Serializer{}
 	txn.MarshalBCS(&ser)
+	err = ser.Error()
+	if err != nil {
+		return
+	}
 	prehash := RawTransactionPrehash()
 	txnbytes := ser.ToBytes()
-	signableBytes := make([]byte, len(prehash)+len(txnbytes))
+	signableBytes = make([]byte, len(prehash)+len(txnbytes))
 	copy(signableBytes, prehash)
 	copy(signableBytes[len(prehash):], txnbytes)
-	return signableBytes
+	return signableBytes, nil
 }
-func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) Authenticator {
-	signableBytes := txn.SignableBytes()
+func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) (aa Authenticator, err error) {
+	signableBytes, err := txn.SignableBytes()
+	if err != nil {
+		return
+	}
 	signature := ed25519.Sign(privateKey, signableBytes)
 	eauth := &Ed25519Authenticator{}
 	pubkey := privateKey.Public()
@@ -61,10 +68,9 @@ func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) Authentica
 		panic(fmt.Sprintf("could not get bytes from pubkey: %T %#v", pubkey, pubkey))
 	}
 	copy(eauth.Signature[:], signature)
-	return Authenticator{
-		Kind: AuthenticatorEd25519,
-		Auth: eauth,
-	}
+	aa.Kind = AuthenticatorEd25519
+	aa.Auth = eauth
+	return
 }
 
 var rawTransactionPrehash []byte

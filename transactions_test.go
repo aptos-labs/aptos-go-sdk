@@ -17,15 +17,30 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                   1,
 	}
 
+	txn.Payload.Payload = &Script{
+		Code:     []byte("fake code lol"),
+		ArgTypes: nil,
+		Args:     nil,
+	}
+
 	pubkey, privkey, err := ed25519.GenerateKey(nil)
 
 	assert.NoError(t, err)
 
-	aa := txn.SignEd25519(privkey)
+	aa, err := txn.SignEd25519(privkey)
+	assert.NoError(t, err)
 	//t.Log(aa)
 
 	eaa, ok := aa.Auth.(*Ed25519Authenticator)
 	assert.True(t, ok)
 	epk := ed25519.PublicKey(eaa.PublicKey[:])
 	assert.Equal(t, epk, pubkey)
+}
+
+func TestTPMarshal(t *testing.T) {
+	var wat TransactionPayload
+	var ser Serializer
+	wat.MarshalBCS(&ser)
+	// without payload it should fail
+	assert.Error(t, ser.Error())
 }
