@@ -14,6 +14,16 @@ type BCSStruct interface {
 
 type Serializer struct {
 	out bytes.Buffer
+	err error
+}
+
+func (bcs *Serializer) Error() error {
+	return bcs.err
+}
+
+// If the data is well formed but nonsense, MarshalBCS() code can set error
+func (bcs *Serializer) SetError(err error) {
+	bcs.err = err
 }
 
 func (bcs *Serializer) U8(v uint8) {
@@ -78,6 +88,10 @@ func (bcs *Serializer) WriteBytes(v []byte) {
 	bcs.out.Write(v)
 }
 
+func (bcs *Serializer) WriteString(v string) {
+	bcs.WriteBytes([]byte(v))
+}
+
 // Something somewhere already knows how long this byte string will be
 func (bcs *Serializer) FixedBytes(v []byte) {
 	bcs.out.Write(v)
@@ -97,6 +111,40 @@ func (bcs *Serializer) Struct(x BCSStruct) {
 
 func (bcs *Serializer) ToBytes() []byte {
 	return bcs.out.Bytes()
+}
+
+func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
+	bcs.Uleb128(uint64(len(x)))
+	for i, v := range x {
+		mv, ok := any(v).(BCSStruct)
+		if ok {
+			mv.MarshalBCS(bcs)
+			return
+		} else {
+			bcs.SetError(fmt.Errorf("could not serialize sequence[%d] member of %T", i, v))
+			return
+		}
+	}
+}
+
+func DeserializeSequence[T any](bcs *Deserializer) []T {
+	slen := bcs.Uleb128()
+	if bcs.Error() != nil {
+		return nil
+	}
+	out := make([]T, slen)
+	for i := 0; i < int(slen); i++ {
+		v := &(out[i])
+		mv, ok := any(v).(BCSStruct)
+		if ok {
+			mv.UnmarshalBCS(bcs)
+		} else {
+			bcs.SetError(fmt.Errorf("could not deserialize sequence[%d] member of %T", i, v))
+			return nil
+		}
+		//out[i].UnmarshalBCS(bcs)
+	}
+	return out
 }
 
 type Deserializer struct {

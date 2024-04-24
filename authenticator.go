@@ -42,7 +42,9 @@ func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {
 
 type AuthenticatorImpl interface {
 	BCSStruct
-	Verify(data []byte)
+
+	// Return true if this Authenticator approves
+	Verify(data []byte) bool
 }
 
 type Ed25519Authenticator struct {
@@ -50,10 +52,28 @@ type Ed25519Authenticator struct {
 	Signature [ed25519.SignatureSize]byte
 }
 
-func (ea *Ed25519Authenticator) MarshalBCS(*Serializer) {
+func (ea *Ed25519Authenticator) MarshalBCS(bcs *Serializer) {
+	bcs.WriteBytes(ea.PublicKey[:])
+	bcs.WriteBytes(ea.Signature[:])
+}
+func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *Deserializer) {
+	kb := bcs.ReadBytes()
+	if len(kb) != ed25519.PublicKeySize {
+		bcs.SetError(fmt.Errorf("bad ed25519 public key, expected %d bytes but got %d", ed25519.PublicKeySize, len(kb)))
+		return
+	}
+	sb := bcs.ReadBytes()
+	if len(sb) != ed25519.SignatureSize {
+		bcs.SetError(fmt.Errorf("bad ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(sb)))
+		return
+	}
+	copy(ea.PublicKey[:], kb)
+	copy(ea.Signature[:], sb)
+}
 
+// Return true if the data was well signed
+func (ea *Ed25519Authenticator) Verify(data []byte) bool {
+	return ed25519.Verify(ed25519.PublicKey(ea.PublicKey[:]), data, ea.Signature[:])
 }
-func (ea *Ed25519Authenticator) UnmarshalBCS(*Deserializer) {
-}
-func (ea *Ed25519Authenticator) Verify(data []byte) {
-}
+
+// TODO: FeePayerAuthenticator, MultiAgentAuthenticator, MultiEd25519Authenticator, SingleSenderAuthenticator, SingleKeyAuthenticator
