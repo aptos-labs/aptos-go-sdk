@@ -1,8 +1,10 @@
 package aptos
 
 import (
+	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -66,8 +68,11 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.client.Get(au.String())
-	if response.StatusCode != 200 {
-		err = fmt.Errorf("http error: %s", response.Status)
+	if err != nil {
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := ioutil.ReadAll(response.Body)
@@ -100,7 +105,7 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 	}
 	response, err := rc.client.Get(au.String())
 	if response.StatusCode >= 400 {
-		err = fmt.Errorf("http error: %s", response.Status)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := ioutil.ReadAll(response.Body)
@@ -123,7 +128,7 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 	}
 	response, err := rc.client.Get(au.String())
 	if response.StatusCode >= 400 {
-		err = fmt.Errorf("http error: %s", response.Status)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := ioutil.ReadAll(response.Body)
@@ -140,7 +145,7 @@ func (rc *RestClient) Info() (data map[string]any, err error) {
 	au := rc.baseUrl
 	response, err := rc.client.Get(au.String())
 	if response.StatusCode >= 400 {
-		err = fmt.Errorf("http error: %s", response.Status)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := ioutil.ReadAll(response.Body)
@@ -153,12 +158,27 @@ func (rc *RestClient) Info() (data map[string]any, err error) {
 	return
 }
 
+// TransactionByHash gets info on a transaction
+// The transaction may be pending or recently committed.
+//
+//	data, err := c.TransactionByHash("0xabcd")
+//	if err != nil {
+//		if httpErr, ok := err.(aptos.HttpError) {
+//			if httpErr.StatusCode == 404 {
+//				// if we're sure this has been submitted, assume it is still pending elsewhere in the mempool
+//			}
+//		}
+//	} else {
+//		if data["type"] == "pending_transaction" {
+//			// known to local mempool, but not committed yet
+//		}
+//	}
 func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions/by_hash", txnHash)
 	response, err := rc.client.Get(au.String())
 	if response.StatusCode >= 400 {
-		err = fmt.Errorf("http error: %s", response.Status)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := ioutil.ReadAll(response.Body)
@@ -169,4 +189,115 @@ func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, er
 	response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
+}
+
+// Waits up to 10 seconds for transactions to be done, polling at 10Hz
+// TODO: options for polling period and timeout
+func (rc *RestClient) WaitForTransactions(txnHashes []string) error {
+	hashSet := make(map[string]bool, len(txnHashes))
+	for _, hash := range txnHashes {
+		hashSet[hash] = true
+	}
+	start := time.Now()
+	deadline := start.Add(10 * time.Second)
+	for len(hashSet) > 0 {
+		if time.Now().After(deadline) {
+			return errors.New("timeout waiting for faucet transactions")
+		}
+		time.Sleep(100 * time.Millisecond)
+		for _, hash := range txnHashes {
+			if !hashSet[hash] {
+				// already done
+				continue
+			}
+			status, err := rc.TransactionByHash(hash)
+			if err == nil {
+				if status["type"] == "pending_transaction" {
+					// not done yet!
+				} else if truthy(status["success"]) {
+					// done!
+					delete(hashSet, hash)
+				}
+			}
+		}
+	}
+	return nil
+}
+
+// Get recent transactions.
+// Start is a version number. Nil for most recent transactions.
+// Limit is a number of transactions to return. 'about a hundred' by default.
+func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data map[string]any, err error) {
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "transactions")
+	var params url.Values
+	if start != nil {
+		params.Set("start", strconv.FormatUint(*start, 10))
+	}
+	if limit != nil {
+		params.Set("limit", strconv.FormatUint(*limit, 10))
+	}
+	if len(params) != 0 {
+		au.RawQuery = params.Encode()
+	}
+	// TODO: ?limit=N&start=V
+	response, err := rc.client.Get(au.String())
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	err = json.Unmarshal(blob, &data)
+	return
+}
+
+func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, err error) {
+	rblob, err := json.Marshal(request)
+	if err != nil {
+		return
+	}
+	bodyReader := bytes.NewReader(rblob)
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "transactions/encode_submission")
+	response, err := rc.client.Post(au.String(), "application/json", bodyReader)
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	err = json.Unmarshal(blob, &data)
+	return
+}
+
+type HttpError struct {
+	Status     string // e.g. "200 OK"
+	StatusCode int    // e.g. 200
+	Header     http.Header
+	Body       []byte
+}
+
+func NewHttpError(response *http.Response) *HttpError {
+	body, _ := ioutil.ReadAll(response.Body)
+	response.Body.Close()
+	return &HttpError{
+		Status:     response.Status,
+		StatusCode: response.StatusCode,
+		Header:     response.Header,
+		Body:       body,
+	}
+}
+
+// implement error interface
+func (he *HttpError) Error() string {
+	return fmt.Sprintf("HttpError %#v", he.Status)
 }
