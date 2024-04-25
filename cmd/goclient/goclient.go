@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/ed25519"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -13,14 +15,26 @@ import (
 var (
 	verbose    bool   = false
 	accountStr string = ""
-	baseUrl    string = ""
+	nodeUrl    string = "https://api.devnet.aptoslabs.com/v1"
+	faucetUrl  string = "https://faucet.devnet.aptoslabs.com"
 	txnHash    string = ""
 )
+
+func getenv(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
 
 func main() {
 
 	args := os.Args[1:]
 	var misc []string
+
+	nodeUrl = getenv("APTOS_NODE_URL", nodeUrl)
+	faucetUrl = getenv("APTOS_FAUCET_URL", faucetUrl)
 
 	// there may be better command frameworks, but in a pinch I can write what I want faster than I can learn one
 	argi := 0
@@ -32,7 +46,10 @@ func main() {
 			accountStr = args[argi+1]
 			argi++
 		} else if arg == "-u" || arg == "--url" {
-			baseUrl = args[argi+1]
+			nodeUrl = args[argi+1]
+			argi++
+		} else if arg == "-F" || arg == "--faucet" {
+			faucetUrl = args[argi+1]
 			argi++
 		} else if arg == "-t" || arg == "--txn" {
 			txnHash = args[argi+1]
@@ -54,7 +71,7 @@ func main() {
 		}
 	}
 
-	client, err := aptos.NewClient(baseUrl)
+	client, err := aptos.NewClient(nodeUrl)
 	maybefail(err, "client error: %s", err)
 
 	var account aptos.AccountAddress
@@ -82,6 +99,17 @@ func main() {
 			data, err := client.Info()
 			maybefail(err, "could not get info: %s", err)
 			os.Stdout.WriteString(prettyJson(data))
+		} else if arg == "transactions" {
+			data, err := client.Transactions(nil, nil)
+			maybefail(err, "could not get info: %s", err)
+			os.Stdout.WriteString(prettyJson(data))
+		} else if arg == "naf" {
+			account, err := aptos.NewAccount()
+			maybefail(err, "new account: %s", err)
+			amount := uint64(10_000_000)
+			err = aptos.FundAccount(client, faucetUrl, account.Address, amount)
+			maybefail(err, "faucet err: %s", err)
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s", account.Address.String(), amount, hex.EncodeToString(account.PrivateKey.(ed25519.PrivateKey)[:]))
 		} else {
 			fmt.Fprintf(os.Stderr, "bad action %#v", arg)
 			os.Exit(1)

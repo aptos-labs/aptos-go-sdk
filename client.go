@@ -227,7 +227,7 @@ func (rc *RestClient) WaitForTransactions(txnHashes []string) error {
 // Get recent transactions.
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data map[string]any, err error) {
+func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions")
 	var params url.Values

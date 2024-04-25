@@ -1,6 +1,8 @@
 package aptos
 
 import (
+	"crypto"
+	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -40,6 +42,22 @@ func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
 }
 func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
+}
+
+type Account struct {
+	Address    AccountAddress
+	PrivateKey crypto.PrivateKey
+}
+
+func NewAccount() (*Account, error) {
+	pubkey, privkey, err := ed25519.GenerateKey(nil)
+	if err != nil {
+		return nil, err
+	}
+	out := &Account{}
+	copy(out.Address[:], pubkey)
+	out.PrivateKey = privkey
+	return out, nil
 }
 
 var ErrAddressTooShort = errors.New("AccountAddress too short")
