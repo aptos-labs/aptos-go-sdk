@@ -123,12 +123,18 @@ func main() {
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
 
+			//time.Sleep(2 * time.Second)
 			stxn, err := aptos.TransferTransaction(client, account, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			result, err := client.SubmitTransaction(stxn)
-			maybefail(err, "could not submit transfer txn, %s", err)
+			if err != nil {
+				if he, ok := err.(*aptos.HttpError); ok {
+					fmt.Fprintf(os.Stdout, "txn err:\n\t%s\n", string(he.Body))
+				}
+				maybefail(err, "could not submit transfer txn, %s", err)
+			}
+			fmt.Printf("submit txn result: %#v", result)
 
-			fmt.Fprintf(os.Stdout, "sent txn, %#v", result)
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
 			var sender aptos.AccountAddress

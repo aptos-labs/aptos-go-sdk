@@ -309,3 +309,14 @@ func (txn *SignedTransaction) UnmarshalBCS(bcs *Deserializer) {
 	txn.Transaction.UnmarshalBCS(bcs)
 	txn.Authenticator.UnmarshalBCS(bcs)
 }
+
+func (txn *SignedTransaction) Verify() error {
+	tbytes, err := txn.Transaction.SignableBytes()
+	if err != nil {
+		return err
+	}
+	if txn.Authenticator.Verify(tbytes) {
+		return nil
+	}
+	return errors.New("Bad Signature")
+}

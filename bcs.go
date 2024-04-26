@@ -150,6 +150,24 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 	return out
 }
 
+func BcsDeserialize(dest BCSStruct, bcsBlob []byte) error {
+	bcs := Deserializer{
+		source: bcsBlob,
+		pos:    0,
+		err:    nil,
+	}
+	dest.UnmarshalBCS(&bcs)
+	return bcs.err
+}
+
+func NewDeserializer(bcsBlob []byte) *Deserializer {
+	return &Deserializer{
+		source: bcsBlob,
+		pos:    0,
+		err:    nil,
+	}
+}
+
 type Deserializer struct {
 	source []byte
 	pos    int

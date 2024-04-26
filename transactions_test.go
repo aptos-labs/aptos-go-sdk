@@ -48,6 +48,22 @@ func TestRawTransactionSign(t *testing.T) {
 	epk := ed25519.PublicKey(eaa.PublicKey[:])
 	spk := ed25519.PublicKey(sender.Address[:])
 	assert.Equal(t, epk, spk)
+
+	assert.NoError(t, stxn.Verify())
+
+	// Serialize, Deserialze, Serialize
+	// out1 and out3 should be the same
+	ser := Serializer{}
+	txn.MarshalBCS(&ser)
+	assert.NoError(t, ser.Error())
+	txn2 := RawTransaction{}
+	txn1Bytes := ser.ToBytes()
+	BcsDeserialize(&txn2, txn1Bytes)
+	ser2 := Serializer{}
+	txn2.MarshalBCS(&ser2)
+	txn2Bytes := ser2.ToBytes()
+	assert.Equal(t, txn1Bytes, txn2Bytes)
+	assert.Equal(t, txn, txn2)
 }
 
 func TestTPMarshal(t *testing.T) {

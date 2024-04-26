@@ -300,7 +300,7 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 	return
 }
 
-func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
+func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data []byte, err error) {
 	bcs := Serializer{}
 	stxn.MarshalBCS(&bcs)
 	err = bcs.Error()
@@ -312,9 +312,13 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions")
 	response, err := rc.client.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
+	if err != nil {
+		err = fmt.Errorf("POST, %w", err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
-		return
+		return nil, err
 	}
 	blob, err := ioutil.ReadAll(response.Body)
 	if err != nil {
@@ -322,8 +326,9 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 		return
 	}
 	response.Body.Close()
-	err = json.Unmarshal(blob, &data)
-	return
+	return blob, nil
+	//err = json.Unmarshal(blob, &data)
+	//return
 }
 
 func (rc *RestClient) GetChainId() (chainId uint8, err error) {
@@ -357,5 +362,5 @@ func NewHttpError(response *http.Response) *HttpError {
 
 // implement error interface
 func (he *HttpError) Error() string {
-	return fmt.Sprintf("HttpError %#v", he.Status)
+	return fmt.Sprintf("HttpError %#v (%d bytes %s)", he.Status, len(he.Body), he.Header.Get("Content-Type"))
 }

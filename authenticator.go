@@ -22,7 +22,7 @@ type Authenticator struct {
 
 func (ea *Authenticator) MarshalBCS(bcs *Serializer) {
 	bcs.Uleb128(uint64(ea.Kind))
-	bcs.Struct(ea.Auth)
+	ea.Auth.MarshalBCS(bcs)
 }
 func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {
 	kindu := bcs.Uleb128()
@@ -38,6 +38,9 @@ func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {
 	default:
 		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindu))
 	}
+}
+func (ea *Authenticator) Verify(data []byte) bool {
+	return ea.Auth.Verify(data)
 }
 
 type AuthenticatorImpl interface {
