@@ -17,6 +17,9 @@ import (
 	"time"
 )
 
+// For Content-Type header
+const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
+
 // TODO: rename 'NodeClient' (vs IndexerClient) ?
 // what looks best for `import aptos "github.com/aptoslabs/aptos-go-sdk"` then aptos.NewClient() ?
 type RestClient struct {
@@ -39,15 +42,17 @@ func NewClient(baseUrl string) (rc *RestClient, err error) {
 }
 
 type NodeInfo struct {
-	ChainId             uint8  `json:"chain_id"`
-	Epoch               uint64 `json:"epoch"`
-	LedgerVersion       uint64 `json:"ledger_version"`
-	OldestLedgerVersion uint64 `json:"oldest_ledger_version"`
-	NodeRole            string `json:"node_role"`
-	BlockHeight         uint64 `json:"block_height"`
-	OldestBlockHeight   uint64 `json:"oldest_block_height"`
-	GitHash             string `json:"git_hash"`
+	ChainId                uint8  `json:"chain_id"`
+	EpochStr               string `json:"epoch"`
+	LedgerVersionStr       string `json:"ledger_version"`
+	OldestLedgerVersionStr string `json:"oldest_ledger_version"`
+	NodeRole               string `json:"node_role"`
+	BlockHeightStr         string `json:"block_height"`
+	OldestBlockHeightStr   string `json:"oldest_block_height"`
+	GitHash                string `json:"git_hash"`
 }
+
+// TODO: write NodeInfo accessors to ParseUint on *Str which work around 53 bit float64 limit in JavaScript
 
 func (rc *RestClient) Info() (info NodeInfo, err error) {
 	response, err := rc.client.Get(rc.baseUrl.String())
@@ -271,6 +276,7 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	return
 }
 
+// Deprecated-ish, #SubmitTransaction() should be much faster and better in every way
 func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, err error) {
 	rblob, err := json.Marshal(request)
 	if err != nil {
@@ -292,6 +298,43 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 	response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
+}
+
+func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
+	bcs := Serializer{}
+	stxn.MarshalBCS(&bcs)
+	err = bcs.Error()
+	if err != nil {
+		return
+	}
+	sblob := bcs.ToBytes()
+	bodyReader := bytes.NewReader(sblob)
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "transactions")
+	response, err := rc.client.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	err = json.Unmarshal(blob, &data)
+	return
+}
+
+func (rc *RestClient) GetChainId() (chainId uint8, err error) {
+	if rc.ChainId != 0 {
+		return rc.ChainId, nil
+	}
+	info, err := rc.Info()
+	if err != nil {
+		return 0, err
+	}
+	return info.ChainId, nil
 }
 
 type HttpError struct {

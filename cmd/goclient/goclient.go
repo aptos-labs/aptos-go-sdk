@@ -111,10 +111,24 @@ func main() {
 		} else if arg == "naf" {
 			account, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
-			amount := uint64(10_000_000)
+			amount := uint64(200_000_000)
 			err = aptos.FundAccount(client, faucetUrl, account.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s", account.Address.String(), amount, hex.EncodeToString(account.PrivateKey.(ed25519.PrivateKey)[:]))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", account.Address.String(), amount, hex.EncodeToString(account.PrivateKey.(ed25519.PrivateKey)[:]))
+
+			bob, err := aptos.NewAccount()
+			maybefail(err, "new account: %s", err)
+			//amount = uint64(10_000_000)
+			err = aptos.FundAccount(client, faucetUrl, bob.Address, amount)
+			maybefail(err, "faucet err: %s", err)
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
+
+			stxn, err := aptos.TransferTransaction(client, account, bob.Address, 42)
+			maybefail(err, "could not make transfer txn, %s", err)
+			result, err := client.SubmitTransaction(stxn)
+			maybefail(err, "could not submit transfer txn, %s", err)
+
+			fmt.Fprintf(os.Stdout, "sent txn, %#v", result)
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
 			var sender aptos.AccountAddress
