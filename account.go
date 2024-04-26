@@ -8,6 +8,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"golang.org/x/crypto/sha3"
 )
 
 type AccountAddress [32]byte
@@ -49,6 +51,12 @@ func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
 func (aa *AccountAddress) Random() {
 	rand.Read((*aa)[:])
 }
+func (aa *AccountAddress) FromEd25519PubKey(pubkey ed25519.PublicKey) {
+	hasher := sha3.New256()
+	hasher.Write(pubkey[:])
+	hasher.Write([]byte{0})
+	hasher.Sum((*aa)[:0])
+}
 
 type Account struct {
 	Address    AccountAddress
@@ -61,7 +69,7 @@ func NewAccount() (*Account, error) {
 		return nil, err
 	}
 	out := &Account{}
-	copy(out.Address[:], pubkey)
+	out.Address.FromEd25519PubKey(pubkey)
 	out.PrivateKey = privkey
 	return out, nil
 }

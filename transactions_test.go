@@ -43,11 +43,8 @@ func TestRawTransactionSign(t *testing.T) {
 	stxn, err := txn.SignEd25519(sender.PrivateKey.(ed25519.PrivateKey))
 	assert.NoError(t, err)
 
-	eaa, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
+	_, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
 	assert.True(t, ok)
-	epk := ed25519.PublicKey(eaa.PublicKey[:])
-	spk := ed25519.PublicKey(sender.Address[:])
-	assert.Equal(t, epk, spk)
 
 	assert.NoError(t, stxn.Verify())
 

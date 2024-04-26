@@ -98,7 +98,7 @@ func main() {
 			os.Stdout.WriteString(prettyJson(resources))
 		} else if arg == "txn_by_hash" {
 			data, err := client.TransactionByHash(txnHash)
-			maybefail(err, "could not get txn %s: %s", txnHash, err)
+			maybefail(err, "could not get txn %s: %s %s", txnHash, err, hebody(err))
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "info" {
 			data, err := client.Info()
@@ -133,7 +133,7 @@ func main() {
 				}
 				maybefail(err, "could not submit transfer txn, %s", err)
 			}
-			fmt.Printf("submit txn result: %#v", result)
+			fmt.Printf("submit txn result: %#v", string(result))
 
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
@@ -218,4 +218,12 @@ func prettyJson(x any) string {
 	enc.SetIndent("", "  ")
 	enc.Encode(x)
 	return out.String()
+}
+
+func hebody(err error) string {
+	he, ok := err.(*aptos.HttpError)
+	if !ok {
+		return ""
+	}
+	return string(he.Body)
 }
