@@ -3,6 +3,7 @@ package aptos
 import (
 	"crypto"
 	"crypto/ed25519"
+	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 )
 
 type AccountAddress [32]byte
+
+var Account0x1 AccountAddress = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 // Returns whether the address is a "special" address. Addresses are considered
 // special if the first 63 characters of the hex string are zero. In other words,
@@ -42,6 +45,9 @@ func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
 }
 func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
+}
+func (aa *AccountAddress) Random() {
+	rand.Read((*aa)[:])
 }
 
 type Account struct {

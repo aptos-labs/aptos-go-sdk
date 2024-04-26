@@ -2,12 +2,16 @@ package main
 
 import (
 	"crypto/ed25519"
+	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
+	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk"
 )
@@ -42,6 +46,7 @@ func main() {
 		arg := args[argi]
 		if arg == "-v" || arg == "--verbose" {
 			verbose = true
+			slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})))
 		} else if arg == "-a" || arg == "--account" {
 			accountStr = args[argi+1]
 			argi++
@@ -110,6 +115,67 @@ func main() {
 			err = aptos.FundAccount(client, faucetUrl, account.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s", account.Address.String(), amount, hex.EncodeToString(account.PrivateKey.(ed25519.PrivateKey)[:]))
+		} else if arg == "send" {
+			// next three args: source addr, dest addr, amount
+			var sender aptos.AccountAddress
+			var dest aptos.AccountAddress
+			var amount uint64
+			err := sender.ParseStringRelaxed(misc[argi+1])
+			maybefail(err, "bad sender, %s", err)
+			err = dest.ParseStringRelaxed(misc[argi+2])
+			maybefail(err, "bad dest, %s", err)
+			amount, err = strconv.ParseUint(misc[argi+3], 10, 64)
+			maybefail(err, "bad amount, %s", err)
+
+			var sn uint64
+			if getenv("DUMMY", "") == "" {
+				info, err := client.Account(sender)
+				maybefail(err, "could not get sender account info, %s", err)
+				sn, err = info.SequenceNumber()
+				maybefail(err, "bad sequence number, %s", err)
+			} else {
+				sn = 0
+			}
+
+			now := time.Now().Unix()
+
+			var amountbytes [8]byte
+			binary.LittleEndian.PutUint64(amountbytes[:], amount)
+			txn := aptos.RawTransaction{
+				Sender:         sender,
+				SequenceNumber: sn + 1,
+				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
+					Module: aptos.ModuleId{
+						Address: aptos.Account0x1,
+						Name:    "aptos_account",
+					},
+					Function: "transfer",
+					// ArgTypes: []aptos.TypeTag{
+					// 	aptos.TypeTag{Value: &aptos.AccountAddressTag{Value: dest}},
+					// 	aptos.TypeTag{Value: &aptos.U64Tag{Value: amount}},
+					// },
+					ArgTypes: []aptos.TypeTag{},
+					Args: [][]byte{
+						dest[:],
+						amountbytes[:],
+					},
+				}},
+				MaxGasAmount:              1000,
+				GasUnitPrice:              2000,
+				ExpirationTimetampSeconds: uint64(now + 100),
+				ChainId:                   4,
+			}
+			txnblob, err := txn.SignableBytes()
+			maybefail(err, "txn SignableBytes, %s", err)
+			//ser := aptos.Serializer{}
+			//txn.MarshalBCS(&ser)
+			//err = ser.Error()
+			//maybefail(err, "txn BCS, %s", err)
+			//txnblob := ser.ToBytes()
+			enc := hex.NewEncoder(os.Stdout)
+			enc.Write(txnblob)
+			os.Stdout.WriteString("\n")
+			argi += 3
 		} else {
 			fmt.Fprintf(os.Stderr, "bad action %#v", arg)
 			os.Exit(1)

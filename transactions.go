@@ -54,7 +54,7 @@ func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	copy(signableBytes[len(prehash):], txnbytes)
 	return signableBytes, nil
 }
-func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) (aa Authenticator, err error) {
+func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) (stxn *SignedTransaction, err error) {
 	signableBytes, err := txn.SignableBytes()
 	if err != nil {
 		return
@@ -68,8 +68,14 @@ func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) (aa Authen
 		panic(fmt.Sprintf("could not get bytes from pubkey: %T %#v", pubkey, pubkey))
 	}
 	copy(eauth.Signature[:], signature)
-	aa.Kind = AuthenticatorEd25519
-	aa.Auth = eauth
+	aa := Authenticator{
+		Kind: AuthenticatorEd25519,
+		Auth: eauth,
+	}
+	stxn = &SignedTransaction{
+		Transaction:   *txn,
+		Authenticator: aa,
+	}
 	return
 }
 
@@ -95,9 +101,10 @@ type TransactionPayload struct {
 }
 
 const (
-	TransactionPayload_Script         = 0
-	TransactionPayload_ModuleBundle   = 1
-	TransactionPayload_ScriptFunction = 2
+	TransactionPayload_Script        = 0
+	TransactionPayload_ModuleBundle  = 1 // Deprecated
+	TransactionPayload_EntryFunction = 2
+	TransactionPayload_Multisig      = 3 // TODO? defined in aptos-core/types/src/transaction/mod.rs
 )
 
 func (txn *TransactionPayload) MarshalBCS(bcs *Serializer) {
@@ -106,10 +113,11 @@ func (txn *TransactionPayload) MarshalBCS(bcs *Serializer) {
 		bcs.Uleb128(TransactionPayload_Script)
 		p.MarshalBCS(bcs)
 	case *ModuleBundle:
+		// Deprecated, should never be seen
 		bcs.Uleb128(TransactionPayload_ModuleBundle)
 		p.MarshalBCS(bcs)
-	case *ScriptFunction:
-		bcs.Uleb128(TransactionPayload_ScriptFunction)
+	case *EntryFunction:
+		bcs.Uleb128(TransactionPayload_EntryFunction)
 		p.MarshalBCS(bcs)
 	default:
 		bcs.SetError(fmt.Errorf("bad txn payload, %T", txn.Payload))
@@ -123,11 +131,12 @@ func (txn *TransactionPayload) UnmarshalBCS(bcs *Deserializer) {
 		xs.UnmarshalBCS(bcs)
 		txn.Payload = xs
 	case TransactionPayload_ModuleBundle:
+		// Deprecated, should never be seen
 		xs := &ModuleBundle{}
 		xs.UnmarshalBCS(bcs)
 		txn.Payload = xs
-	case TransactionPayload_ScriptFunction:
-		xs := &ScriptFunction{}
+	case TransactionPayload_EntryFunction:
+		xs := &EntryFunction{}
 		xs.UnmarshalBCS(bcs)
 		txn.Payload = xs
 	default:
@@ -135,6 +144,7 @@ func (txn *TransactionPayload) UnmarshalBCS(bcs *Deserializer) {
 	}
 }
 
+// Execute a Script literal immediately as a transaction
 type Script struct {
 	Code     []byte
 	ArgTypes []TypeTag
@@ -233,7 +243,7 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *Deserializer) {
 	}
 }
 
-// TODO: Python SDK doesn't implement this, so we don't need it yet either?
+// ModuleBundle is long deprecated and no longer used, but exist as an enum position in TransactionPayload
 type ModuleBundle struct {
 }
 
@@ -244,15 +254,15 @@ func (txn *ModuleBundle) UnmarshalBCS(bcs *Deserializer) {
 	bcs.SetError(errors.New("ModuleBunidle unimplemented"))
 }
 
-// TODO: Python calls this EntryFunction but constants are "Script function", which is better?
-type ScriptFunction struct {
+// Call an existing published function
+type EntryFunction struct {
 	Module   ModuleId
 	Function string
 	ArgTypes []TypeTag
 	Args     [][]byte
 }
 
-func (sf *ScriptFunction) MarshalBCS(bcs *Serializer) {
+func (sf *EntryFunction) MarshalBCS(bcs *Serializer) {
 	sf.Module.MarshalBCS(bcs)
 	bcs.WriteString(sf.Function)
 	SerializeSequence(sf.ArgTypes, bcs)
@@ -261,7 +271,7 @@ func (sf *ScriptFunction) MarshalBCS(bcs *Serializer) {
 		bcs.WriteBytes(a)
 	}
 }
-func (sf *ScriptFunction) UnmarshalBCS(bcs *Deserializer) {
+func (sf *EntryFunction) UnmarshalBCS(bcs *Deserializer) {
 	sf.Module.UnmarshalBCS(bcs)
 	sf.Function = bcs.ReadString()
 	sf.ArgTypes = DeserializeSequence[TypeTag](bcs)

@@ -2,39 +2,52 @@ package aptos
 
 import (
 	"crypto/ed25519"
+	"encoding/binary"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRawTransactionSign(t *testing.T) {
+	sender, err := NewAccount()
+	assert.NoError(t, err)
+
+	var dest AccountAddress
+	dest.Random()
+
+	sn := uint64(1)
+	amount := uint64(10_000)
+	var amountbytes [8]byte
+	binary.LittleEndian.PutUint64(amountbytes[:], amount)
 	txn := RawTransaction{
-		Sender:                    [32]byte{0, 0, 0, 1},
-		SequenceNumber:            137,
-		MaxGasAmount:              1337,
-		GasUnitPrice:              42,
-		ExpirationTimetampSeconds: 1713982684,
-		ChainId:                   1,
+		Sender:         sender.Address,
+		SequenceNumber: sn + 1,
+		Payload: TransactionPayload{Payload: &EntryFunction{
+			Module: ModuleId{
+				Address: Account0x1,
+				Name:    "aptos_account",
+			},
+			Function: "transfer",
+			ArgTypes: []TypeTag{},
+			Args: [][]byte{
+				dest[:],
+				amountbytes[:],
+			},
+		}},
+		MaxGasAmount:              1000,
+		GasUnitPrice:              2000,
+		ExpirationTimetampSeconds: 1714158778,
+		ChainId:                   4,
 	}
 
-	txn.Payload.Payload = &Script{
-		Code:     []byte("fake code lol"),
-		ArgTypes: nil,
-		Args:     nil,
-	}
-
-	pubkey, privkey, err := ed25519.GenerateKey(nil)
-
+	stxn, err := txn.SignEd25519(sender.PrivateKey.(ed25519.PrivateKey))
 	assert.NoError(t, err)
 
-	aa, err := txn.SignEd25519(privkey)
-	assert.NoError(t, err)
-	//t.Log(aa)
-
-	eaa, ok := aa.Auth.(*Ed25519Authenticator)
+	eaa, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
 	assert.True(t, ok)
 	epk := ed25519.PublicKey(eaa.PublicKey[:])
-	assert.Equal(t, epk, pubkey)
+	spk := ed25519.PublicKey(sender.Address[:])
+	assert.Equal(t, epk, spk)
 }
 
 func TestTPMarshal(t *testing.T) {

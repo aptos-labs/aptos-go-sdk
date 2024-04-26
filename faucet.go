@@ -3,6 +3,7 @@ package aptos
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"path"
@@ -73,8 +74,10 @@ func FundAccount(rc *RestClient, faucetUrl string, address AccountAddress, amoun
 		return fmt.Errorf("response json decode error, %w", err)
 	}
 	if rc == nil {
+		slog.Debug("FundAccount no txns to wait for")
 		// no Aptos client to wait on txn completion
 		return nil
 	}
+	slog.Debug("FundAccount wait for txns", "ntxn", len(txnHashes))
 	return rc.WaitForTransactions(txnHashes)
 }

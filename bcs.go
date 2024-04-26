@@ -119,11 +119,15 @@ func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
 		mv, ok := any(v).(BCSStruct)
 		if ok {
 			mv.MarshalBCS(bcs)
-			return
-		} else {
-			bcs.SetError(fmt.Errorf("could not serialize sequence[%d] member of %T", i, v))
-			return
+			continue
 		}
+		mv, ok = any(&v).(BCSStruct)
+		if ok {
+			mv.MarshalBCS(bcs)
+			continue
+		}
+		bcs.SetError(fmt.Errorf("could not serialize sequence[%d] member of %T", i, v))
+		return
 	}
 }
 
@@ -142,7 +146,6 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 			bcs.SetError(fmt.Errorf("could not deserialize sequence[%d] member of %T", i, v))
 			return nil
 		}
-		//out[i].UnmarshalBCS(bcs)
 	}
 	return out
 }

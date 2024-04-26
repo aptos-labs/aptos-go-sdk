@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -19,7 +20,7 @@ import (
 // TODO: rename 'NodeClient' (vs IndexerClient) ?
 // what looks best for `import aptos "github.com/aptoslabs/aptos-go-sdk"` then aptos.NewClient() ?
 type RestClient struct {
-	ChainId int
+	ChainId uint8
 
 	client  http.Client
 	baseUrl url.URL
@@ -34,6 +35,36 @@ func NewClient(baseUrl string) (rc *RestClient, err error) {
 	}
 	rc.baseUrl = *tu
 	rc.client.Timeout = 60 * time.Second
+	return
+}
+
+type NodeInfo struct {
+	ChainId             uint8  `json:"chain_id"`
+	Epoch               uint64 `json:"epoch"`
+	LedgerVersion       uint64 `json:"ledger_version"`
+	OldestLedgerVersion uint64 `json:"oldest_ledger_version"`
+	NodeRole            string `json:"node_role"`
+	BlockHeight         uint64 `json:"block_height"`
+	OldestBlockHeight   uint64 `json:"oldest_block_height"`
+	GitHash             string `json:"git_hash"`
+}
+
+func (rc *RestClient) Info() (info NodeInfo, err error) {
+	response, err := rc.client.Get(rc.baseUrl.String())
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	err = json.Unmarshal(blob, &info)
+	if err == nil {
+		rc.ChainId = info.ChainId
+	}
 	return
 }
 
@@ -141,23 +172,6 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 	return
 }
 
-func (rc *RestClient) Info() (data map[string]any, err error) {
-	au := rc.baseUrl
-	response, err := rc.client.Get(au.String())
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
-		return
-	}
-	blob, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		err = fmt.Errorf("error getting response data, %w", err)
-		return
-	}
-	response.Body.Close()
-	err = json.Unmarshal(blob, &data)
-	return
-}
-
 // TransactionByHash gets info on a transaction
 // The transaction may be pending or recently committed.
 //
@@ -217,6 +231,7 @@ func (rc *RestClient) WaitForTransactions(txnHashes []string) error {
 				} else if truthy(status["success"]) {
 					// done!
 					delete(hashSet, hash)
+					slog.Debug("txn done", "hash", hash, "status", status["success"])
 				}
 			}
 		}
