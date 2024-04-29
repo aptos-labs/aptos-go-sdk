@@ -56,6 +56,10 @@ type NodeInfo struct {
 
 func (rc *RestClient) Info() (info NodeInfo, err error) {
 	response, err := rc.client.Get(rc.baseUrl.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", rc.baseUrl.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -105,6 +109,7 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 	}
 	response, err := rc.client.Get(au.String())
 	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
 		return
 	}
 	if response.StatusCode >= 400 {
@@ -140,6 +145,10 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.client.Get(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -163,6 +172,10 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.client.Get(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -196,6 +209,10 @@ func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, er
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions/by_hash", txnHash)
 	response, err := rc.client.Get(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -262,6 +279,10 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	}
 	// TODO: ?limit=N&start=V
 	response, err := rc.client.Get(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -286,6 +307,10 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions/encode_submission")
 	response, err := rc.client.Post(au.String(), "application/json", bodyReader)
+	if err != nil {
+		err = fmt.Errorf("POST %s, %w", au.String(), err)
+		return
+	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -313,7 +338,7 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	au.Path = path.Join(au.Path, "transactions")
 	response, err := rc.client.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
 	if err != nil {
-		err = fmt.Errorf("POST, %w", err)
+		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
 	}
 	if response.StatusCode >= 400 {
