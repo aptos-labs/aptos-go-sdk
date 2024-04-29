@@ -300,7 +300,7 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 	return
 }
 
-func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data []byte, err error) {
+func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
 	bcs := Serializer{}
 	stxn.MarshalBCS(&bcs)
 	err = bcs.Error()
@@ -326,9 +326,9 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data []byte, e
 		return
 	}
 	response.Body.Close()
-	return blob, nil
-	//err = json.Unmarshal(blob, &data)
-	//return
+	//return blob, nil
+	err = json.Unmarshal(blob, &data)
+	return
 }
 
 func (rc *RestClient) GetChainId() (chainId uint8, err error) {

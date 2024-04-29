@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"runtime/debug"
 	"strconv"
@@ -30,6 +31,47 @@ func getenv(name string, defaultValue string) string {
 		return defaultValue
 	}
 	return value
+}
+
+const APTOS_CLIENT_HEADER = "x-aptos-client"
+
+var AptosClientHeaderValue = "aptos-go-sdk/unk"
+
+func init() {
+	vcsRevision := ""
+	vcsMod := ""
+	goArch := ""
+	goOs := ""
+	buildInfo, ok := debug.ReadBuildInfo()
+	if ok {
+		for _, setting := range buildInfo.Settings {
+			switch setting.Key {
+			case "vcs.revision":
+				vcsRevision = setting.Value
+			case "vcs.modified":
+				vcsMod = setting.Value
+			case "GOARCH":
+				goArch = setting.Value
+			case "GOOS":
+				goOs = setting.Value
+			default:
+			}
+		}
+	}
+	params := url.Values{}
+	if vcsRevision != "" {
+		AptosClientHeaderValue = fmt.Sprintf("aptos-go-sdk/%s", vcsRevision)
+	}
+	if vcsMod == "true" {
+		params.Set("m", "t")
+	}
+	params.Set("go", buildInfo.GoVersion)
+	if goArch != "" {
+		params.Set("a", goArch)
+	}
+	if goOs != "" {
+		params.Set("os", goOs)
+	}
 }
 
 func main() {
@@ -74,6 +116,7 @@ func main() {
 				fmt.Printf("%s=%s\n", setting.Key, setting.Value)
 			}
 		}
+		fmt.Printf("will send \"%s: %s\"\n", APTOS_CLIENT_HEADER, AptosClientHeaderValue)
 	}
 
 	client, err := aptos.NewClient(nodeUrl)
@@ -93,8 +136,15 @@ func main() {
 			maybefail(err, "could not get account %s: %s", accountStr, err)
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "account_resources" {
+			localAccountStr := accountStr
+			if (localAccountStr == "") && ((argi + 1) < len(misc)) {
+				localAccountStr = misc[argi+1]
+				err := account.ParseStringRelaxed(localAccountStr)
+				maybefail(err, "could not parse address %#v: %s", localAccountStr, err)
+				argi++
+			}
 			resources, err := client.AccountResources(account)
-			maybefail(err, "could not get account resources %s: %s", accountStr, err)
+			maybefail(err, "could not get account resources %s: %s", localAccountStr, err)
 			os.Stdout.WriteString(prettyJson(resources))
 		} else if arg == "txn_by_hash" {
 			data, err := client.TransactionByHash(txnHash)
@@ -105,16 +155,63 @@ func main() {
 			maybefail(err, "could not get info: %s", err)
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "transactions" {
+			exceptSystem := false
+
+			if (argi+1 < len(misc)) && (misc[argi+1] == "--except-system") {
+				// filter out system "block_metadata_transaction" and "state_checkpoint_transaction"
+				exceptSystem = true
+				argi++
+			}
 			data, err := client.Transactions(nil, nil)
 			maybefail(err, "could not get info: %s", err)
+			timestamps := make([]int64, 0, len(data))
+			for _, rec := range data {
+				if tsX, ok := rec["timestamp"]; ok {
+					if tss, ok := tsX.(string); ok {
+						tsv, err := strconv.ParseInt(tss, 10, 64)
+						if err == nil {
+							timestamps = append(timestamps, tsv)
+						}
+					}
+				}
+			}
+			if len(timestamps) > 0 {
+				mints := timestamps[0]
+				maxts := timestamps[0]
+				nowts := time.Now().UnixMicro()
+				for _, t := range timestamps[1:] {
+					if t < mints {
+						mints = t
+					}
+					if t > maxts {
+						maxts = t
+					}
+				}
+				mindt := nowts - mints
+				maxdt := nowts - maxts
+				slog.Info("got txns", "len", len(data), "maxAge", float64(mindt)*0.000001, "minAge", float64(maxdt)*0.0000001)
+			}
+			if exceptSystem {
+				nd := make([]map[string]any, 0, len(data))
+				for _, rec := range data {
+					if recType, ok := rec["type"]; ok {
+						if recType == "state_checkpoint_transaction" || recType == "block_metadata_transaction" || recType == "validator_transaction" {
+							continue
+						}
+					}
+					nd = append(nd, rec)
+				}
+				slog.Debug("txns filtered", "orig", len(data), "kept", len(nd))
+				data = nd
+			}
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
-			account, err := aptos.NewAccount()
+			alice, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
-			err = aptos.FundAccount(client, faucetUrl, account.Address, amount)
+			err = aptos.FundAccount(client, faucetUrl, alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", account.Address.String(), amount, hex.EncodeToString(account.PrivateKey.(ed25519.PrivateKey)[:]))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.(ed25519.PrivateKey)[:]))
 
 			bob, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
@@ -123,9 +220,10 @@ func main() {
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
 
-			//time.Sleep(2 * time.Second)
-			stxn, err := aptos.TransferTransaction(client, account, bob.Address, 42)
+			time.Sleep(2 * time.Second)
+			stxn, err := aptos.TransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
+			slog.Debug("transfer", "stxn", stxn)
 			result, err := client.SubmitTransaction(stxn)
 			if err != nil {
 				if he, ok := err.(*aptos.HttpError); ok {
@@ -133,8 +231,9 @@ func main() {
 				}
 				maybefail(err, "could not submit transfer txn, %s", err)
 			}
-			fmt.Printf("submit txn result: %#v", string(result))
-
+			fmt.Printf("submit txn result:\n%s\n", prettyJson(result))
+			fmt.Printf("alice addr %s\n", alice.Address.String())
+			fmt.Printf("bob   addr %s\n", bob.Address.String())
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
 			var sender aptos.AccountAddress

@@ -10,7 +10,7 @@ import (
 // Amount in Octas (10^-8 APT)
 func TransferTransaction(rc *RestClient, sender *Account, dest AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
 	// TODO: options for MaxGasAmount, GasUnitPrice, validSeconds, sequenceNumber
-	validSeconds := int64(600)
+	validSeconds := int64(600_000)
 	var chainId uint8
 	chainId, err = rc.GetChainId()
 	if err != nil {
