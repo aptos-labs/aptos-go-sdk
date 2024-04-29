@@ -32,7 +32,7 @@ func TransferTransaction(rc *RestClient, sender *Account, dest AccountAddress, a
 	now := time.Now().Unix()
 	txn := RawTransaction{
 		Sender:         sender.Address,
-		SequenceNumber: sn + 1,
+		SequenceNumber: sn,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
 				Address: Account0x1,
