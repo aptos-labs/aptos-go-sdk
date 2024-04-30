@@ -27,3 +27,5 @@ go.work
 cmd/goclient/goclient
 
 .idea/
+*.swp
+*.swo
