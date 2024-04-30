@@ -13,5 +13,5 @@ runs:
         go-version: '>=1.22'
     # Run unit tests
     - shell: bash
-      run: 'go test'
+      run: 'go test ./...'
 
