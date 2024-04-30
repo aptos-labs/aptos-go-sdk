@@ -138,6 +138,7 @@ type AccountResourceInfo struct {
 func (rc *RestClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl
 	// TODO: offer a list of known-good resourceType string constants
+	// TODO: set "Accept: application/x-bcs" and parse BCS objects for lossless (and faster) transmission
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resource", resourceType)
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -297,8 +298,9 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	return
 }
 
-// Deprecated-ish, #SubmitTransaction() should be much faster and better in every way
-func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, err error) {
+// testing only
+// There exists an aptos-node API for submitting JSON and having the node Rust code encode it to BCS, we should only use this for testing to validate our local BCS. Actual GO-SDK usage should use BCS encoding locally in Go code.
+func (rc *RestClient) transactionEncode(request map[string]any) (data []byte, err error) {
 	rblob, err := json.Marshal(request)
 	if err != nil {
 		return

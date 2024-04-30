@@ -14,6 +14,7 @@ import (
 
 type AccountAddress [32]byte
 
+// TODO: find nicer naming for this? Move account to a package so this can be account.ONE ? Wrap in a singleton struct for Account.One ?
 var Account0x1 AccountAddress = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
 
 // Returns whether the address is a "special" address. Addresses are considered
@@ -52,6 +53,7 @@ func (aa *AccountAddress) Random() {
 	rand.Read((*aa)[:])
 }
 func (aa *AccountAddress) FromEd25519PubKey(pubkey ed25519.PublicKey) {
+	// TODO: Other SDK implementations have an internal AuthenticationKey type to wrap this. Maybe follow that pattern later?
 	hasher := sha3.New256()
 	hasher.Write(pubkey[:])
 	hasher.Write([]byte{0})
