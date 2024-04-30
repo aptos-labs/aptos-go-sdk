@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -65,7 +64,7 @@ func (rc *RestClient) Info() (info NodeInfo, err error) {
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -117,7 +116,7 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -154,7 +153,7 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -181,7 +180,7 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -303,7 +302,7 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -331,7 +330,7 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -361,7 +360,7 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 		err = NewHttpError(response)
 		return nil, err
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
@@ -391,7 +390,7 @@ type HttpError struct {
 }
 
 func NewHttpError(response *http.Response) *HttpError {
-	body, _ := ioutil.ReadAll(response.Body)
+	body, _ := io.ReadAll(response.Body)
 	response.Body.Close()
 	return &HttpError{
 		Status:     response.Status,
