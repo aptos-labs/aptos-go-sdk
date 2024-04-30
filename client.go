@@ -69,7 +69,7 @@ func (rc *RestClient) Info() (info NodeInfo, err error) {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err == nil {
 		rc.ChainId = info.ChainId
@@ -121,7 +121,7 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "account json err: %v\n%s\n", err, string(blob))
@@ -158,7 +158,7 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -185,7 +185,7 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &resources)
 	return
 }
@@ -307,7 +307,7 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -335,7 +335,7 @@ func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, er
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -365,7 +365,7 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	//return blob, nil
 	err = json.Unmarshal(blob, &data)
 	return
@@ -391,7 +391,7 @@ type HttpError struct {
 
 func NewHttpError(response *http.Response) *HttpError {
 	body, _ := io.ReadAll(response.Body)
-	response.Body.Close()
+	_ = response.Body.Close()
 	return &HttpError{
 		Status:     response.Status,
 		StatusCode: response.StatusCode,
