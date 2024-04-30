@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log/slog"
 	"net/http"
@@ -206,23 +207,38 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 //		}
 //	}
 func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "transactions/by_hash", txnHash)
-	response, err := rc.client.Get(au.String())
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/by_hash", txnHash)
+	return rc.getTransactionCommon(restUrl)
+}
+
+func (rc *RestClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/by_version", strconv.FormatUint(version, 10))
+	return rc.getTransactionCommon(restUrl)
+}
+
+func (rc *RestClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
+	// Fetch transaction
+	response, err := rc.client.Get(restUrl.String())
 	if err != nil {
-		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		err = fmt.Errorf("GET %s, %w", restUrl.String(), err)
 		return
 	}
+
+	// Handle Errors TODO: Handle ratelimits, etc.
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+
+	// Read body to JSON TODO: BCS
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close() // We don't care about the error about closing the body
 	err = json.Unmarshal(blob, &data)
 	return
 }
