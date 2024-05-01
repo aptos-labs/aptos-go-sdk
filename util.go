@@ -8,7 +8,7 @@ import (
 
 // Move some APT from sender to dest
 // Amount in Octas (10^-8 APT)
-func APTTransferTransaction(rc *RestClient, sender *Account, dest AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
+func APTTransferTransaction(rc *NodeClient, sender *Account, dest AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
 	// TODO: options for MaxGasAmount, GasUnitPrice, validSeconds, sequenceNumber
 	validSeconds := int64(600_000)
 	var chainId uint8

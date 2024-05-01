@@ -55,14 +55,14 @@ type NetworkConfig struct {
 
 type Client struct {
 	// TODO: Move all these inner functions to the top level, then make these private
-	RestClient   RestClient
+	RestClient   NodeClient
 	FaucetClient FaucetClient
 	// TODO: Add indexer client
 }
 
 // TODO: rename 'NodeClient' (vs IndexerClient) ?
 // what looks best for `import aptos "github.com/aptoslabs/aptos-go-sdk"` then aptos.NewClient() ?
-type RestClient struct {
+type NodeClient struct {
 	ChainId uint8
 
 	client  http.Client
@@ -146,7 +146,7 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 
 	// TODO: add indexer
 
-	restClient := new(RestClient)
+	restClient := new(NodeClient)
 	restClient.baseUrl = *apiUrl
 	restClient.client.Timeout = 60 * time.Second // TODO: Make configurable
 	faucetClient := &FaucetClient{
@@ -173,7 +173,7 @@ type NodeInfo struct {
 
 // TODO: write NodeInfo accessors to ParseUint on *Str which work around 53 bit float64 limit in JavaScript
 
-func (rc *RestClient) Info() (info NodeInfo, err error) {
+func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	response, err := rc.client.Get(rc.baseUrl.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", rc.baseUrl.String(), err)
@@ -218,7 +218,7 @@ func (ai AccountInfo) SequenceNumber() (uint64, error) {
 	return strconv.ParseUint(ai.SequenceNumberStr, 10, 64)
 }
 
-func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
+func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String())
 	if len(ledger_version) > 0 {
@@ -257,7 +257,7 @@ type AccountResourceInfo struct {
 	Data map[string]any `json:"data"`
 }
 
-func (rc *RestClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
+func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl
 	// TODO: offer a list of known-good resourceType string constants
 	// TODO: set "Accept: application/x-bcs" and parse BCS objects for lossless (and faster) transmission
@@ -288,7 +288,7 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
+func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
@@ -334,7 +334,7 @@ func (aar *AccountResourceRecord) UnmarshalBCS(bcs *Deserializer) {
 	aar.Data = bcs.ReadBytes()
 }
 
-func (rc *RestClient) GetBCS(getUrl string) (*http.Response, error) {
+func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
 		return nil, err
@@ -344,7 +344,7 @@ func (rc *RestClient) GetBCS(getUrl string) (*http.Response, error) {
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
@@ -388,19 +388,19 @@ func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version
 //			// known to local mempool, but not committed yet
 //		}
 //	}
-func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
+func (rc *NodeClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
 	restUrl := rc.baseUrl
 	restUrl.Path = path.Join(restUrl.Path, "transactions/by_hash", txnHash)
 	return rc.getTransactionCommon(restUrl)
 }
 
-func (rc *RestClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
+func (rc *NodeClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
 	restUrl := rc.baseUrl
 	restUrl.Path = path.Join(restUrl.Path, "transactions/by_version", strconv.FormatUint(version, 10))
 	return rc.getTransactionCommon(restUrl)
 }
 
-func (rc *RestClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
+func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
 	// Fetch transaction
 	response, err := rc.client.Get(restUrl.String())
 	if err != nil {
@@ -427,7 +427,7 @@ func (rc *RestClient) getTransactionCommon(restUrl url.URL) (data map[string]any
 
 // Waits up to 10 seconds for transactions to be done, polling at 10Hz
 // TODO: options for polling period and timeout
-func (rc *RestClient) WaitForTransactions(txnHashes []string) error {
+func (rc *NodeClient) WaitForTransactions(txnHashes []string) error {
 	hashSet := make(map[string]bool, len(txnHashes))
 	for _, hash := range txnHashes {
 		hashSet[hash] = true
@@ -462,7 +462,7 @@ func (rc *RestClient) WaitForTransactions(txnHashes []string) error {
 // Get recent transactions.
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
+func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions")
 	var params url.Values
@@ -497,7 +497,7 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 
 // testing only
 // There exists an aptos-node API for submitting JSON and having the node Rust code encode it to BCS, we should only use this for testing to validate our local BCS. Actual GO-SDK usage should use BCS encoding locally in Go code.
-func (rc *RestClient) transactionEncode(request map[string]any) (data []byte, err error) {
+func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, err error) {
 	rblob, err := json.Marshal(request)
 	if err != nil {
 		return
@@ -524,7 +524,7 @@ func (rc *RestClient) transactionEncode(request map[string]any) (data []byte, er
 	return
 }
 
-func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
+func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
 	bcs := Serializer{}
 	stxn.MarshalBCS(&bcs)
 	err = bcs.Error()
@@ -555,7 +555,7 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	return
 }
 
-func (rc *RestClient) GetChainId() (chainId uint8, err error) {
+func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	if rc.ChainId != 0 {
 		return rc.ChainId, nil
 	}

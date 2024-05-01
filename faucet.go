@@ -50,7 +50,7 @@ func truthy(x any) bool {
 }
 
 type FaucetClient struct {
-	restClient *RestClient
+	restClient *NodeClient
 	url        *url.URL
 }
 
