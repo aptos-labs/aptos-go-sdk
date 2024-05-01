@@ -20,6 +20,45 @@ import (
 // For Content-Type header
 const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
 
+const (
+	localnet = "localnet"
+	devnet   = "devnet"
+	testnet  = "testnet"
+	mainnet  = "mainnet"
+)
+
+const (
+	localnet_api = "http://localhost:8080/v1"
+	devnet_api   = "https://api.devnet.aptoslabs.com/v1"
+	testnet_api  = "https://api.testnet.aptoslabs.com/v1"
+	mainnet_api  = "https://api.mainnet.aptoslabs.com/v1"
+)
+
+const (
+	localnet_faucet = "http://localhost:8081/v1"
+	devnet_faucet   = "https://faucet.devnet.aptoslabs.com/"
+	testnet_faucet  = "https://faucet.testnet.aptoslabs.com/"
+)
+
+const (
+	localnet_chain_id = 4
+	testnet_chain_id  = 2
+	mainnet_chain_id  = 1
+)
+
+type NetworkConfig struct {
+	network *string
+	api     *string
+	faucet  *string
+	indexer *string
+}
+
+type Client struct {
+	restClient   RestClient
+	faucetClient FaucetClient
+	// TODO: Add indexer client
+}
+
 // TODO: rename 'NodeClient' (vs IndexerClient) ?
 // what looks best for `import aptos "github.com/aptoslabs/aptos-go-sdk"` then aptos.NewClient() ?
 type RestClient struct {
@@ -29,6 +68,92 @@ type RestClient struct {
 	baseUrl url.URL
 }
 
+func NewNetworkClient(config NetworkConfig) (client *Client, err error) {
+	var apiUrl *url.URL = nil
+
+	switch {
+	case config.api == nil && config.network == nil:
+		err = errors.New("aptos api url or network is required")
+		return
+	case config.api != nil:
+		apiUrl, err = url.Parse(*config.api)
+		if err != nil {
+			return
+		}
+	case *config.network == localnet:
+		apiUrl, err = url.Parse(localnet_api)
+		if err != nil {
+			return
+		}
+	case *config.network == devnet:
+		apiUrl, err = url.Parse(devnet_api)
+		if err != nil {
+			return
+		}
+	case *config.network == testnet:
+		apiUrl, err = url.Parse(testnet_api)
+		if err != nil {
+			return
+		}
+	case *config.network == mainnet:
+		apiUrl, err = url.Parse(mainnet_api)
+		if err != nil {
+			return
+		}
+	default:
+		err = errors.New("network name is unknown, please put localnet, devnet, testnet, or mainnet")
+		return
+	}
+	var faucetUrl *url.URL = nil
+
+	switch {
+	case config.faucet == nil && config.network == nil:
+		err = errors.New("aptos faucet url or network is required")
+		return
+	case config.faucet != nil:
+		faucetUrl, err = url.Parse(*config.faucet)
+		if err != nil {
+			return
+		}
+	case *config.network == localnet:
+		faucetUrl, err = url.Parse(localnet_faucet)
+		if err != nil {
+			return
+		}
+	case *config.network == devnet:
+		faucetUrl, err = url.Parse(devnet_faucet)
+		if err != nil {
+			return
+		}
+	case *config.network == testnet:
+		faucetUrl, err = url.Parse(testnet_faucet)
+		if err != nil {
+			return
+		}
+	case *config.network == mainnet:
+		faucetUrl = nil
+	default:
+		err = errors.New("network name is unknown, please put localnet, devnet, testnet, or mainnet")
+		return
+	}
+
+	// TODO: add indexer
+
+	restClient := new(RestClient)
+	restClient.baseUrl = *apiUrl
+	restClient.client.Timeout = 60 * time.Second // TODO: Make configurable
+	faucetClient := &FaucetClient{
+		restClient,
+		faucetUrl,
+	}
+	client = &Client{
+		*restClient,
+		*faucetClient,
+	}
+	return
+}
+
+// TODO: Deprecate
 func NewClient(baseUrl string) (rc *RestClient, err error) {
 	rc = new(RestClient)
 	tu, err := url.Parse(baseUrl)

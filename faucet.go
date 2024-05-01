@@ -49,6 +49,40 @@ func truthy(x any) bool {
 	}
 }
 
+type FaucetClient struct {
+	restClient *RestClient
+	url        *url.URL
+}
+
+func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) error {
+	mintUrl := faucetClient.url
+	mintUrl.Path = path.Join(mintUrl.Path, "mint")
+	params := url.Values{}
+	params.Set("amount", strconv.FormatUint(amount, 10))
+	params.Set("address", address.String())
+	mintUrl.RawQuery = params.Encode()
+	response, err := http.Post(mintUrl.String(), "text/plain", nil)
+	if err != nil {
+		return err
+	}
+	if response.StatusCode >= 400 {
+		return NewHttpError(response)
+	}
+	dec := json.NewDecoder(response.Body)
+	var txnHashes []string
+	err = dec.Decode(&txnHashes)
+	if err != nil {
+		return fmt.Errorf("response json decode error, %w", err)
+	}
+	if faucetClient.restClient == nil {
+		slog.Debug("FundAccount no txns to wait for")
+		// no Aptos client to wait on txn completion
+		return nil
+	}
+	slog.Debug("FundAccount wait for txns", "ntxn", len(txnHashes))
+	return faucetClient.restClient.WaitForTransactions(txnHashes)
+}
+
 // Ask the faucet to send some money to a test account
 func FundAccount(rc *RestClient, faucetUrl string, address AccountAddress, amount uint64) error {
 	au, err := url.Parse(faucetUrl)
