@@ -242,7 +242,7 @@ func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
