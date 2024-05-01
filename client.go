@@ -21,10 +21,10 @@ import (
 const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
 
 const (
-	localnet = "localnet"
-	devnet   = "devnet"
-	testnet  = "testnet"
-	mainnet  = "mainnet"
+	Localnet = "localnet"
+	Devnet   = "devnet"
+	Testnet  = "testnet"
+	Mainnet  = "mainnet"
 )
 
 const (
@@ -54,8 +54,9 @@ type NetworkConfig struct {
 }
 
 type Client struct {
-	restClient   RestClient
-	faucetClient FaucetClient
+	// TODO: Move all these inner functions to the top level, then make these private
+	RestClient   RestClient
+	FaucetClient FaucetClient
 	// TODO: Add indexer client
 }
 
@@ -68,7 +69,13 @@ type RestClient struct {
 	baseUrl url.URL
 }
 
-func NewNetworkClient(config NetworkConfig) (client *Client, err error) {
+func NewClientFromNetworkName(network *string) (client *Client, err error) {
+	config := NetworkConfig{network: network}
+	client, err = NewClient(config)
+	return
+}
+
+func NewClient(config NetworkConfig) (client *Client, err error) {
 	var apiUrl *url.URL = nil
 
 	switch {
@@ -80,28 +87,28 @@ func NewNetworkClient(config NetworkConfig) (client *Client, err error) {
 		if err != nil {
 			return
 		}
-	case *config.network == localnet:
+	case *config.network == Localnet:
 		apiUrl, err = url.Parse(localnet_api)
 		if err != nil {
 			return
 		}
-	case *config.network == devnet:
+	case *config.network == Devnet:
 		apiUrl, err = url.Parse(devnet_api)
 		if err != nil {
 			return
 		}
-	case *config.network == testnet:
+	case *config.network == Testnet:
 		apiUrl, err = url.Parse(testnet_api)
 		if err != nil {
 			return
 		}
-	case *config.network == mainnet:
+	case *config.network == Mainnet:
 		apiUrl, err = url.Parse(mainnet_api)
 		if err != nil {
 			return
 		}
 	default:
-		err = errors.New("network name is unknown, please put localnet, devnet, testnet, or mainnet")
+		err = errors.New("network name is unknown, please put Localnet, Devnet, Testnet, or Mainnet")
 		return
 	}
 	var faucetUrl *url.URL = nil
@@ -115,25 +122,25 @@ func NewNetworkClient(config NetworkConfig) (client *Client, err error) {
 		if err != nil {
 			return
 		}
-	case *config.network == localnet:
+	case *config.network == Localnet:
 		faucetUrl, err = url.Parse(localnet_faucet)
 		if err != nil {
 			return
 		}
-	case *config.network == devnet:
+	case *config.network == Devnet:
 		faucetUrl, err = url.Parse(devnet_faucet)
 		if err != nil {
 			return
 		}
-	case *config.network == testnet:
+	case *config.network == Testnet:
 		faucetUrl, err = url.Parse(testnet_faucet)
 		if err != nil {
 			return
 		}
-	case *config.network == mainnet:
+	case *config.network == Mainnet:
 		faucetUrl = nil
 	default:
-		err = errors.New("network name is unknown, please put localnet, devnet, testnet, or mainnet")
+		err = errors.New("network name is unknown, please put Localnet, Devnet, Testnet, or Mainnet")
 		return
 	}
 
@@ -150,19 +157,6 @@ func NewNetworkClient(config NetworkConfig) (client *Client, err error) {
 		*restClient,
 		*faucetClient,
 	}
-	return
-}
-
-// TODO: Deprecate
-func NewClient(baseUrl string) (rc *RestClient, err error) {
-	rc = new(RestClient)
-	tu, err := url.Parse(baseUrl)
-	if err != nil {
-		rc = nil
-		return
-	}
-	rc.baseUrl = *tu
-	rc.client.Timeout = 60 * time.Second
 	return
 }
 
