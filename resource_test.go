@@ -2,7 +2,7 @@ package aptos
 
 import (
 	"encoding/base64"
-	"io/ioutil"
+	"io"
 	"strings"
 	"testing"
 
@@ -12,7 +12,7 @@ import (
 func decodeB64(x string) ([]byte, error) {
 	reader := strings.NewReader(x)
 	dec := base64.NewDecoder(base64.StdEncoding, reader)
-	return ioutil.ReadAll(dec)
+	return io.ReadAll(dec)
 }
 
 func TestMoveResourceBCS(t *testing.T) {
