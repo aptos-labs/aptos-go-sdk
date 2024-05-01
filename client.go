@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -64,12 +64,12 @@ func (rc *RestClient) Info() (info NodeInfo, err error) {
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err == nil {
 		rc.ChainId = info.ChainId
@@ -116,12 +116,12 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "account json err: %v\n%s\n", err, string(blob))
@@ -154,12 +154,12 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -181,12 +181,12 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &resources)
 	return
 }
@@ -207,23 +207,38 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 //		}
 //	}
 func (rc *RestClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "transactions/by_hash", txnHash)
-	response, err := rc.client.Get(au.String())
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/by_hash", txnHash)
+	return rc.getTransactionCommon(restUrl)
+}
+
+func (rc *RestClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/by_version", strconv.FormatUint(version, 10))
+	return rc.getTransactionCommon(restUrl)
+}
+
+func (rc *RestClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
+	// Fetch transaction
+	response, err := rc.client.Get(restUrl.String())
 	if err != nil {
-		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		err = fmt.Errorf("GET %s, %w", restUrl.String(), err)
 		return
 	}
+
+	// Handle Errors TODO: Handle ratelimits, etc.
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+
+	// Read body to JSON TODO: BCS
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close() // We don't care about the error about closing the body
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -288,12 +303,12 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -317,12 +332,12 @@ func (rc *RestClient) transactionEncode(request map[string]any) (data []byte, er
 		err = NewHttpError(response)
 		return
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -347,12 +362,12 @@ func (rc *RestClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 		err = NewHttpError(response)
 		return nil, err
 	}
-	blob, err := ioutil.ReadAll(response.Body)
+	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	//return blob, nil
 	err = json.Unmarshal(blob, &data)
 	return
@@ -377,8 +392,8 @@ type HttpError struct {
 }
 
 func NewHttpError(response *http.Response) *HttpError {
-	body, _ := ioutil.ReadAll(response.Body)
-	response.Body.Close()
+	body, _ := io.ReadAll(response.Body)
+	_ = response.Body.Close()
 	return &HttpError{
 		Status:     response.Status,
 		StatusCode: response.StatusCode,

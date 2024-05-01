@@ -1,0 +1,17 @@
+name: "Go Unit Tests"
+description: |
+  Run Go unit tests
+
+runs:
+  using: composite
+  steps:
+    # Setup checkout of Git
+    - uses: actions/checkout@v3
+    # Setup Go
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '>=1.22'
+    # Run unit tests
+    - shell: bash
+      run: 'go test ./...'
+
