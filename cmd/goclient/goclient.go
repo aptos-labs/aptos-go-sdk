@@ -127,7 +127,7 @@ func main() {
 	for argi < len(misc) {
 		arg := misc[argi]
 		if arg == "account" {
-			data, err := client.RestClient.Account(account)
+			data, err := client.Account(account)
 			maybefail(err, "could not get account %s: %s", accountStr, err)
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "account_resources" {
@@ -138,15 +138,15 @@ func main() {
 				maybefail(err, "could not parse address %#v: %s", localAccountStr, err)
 				argi++
 			}
-			resources, err := client.RestClient.AccountResources(account)
+			resources, err := client.AccountResources(account)
 			maybefail(err, "could not get account resources %s: %s", localAccountStr, err)
 			os.Stdout.WriteString(prettyJson(resources))
 		} else if arg == "txn_by_hash" {
-			data, err := client.RestClient.TransactionByHash(txnHash)
+			data, err := client.TransactionByHash(txnHash)
 			maybefail(err, "could not get txn %s: %s %s", txnHash, err, hebody(err))
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "info" {
-			data, err := client.RestClient.Info()
+			data, err := client.Info()
 			maybefail(err, "could not get info: %s", err)
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "transactions" {
@@ -157,7 +157,7 @@ func main() {
 				exceptSystem = true
 				argi++
 			}
-			data, err := client.RestClient.Transactions(nil, nil)
+			data, err := client.Transactions(nil, nil)
 			maybefail(err, "could not get info: %s", err)
 			timestamps := make([]int64, 0, len(data))
 			for _, rec := range data {
@@ -204,22 +204,22 @@ func main() {
 			alice, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
-			err = client.FaucetClient.Fund(alice.Address, amount)
+			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.(ed25519.PrivateKey)[:]))
 
 			bob, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
-			err = client.FaucetClient.Fund(bob.Address, amount)
+			err = client.Fund(bob.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
 
 			time.Sleep(2 * time.Second)
-			stxn, err := aptos.APTTransferTransaction(&client.RestClient, alice, bob.Address, 42)
+			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			slog.Debug("transfer", "stxn", stxn)
-			result, err := client.RestClient.SubmitTransaction(stxn)
+			result, err := client.SubmitTransaction(stxn)
 			if err != nil {
 				if he, ok := err.(*aptos.HttpError); ok {
 					fmt.Fprintf(os.Stdout, "txn err:\n\t%s\n", string(he.Body))
@@ -243,7 +243,7 @@ func main() {
 
 			var sn uint64
 			if getenv("DUMMY", "") == "" {
-				info, err := client.RestClient.Account(sender)
+				info, err := client.Account(sender)
 				maybefail(err, "could not get sender account info, %s", err)
 				sn, err = info.SequenceNumber()
 				maybefail(err, "bad sequence number, %s", err)

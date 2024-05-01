@@ -16,7 +16,7 @@ func Test_Flow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify chain id retrieval works
-	chainId, err := client.RestClient.GetChainId()
+	chainId, err := client.GetChainId()
 	assert.NoError(t, err)
 	assert.Less(t, uint8(4), chainId)
 
@@ -25,26 +25,26 @@ func Test_Flow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
-	client.FaucetClient.Fund(account.Address, 100_000_000)
+	client.Fund(account.Address, 100_000_000)
 
 	// Send money to 0x1
 	// Build transaction
-	signed_txn, err := APTTransferTransaction(&client.RestClient, account, Account0x1, 100)
+	signed_txn, err := APTTransferTransaction(client, account, Account0x1, 100)
 	assert.NoError(t, err)
 
 	// Send transaction
 	// TODO: verify response
-	result, err := client.RestClient.SubmitTransaction(signed_txn)
+	result, err := client.SubmitTransaction(signed_txn)
 	assert.NoError(t, err)
 
 	hash := result["hash"].(string)
 
 	// TODO Wait on transaction
-	err = client.RestClient.WaitForTransactions([]string{hash})
+	err = client.WaitForTransactions([]string{hash})
 	assert.NoError(t, err)
 
 	// Read transaction by hash
-	txn, err := client.RestClient.TransactionByHash(hash)
+	txn, err := client.TransactionByHash(hash)
 	assert.NoError(t, err)
 
 	// Read transaction by version
@@ -55,7 +55,7 @@ func Test_Flow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Load the transaction again
-	txnByVersion, err := client.RestClient.TransactionByVersion(version)
+	txnByVersion, err := client.TransactionByVersion(version)
 
 	// Assert that both are the same
 	assert.Equal(t, txn, txnByVersion)

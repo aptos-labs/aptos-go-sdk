@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -56,6 +57,9 @@ type FaucetClient struct {
 
 // Fund account with the given amount of AptosCoin
 func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) error {
+	if faucetClient.restClient == nil {
+		return errors.New("faucet client not initialized")
+	}
 	mintUrl := faucetClient.url
 	mintUrl.Path = path.Join(mintUrl.Path, "mint")
 	params := url.Values{}

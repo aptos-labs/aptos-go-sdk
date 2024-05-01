@@ -8,16 +8,16 @@ import (
 
 // Move some APT from sender to dest
 // Amount in Octas (10^-8 APT)
-func APTTransferTransaction(rc *NodeClient, sender *Account, dest AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
+func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
 	// TODO: options for MaxGasAmount, GasUnitPrice, validSeconds, sequenceNumber
 	validSeconds := int64(600_000)
 	var chainId uint8
-	chainId, err = rc.GetChainId()
+	chainId, err = client.GetChainId()
 	if err != nil {
 		return
 	}
 
-	info, err := rc.Account(sender.Address)
+	info, err := client.Account(sender.Address)
 	if err != nil {
 		return nil, err
 	}
