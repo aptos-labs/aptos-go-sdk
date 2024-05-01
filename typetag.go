@@ -1,6 +1,9 @@
 package aptos
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type TypeTagType uint64
 
@@ -21,6 +24,7 @@ const (
 type TypeTagImpl interface {
 	BCSStruct
 	GetType() TypeTagType
+	String() string
 }
 
 type TypeTag struct {
@@ -39,9 +43,33 @@ func (tt *TypeTag) UnmarshalBCS(bcs *Deserializer) {
 		xt := &BoolTag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
+	case TypeTag_U8:
+		xt := &U8Tag{}
+		xt.UnmarshalBCS(bcs)
+		tt.Value = xt
+	case TypeTag_U16:
+		xt := &U16Tag{}
+		xt.UnmarshalBCS(bcs)
+		tt.Value = xt
+	case TypeTag_U32:
+		xt := &U32Tag{}
+		xt.UnmarshalBCS(bcs)
+		tt.Value = xt
+	case TypeTag_U64:
+		xt := &U64Tag{}
+		xt.UnmarshalBCS(bcs)
+		tt.Value = xt
+	case TypeTag_Struct:
+		xt := &StructTag{}
+		xt.UnmarshalBCS(bcs)
+		tt.Value = xt
 	default:
 		bcs.SetError(fmt.Errorf("unknown TypeTag enum %d", variant))
 	}
+}
+
+func (tt *TypeTag) String() string {
+	return tt.Value.String()
 }
 
 func NewTypeTag(v any) *TypeTag {
@@ -56,6 +84,10 @@ func NewTypeTag(v any) *TypeTag {
 
 type BoolTag struct {
 	Value bool
+}
+
+func (xt *BoolTag) String() string {
+	return "bool"
 }
 
 func (xt *BoolTag) GetType() TypeTagType {
@@ -74,6 +106,10 @@ type U8Tag struct {
 	Value uint8
 }
 
+func (xt *U8Tag) String() string {
+	return "u8"
+}
+
 func (xt *U8Tag) GetType() TypeTagType {
 	return TypeTag_U8
 }
@@ -88,6 +124,10 @@ func (xt *U8Tag) UnmarshalBCS(bcs *Deserializer) {
 
 type U16Tag struct {
 	Value uint16
+}
+
+func (xt *U16Tag) String() string {
+	return "u16"
 }
 
 func (xt *U16Tag) GetType() TypeTagType {
@@ -106,6 +146,10 @@ type U32Tag struct {
 	Value uint32
 }
 
+func (xt *U32Tag) String() string {
+	return "u32"
+}
+
 func (xt *U32Tag) GetType() TypeTagType {
 	return TypeTag_U32
 }
@@ -120,6 +164,10 @@ func (xt *U32Tag) UnmarshalBCS(bcs *Deserializer) {
 
 type U64Tag struct {
 	Value uint64
+}
+
+func (xt *U64Tag) String() string {
+	return "u64"
 }
 
 func (xt *U64Tag) GetType() TypeTagType {
@@ -148,4 +196,47 @@ func (xt *AccountAddressTag) MarshalBCS(bcs *Serializer) {
 }
 func (xt *AccountAddressTag) UnmarshalBCS(bcs *Deserializer) {
 	xt.Value.UnmarshalBCS(bcs)
+}
+
+type StructTag struct {
+	Address    AccountAddress
+	Module     string // TODO: IdentifierWrapper ?
+	Name       string // TODO: IdentifierWrapper ?
+	TypeParams []TypeTag
+}
+
+func (st *StructTag) MarshalBCS(bcs *Serializer) {
+	st.Address.MarshalBCS(bcs)
+	bcs.WriteString(st.Module)
+	bcs.WriteString(st.Name)
+	SerializeSequence(st.TypeParams, bcs)
+}
+func (st *StructTag) UnmarshalBCS(bcs *Deserializer) {
+	st.Address.UnmarshalBCS(bcs)
+	st.Module = bcs.ReadString()
+	st.Name = bcs.ReadString()
+	st.TypeParams = DeserializeSequence[TypeTag](bcs)
+}
+func (st *StructTag) GetType() TypeTagType {
+	return TypeTag_Struct
+}
+
+func (st *StructTag) String() string {
+	out := strings.Builder{}
+	out.WriteString(st.Address.String())
+	out.WriteString("::")
+	out.WriteString(st.Module)
+	out.WriteString("::")
+	out.WriteString(st.Name)
+	if len(st.TypeParams) != 0 {
+		out.WriteRune('<')
+		for i, tp := range st.TypeParams {
+			if i != 0 {
+				out.WriteRune(',')
+			}
+			out.WriteString(tp.String())
+		}
+		out.WriteRune('>')
+	}
+	return out.String()
 }

@@ -131,8 +131,11 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 
 // AccountResourceInfo is returned by #AccountResource() and #AccountResources()
 type AccountResourceInfo struct {
-	Type string         `json:"type"`
-	Data map[string]any `json:"data"` // TODO: what are these? Build a struct.
+	// e.g. "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"
+	Type string `json:"type"`
+
+	// Decoded from Move contract data, could really be anything
+	Data map[string]any `json:"data"`
 }
 
 func (rc *RestClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
@@ -188,6 +191,63 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 	}
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &resources)
+	return
+}
+
+// DeserializeSequence[AccountResourceRecord](bcs) approximates the Rust side BTreeMap<StructTag,Vec<u8>>
+// They should BCS the same with a prefix Uleb128 length followed by (StructTag,[]byte) pairs.
+type AccountResourceRecord struct {
+	// Account::Module::Name
+	Tag StructTag
+
+	// BCS data as stored by Move contract
+	Data []byte
+}
+
+func (aar *AccountResourceRecord) MarshalBCS(bcs *Serializer) {
+	aar.Tag.MarshalBCS(bcs)
+	bcs.WriteBytes(aar.Data)
+}
+func (aar *AccountResourceRecord) UnmarshalBCS(bcs *Deserializer) {
+	aar.Tag.UnmarshalBCS(bcs)
+	aar.Data = bcs.ReadBytes()
+}
+
+func (rc *RestClient) GetBCS(getUrl string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", getUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/x-bcs")
+	return rc.client.Do(req)
+}
+
+func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
+	if len(ledger_version) > 0 {
+		params := url.Values{}
+		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		au.RawQuery = params.Encode()
+	}
+	response, err := rc.GetBCS(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	bcs := NewDeserializer(blob)
+	// See resource_test.go TestMoveResourceBCS
+	resources = DeserializeSequence[AccountResourceRecord](bcs)
 	return
 }
 
