@@ -167,6 +167,8 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 	return
 }
 
+// AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
+// For fetching raw Move structs as BCS, See #AccountResourcesBCS
 func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
@@ -222,6 +224,7 @@ func (rc *RestClient) GetBCS(getUrl string) (*http.Response, error) {
 	return rc.client.Do(req)
 }
 
+// AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
