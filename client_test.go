@@ -29,7 +29,7 @@ func Test_Flow(t *testing.T) {
 
 	// Send money to 0x1
 	// Build transaction
-	signed_txn, err := TransferTransaction(&client.RestClient, account, Account0x1, 100)
+	signed_txn, err := APTTransferTransaction(&client.RestClient, account, Account0x1, 100)
 	assert.NoError(t, err)
 
 	// Send transaction
