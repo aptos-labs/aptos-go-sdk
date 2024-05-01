@@ -221,7 +221,7 @@ func main() {
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
 
 			time.Sleep(2 * time.Second)
-			stxn, err := aptos.TransferTransaction(client, alice, bob.Address, 42)
+			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			slog.Debug("transfer", "stxn", stxn)
 			result, err := client.SubmitTransaction(stxn)

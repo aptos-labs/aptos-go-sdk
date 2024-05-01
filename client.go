@@ -131,13 +131,17 @@ func (rc *RestClient) Account(address AccountAddress, ledger_version ...int) (in
 
 // AccountResourceInfo is returned by #AccountResource() and #AccountResources()
 type AccountResourceInfo struct {
-	Type string         `json:"type"`
-	Data map[string]any `json:"data"` // TODO: what are these? Build a struct.
+	// e.g. "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>"
+	Type string `json:"type"`
+
+	// Decoded from Move contract data, could really be anything
+	Data map[string]any `json:"data"`
 }
 
 func (rc *RestClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl
 	// TODO: offer a list of known-good resourceType string constants
+	// TODO: set "Accept: application/x-bcs" and parse BCS objects for lossless (and faster) transmission
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resource", resourceType)
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -163,6 +167,8 @@ func (rc *RestClient) AccountResource(address AccountAddress, resourceType strin
 	return
 }
 
+// AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
+// For fetching raw Move structs as BCS, See #AccountResourcesBCS
 func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
@@ -187,6 +193,64 @@ func (rc *RestClient) AccountResources(address AccountAddress, ledger_version ..
 	}
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &resources)
+	return
+}
+
+// DeserializeSequence[AccountResourceRecord](bcs) approximates the Rust side BTreeMap<StructTag,Vec<u8>>
+// They should BCS the same with a prefix Uleb128 length followed by (StructTag,[]byte) pairs.
+type AccountResourceRecord struct {
+	// Account::Module::Name
+	Tag StructTag
+
+	// BCS data as stored by Move contract
+	Data []byte
+}
+
+func (aar *AccountResourceRecord) MarshalBCS(bcs *Serializer) {
+	aar.Tag.MarshalBCS(bcs)
+	bcs.WriteBytes(aar.Data)
+}
+func (aar *AccountResourceRecord) UnmarshalBCS(bcs *Deserializer) {
+	aar.Tag.UnmarshalBCS(bcs)
+	aar.Data = bcs.ReadBytes()
+}
+
+func (rc *RestClient) GetBCS(getUrl string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", getUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/x-bcs")
+	return rc.client.Do(req)
+}
+
+// AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
+func (rc *RestClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
+	if len(ledger_version) > 0 {
+		params := url.Values{}
+		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		au.RawQuery = params.Encode()
+	}
+	response, err := rc.GetBCS(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	response.Body.Close()
+	bcs := NewDeserializer(blob)
+	// See resource_test.go TestMoveResourceBCS
+	resources = DeserializeSequence[AccountResourceRecord](bcs)
 	return
 }
 
@@ -312,8 +376,9 @@ func (rc *RestClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	return
 }
 
-// Deprecated-ish, #SubmitTransaction() should be much faster and better in every way
-func (rc *RestClient) TransactionEncode(request map[string]any) (data []byte, err error) {
+// testing only
+// There exists an aptos-node API for submitting JSON and having the node Rust code encode it to BCS, we should only use this for testing to validate our local BCS. Actual GO-SDK usage should use BCS encoding locally in Go code.
+func (rc *RestClient) transactionEncode(request map[string]any) (data []byte, err error) {
 	rblob, err := json.Marshal(request)
 	if err != nil {
 		return

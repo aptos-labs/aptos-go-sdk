@@ -150,6 +150,34 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 	return out
 }
 
+// DeserializeMapToSlices returns two slices []K and []V of equal length that are equivalent to map[K]V but may represent types that are not valid Go map keys.
+func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) {
+	count := bcs.Uleb128()
+	keys = make([]K, 0, count)
+	values = make([]V, 0, count)
+	for _ = range count {
+		var nextk K
+		var nextv V
+		switch sv := any(&nextk).(type) {
+		case BCSStruct:
+			sv.UnmarshalBCS(bcs)
+		case *string:
+			*sv = bcs.ReadString()
+		}
+		switch sv := any(&nextv).(type) {
+		case BCSStruct:
+			sv.UnmarshalBCS(bcs)
+		case *string:
+			*sv = bcs.ReadString()
+		case *[]byte:
+			*sv = bcs.ReadBytes()
+		}
+		keys = append(keys, nextk)
+		values = append(values, nextv)
+	}
+	return
+}
+
 func BcsDeserialize(dest BCSStruct, bcsBlob []byte) error {
 	bcs := Deserializer{
 		source: bcsBlob,
