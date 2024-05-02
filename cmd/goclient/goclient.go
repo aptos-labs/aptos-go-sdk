@@ -20,8 +20,7 @@ import (
 var (
 	verbose    bool   = false
 	accountStr string = ""
-	nodeUrl    string = "https://api.devnet.aptoslabs.com/v1"
-	faucetUrl  string = "https://faucet.devnet.aptoslabs.com"
+	network    string = aptos.Devnet
 	txnHash    string = ""
 )
 
@@ -79,8 +78,7 @@ func main() {
 	args := os.Args[1:]
 	var misc []string
 
-	nodeUrl = getenv("APTOS_NODE_URL", nodeUrl)
-	faucetUrl = getenv("APTOS_FAUCET_URL", faucetUrl)
+	network = getenv("APTOS_NETWORK", network)
 
 	// there may be better command frameworks, but in a pinch I can write what I want faster than I can learn one
 	argi := 0
@@ -92,11 +90,8 @@ func main() {
 		} else if arg == "-a" || arg == "--account" {
 			accountStr = args[argi+1]
 			argi++
-		} else if arg == "-u" || arg == "--url" {
-			nodeUrl = args[argi+1]
-			argi++
-		} else if arg == "-F" || arg == "--faucet" {
-			faucetUrl = args[argi+1]
+		} else if arg == "-n" || arg == "--network" {
+			network = args[argi+1]
 			argi++
 		} else if arg == "-t" || arg == "--txn" {
 			txnHash = args[argi+1]
@@ -119,7 +114,7 @@ func main() {
 		fmt.Printf("will send \"%s: %s\"\n", APTOS_CLIENT_HEADER, AptosClientHeaderValue)
 	}
 
-	client, err := aptos.NewClient(nodeUrl)
+	client, err := aptos.NewClientFromNetworkName(&network)
 	maybefail(err, "client error: %s", err)
 
 	var account aptos.AccountAddress
@@ -209,14 +204,14 @@ func main() {
 			alice, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
-			err = aptos.FundAccount(client, faucetUrl, alice.Address, amount)
+			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.(ed25519.PrivateKey)[:]))
 
 			bob, err := aptos.NewAccount()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
-			err = aptos.FundAccount(client, faucetUrl, bob.Address, amount)
+			err = client.Fund(bob.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.(ed25519.PrivateKey)[:]))
 
