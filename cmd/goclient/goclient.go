@@ -20,7 +20,7 @@ import (
 var (
 	verbose    bool   = false
 	accountStr string = ""
-	network    string = aptos.Devnet
+	network    string = ""
 	txnHash    string = ""
 )
 
@@ -79,6 +79,8 @@ func main() {
 	var misc []string
 
 	network = getenv("APTOS_NETWORK", network)
+	nodeUrl := getenv("APTOS_NODE_URL", "")
+	faucetUrl := getenv("APTOS_FAUCET_URL", "")
 
 	// there may be better command frameworks, but in a pinch I can write what I want faster than I can learn one
 	argi := 0
@@ -93,6 +95,12 @@ func main() {
 		} else if arg == "-n" || arg == "--network" {
 			network = args[argi+1]
 			argi++
+		} else if arg == "-u" || arg == "--node" {
+			nodeUrl = args[argi+1]
+			argi++
+		} else if arg == "-F" || arg == "--faucet" {
+			faucetUrl = args[argi+1]
+			argi++
 		} else if arg == "-t" || arg == "--txn" {
 			txnHash = args[argi+1]
 			argi++
@@ -102,20 +110,19 @@ func main() {
 		argi++
 	}
 
-	// TODO: some of this info will be useful for putting in client HTTP headers
-	if verbose {
-		buildInfo, ok := debug.ReadBuildInfo()
-		if ok {
-			fmt.Printf("built with %s\n", buildInfo.GoVersion)
-			for _, setting := range buildInfo.Settings {
-				fmt.Printf("%s=%s\n", setting.Key, setting.Value)
-			}
-		}
-		fmt.Printf("will send \"%s: %s\"\n", APTOS_CLIENT_HEADER, AptosClientHeaderValue)
-	}
+	var client *aptos.Client
+	var err error
 
-	client, err := aptos.NewClientFromNetworkName(&network)
-	maybefail(err, "client error: %s", err)
+	if network != "" {
+		client, err = aptos.NewClientFromNetworkName(network)
+		maybefail(err, "client error: %s", err)
+	} else {
+		client, err = aptos.NewClient(aptos.NetworkConfig{
+			NodeUrl:   nodeUrl,
+			FaucetUrl: faucetUrl,
+		})
+		maybefail(err, "client error: %s", err)
+	}
 
 	var account aptos.AccountAddress
 	if accountStr != "" {

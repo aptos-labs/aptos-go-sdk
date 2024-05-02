@@ -1,18 +1,33 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func Test_Flow(t *testing.T) {
-	// Create a client
-	network := Devnet
-	config := NetworkConfig{
-		network: &network,
+func TestNamedConfig(t *testing.T) {
+	names := []string{"mainnet", "devnet", "testnet", "localnet"}
+	for _, name := range names {
+		assert.Equal(t, name, NamedNetworks[name].Name)
 	}
-	client, err := NewClient(config)
+}
+
+func TestAptosClientHeaderValue(t *testing.T) {
+	assert.Greater(t, len(AptosClientHeaderValue), 0)
+	assert.NotEqual(t, "aptos-go-sdk/unk", AptosClientHeaderValue)
+}
+
+func Test_Flow(t *testing.T) {
+	if testing.Short() {
+		// TODO: only run this in some integration mode set by environment variable?
+		// TODO: allow this to be harmlessly flakey if devnet is down?
+		// TODO: write a framework to optionally run things against `aptos node run-localnet`
+		t.Skip("integration test expects network connection to devnet in cloud")
+	}
+	// Create a client
+	client, err := NewClient(DevnetConfig)
 	assert.NoError(t, err)
 
 	// Verify chain id retrieval works
