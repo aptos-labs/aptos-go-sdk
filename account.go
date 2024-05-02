@@ -1,8 +1,6 @@
 package aptos
 
 import (
-	"crypto"
-	"crypto/ed25519"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -10,6 +8,17 @@ import (
 	"strings"
 
 	"golang.org/x/crypto/sha3"
+)
+
+// Seeds for deriving addresses from addresses
+const (
+	Ed25519Scheme         = uint8(0)
+	MultiEd25519Scheme    = uint8(1)
+	SingleKeyScheme       = uint8(2)
+	MultiKeyScheme        = uint8(3)
+	deriveObjectScheme    = uint8(252)
+	namedObjectScheme     = uint8(254)
+	resourceAccountScheme = uint8(255)
 )
 
 type AccountAddress [32]byte
@@ -46,33 +55,58 @@ func (aa AccountAddress) String() string {
 func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
 	bcs.FixedBytes(aa[:])
 }
+
 func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
 }
+
 func (aa *AccountAddress) Random() {
 	rand.Read((*aa)[:])
 }
-func (aa *AccountAddress) FromEd25519PubKey(pubkey ed25519.PublicKey) {
-	// TODO: Other SDK implementations have an internal AuthenticationKey type to wrap this. Maybe follow that pattern later?
+
+func (aa *AccountAddress) FromPublicKey(pubkey PublicKey) {
 	hasher := sha3.New256()
-	hasher.Write(pubkey[:])
-	hasher.Write([]byte{0})
+	hasher.Write(pubkey.Bytes())
+	hasher.Write([]byte{pubkey.Scheme()})
 	hasher.Sum((*aa)[:0])
+}
+
+func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
+	return aa.DerivedAddress(seed, namedObjectScheme)
+}
+
+func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
+	return aa.DerivedAddress(objectAddress[:], deriveObjectScheme)
+}
+
+func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
+	return aa.DerivedAddress(seed, resourceAccountScheme)
+}
+
+// DerivedAddress addresses are derived by the address, the seed, then the type byte
+func (aa *AccountAddress) DerivedAddress(seed []byte, type_byte uint8) (accountAddress AccountAddress) {
+	accountAddress = AccountAddress{}
+	hasher := sha3.New256()
+	hasher.Write(aa[:])
+	hasher.Write(seed[:])
+	hasher.Write([]byte{type_byte})
+	hasher.Sum(accountAddress[:])
+	return
 }
 
 type Account struct {
 	Address    AccountAddress
-	PrivateKey crypto.PrivateKey
+	PrivateKey PrivateKey
 }
 
 func NewAccount() (*Account, error) {
-	pubkey, privkey, err := ed25519.GenerateKey(nil)
+	privkey, pubkey, err := GenerateEd5519Keys()
 	if err != nil {
 		return nil, err
 	}
 	out := &Account{}
-	out.Address.FromEd25519PubKey(pubkey)
-	out.PrivateKey = privkey
+	out.Address.FromPublicKey(pubkey)
+	out.PrivateKey = &privkey
 	return out, nil
 }
 
