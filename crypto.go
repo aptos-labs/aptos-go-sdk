@@ -11,6 +11,8 @@ type PrivateKey interface {
 
 	/// PubKey Retrieve the public key for signature verification
 	PubKey() PublicKey
+
+	Bytes() []byte
 }
 
 // PublicKey a generic interface for a public key associated with the private key

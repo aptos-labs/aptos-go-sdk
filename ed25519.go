@@ -25,6 +25,10 @@ func (key *Ed25519PrivateKey) PubKey() PublicKey {
 	}
 }
 
+func (key *Ed25519PrivateKey) Bytes() []byte {
+	return key.inner[:]
+}
+
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator Authenticator, err error) {
 	publicKeyBytes := key.PubKey().Bytes()
 	signature := ed25519.Sign(key.inner, msg)
