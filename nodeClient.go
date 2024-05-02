@@ -15,6 +15,9 @@ import (
 	"time"
 )
 
+// For Content-Type header when POST-ing a Transaction
+const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
+
 type NodeClient struct {
 	ChainId uint8
 
@@ -23,7 +26,7 @@ type NodeClient struct {
 }
 
 func (rc *NodeClient) Info() (info NodeInfo, err error) {
-	response, err := rc.client.Get(rc.baseUrl.String())
+	response, err := rc.Get(rc.baseUrl.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", rc.baseUrl.String(), err)
 		return
@@ -53,7 +56,7 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
 		au.RawQuery = params.Encode()
 	}
-	response, err := rc.client.Get(au.String())
+	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
 		return
@@ -87,7 +90,7 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
 		au.RawQuery = params.Encode()
 	}
-	response, err := rc.client.Get(au.String())
+	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
 		return
@@ -116,7 +119,7 @@ func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ..
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
 		au.RawQuery = params.Encode()
 	}
-	response, err := rc.client.Get(au.String())
+	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
 		return
@@ -135,12 +138,22 @@ func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ..
 	return
 }
 
+func (rc *NodeClient) Get(getUrl string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", getUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	return rc.client.Do(req)
+}
+
 func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/x-bcs")
+	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
 	return rc.client.Do(req)
 }
 
@@ -203,7 +216,7 @@ func (rc *NodeClient) TransactionByVersion(version uint64) (data map[string]any,
 
 func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
 	// Fetch transaction
-	response, err := rc.client.Get(restUrl.String())
+	response, err := rc.Get(restUrl.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", restUrl.String(), err)
 		return
@@ -277,7 +290,7 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[str
 		au.RawQuery = params.Encode()
 	}
 	// TODO: ?limit=N&start=V
-	response, err := rc.client.Get(au.String())
+	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
 		return

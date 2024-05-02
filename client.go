@@ -6,40 +6,55 @@ import (
 	"time"
 )
 
-// For Content-Type header
-const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
-
-const (
-	Localnet = "localnet"
-	Devnet   = "devnet"
-	Testnet  = "testnet"
-	Mainnet  = "mainnet"
-)
-
-const (
-	localnet_api = "http://localhost:8080/v1"
-	devnet_api   = "https://api.devnet.aptoslabs.com/v1"
-	testnet_api  = "https://api.testnet.aptoslabs.com/v1"
-	mainnet_api  = "https://api.mainnet.aptoslabs.com/v1"
-)
-
-const (
-	localnet_faucet = "http://localhost:8081/v1"
-	devnet_faucet   = "https://faucet.devnet.aptoslabs.com/"
-	testnet_faucet  = "https://faucet.testnet.aptoslabs.com/"
-)
-
-const (
-	localnet_chain_id = 4
-	testnet_chain_id  = 2
-	mainnet_chain_id  = 1
-)
-
 type NetworkConfig struct {
-	network *string
-	api     *string
-	faucet  *string
-	indexer *string
+	Name       string
+	ChainId    uint8
+	NodeUrl    string
+	IndexerUrl string
+	FaucetUrl  string
+}
+
+var LocalnetConfig = NetworkConfig{
+	Name:       "localnet",
+	ChainId:    4,
+	NodeUrl:    "http://localhost:8080/v1",
+	IndexerUrl: "",
+	FaucetUrl:  "http://localhost:8081/v1",
+}
+var DevnetConfig = NetworkConfig{
+	Name:       "devnet",
+	ChainId:    3,
+	NodeUrl:    "https://api.devnet.aptoslabs.com/v1",
+	IndexerUrl: "",
+	FaucetUrl:  "https://faucet.devnet.aptoslabs.com/",
+}
+var TestnetConfig = NetworkConfig{
+	Name:       "testnet",
+	ChainId:    2,
+	NodeUrl:    "https://api.testnet.aptoslabs.com/v1",
+	IndexerUrl: "",
+	FaucetUrl:  "https://faucet.testnet.aptoslabs.com/",
+}
+var MainnetConfig = NetworkConfig{
+	Name:       "mainnet",
+	ChainId:    1,
+	NodeUrl:    "https://api.mainnet.aptoslabs.com/v1",
+	IndexerUrl: "",
+	FaucetUrl:  "",
+}
+
+// Map from network name to NetworkConfig
+var NamedNetworks map[string]NetworkConfig
+
+func init() {
+	NamedNetworks = make(map[string]NetworkConfig, 4)
+	setNN := func(nc NetworkConfig) {
+		NamedNetworks[nc.Name] = nc
+	}
+	setNN(LocalnetConfig)
+	setNN(DevnetConfig)
+	setNN(TestnetConfig)
+	setNN(MainnetConfig)
 }
 
 // Client is a facade over the multiple types of underlying clients, as the user doesn't actually care where the data
@@ -50,94 +65,41 @@ type Client struct {
 	// TODO: Add indexer client
 }
 
+var ErrUnknownNetworkName = errors.New("Unknown network name")
+
 // NewClientFromNetworkName Creates a new client for a specific network name
-func NewClientFromNetworkName(network *string) (client *Client, err error) {
-	config := NetworkConfig{network: network}
-	client, err = NewClient(config)
-	return
+func NewClientFromNetworkName(networkName string) (client *Client, err error) {
+	config, ok := NamedNetworks[networkName]
+	if !ok {
+		return nil, ErrUnknownNetworkName
+
+	}
+	return NewClient(config)
 }
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig) (client *Client, err error) {
-	var apiUrl *url.URL = nil
-
-	switch {
-	case config.api == nil && config.network == nil:
-		err = errors.New("aptos api url or network is required")
-		return
-	case config.api != nil:
-		apiUrl, err = url.Parse(*config.api)
-		if err != nil {
-			return
-		}
-	case *config.network == Localnet:
-		apiUrl, err = url.Parse(localnet_api)
-		if err != nil {
-			return
-		}
-	case *config.network == Devnet:
-		apiUrl, err = url.Parse(devnet_api)
-		if err != nil {
-			return
-		}
-	case *config.network == Testnet:
-		apiUrl, err = url.Parse(testnet_api)
-		if err != nil {
-			return
-		}
-	case *config.network == Mainnet:
-		apiUrl, err = url.Parse(mainnet_api)
-		if err != nil {
-			return
-		}
-	default:
-		err = errors.New("network name is unknown, please put Localnet, Devnet, Testnet, or Mainnet")
-		return
+	nodeUrl, err := url.Parse(config.NodeUrl)
+	if err != nil {
+		return nil, err
 	}
-	var faucetUrl *url.URL = nil
 
-	switch {
-	case config.faucet == nil && config.network == nil:
-		err = errors.New("aptos faucet url or network is required")
-		return
-	case config.faucet != nil:
-		faucetUrl, err = url.Parse(*config.faucet)
-		if err != nil {
-			return
-		}
-	case *config.network == Localnet:
-		faucetUrl, err = url.Parse(localnet_faucet)
-		if err != nil {
-			return
-		}
-	case *config.network == Devnet:
-		faucetUrl, err = url.Parse(devnet_faucet)
-		if err != nil {
-			return
-		}
-	case *config.network == Testnet:
-		faucetUrl, err = url.Parse(testnet_faucet)
-		if err != nil {
-			return
-		}
-	case *config.network == Mainnet:
-		faucetUrl = nil
-	default:
-		err = errors.New("network name is unknown, please put Localnet, Devnet, Testnet, or Mainnet")
-		return
+	faucetUrl, err := url.Parse(config.FaucetUrl)
+	if err != nil {
+		return nil, err
 	}
 
 	// TODO: add indexer
 
-	restClient := new(NodeClient)
-	restClient.baseUrl = *apiUrl
-	restClient.client.Timeout = 60 * time.Second // TODO: Make configurable
+	nodeClient := new(NodeClient)
+	nodeClient.baseUrl = *nodeUrl
+	nodeClient.client.Timeout = 60 * time.Second // TODO: Make configurable
 	faucetClient := &FaucetClient{
-		restClient,
-		faucetUrl,
+		nodeClient,
+		*faucetUrl,
 	}
 	client = &Client{
-		*restClient,
+		*nodeClient,
 		*faucetClient,
 	}
 	return

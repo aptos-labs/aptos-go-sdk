@@ -51,14 +51,14 @@ func truthy(x any) bool {
 }
 
 type FaucetClient struct {
-	restClient *NodeClient
-	url        *url.URL
+	nodeClient *NodeClient
+	url        url.URL
 }
 
 // Fund account with the given amount of AptosCoin
 func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) error {
-	if faucetClient.restClient == nil {
-		return errors.New("faucet client not initialized")
+	if faucetClient.nodeClient == nil {
+		return errors.New("faucet's node-client not initialized")
 	}
 	mintUrl := faucetClient.url
 	mintUrl.Path = path.Join(mintUrl.Path, "mint")
@@ -79,11 +79,11 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	if err != nil {
 		return fmt.Errorf("response json decode error, %w", err)
 	}
-	if faucetClient.restClient == nil {
+	if faucetClient.nodeClient == nil {
 		slog.Debug("FundAccount no txns to wait for")
 		// no Aptos client to wait on txn completion
 		return nil
 	}
 	slog.Debug("FundAccount wait for txns", "ntxn", len(txnHashes))
-	return faucetClient.restClient.WaitForTransactions(txnHashes)
+	return faucetClient.nodeClient.WaitForTransactions(txnHashes)
 }

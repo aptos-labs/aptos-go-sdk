@@ -8,7 +8,7 @@ Aptos Go SDK
 2. sequence number reading
     - Done. [RestClient.Account()](client.go)
 3. Account / object resource listing
-    - Rough. Bulk of data is still map[string]any rather than struct.
+    - Good. JSON map[string]any mode and BCS mode.
 4. Transaction waiting / reads (by hash)
     - Rough. TransactionByHash() returns map[string]any rather than struct.
 
