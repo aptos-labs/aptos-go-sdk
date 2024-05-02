@@ -378,5 +378,116 @@ func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	if err != nil {
 		return 0, err
 	}
-	return info.ChainId, nil
+
+	// Cache the ChainId for later calls, because performance
+	rc.ChainId = info.ChainId
+
+	return rc.ChainId, nil
+}
+
+// MaxGasAmount is an option to APTTransferTransaction
+type MaxGasAmount uint64
+
+// GasUnitPrice is an option to APTTransferTransaction
+type GasUnitPrice uint64
+
+// ExpirationSeconds is an option to APTTransferTransaction
+type ExpirationSeconds int64
+
+// SequenceNumber is an option to APTTransferTransaction
+type SequenceNumber uint64
+
+// ChainIdOption is an option to APTTransferTransaction
+type ChainIdOption uint8
+
+// BuildTransaction builds a raw transaction for signing
+func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+
+	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
+	gasUnitPrice := uint64(100)     // Default to min gas price
+	expirationSeconds := int64(300) // Default to 5 minutes
+	sequenceNumber := uint64(0)
+	haveSequenceNumber := false
+	chainId := uint8(0)
+	haveChainId := false
+
+	for opti, option := range options {
+		switch ovalue := option.(type) {
+		case MaxGasAmount:
+			maxGasAmount = uint64(ovalue)
+		case GasUnitPrice:
+			gasUnitPrice = uint64(ovalue)
+		case ExpirationSeconds:
+			expirationSeconds = int64(ovalue)
+			if expirationSeconds < 0 {
+				err = errors.New("ExpirationSeconds cannot be less than 0")
+				return nil, err
+			}
+		case SequenceNumber:
+			sequenceNumber = uint64(ovalue)
+			haveSequenceNumber = true
+		case ChainIdOption:
+			chainId = uint8(ovalue)
+			haveChainId = true
+		default:
+			err = fmt.Errorf("APTTransferTransaction arg [%d] unknown option type %T", opti+4, option)
+			return nil, err
+		}
+	}
+
+	// Fetch ChainId which may be cached
+	if !haveChainId {
+		chainId, err = rc.GetChainId()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Fetch sequence number unless provided
+	if !haveSequenceNumber {
+		info, err := rc.Account(sender)
+		if err != nil {
+			return nil, err
+		}
+		sequenceNumber, err = info.SequenceNumber()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO: fetch gas price onchain
+	// TODO: optionally simulate for max gas
+
+	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
+	rawTxn = &RawTransaction{
+		Sender:                    sender,
+		SequenceNumber:            sequenceNumber,
+		Payload:                   payload,
+		MaxGasAmount:              maxGasAmount,
+		GasUnitPrice:              gasUnitPrice,
+		ExpirationTimetampSeconds: expirationTimestampSeconds,
+		ChainId:                   chainId,
+	}
+
+	return
+}
+
+// BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
+// from splitting into multiple calls
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
+	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
+	if err != nil {
+		return
+	}
+	// TODO: This shows we should be taking the account, and let it handle the sign part rather than the private key
+	signedTxn, err := rawTxn.Sign(sender.PrivateKey)
+	if err != nil {
+		return
+	}
+
+	response, err := rc.SubmitTransaction(signedTxn)
+	if err != nil {
+		return
+	}
+	return response["hash"].(string), nil
 }

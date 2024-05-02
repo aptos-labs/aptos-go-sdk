@@ -40,7 +40,8 @@ func Test_Flow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
-	client.Fund(account.Address, 100_000_000)
+	err = client.Fund(account.Address, 100_000_000)
+	assert.NoError(t, err)
 
 	// Send money to 0x1
 	// Build transaction
@@ -48,13 +49,12 @@ func Test_Flow(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Send transaction
-	// TODO: verify response
 	result, err := client.SubmitTransaction(signed_txn)
 	assert.NoError(t, err)
 
 	hash := result["hash"].(string)
 
-	// TODO Wait on transaction
+	// Wait for the transaction
 	err = client.WaitForTransactions([]string{hash})
 	assert.NoError(t, err)
 
