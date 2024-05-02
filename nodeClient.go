@@ -241,6 +241,7 @@ func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any
 
 // Waits up to 10 seconds for transactions to be done, polling at 10Hz
 // TODO: options for polling period and timeout
+// TODO: use new hanging-GET endpoint
 func (rc *NodeClient) WaitForTransactions(txnHashes []string) error {
 	hashSet := make(map[string]bool, len(txnHashes))
 	for _, hash := range txnHashes {
