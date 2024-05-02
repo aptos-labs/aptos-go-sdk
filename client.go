@@ -113,8 +113,6 @@ func (client *Client) Account(address AccountAddress, ledgerVersion ...int) (inf
 	return client.nodeClient.Account(address, ledgerVersion...)
 }
 
-// TODO: set HTTP header "x-aptos-client: aptos-go-sdk/{version}"
-
 func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
 	return client.nodeClient.AccountResource(address, resourceType, ledgerVersion...)
 }

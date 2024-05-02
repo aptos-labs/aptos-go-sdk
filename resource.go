@@ -6,21 +6,28 @@ type MoveResource struct {
 }
 
 func (mr *MoveResource) MarshalBCS(bcs *Serializer) {
+	mr.Tag.MarshalBCS(bcs)
+	// We can't unmarshal `any`, BCS needs to know what destination struct type is
 	panic("TODO")
 }
 func (mr *MoveResource) UnmarshalBCS(bcs *Deserializer) {
 	mr.Tag.UnmarshalBCS(bcs)
+	// We can't unmarshal `any`, BCS needs to know what destination struct type is
+	panic("TODO")
 }
 
 type MoveStructTag struct {
 	Address           AccountAddress
-	Module            string // TODO: IdentifierWrapper ?
-	Name              string // TODO: IdentifierWrapper ?
+	Module            string
+	Name              string
 	GenericTypeParams []MoveType
 }
 
 func (mst *MoveStructTag) MarshalBCS(bcs *Serializer) {
-	panic("TODO")
+	mst.Address.MarshalBCS(bcs)
+	bcs.WriteString(mst.Module)
+	bcs.WriteString(mst.Name)
+	SerializeSequence(mst.GenericTypeParams, bcs)
 }
 func (mst *MoveStructTag) UnmarshalBCS(bcs *Deserializer) {
 	mst.Address.UnmarshalBCS(bcs)
