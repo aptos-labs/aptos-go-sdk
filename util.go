@@ -6,15 +6,28 @@ import (
 	"time"
 )
 
+// MaxGasAmount is an option to APTTransferTransaction
 type MaxGasAmount uint64
+
+// GasUnitPrice is an option to APTTransferTransaction
 type GasUnitPrice uint64
+
+// ValidSeconds is an option to APTTransferTransaction
 type ValidSeconds int64
+
+// ValidUntil is an option to APTTransferTransaction
 type ValidUntil int64
-type SequenceNumebr uint64
+
+// SequenceNumber is an option to APTTransferTransaction
+type SequenceNumber uint64
+
+// ChainIdOption is an option to APTTransferTransaction
 type ChainIdOption uint8
 
 // Move some APT from sender to dest
 // Amount in Octas (10^-8 APT)
+//
+// options may be: MaxGasAmount, GasUnitPrice, ValidSeconds, ValidUntil, SequenceNumber, ChainIdOption
 func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (stxn *SignedTransaction, err error) {
 	max_gas_amount := uint64(100_000)
 	gas_unit_price := uint64(100)
@@ -45,7 +58,7 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 			}
 			validArg = option
 			validSet = true
-		case SequenceNumebr:
+		case SequenceNumber:
 			sequence_number = uint64(ovalue)
 			haveSequenceNumber = true
 		case ChainIdOption:
