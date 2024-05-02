@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"crypto/ed25519"
 	"errors"
 	"fmt"
 	"math/big"
@@ -31,6 +30,7 @@ func (txn *RawTransaction) MarshalBCS(bcs *Serializer) {
 	bcs.U64(txn.ExpirationTimetampSeconds)
 	bcs.U8(txn.ChainId)
 }
+
 func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
 	txn.Sender.UnmarshalBCS(bcs)
 	txn.SequenceNumber = bcs.U64()
@@ -40,6 +40,7 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
 	txn.ExpirationTimetampSeconds = bcs.U64()
 	txn.ChainId = bcs.U8()
 }
+
 func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	ser := Serializer{}
 	txn.MarshalBCS(&ser)
@@ -54,27 +55,20 @@ func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	copy(signableBytes[len(prehash):], txnbytes)
 	return signableBytes, nil
 }
-func (txn *RawTransaction) SignEd25519(privateKey ed25519.PrivateKey) (stxn *SignedTransaction, err error) {
+
+func (txn *RawTransaction) Sign(privateKey PrivateKey) (stxn *SignedTransaction, err error) {
 	signableBytes, err := txn.SignableBytes()
 	if err != nil {
 		return
 	}
-	signature := ed25519.Sign(privateKey, signableBytes)
-	eauth := &Ed25519Authenticator{}
-	pubkey := privateKey.Public()
-	if pkb, ok := pubkey.(ed25519.PublicKey); ok {
-		copy(eauth.PublicKey[:], pkb[:])
-	} else {
-		panic(fmt.Sprintf("could not get bytes from pubkey: %T %#v", pubkey, pubkey))
+	authenticator, err := privateKey.Sign(signableBytes)
+	if err != nil {
+		return
 	}
-	copy(eauth.Signature[:], signature)
-	aa := Authenticator{
-		Kind: AuthenticatorEd25519,
-		Auth: eauth,
-	}
+
 	stxn = &SignedTransaction{
 		Transaction:   *txn,
-		Authenticator: aa,
+		Authenticator: authenticator,
 	}
 	return
 }

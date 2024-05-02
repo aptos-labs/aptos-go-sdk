@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"time"
 )
@@ -51,6 +50,6 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 		ChainId:                   chainId,
 	}
 
-	stxn, err = txn.SignEd25519(sender.PrivateKey.(ed25519.PrivateKey))
+	stxn, err = txn.Sign(sender.PrivateKey)
 	return stxn, err
 }

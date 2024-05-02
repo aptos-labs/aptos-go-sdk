@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"crypto/ed25519"
 	"encoding/binary"
 	"testing"
 
@@ -40,7 +39,7 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                   4,
 	}
 
-	stxn, err := txn.SignEd25519(sender.PrivateKey.(ed25519.PrivateKey))
+	stxn, err := txn.Sign(sender.PrivateKey)
 	assert.NoError(t, err)
 
 	_, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
