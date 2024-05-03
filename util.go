@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"encoding/binary"
+	"golang.org/x/crypto/sha3"
 )
 
 // Move some APT from sender to dest
@@ -30,4 +31,12 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 	}
 	signedTxn, err = rawTxn.Sign(sender.PrivateKey)
 	return
+}
+
+func SHA3_256Hash(bytes [][]byte) (output []byte) {
+	hasher := sha3.New256()
+	for _, b := range bytes {
+		hasher.Write(b)
+	}
+	return hasher.Sum([]byte{})
 }

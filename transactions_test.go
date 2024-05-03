@@ -8,7 +8,7 @@ import (
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := NewAccount()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	var dest AccountAddress

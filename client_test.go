@@ -36,7 +36,7 @@ func Test_Flow(t *testing.T) {
 	assert.Less(t, uint8(4), chainId)
 
 	// Create an account
-	account, err := NewAccount()
+	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT

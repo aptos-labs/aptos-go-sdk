@@ -207,14 +207,14 @@ func main() {
 			}
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
-			alice, err := aptos.NewAccount()
+			alice, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.Bytes()))
 
-			bob, err := aptos.NewAccount()
+			bob, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
