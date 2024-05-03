@@ -53,7 +53,7 @@ func TestClient(t *testing.T) {
 	assert.True(t, storeExists)
 
 	// This should hold
-	storeNotExist, err := faClient.StoreExists(Account0x1)
+	storeNotExist, err := faClient.StoreExists(AccountOne)
 	assert.NoError(t, err)
 	assert.False(t, storeNotExist)
 

@@ -16,7 +16,7 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: Account0x1,
+				Address: AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",

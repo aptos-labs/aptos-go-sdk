@@ -266,7 +266,7 @@ func main() {
 				SequenceNumber: sn + 1,
 				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 					Module: aptos.ModuleId{
-						Address: aptos.Account0x1,
+						Address: aptos.AccountOne,
 						Name:    "aptos_account",
 					},
 					Function: "transfer",

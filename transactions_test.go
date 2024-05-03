@@ -23,7 +23,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: Account0x1,
+				Address: AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
