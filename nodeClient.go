@@ -17,6 +17,7 @@ import (
 
 // For Content-Type header when POST-ing a Transaction
 const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
+const APTOS_VIEW_BCS = "application/x.aptos.view_function+bcs"
 
 type NodeClient struct {
 	ChainId uint8
@@ -490,4 +491,51 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender Account, payload Tran
 		return
 	}
 	return response["hash"].(string), nil
+}
+
+type ViewPayload struct {
+	Module   ModuleId
+	Function string
+	ArgTypes []TypeTag
+	Args     [][]byte
+}
+
+func (vp *ViewPayload) MarshalBCS(bcs *Serializer) {
+	vp.Module.MarshalBCS(bcs)
+	bcs.WriteString(vp.Function)
+	SerializeSequence(vp.ArgTypes, bcs)
+	bcs.Uleb128(uint64(len(vp.Args)))
+	for _, a := range vp.Args {
+		bcs.WriteBytes(a)
+	}
+}
+
+func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
+	bcs := Serializer{}
+	payload.MarshalBCS(&bcs)
+	err = bcs.Error()
+	if err != nil {
+		return
+	}
+	sblob := bcs.ToBytes()
+	bodyReader := bytes.NewReader(sblob)
+	au := rc.baseUrl
+	au.Path = path.Join(au.Path, "view")
+	response, err := rc.client.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
+	if err != nil {
+		err = fmt.Errorf("POST %s, %w", au.String(), err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return nil, err
+	}
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	_ = response.Body.Close()
+	err = json.Unmarshal(blob, &data)
+	return
 }

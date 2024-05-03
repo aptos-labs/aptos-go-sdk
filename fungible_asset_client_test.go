@@ -33,8 +33,53 @@ func TestClient(t *testing.T) {
 	assert.NoError(t, err)
 	println("BALANCE: ", balance)
 
+	name, err := faClient.Name()
+	assert.NoError(t, err)
+	println("NAME: ", name)
+	symbol, err := faClient.Symbol()
+	assert.NoError(t, err)
+	println("Symbol: ", symbol)
+
+	supply, err := faClient.Supply()
+	assert.NoError(t, err)
+	println("Supply: ", supply.String())
+
+	maximum, err := faClient.Maximum()
+	assert.NoError(t, err)
+	println("Maximum: ", maximum.String())
+
+	storeExists, err := faClient.StoreExists(primaryStoreAddress)
+	assert.NoError(t, err)
+	assert.True(t, storeExists)
+
+	// This should hold
+	storeNotExist, err := faClient.StoreExists(Account0x1)
+	assert.NoError(t, err)
+	assert.False(t, storeNotExist)
+
+	storeMetadataAddress, err := faClient.StoreMetadata(primaryStoreAddress)
+	assert.NoError(t, err)
+	assert.Equal(t, metadataAddress, storeMetadataAddress)
+
+	decimals, err := faClient.Decimals()
+	assert.NoError(t, err)
+	println("DECIMALS: ", decimals)
+
+	storePrimaryStoreAddress, err := faClient.PrimaryStoreAddress(ownerAddress)
+	assert.NoError(t, err)
+	assert.Equal(t, primaryStoreAddress, storePrimaryStoreAddress)
+
+	primaryStoreExists, err := faClient.PrimaryStoreExists(ownerAddress)
+	assert.NoError(t, err)
+	assert.True(t, primaryStoreExists)
+
 	// Primary store by default
-	primaryBalance, err := faClient.PrimaryBalance(&ownerAddress)
+	primaryBalance, err := faClient.PrimaryBalance(ownerAddress)
 	assert.NoError(t, err)
 	println("PRIMARY BALANCE: ", primaryBalance)
+
+	isFrozen, err := faClient.IsFrozen(primaryStoreAddress)
+	assert.NoError(t, err)
+	assert.False(t, isFrozen)
+
 }

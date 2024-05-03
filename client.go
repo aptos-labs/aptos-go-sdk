@@ -183,3 +183,8 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 func (client *Client) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
+
+// TODO: support ledger version
+func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
+	return client.nodeClient.View(payload)
+}
