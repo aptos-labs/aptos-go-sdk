@@ -84,13 +84,14 @@ func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAd
 }
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
-func (aa *AccountAddress) DerivedAddress(seed []byte, type_byte uint8) (accountAddress AccountAddress) {
+func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
 	accountAddress = AccountAddress{}
 	hasher := sha3.New256()
 	hasher.Write(aa[:])
 	hasher.Write(seed[:])
-	hasher.Write([]byte{type_byte})
-	hasher.Sum(accountAddress[:])
+	hasher.Write([]byte{typeByte})
+	bytes := hasher.Sum([]byte{})
+	copy(accountAddress[:], bytes)
 	return
 }
 
@@ -133,5 +134,6 @@ func (aa *AccountAddress) ParseStringRelaxed(x string) error {
 	}
 	// zero-prefix/right-align what bytes we got
 	copy((*aa)[32-len(abytes):], abytes)
+
 	return nil
 }

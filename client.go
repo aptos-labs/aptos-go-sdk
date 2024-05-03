@@ -175,3 +175,11 @@ func (client *Client) GetChainId() (chainId uint8, err error) {
 func (client *Client) Fund(address AccountAddress, amount uint64) error {
 	return client.faucetClient.Fund(address, amount)
 }
+
+func (client *Client) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+	return client.nodeClient.BuildTransaction(sender, payload, options...)
+}
+
+func (client *Client) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
+	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
+}
