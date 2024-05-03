@@ -313,7 +313,11 @@ func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, funct
 // Helper function to pull out the object address
 // TODO: Move to somewhere more useful
 func unwrapObject(val any) (address AccountAddress, err error) {
-	inner := val.(map[string]any)
+	inner, ok := val.(map[string]any)
+	if !ok {
+		err = errors.New("bad view return from node, could not unwrap object")
+		return
+	}
 	addressString := inner["inner"].(string)
 	err = address.ParseStringRelaxed(addressString)
 	return
