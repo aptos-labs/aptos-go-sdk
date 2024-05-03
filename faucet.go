@@ -85,5 +85,10 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 		return nil
 	}
 	slog.Debug("FundAccount wait for txns", "ntxn", len(txnHashes))
-	return faucetClient.nodeClient.WaitForTransactions(txnHashes)
+	if len(txnHashes) == 1 {
+		_, err = faucetClient.nodeClient.WaitForTransaction(txnHashes[0])
+		return err
+	} else {
+		return faucetClient.nodeClient.PollForTransactions(txnHashes)
+	}
 }

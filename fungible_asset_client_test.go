@@ -1,11 +1,16 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestClient(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to mainnet")
+	}
+
 	// Create a new Aptos client
 	aptosClient, err := NewClient(MainnetConfig)
 	assert.NoError(t, err)

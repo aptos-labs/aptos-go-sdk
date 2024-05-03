@@ -79,12 +79,9 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 	return
 }
 
-// TODO: set HTTP header "x-aptos-client: aptos-go-sdk/{version}"
-
 func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl
 	// TODO: offer a list of known-good resourceType string constants
-	// TODO: set "Accept: application/x-bcs" and parse BCS objects for lossless (and faster) transmission
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resource", resourceType)
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -240,21 +237,45 @@ func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any
 	return
 }
 
+// Do a long-GET for one transaction and wait for it to complete
+func (rc *NodeClient) WaitForTransaction(txnHash string) (data map[string]any, err error) {
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/wait_by_hash", txnHash)
+	return rc.getTransactionCommon(restUrl)
+}
+
+// PollPeriod is an option to PollForTransactions
+type PollPeriod time.Duration
+
+// PollTimeout is an option to PollForTransactions
+type PollTimeout time.Duration
+
 // Waits up to 10 seconds for transactions to be done, polling at 10Hz
-// TODO: options for polling period and timeout
-// TODO: use new hanging-GET endpoint
-func (rc *NodeClient) WaitForTransactions(txnHashes []string) error {
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) error {
+	period := 100 * time.Millisecond
+	timeout := 10 * time.Second
+	for argi, arg := range options {
+		switch value := arg.(type) {
+		case PollPeriod:
+			period = time.Duration(value)
+		case PollTimeout:
+			timeout = time.Duration(value)
+		default:
+			return fmt.Errorf("PollForTransactions arg %d bad type %T", argi+1, arg)
+		}
+	}
 	hashSet := make(map[string]bool, len(txnHashes))
 	for _, hash := range txnHashes {
 		hashSet[hash] = true
 	}
 	start := time.Now()
-	deadline := start.Add(10 * time.Second)
+	deadline := start.Add(timeout)
 	for len(hashSet) > 0 {
 		if time.Now().After(deadline) {
 			return errors.New("timeout waiting for faucet transactions")
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(period)
 		for _, hash := range txnHashes {
 			if !hashSet[hash] {
 				// already done
@@ -291,7 +312,6 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	if len(params) != 0 {
 		au.RawQuery = params.Encode()
 	}
-	// TODO: ?limit=N&start=V
 	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)

@@ -200,8 +200,8 @@ func (xt *AccountAddressTag) UnmarshalBCS(bcs *Deserializer) {
 
 type StructTag struct {
 	Address    AccountAddress
-	Module     string // TODO: IdentifierWrapper ?
-	Name       string // TODO: IdentifierWrapper ?
+	Module     string
+	Name       string
 	TypeParams []TypeTag
 }
 

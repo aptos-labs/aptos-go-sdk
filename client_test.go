@@ -55,7 +55,7 @@ func Test_Flow(t *testing.T) {
 	hash := result["hash"].(string)
 
 	// Wait for the transaction
-	err = client.WaitForTransactions([]string{hash})
+	_, err = client.WaitForTransaction(hash)
 	assert.NoError(t, err)
 
 	// Read transaction by hash
