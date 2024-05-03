@@ -212,14 +212,14 @@ func main() {
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.Bytes()))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
 
 			bob, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.Bytes()))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
 
 			time.Sleep(2 * time.Second)
 			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)

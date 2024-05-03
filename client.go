@@ -180,7 +180,7 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 	return client.nodeClient.BuildTransaction(sender, payload, options...)
 }
 
-func (client *Client) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 

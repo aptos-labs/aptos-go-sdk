@@ -29,7 +29,7 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 	if err != nil {
 		return
 	}
-	signedTxn, err = rawTxn.Sign(sender.PrivateKey)
+	signedTxn, err = rawTxn.Sign(sender)
 	return
 }
 

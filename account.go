@@ -55,7 +55,7 @@ func (aa *AccountAddress) String() string {
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
-func (aa *AccountAddress) MarshalBCS(bcs *Serializer) {
+func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
 	bcs.FixedBytes(aa[:])
 }
 

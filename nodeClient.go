@@ -475,13 +475,13 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return
 	}
 	// TODO: This shows we should be taking the account, and let it handle the sign part rather than the private key
-	signedTxn, err := rawTxn.Sign(sender.PrivateKey)
+	signedTxn, err := rawTxn.Sign(sender)
 	if err != nil {
 		return
 	}

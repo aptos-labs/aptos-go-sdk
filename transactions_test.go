@@ -39,7 +39,7 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                   4,
 	}
 
-	stxn, err := txn.Sign(sender.PrivateKey)
+	stxn, err := txn.Sign(sender)
 	assert.NoError(t, err)
 
 	_, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
