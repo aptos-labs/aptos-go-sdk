@@ -28,7 +28,6 @@ var LocalnetConfig = NetworkConfig{
 }
 var DevnetConfig = NetworkConfig{
 	Name:       "devnet",
-	ChainId:    3,
 	NodeUrl:    "https://api.devnet.aptoslabs.com/v1",
 	IndexerUrl: "",
 	FaucetUrl:  "https://faucet.devnet.aptoslabs.com/",
@@ -107,7 +106,14 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 
 	nodeClient.client.Jar = jar
 	nodeClient.baseUrl = *nodeUrl
-	nodeClient.client.Timeout = 60 * time.Second
+	nodeClient.client.Timeout = 60 * time.Second // TODO: Make configurable
+
+	// Fetch the chain Id if it isn't in the config
+	if config.ChainId == 0 {
+		_, _ = nodeClient.GetChainId()
+	} else {
+		nodeClient.ChainId = config.ChainId
+	}
 	faucetClient := &FaucetClient{
 		nodeClient,
 		*faucetUrl,
