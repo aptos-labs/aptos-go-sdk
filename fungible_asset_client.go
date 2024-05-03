@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
@@ -326,12 +327,20 @@ func unwrapObject(val any) (address AccountAddress, err error) {
 // Helper function to pull out the object address
 // TODO: Move to somewhere more useful
 func unwrapAggregator(val any) (num *big.Int, err error) {
-	inner := val.(map[string]any)
+	inner, ok := val.(map[string]any)
+	if !ok {
+		err = errors.New("bad view return from node, could not unwrap aggregator")
+		return
+	}
 	vals := inner["vec"].([]any)
 	if len(vals) == 0 {
 		return nil, nil
 	}
-	numStr := vals[0].(string)
+	numStr, ok := vals[0].(string)
+	if !ok {
+		err = errors.New("bad view return from node, aggregator value is not a string")
+		return
+	}
 
 	return ToU128OrU256(numStr)
 }
