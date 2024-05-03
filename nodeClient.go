@@ -155,6 +155,39 @@ func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 	return rc.client.Do(req)
 }
 
+func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (resp *http.Response, err error) {
+	req, err := http.NewRequest("POST", postUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	if body == nil {
+		req.Body = &nilBodySingleton
+	} else {
+		readCloser, ok := body.(io.ReadCloser)
+		if ok {
+			req.Body = readCloser
+		} else {
+			req.Body = io.NopCloser(body)
+		}
+	}
+	return rc.client.Do(req)
+}
+
+// empty io.ReadCloser
+type NilBody struct {
+}
+
+var nilBodySingleton NilBody
+
+func (nb *NilBody) Read(p []byte) (n int, err error) {
+	return 0, io.EOF
+}
+func (nb *NilBody) Close() error {
+	return nil
+}
+
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl
@@ -341,7 +374,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 	bodyReader := bytes.NewReader(rblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions/encode_submission")
-	response, err := rc.client.Post(au.String(), "application/json", bodyReader)
+	response, err := rc.Post(au.String(), "application/json", bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -371,7 +404,7 @@ func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions")
-	response, err := rc.client.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
+	response, err := rc.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -541,7 +574,7 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "view")
-	response, err := rc.client.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
+	response, err := rc.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return

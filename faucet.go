@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"net/url"
 	"path"
 	"strconv"
@@ -66,7 +65,7 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	params.Set("amount", strconv.FormatUint(amount, 10))
 	params.Set("address", address.String())
 	mintUrl.RawQuery = params.Encode()
-	response, err := http.Post(mintUrl.String(), "text/plain", nil)
+	response, err := faucetClient.nodeClient.Post(mintUrl.String(), "text/plain", nil)
 	if err != nil {
 		return err
 	}
