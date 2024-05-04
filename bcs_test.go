@@ -7,6 +7,20 @@ import (
 	"testing"
 )
 
+type TestStruct struct {
+	num uint8
+	b   bool
+}
+
+func (st *TestStruct) MarshalBCS(bcs *Serializer) {
+	bcs.U8(st.num)
+	bcs.Bool(st.b)
+}
+func (st *TestStruct) UnmarshalBCS(bcs *Deserializer) {
+	st.num = bcs.U8()
+	st.b = bcs.Bool()
+}
+
 func Test_U8(t *testing.T) {
 	serialized := []string{"00", "01", "ff"}
 	deserialized := []uint8{0, 1, 0xff}
@@ -141,6 +155,30 @@ func Test_Bytes(t *testing.T) {
 		bytes := deserializer.ReadBytes()
 		return hex.EncodeToString(bytes)
 	})
+}
+
+func Test_Struct(t *testing.T) {
+	serialized := []string{"0000", "0001", "FF01"}
+	deserialized := []TestStruct{{0, false}, {0, true}, {255, true}}
+
+	// Serializer
+	for i, input := range deserialized {
+		serializer := &Serializer{}
+		serializer.Struct(&input)
+		expected, _ := hex.DecodeString(serialized[i])
+		assert.Equal(t, expected, serializer.ToBytes())
+		assert.NoError(t, serializer.Error())
+	}
+
+	// Deserializer
+	for i, input := range serialized {
+		bytes, _ := hex.DecodeString(input)
+		deserializer := &Deserializer{source: bytes}
+		st := TestStruct{}
+		deserializer.Struct(&st)
+		assert.Equal(t, deserialized[i], st)
+		assert.NoError(t, deserializer.Error())
+	}
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {

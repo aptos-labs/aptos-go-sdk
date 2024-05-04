@@ -118,7 +118,7 @@ func NewEd25519Account() (*Account, error) {
 		return nil, err
 	}
 	out := &Account{}
-	out.Address.FromPublicKey(pubkey)
+	out.Address.FromPublicKey(&pubkey)
 	out.Signer = &privkey
 	return out, nil
 }

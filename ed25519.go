@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"crypto/ed25519"
+	"encoding/hex"
 )
 
 type Ed25519PrivateKey struct {
@@ -20,13 +21,17 @@ func GenerateEd5519Keys() (privkey Ed25519PrivateKey, pubkey Ed25519PublicKey, e
 
 func (key *Ed25519PrivateKey) PubKey() PublicKey {
 	pubkey := key.inner.Public()
-	return Ed25519PublicKey{
+	return &Ed25519PublicKey{
 		pubkey.(ed25519.PublicKey),
 	}
 }
 
 func (key *Ed25519PrivateKey) Bytes() []byte {
 	return key.inner[:]
+}
+
+func (key *Ed25519PrivateKey) String() string {
+	return hex.EncodeToString(key.Bytes())
 }
 
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator Authenticator, err error) {
@@ -47,22 +52,14 @@ type Ed25519PublicKey struct {
 	inner ed25519.PublicKey
 }
 
-func (key Ed25519PublicKey) Bytes() []byte {
+func (key *Ed25519PublicKey) Bytes() []byte {
 	return key.inner[:]
 }
-func (key Ed25519PublicKey) Scheme() uint8 {
+
+func (key *Ed25519PublicKey) Scheme() uint8 {
 	return Ed25519Scheme
 }
 
-func (key Ed25519PublicKey) MarshalBCS(bcs *Serializer) {
-	bcs.FixedBytes(key.inner[:])
-}
-
-func (key Ed25519PublicKey) UnmarshalBCS(bcs *Deserializer) {
-	key = Ed25519PublicKey{}
-	bytes := bcs.ReadFixedBytes(32)
-	if bcs.Error() != nil {
-		return
-	}
-	copy(key.inner[:], bytes)
+func (key *Ed25519PublicKey) String() string {
+	return hex.EncodeToString(key.Bytes())
 }
