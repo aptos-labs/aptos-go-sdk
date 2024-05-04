@@ -1,6 +1,6 @@
 package aptos
 
-// DeserializeSequence[AccountResourceRecord](bcs) approximates the Rust side BTreeMap<StructTag,Vec<u8>>
+// AccountResourceRecord DeserializeSequence[AccountResourceRecord](bcs) approximates the Rust side BTreeMap<StructTag,Vec<u8>>
 // They should BCS the same with a prefix Uleb128 length followed by (StructTag,[]byte) pairs.
 type AccountResourceRecord struct {
 	// Account::Module::Name

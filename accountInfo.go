@@ -12,7 +12,7 @@ type AccountInfo struct {
 	AuthenticationKeyHex string `json:"authentication_key"`
 }
 
-// Hex decode of AuthenticationKeyHex
+// AuthenticationKey Hex decode of AuthenticationKeyHex
 func (ai AccountInfo) AuthenticationKey() ([]byte, error) {
 	ak := ai.AuthenticationKeyHex
 	if strings.HasPrefix(ak, "0x") {
@@ -21,7 +21,7 @@ func (ai AccountInfo) AuthenticationKey() ([]byte, error) {
 	return hex.DecodeString(ak)
 }
 
-// ParseUint of SequenceNumberStr
+// SequenceNumber ParseUint of SequenceNumberStr
 func (ai AccountInfo) SequenceNumber() (uint64, error) {
 	return strconv.ParseUint(ai.SequenceNumberStr, 10, 64)
 }

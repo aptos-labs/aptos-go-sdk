@@ -5,7 +5,8 @@ import (
 	"fmt"
 )
 
-type AuthenticatorType int
+// AuthenticatorType single byte representing the spot in the enum from the Rust implementation
+type AuthenticatorType uint8
 
 const (
 	AuthenticatorEd25519      AuthenticatorType = 0
@@ -39,6 +40,7 @@ func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {
 		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindu))
 	}
 }
+
 func (ea *Authenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
 }
@@ -46,7 +48,7 @@ func (ea *Authenticator) Verify(data []byte) bool {
 type AuthenticatorImpl interface {
 	BCSStruct
 
-	// Return true if this Authenticator approves
+	// Verify Return true if this Authenticator approves
 	Verify(data []byte) bool
 }
 
@@ -74,7 +76,7 @@ func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *Deserializer) {
 	copy(ea.Signature[:], sb)
 }
 
-// Return true if the data was well signed
+// Verify Return true if the data was well signed
 func (ea *Ed25519Authenticator) Verify(data []byte) bool {
 	return ed25519.Verify(ed25519.PublicKey(ea.PublicKey[:]), data, ea.Signature[:])
 }
