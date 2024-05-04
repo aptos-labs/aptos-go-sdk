@@ -22,7 +22,7 @@ type Authenticator struct {
 }
 
 func (ea *Authenticator) MarshalBCS(bcs *Serializer) {
-	bcs.Uleb128(uint64(ea.Kind))
+	bcs.Uleb128(uint32(ea.Kind))
 	ea.Auth.MarshalBCS(bcs)
 }
 func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {

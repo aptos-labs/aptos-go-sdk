@@ -260,7 +260,7 @@ func (sf *EntryFunction) MarshalBCS(bcs *Serializer) {
 	sf.Module.MarshalBCS(bcs)
 	bcs.WriteString(sf.Function)
 	SerializeSequence(sf.ArgTypes, bcs)
-	bcs.Uleb128(uint64(len(sf.Args)))
+	bcs.Uleb128(uint32(len(sf.Args)))
 	for _, a := range sf.Args {
 		bcs.WriteBytes(a)
 	}

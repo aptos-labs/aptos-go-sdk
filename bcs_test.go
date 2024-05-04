@@ -75,11 +75,11 @@ func Test_U256(t *testing.T) {
 
 func Test_Uleb128(t *testing.T) {
 	serialized := []string{"00", "01", "7f", "ff7f", "ffff03", "ffffffff0f"}
-	deserialized := []uint64{0, 1, 127, 16383, 65535, 0xffffffff}
+	deserialized := []uint32{0, 1, 127, 16383, 65535, 0xffffffff}
 
-	helper(t, serialized, deserialized, func(serializer *Serializer, input uint64) {
+	helper(t, serialized, deserialized, func(serializer *Serializer, input uint32) {
 		serializer.Uleb128(input)
-	}, func(deserializer *Deserializer) uint64 {
+	}, func(deserializer *Deserializer) uint32 {
 		return deserializer.Uleb128()
 	})
 }

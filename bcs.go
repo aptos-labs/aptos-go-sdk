@@ -74,7 +74,7 @@ func (bcs *Serializer) U256(v big.Int) {
 	bcs.out.Write(ub[:])
 }
 
-func (bcs *Serializer) Uleb128(v uint64) {
+func (bcs *Serializer) Uleb128(v uint32) {
 	for v > 0x80 {
 		nb := uint8(v & 0x7f)
 		bcs.out.WriteByte(0x80 | nb)
@@ -84,7 +84,7 @@ func (bcs *Serializer) Uleb128(v uint64) {
 }
 
 func (bcs *Serializer) WriteBytes(v []byte) {
-	bcs.Uleb128(uint64(len(v)))
+	bcs.Uleb128(uint32(len(v)))
 	bcs.out.Write(v)
 }
 
@@ -114,7 +114,7 @@ func (bcs *Serializer) ToBytes() []byte {
 }
 
 func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
-	bcs.Uleb128(uint64(len(x)))
+	bcs.Uleb128(uint32(len(x)))
 	for i, v := range x {
 		mv, ok := any(v).(BCSStruct)
 		if ok {
@@ -237,13 +237,13 @@ func (d *Deserializer) Bool() bool {
 	return v
 }
 
-func (d *Deserializer) Uleb128() uint64 {
-	var value uint64 = 0
+func (d *Deserializer) Uleb128() uint32 {
+	var value uint32 = 0
 	shift := 0
 
 	for {
 		b := d.source[d.pos]
-		value = value | (uint64(b&0x7f) << shift)
+		value = value | (uint32(b&0x7f) << shift)
 		d.pos++
 		if (b & 0x80) == 0 {
 			break

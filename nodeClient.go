@@ -504,7 +504,7 @@ func (vp *ViewPayload) MarshalBCS(bcs *Serializer) {
 	vp.Module.MarshalBCS(bcs)
 	bcs.WriteString(vp.Function)
 	SerializeSequence(vp.ArgTypes, bcs)
-	bcs.Uleb128(uint64(len(vp.Args)))
+	bcs.Uleb128(uint32(len(vp.Args)))
 	for _, a := range vp.Args {
 		bcs.WriteBytes(a)
 	}
