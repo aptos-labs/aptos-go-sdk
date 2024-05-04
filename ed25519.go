@@ -3,6 +3,7 @@ package aptos
 import (
 	"crypto/ed25519"
 	"encoding/hex"
+	"errors"
 )
 
 type Ed25519PrivateKey struct {
@@ -30,8 +31,20 @@ func (key *Ed25519PrivateKey) Bytes() []byte {
 	return key.inner[:]
 }
 
-func (key *Ed25519PrivateKey) String() string {
+func (key *Ed25519PrivateKey) ToHex() string {
 	return hex.EncodeToString(key.Bytes())
+}
+
+func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
+	bytes, err := ParseHex(hexStr)
+	if err != nil {
+		return err
+	}
+	if len(bytes) != ed25519.PrivateKeySize {
+		return errors.New("invalid ed25519 private key size")
+	}
+	key.inner = bytes
+	return nil
 }
 
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator Authenticator, err error) {
@@ -60,6 +73,18 @@ func (key *Ed25519PublicKey) Scheme() uint8 {
 	return Ed25519Scheme
 }
 
-func (key *Ed25519PublicKey) String() string {
+func (key *Ed25519PublicKey) ToHex() string {
 	return hex.EncodeToString(key.Bytes())
+}
+
+func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
+	bytes, err := ParseHex(hexStr)
+	if err != nil {
+		return err
+	}
+	if len(bytes) != ed25519.PublicKeySize {
+		return errors.New("invalid ed25519 public key size")
+	}
+	key.inner = bytes
+	return nil
 }
