@@ -8,7 +8,7 @@ import (
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := NewAccount()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	var dest AccountAddress
@@ -23,7 +23,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: Account0x1,
+				Address: AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
@@ -39,7 +39,7 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                   4,
 	}
 
-	stxn, err := txn.Sign(sender.PrivateKey)
+	stxn, err := txn.Sign(sender)
 	assert.NoError(t, err)
 
 	_, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)

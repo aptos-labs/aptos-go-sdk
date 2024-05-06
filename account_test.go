@@ -29,6 +29,13 @@ func TestAccountSpecialString(t *testing.T) {
 	}
 }
 
+func TestAccountAddress_ParseStringRelaxed_Error(t *testing.T) {
+	var owner AccountAddress
+	err := owner.ParseStringRelaxed("0x")
+	assert.Error(t, err)
+	err = owner.ParseStringRelaxed("0xF1234567812345678123456781234567812345678123456781234567812345678")
+	assert.Error(t, err)
+}
 func TestAccountAddress_ObjectAddressFromObject(t *testing.T) {
 	var owner AccountAddress
 	err := owner.ParseStringRelaxed(defaultOwner)

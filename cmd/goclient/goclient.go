@@ -207,19 +207,19 @@ func main() {
 			}
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
-			alice, err := aptos.NewAccount()
+			alice, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", alice.Address.String(), amount, hex.EncodeToString(alice.PrivateKey.Bytes()))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
 
-			bob, err := aptos.NewAccount()
+			bob, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d, privkey = %s\n", bob.Address.String(), amount, hex.EncodeToString(bob.PrivateKey.Bytes()))
+			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
 
 			time.Sleep(2 * time.Second)
 			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
@@ -266,7 +266,7 @@ func main() {
 				SequenceNumber: sn + 1,
 				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 					Module: aptos.ModuleId{
-						Address: aptos.Account0x1,
+						Address: aptos.AccountOne,
 						Name:    "aptos_account",
 					},
 					Function: "transfer",

@@ -32,7 +32,7 @@ type TypeTag struct {
 }
 
 func (tt *TypeTag) MarshalBCS(bcs *Serializer) {
-	bcs.Uleb128(uint64(tt.Value.GetType()))
+	bcs.Uleb128(uint32(tt.Value.GetType()))
 	tt.Value.MarshalBCS(bcs)
 
 }

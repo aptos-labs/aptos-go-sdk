@@ -56,12 +56,12 @@ func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	return signableBytes, nil
 }
 
-func (txn *RawTransaction) Sign(privateKey PrivateKey) (stxn *SignedTransaction, err error) {
+func (txn *RawTransaction) Sign(sender *Account) (stxn *SignedTransaction, err error) {
 	signableBytes, err := txn.SignableBytes()
 	if err != nil {
 		return
 	}
-	authenticator, err := privateKey.Sign(signableBytes)
+	authenticator, err := sender.Sign(signableBytes)
 	if err != nil {
 		return
 	}
@@ -260,7 +260,7 @@ func (sf *EntryFunction) MarshalBCS(bcs *Serializer) {
 	sf.Module.MarshalBCS(bcs)
 	bcs.WriteString(sf.Function)
 	SerializeSequence(sf.ArgTypes, bcs)
-	bcs.Uleb128(uint64(len(sf.Args)))
+	bcs.Uleb128(uint32(len(sf.Args)))
 	for _, a := range sf.Args {
 		bcs.WriteBytes(a)
 	}
