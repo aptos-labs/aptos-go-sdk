@@ -8,12 +8,12 @@ import (
 
 func TestStructTag(t *testing.T) {
 	st := StructTag{
-		Address: Account0x1,
+		Address: AccountOne,
 		Module:  "coin",
 		Name:    "CoinStore",
 		TypeParams: []TypeTag{
 			TypeTag{Value: &StructTag{
-				Address:    Account0x1,
+				Address:    AccountOne,
 				Module:     "aptos_coin",
 				Name:       "AptosCoin",
 				TypeParams: nil,

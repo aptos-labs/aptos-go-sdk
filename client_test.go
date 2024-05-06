@@ -36,7 +36,7 @@ func Test_Flow(t *testing.T) {
 	assert.Less(t, uint8(4), chainId)
 
 	// Create an account
-	account, err := NewAccount()
+	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
@@ -45,7 +45,7 @@ func Test_Flow(t *testing.T) {
 
 	// Send money to 0x1
 	// Build transaction
-	signed_txn, err := APTTransferTransaction(client, account, Account0x1, 100)
+	signed_txn, err := APTTransferTransaction(client, account, AccountOne, 100)
 	assert.NoError(t, err)
 
 	// Send transaction

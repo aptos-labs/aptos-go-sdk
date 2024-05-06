@@ -6,9 +6,9 @@ import (
 )
 
 func TestAPTTransferTransaction(t *testing.T) {
-	sender, err := NewAccount()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
-	dest, err := NewAccount()
+	dest, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	client, err := NewClient(DevnetConfig)

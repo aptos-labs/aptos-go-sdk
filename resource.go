@@ -57,7 +57,7 @@ const (
 )
 
 func (mt *MoveType) MarshalBCS(bcs *Serializer) {
-	bcs.Uleb128(uint64(*mt))
+	bcs.Uleb128(uint32(*mt))
 }
 func (mt *MoveType) UnmarshalBCS(bcs *Deserializer) {
 	*mt = MoveType(bcs.Uleb128())

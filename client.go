@@ -7,6 +7,10 @@ import (
 	"time"
 )
 
+// NetworkConfig a configuration for the Client and which
+// network to use.  Use one of the preconfigured LocalnetConfig,
+// DevnetConfig, TestnetConfig, or MainnetConfig unless you have
+// your own full node
 type NetworkConfig struct {
 	Name       string
 	ChainId    uint8
@@ -115,18 +119,23 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	return
 }
 
+// SetTimeout adjusts the HTTP client timeout
 func (client *Client) SetTimeout(timeout time.Duration) {
 	client.nodeClient.client.Timeout = timeout
 }
 
+// Info Retrieves the node info about the network and it's current state
 func (client *Client) Info() (info NodeInfo, err error) {
 	return client.nodeClient.Info()
 }
 
+// Account Retrieves information about the account such as SequenceNumber and AuthenticationKey
 func (client *Client) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
 	return client.nodeClient.Account(address, ledgerVersion...)
 }
 
+// AccountResource Retrieves a single resource given its struct name.
+// Can also fetch at a specific ledger version
 func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
 	return client.nodeClient.AccountResource(address, resourceType, ledgerVersion...)
 }
@@ -161,6 +170,8 @@ func (client *Client) TransactionByHash(txnHash string) (data map[string]any, er
 	return client.nodeClient.TransactionByHash(txnHash)
 }
 
+// TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
+// committed to have a ledger version
 func (client *Client) TransactionByVersion(version uint64) (data map[string]any, err error) {
 	return client.nodeClient.TransactionByVersion(version)
 }
@@ -183,26 +194,35 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []map[str
 	return client.nodeClient.Transactions(start, limit)
 }
 
+// SubmitTransaction Submits an already signed transaction to the blockchain
 func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data map[string]any, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
 }
 
+// GetChainId Retrieves the ChainId of the network
+// Note this will be cached forever, or taken directly from the config
 func (client *Client) GetChainId() (chainId uint8, err error) {
 	return client.nodeClient.GetChainId()
 }
 
+// Fund Uses the faucet to fund an address, only applies to non-production networks
 func (client *Client) Fund(address AccountAddress, amount uint64) error {
 	return client.faucetClient.Fund(address, amount)
 }
 
+// BuildTransaction Builds a raw transaction from the payload and fetches any necessary information
+// from onchain
 func (client *Client) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 	return client.nodeClient.BuildTransaction(sender, payload, options...)
 }
 
-func (client *Client) BuildSignAndSubmitTransaction(sender Account, payload TransactionPayload, options ...any) (hash string, err error) {
+// BuildSignAndSubmitTransaction Convenience function to do all three in one
+// for more configuration, please use them separately
+func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 
+// View Runs a view function on chain returning a list of return values.
 // TODO: support ledger version
 func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
 	return client.nodeClient.View(payload)
