@@ -270,11 +270,36 @@ func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any
 	return
 }
 
-// Do a long-GET for one transaction and wait for it to complete
-func (rc *NodeClient) WaitForTransaction(txnHash string) (data map[string]any, err error) {
+// WaitForTransaction does a long-GET for one transaction and wait for it to complete.
+// Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
+// Accept option arguments PollPeriod and PollTimeout like PollForTransactions.
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data map[string]any, err error) {
+	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 1*time.Second, options...)
+	if err != nil {
+		return nil, err
+	}
 	restUrl := rc.baseUrl
 	restUrl.Path = path.Join(restUrl.Path, "transactions/wait_by_hash", txnHash)
-	return rc.getTransactionCommon(restUrl)
+	start := time.Now()
+	deadline := start.Add(timeout)
+	for {
+		data, err = rc.getTransactionCommon(restUrl)
+		if err == nil {
+			return
+		}
+		if httpErr, ok := err.(*HttpError); ok {
+			if httpErr.StatusCode == 404 {
+				if time.Now().Before(deadline) {
+					time.Sleep(period)
+				} else {
+					return
+				}
+			}
+		} else {
+			return
+		}
+	}
+
 }
 
 // PollPeriod is an option to PollForTransactions
@@ -283,11 +308,9 @@ type PollPeriod time.Duration
 // PollTimeout is an option to PollForTransactions
 type PollTimeout time.Duration
 
-// Waits up to 10 seconds for transactions to be done, polling at 10Hz
-// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
-func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) error {
-	period := 100 * time.Millisecond
-	timeout := 10 * time.Second
+func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, options ...any) (period time.Duration, timeout time.Duration, err error) {
+	period = defaultPeriod
+	timeout = defaultTimeout
 	for argi, arg := range options {
 		switch value := arg.(type) {
 		case PollPeriod:
@@ -295,8 +318,19 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 		case PollTimeout:
 			timeout = time.Duration(value)
 		default:
-			return fmt.Errorf("PollForTransactions arg %d bad type %T", argi+1, arg)
+			err = fmt.Errorf("PollForTransactions arg %d bad type %T", argi+1, arg)
+			return
 		}
+	}
+	return
+}
+
+// PollForTransactions waits up to 10 seconds for transactions to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) error {
+	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
+	if err != nil {
+		return err
 	}
 	hashSet := make(map[string]bool, len(txnHashes))
 	for _, hash := range txnHashes {
