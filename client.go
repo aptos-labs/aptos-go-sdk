@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"errors"
+	"net/http/cookiejar"
 	"net/url"
 	"time"
 )
@@ -92,6 +93,15 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	// TODO: add indexer
 
 	nodeClient := new(NodeClient)
+
+	// Set cookie jar so cookie stickiness applies to connections
+	// TODO Add appropriate suffix list
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
+
+	nodeClient.client.Jar = jar
 	nodeClient.baseUrl = *nodeUrl
 	nodeClient.client.Timeout = 60 * time.Second // TODO: Make configurable
 	faucetClient := &FaucetClient{
