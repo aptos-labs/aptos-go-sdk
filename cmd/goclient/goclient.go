@@ -225,6 +225,7 @@ func main() {
 			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			slog.Debug("transfer", "stxn", stxn)
+			submitStart := time.Now()
 			result, err := client.SubmitTransaction(stxn)
 			if err != nil {
 				if he, ok := err.(*aptos.HttpError); ok {
@@ -233,6 +234,20 @@ func main() {
 				maybefail(err, "could not submit transfer txn, %s", err)
 			}
 			fmt.Printf("submit txn result:\n%s\n", prettyJson(result))
+			txnHashX, haveHash := result["hash"]
+			var txnHash string
+			if haveHash {
+				txnHash, haveHash = txnHashX.(string)
+			}
+			if haveHash {
+				txnInfo, err := client.WaitForTransaction(txnHash)
+				dt := time.Now().Sub(submitStart)
+				if err != nil {
+					fmt.Printf("txn wait done in %.2f seconds, err=%s\n", dt.Seconds(), err)
+				} else {
+					fmt.Printf("txn wait done in %.2f seconds, success result:\n%s\n", dt.Seconds(), prettyJson(txnInfo))
+				}
+			}
 			fmt.Printf("alice addr %s\n", alice.Address.String())
 			fmt.Printf("bob   addr %s\n", bob.Address.String())
 		} else if arg == "send" {

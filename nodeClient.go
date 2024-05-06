@@ -79,12 +79,9 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 	return
 }
 
-// TODO: set HTTP header "x-aptos-client: aptos-go-sdk/{version}"
-
 func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl
 	// TODO: offer a list of known-good resourceType string constants
-	// TODO: set "Accept: application/x-bcs" and parse BCS objects for lossless (and faster) transmission
 	au.Path = path.Join(au.Path, "accounts", address.String(), "resource", resourceType)
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -156,6 +153,39 @@ func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 	req.Header.Set("Accept", "application/x-bcs")
 	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
 	return rc.client.Do(req)
+}
+
+func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (resp *http.Response, err error) {
+	req, err := http.NewRequest("POST", postUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", contentType)
+	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	if body == nil {
+		req.Body = &nilBodySingleton
+	} else {
+		readCloser, ok := body.(io.ReadCloser)
+		if ok {
+			req.Body = readCloser
+		} else {
+			req.Body = io.NopCloser(body)
+		}
+	}
+	return rc.client.Do(req)
+}
+
+// empty io.ReadCloser
+type NilBody struct {
+}
+
+var nilBodySingleton NilBody
+
+func (nb *NilBody) Read(p []byte) (n int, err error) {
+	return 0, io.EOF
+}
+func (nb *NilBody) Close() error {
+	return nil
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
@@ -240,21 +270,79 @@ func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any
 	return
 }
 
-// Waits up to 10 seconds for transactions to be done, polling at 10Hz
-// TODO: options for polling period and timeout
-// TODO: use new hanging-GET endpoint
-func (rc *NodeClient) WaitForTransactions(txnHashes []string) error {
+// WaitForTransaction does a long-GET for one transaction and wait for it to complete.
+// Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
+// Accept option arguments PollPeriod and PollTimeout like PollForTransactions.
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data map[string]any, err error) {
+	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 1*time.Second, options...)
+	if err != nil {
+		return nil, err
+	}
+	restUrl := rc.baseUrl
+	restUrl.Path = path.Join(restUrl.Path, "transactions/wait_by_hash", txnHash)
+	start := time.Now()
+	deadline := start.Add(timeout)
+	for {
+		data, err = rc.getTransactionCommon(restUrl)
+		if err == nil {
+			return
+		}
+		if httpErr, ok := err.(*HttpError); ok {
+			if httpErr.StatusCode == 404 {
+				if time.Now().Before(deadline) {
+					time.Sleep(period)
+				} else {
+					return
+				}
+			}
+		} else {
+			return
+		}
+	}
+
+}
+
+// PollPeriod is an option to PollForTransactions
+type PollPeriod time.Duration
+
+// PollTimeout is an option to PollForTransactions
+type PollTimeout time.Duration
+
+func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, options ...any) (period time.Duration, timeout time.Duration, err error) {
+	period = defaultPeriod
+	timeout = defaultTimeout
+	for argi, arg := range options {
+		switch value := arg.(type) {
+		case PollPeriod:
+			period = time.Duration(value)
+		case PollTimeout:
+			timeout = time.Duration(value)
+		default:
+			err = fmt.Errorf("PollForTransactions arg %d bad type %T", argi+1, arg)
+			return
+		}
+	}
+	return
+}
+
+// PollForTransactions waits up to 10 seconds for transactions to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) error {
+	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
+	if err != nil {
+		return err
+	}
 	hashSet := make(map[string]bool, len(txnHashes))
 	for _, hash := range txnHashes {
 		hashSet[hash] = true
 	}
 	start := time.Now()
-	deadline := start.Add(10 * time.Second)
+	deadline := start.Add(timeout)
 	for len(hashSet) > 0 {
 		if time.Now().After(deadline) {
 			return errors.New("timeout waiting for faucet transactions")
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(period)
 		for _, hash := range txnHashes {
 			if !hashSet[hash] {
 				// already done
@@ -291,7 +379,6 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	if len(params) != 0 {
 		au.RawQuery = params.Encode()
 	}
-	// TODO: ?limit=N&start=V
 	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
@@ -321,7 +408,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 	bodyReader := bytes.NewReader(rblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions/encode_submission")
-	response, err := rc.client.Post(au.String(), "application/json", bodyReader)
+	response, err := rc.Post(au.String(), "application/json", bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -351,7 +438,7 @@ func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "transactions")
-	response, err := rc.client.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
+	response, err := rc.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -521,7 +608,7 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl
 	au.Path = path.Join(au.Path, "view")
-	response, err := rc.client.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
+	response, err := rc.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return

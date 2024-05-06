@@ -107,7 +107,7 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 
 	nodeClient.client.Jar = jar
 	nodeClient.baseUrl = *nodeUrl
-	nodeClient.client.Timeout = 60 * time.Second // TODO: Make configurable
+	nodeClient.client.Timeout = 60 * time.Second
 	faucetClient := &FaucetClient{
 		nodeClient,
 		*faucetUrl,
@@ -117,6 +117,11 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 		*faucetClient,
 	}
 	return
+}
+
+// SetTimeout adjusts the HTTP client timeout
+func (client *Client) SetTimeout(timeout time.Duration) {
+	client.nodeClient.client.Timeout = timeout
 }
 
 // Info Retrieves the node info about the network and it's current state
@@ -171,10 +176,15 @@ func (client *Client) TransactionByVersion(version uint64) (data map[string]any,
 	return client.nodeClient.TransactionByVersion(version)
 }
 
-// WaitForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
-// TODO: options for polling period and timeout
-func (client *Client) WaitForTransactions(txnHashes []string) error {
-	return client.nodeClient.WaitForTransactions(txnHashes)
+// PollForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+func (client *Client) PollForTransactions(txnHashes []string, options ...any) error {
+	return client.nodeClient.PollForTransactions(txnHashes, options...)
+}
+
+// Do a long-GET for one transaction and wait for it to complete
+func (client *Client) WaitForTransaction(txnHash string) (data map[string]any, err error) {
+	return client.nodeClient.WaitForTransaction(txnHash)
 }
 
 // Transactions Get recent transactions.
