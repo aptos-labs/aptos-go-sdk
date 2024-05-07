@@ -489,6 +489,7 @@ type SequenceNumber uint64
 type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing
+// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount

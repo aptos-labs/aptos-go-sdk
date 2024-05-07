@@ -1,9 +1,10 @@
 package main
 
 import (
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
-	"time"
 )
 
 // main This example shows you how to improve performance of the transaction submission
@@ -45,16 +46,8 @@ func main() {
 	amount := uint64(100)
 
 	// Serialize arguments
-	// TODO: this seems verbose
+	receiverArg, err := aptos.BcsSerialize(&receiver)
 	serializer := aptos.Serializer{}
-	serializer.Struct(&receiver)
-	err = serializer.Error()
-	if err != nil {
-		panic("Failed to serialize arguments:" + err.Error())
-	}
-	receiverArg := serializer.ToBytes()
-
-	serializer = aptos.Serializer{}
 	serializer.U64(amount)
 	err = serializer.Error()
 	if err != nil {

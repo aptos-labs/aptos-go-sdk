@@ -178,6 +178,17 @@ func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) 
 	return
 }
 
+func BcsSerialize(value BCSStruct) (bcsBlob []byte, err error) {
+	var bcs Serializer
+	value.MarshalBCS(&bcs)
+	err = bcs.Error()
+	if err != nil {
+		return
+	}
+	bcsBlob = bcs.ToBytes()
+	return
+}
+
 func BcsDeserialize(dest BCSStruct, bcsBlob []byte) error {
 	bcs := Deserializer{
 		source: bcsBlob,
