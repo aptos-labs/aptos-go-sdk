@@ -17,7 +17,7 @@ type Serializer struct {
 	err error
 }
 
-func (bcs *Serializer) Error() error {
+func (bcs   *Serializer)   Error()   error {
 	return bcs.err
 }
 
