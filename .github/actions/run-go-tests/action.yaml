@@ -6,12 +6,22 @@ runs:
   using: composite
   steps:
     # Setup checkout of Git
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     # Setup Go
     - uses: actions/setup-go@v5
       with:
         go-version: '>=1.22'
     # Run unit tests
     - shell: bash
+      run: 'go vet ./...'
+    - shell: bash
+      run: 'go fmt ./...'
+    - shell: bash
+      run: |
+        if [ "x$(git status -uno -s)x" != "xx" ]; then git status; echo NOT CLEAN; exit 1; fi
+    - shell: bash
       run: 'go test ./...'
-
+    - shell: bash
+      run: 'go run examples/simple_transaction/main.go'
+    - shell: bash
+      run: 'go run examples/performance_transaction/main.go'
