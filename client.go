@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"errors"
-	"net/http/cookiejar"
 	"net/url"
 	"time"
 )
@@ -64,8 +63,8 @@ func init() {
 // Client is a facade over the multiple types of underlying clients, as the user doesn't actually care where the data
 // comes from.  It will be then handled underneath
 type Client struct {
-	nodeClient   NodeClient
-	faucetClient FaucetClient
+	nodeClient   *NodeClient
+	faucetClient *FaucetClient
 	// TODO: Add indexer client
 }
 
@@ -83,11 +82,6 @@ func NewClientFromNetworkName(networkName string) (client *Client, err error) {
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig) (client *Client, err error) {
-	nodeUrl, err := url.Parse(config.NodeUrl)
-	if err != nil {
-		return nil, err
-	}
-
 	faucetUrl, err := url.Parse(config.FaucetUrl)
 	if err != nil {
 		return nil, err
@@ -95,32 +89,24 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 
 	// TODO: add indexer
 
-	nodeClient := new(NodeClient)
-
-	// Set cookie jar so cookie stickiness applies to connections
-	// TODO Add appropriate suffix list
-	jar, err := cookiejar.New(nil)
+	nodeClient, err := NewNodeClient(config.NodeUrl, config.ChainId)
 	if err != nil {
 		return nil, err
 	}
 
-	nodeClient.client.Jar = jar
-	nodeClient.baseUrl = *nodeUrl
-	nodeClient.client.Timeout = 60 * time.Second // TODO: Make configurable
-
 	// Fetch the chain Id if it isn't in the config
 	if config.ChainId == 0 {
 		_, _ = nodeClient.GetChainId()
-	} else {
-		nodeClient.ChainId = config.ChainId
 	}
+
 	faucetClient := &FaucetClient{
 		nodeClient,
 		*faucetUrl,
 	}
+
 	client = &Client{
-		*nodeClient,
-		*faucetClient,
+		nodeClient,
+		faucetClient,
 	}
 	return
 }

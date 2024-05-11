@@ -8,9 +8,9 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/http/cookiejar"
 	"net/url"
 	"os"
-	"path"
 	"strconv"
 	"time"
 )
@@ -20,10 +20,36 @@ const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
 const APTOS_VIEW_BCS = "application/x.aptos.view_function+bcs"
 
 type NodeClient struct {
-	ChainId uint8
+	client  *http.Client
+	baseUrl *url.URL
+	chainId uint8
+}
 
-	client  http.Client
-	baseUrl url.URL
+func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
+	// Set cookie jar so cookie stickiness applies to connections
+	// TODO Add appropriate suffix list
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, err
+	}
+	defaultClient := &http.Client{
+		Jar:     jar,
+		Timeout: 60 * time.Second,
+	}
+
+	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
+}
+
+func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
+	baseUrl, err := url.Parse(rpcUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse RPC url '%s': %+w", rpcUrl, err)
+	}
+	return &NodeClient{
+		client:  client,
+		baseUrl: baseUrl,
+		chainId: chainId,
+	}, nil
 }
 
 func (rc *NodeClient) Info() (info NodeInfo, err error) {
@@ -44,14 +70,13 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err == nil {
-		rc.ChainId = info.ChainId
+		rc.chainId = info.ChainId
 	}
 	return
 }
 
 func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "accounts", address.String())
+	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledger_version) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
@@ -80,9 +105,8 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 }
 
 func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
-	au := rc.baseUrl
+	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
-	au.Path = path.Join(au.Path, "accounts", address.String(), "resource", resourceType)
 	if len(ledger_version) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
@@ -110,8 +134,7 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
 func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
+	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
@@ -190,8 +213,7 @@ func (nb *NilBody) Close() error {
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "accounts", address.String(), "resources")
+	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
@@ -234,18 +256,16 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version
 //		}
 //	}
 func (rc *NodeClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
-	restUrl := rc.baseUrl
-	restUrl.Path = path.Join(restUrl.Path, "transactions/by_hash", txnHash)
+	restUrl := rc.baseUrl.JoinPath("transactions/by_hash", txnHash)
 	return rc.getTransactionCommon(restUrl)
 }
 
 func (rc *NodeClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
-	restUrl := rc.baseUrl
-	restUrl.Path = path.Join(restUrl.Path, "transactions/by_version", strconv.FormatUint(version, 10))
+	restUrl := rc.baseUrl.JoinPath("transactions/by_version", strconv.FormatUint(version, 10))
 	return rc.getTransactionCommon(restUrl)
 }
 
-func (rc *NodeClient) getTransactionCommon(restUrl url.URL) (data map[string]any, err error) {
+func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]any, err error) {
 	// Fetch transaction
 	response, err := rc.Get(restUrl.String())
 	if err != nil {
@@ -278,8 +298,7 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data m
 	if err != nil {
 		return nil, err
 	}
-	restUrl := rc.baseUrl
-	restUrl.Path = path.Join(restUrl.Path, "transactions/wait_by_hash", txnHash)
+	restUrl := rc.baseUrl.JoinPath("transactions/wait_by_hash", txnHash)
 	start := time.Now()
 	deadline := start.Add(timeout)
 	for {
@@ -367,8 +386,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "transactions")
+	au := rc.baseUrl.JoinPath("transactions")
 	var params url.Values
 	if start != nil {
 		params.Set("start", strconv.FormatUint(*start, 10))
@@ -406,8 +424,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 		return
 	}
 	bodyReader := bytes.NewReader(rblob)
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "transactions/encode_submission")
+	au := rc.baseUrl.JoinPath("transactions/encode_submission")
 	response, err := rc.Post(au.String(), "application/json", bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
@@ -436,8 +453,7 @@ func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 	}
 	sblob := bcs.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "transactions")
+	au := rc.baseUrl.JoinPath("transactions")
 	response, err := rc.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
@@ -459,18 +475,15 @@ func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 }
 
 func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
-	if rc.ChainId != 0 {
-		return rc.ChainId, nil
+	if rc.chainId == 0 {
+		info, err := rc.Info()
+		if err != nil {
+			return 0, err
+		}
+		// Cache the ChainId for later calls, because performance
+		rc.chainId = info.ChainId
 	}
-	info, err := rc.Info()
-	if err != nil {
-		return 0, err
-	}
-
-	// Cache the ChainId for later calls, because performance
-	rc.ChainId = info.ChainId
-
-	return rc.ChainId, nil
+	return rc.chainId, nil
 }
 
 // MaxGasAmount is an option to APTTransferTransaction
@@ -607,8 +620,7 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	}
 	sblob := bcs.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
-	au := rc.baseUrl
-	au.Path = path.Join(au.Path, "view")
+	au := rc.baseUrl.JoinPath("view")
 	response, err := rc.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
