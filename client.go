@@ -3,7 +3,6 @@ package aptos
 import (
 	"errors"
 	"github.com/aptos-labs/aptos-go-sdk/core"
-	"net/url"
 	"time"
 )
 
@@ -83,11 +82,6 @@ func NewClientFromNetworkName(networkName string) (client *Client, err error) {
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig) (client *Client, err error) {
-	faucetUrl, err := url.Parse(config.FaucetUrl)
-	if err != nil {
-		return nil, err
-	}
-
 	// TODO: add indexer
 
 	nodeClient, err := NewNodeClient(config.NodeUrl, config.ChainId)
@@ -95,14 +89,14 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 		return nil, err
 	}
 
+	faucetClient, err := NewFaucetClient(nodeClient, config.FaucetUrl)
+	if err != nil {
+		return nil, err
+	}
+
 	// Fetch the chain Id if it isn't in the config
 	if config.ChainId == 0 {
 		_, _ = nodeClient.GetChainId()
-	}
-
-	faucetClient := &FaucetClient{
-		nodeClient,
-		*faucetUrl,
 	}
 
 	client = &Client{
