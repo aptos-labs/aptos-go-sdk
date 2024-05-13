@@ -2,9 +2,10 @@ package aptos
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/core"
-	"strings"
 )
 
 type TypeTagType uint64
@@ -68,22 +69,6 @@ func (tt *TypeTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	default:
 		bcs.SetError(fmt.Errorf("unknown TypeTag enum %d", variant))
 	}
-}
-
-func SerializeTypeTags(serializer *bcs.Serializer, tags []TypeTag) {
-	serializer.Uleb128(uint32(len(tags)))
-	for _, tag := range tags {
-		serializer.Struct(&tag)
-	}
-}
-
-func DeserializeTypeTags(deserializer *bcs.Deserializer) []TypeTag {
-	numArgs := deserializer.Uleb128()
-	argTypes := make([]TypeTag, numArgs)
-	for i := range numArgs {
-		deserializer.Struct(&argTypes[i])
-	}
-	return argTypes
 }
 
 func (tt *TypeTag) String() string {
@@ -227,14 +212,13 @@ func (st *StructTag) MarshalBCS(serializer *bcs.Serializer) {
 	st.Address.MarshalBCS(serializer)
 	serializer.WriteString(st.Module)
 	serializer.WriteString(st.Name)
-	SerializeTypeTags(serializer, st.TypeParams)
+	bcs.SerializeSequence(st.TypeParams, serializer)
 }
 func (st *StructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	st.Address.UnmarshalBCS(deserializer)
 	st.Module = deserializer.ReadString()
 	st.Name = deserializer.ReadString()
-
-	st.TypeParams = DeserializeTypeTags(deserializer)
+	st.TypeParams = bcs.DeserializeSequence[TypeTag](deserializer)
 }
 
 func (st *StructTag) GetType() TypeTagType {
