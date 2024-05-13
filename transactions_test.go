@@ -2,10 +2,11 @@ package aptos
 
 import (
 	"encoding/binary"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -57,7 +58,7 @@ func TestRawTransactionSign(t *testing.T) {
 	assert.NoError(t, ser.Error())
 	txn2 := RawTransaction{}
 	txn1Bytes := ser.ToBytes()
-	bcs.BcsDeserialize(&txn2, txn1Bytes)
+	bcs.Deserialize(&txn2, txn1Bytes)
 	ser2 := bcs.Serializer{}
 	txn2.MarshalBCS(&ser2)
 	txn2Bytes := ser2.ToBytes()

@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
 )
 
@@ -48,7 +48,7 @@ func main() {
 	amount := uint64(100)
 
 	// Serialize arguments
-	receiverArg, err := bcs.BcsSerialize(&receiver)
+	receiverArg, err := bcs.Serialize(&receiver)
 	serializer := bcs.Serializer{}
 	serializer.U64(amount)
 	err = serializer.Error()

@@ -7,9 +7,16 @@ import (
 	"math/big"
 )
 
-type BCSStruct interface {
+type Marshaler interface {
 	MarshalBCS(*Serializer)
+}
+type Unmarshaler interface {
 	UnmarshalBCS(*Deserializer)
+}
+
+type Struct interface {
+	Marshaler
+	Unmarshaler
 }
 
 type Serializer struct {
@@ -105,7 +112,7 @@ func (ser *Serializer) Bool(v bool) {
 	}
 }
 
-func (ser *Serializer) Struct(x BCSStruct) {
+func (ser *Serializer) Struct(x Marshaler) {
 	x.MarshalBCS(ser)
 }
 
@@ -116,12 +123,12 @@ func (ser *Serializer) ToBytes() []byte {
 func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
 	bcs.Uleb128(uint32(len(x)))
 	for i, v := range x {
-		mv, ok := any(v).(BCSStruct)
+		mv, ok := any(v).(Marshaler)
 		if ok {
 			mv.MarshalBCS(bcs)
 			continue
 		}
-		mv, ok = any(&v).(BCSStruct)
+		mv, ok = any(&v).(Marshaler)
 		if ok {
 			mv.MarshalBCS(bcs)
 			continue
@@ -139,7 +146,7 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 	out := make([]T, slen)
 	for i := 0; i < int(slen); i++ {
 		v := &(out[i])
-		mv, ok := any(v).(BCSStruct)
+		mv, ok := any(v).(Unmarshaler)
 		if ok {
 			mv.UnmarshalBCS(bcs)
 		} else {
@@ -159,13 +166,13 @@ func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) 
 		var nextk K
 		var nextv V
 		switch sv := any(&nextk).(type) {
-		case BCSStruct:
+		case Unmarshaler:
 			sv.UnmarshalBCS(bcs)
 		case *string:
 			*sv = bcs.ReadString()
 		}
 		switch sv := any(&nextv).(type) {
-		case BCSStruct:
+		case Unmarshaler:
 			sv.UnmarshalBCS(bcs)
 		case *string:
 			*sv = bcs.ReadString()
@@ -178,8 +185,8 @@ func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) 
 	return
 }
 
-// BcsSerialize serializes a single item
-func BcsSerialize(value BCSStruct) (bcsBlob []byte, err error) {
+// Serialize serializes a single item
+func Serialize(value Marshaler) (bcsBlob []byte, err error) {
 	var bcs Serializer
 	value.MarshalBCS(&bcs)
 	err = bcs.Error()
@@ -190,8 +197,8 @@ func BcsSerialize(value BCSStruct) (bcsBlob []byte, err error) {
 	return
 }
 
-// BcsDeserialize deserializes a single item
-func BcsDeserialize(dest BCSStruct, bcsBlob []byte) error {
+// Deserialize deserializes a single item
+func Deserialize(dest Unmarshaler, bcsBlob []byte) error {
 	bcs := Deserializer{
 		source: bcsBlob,
 		pos:    0,
@@ -341,6 +348,6 @@ func (d *Deserializer) U256() big.Int {
 	return out
 }
 
-func (d *Deserializer) Struct(x BCSStruct) {
+func (d *Deserializer) Struct(x Unmarshaler) {
 	x.UnmarshalBCS(d)
 }

@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/ed25519"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
@@ -58,7 +59,7 @@ func (ea *Authenticator) Verify(data []byte) bool {
 }
 
 type AuthenticatorImpl interface {
-	bcs.BCSStruct
+	bcs.Struct
 
 	// Verify Return true if this Authenticator approves
 	Verify(data []byte) bool
