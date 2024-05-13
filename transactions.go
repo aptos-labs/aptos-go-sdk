@@ -3,10 +3,11 @@ package aptos
 import (
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"math/big"
 
 	"golang.org/x/crypto/sha3"
 )
@@ -150,21 +151,14 @@ type Script struct {
 
 func (sc *Script) MarshalBCS(serializer *bcs.Serializer) {
 	serializer.WriteBytes(sc.Code)
-	SerializeTypeTags(serializer, sc.ArgTypes)
-	serializer.Uleb128(uint32(len(sc.Args)))
-	for _, arg := range sc.Args {
-		serializer.Struct(&arg)
-	}
+	bcs.SerializeSequence(sc.ArgTypes, serializer)
+	bcs.SerializeSequence(sc.Args, serializer)
 }
 
 func (sc *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	sc.Code = deserializer.ReadBytes()
-	sc.ArgTypes = DeserializeTypeTags(deserializer)
-	numArgs := deserializer.Uleb128()
-	sc.Args = make([]ScriptArgument, numArgs)
-	for i := range numArgs {
-		deserializer.Struct(&sc.Args[i])
-	}
+	sc.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
+	sc.Args = bcs.DeserializeSequence[ScriptArgument](deserializer)
 }
 
 type ScriptArgument struct {
@@ -267,19 +261,19 @@ type EntryFunction struct {
 	Args     [][]byte
 }
 
-func (sf *EntryFunction) MarshalBCS(bcs *bcs.Serializer) {
-	sf.Module.MarshalBCS(bcs)
-	bcs.WriteString(sf.Function)
-	SerializeTypeTags(bcs, sf.ArgTypes)
-	bcs.Uleb128(uint32(len(sf.Args)))
+func (sf *EntryFunction) MarshalBCS(serializer *bcs.Serializer) {
+	sf.Module.MarshalBCS(serializer)
+	serializer.WriteString(sf.Function)
+	bcs.SerializeSequence(sf.ArgTypes, serializer)
+	serializer.Uleb128(uint32(len(sf.Args)))
 	for _, a := range sf.Args {
-		bcs.WriteBytes(a)
+		serializer.WriteBytes(a)
 	}
 }
 func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	sf.Module.UnmarshalBCS(deserializer)
 	sf.Function = deserializer.ReadString()
-	sf.ArgTypes = DeserializeTypeTags(deserializer)
+	sf.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
 	alen := deserializer.Uleb128()
 	sf.Args = make([][]byte, alen)
 	for i := range alen {

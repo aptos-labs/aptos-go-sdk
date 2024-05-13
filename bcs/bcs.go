@@ -113,7 +113,6 @@ func (ser *Serializer) ToBytes() []byte {
 	return ser.out.Bytes()
 }
 
-// Since generics don't work outside of packages, this is just for as an example for others
 func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
 	bcs.Uleb128(uint32(len(x)))
 	for i, v := range x {
@@ -132,7 +131,6 @@ func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
 	}
 }
 
-// Since generics don't work outside of packages, this is just for as an example for others
 func DeserializeSequence[T any](bcs *Deserializer) []T {
 	slen := bcs.Uleb128()
 	if bcs.Error() != nil {
@@ -153,7 +151,6 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 }
 
 // DeserializeMapToSlices returns two slices []K and []V of equal length that are equivalent to map[K]V but may represent types that are not valid Go map keys.
-// Since generics don't work outside of packages, this is just for as an example for others
 func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) {
 	count := bcs.Uleb128()
 	keys = make([]K, 0, count)

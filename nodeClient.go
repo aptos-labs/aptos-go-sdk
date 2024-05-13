@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,6 +13,9 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -606,7 +607,7 @@ type ViewPayload struct {
 func (vp *ViewPayload) MarshalBCS(serializer *bcs.Serializer) {
 	vp.Module.MarshalBCS(serializer)
 	serializer.WriteString(vp.Function)
-	SerializeTypeTags(serializer, vp.ArgTypes)
+	bcs.SerializeSequence(vp.ArgTypes, serializer)
 	serializer.Uleb128(uint32(len(vp.Args)))
 	for _, a := range vp.Args {
 		serializer.WriteBytes(a)

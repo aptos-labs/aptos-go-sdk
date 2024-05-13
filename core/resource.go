@@ -38,12 +38,7 @@ func (mst *MoveStructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	mst.Address.UnmarshalBCS(deserializer)
 	mst.Module = deserializer.ReadString()
 	mst.Name = deserializer.ReadString()
-
-	bytes := deserializer.ReadBytes()
-	mst.GenericTypeParams = make([]MoveType, len(bytes))
-	for i, num := range bytes {
-		mst.GenericTypeParams[i] = MoveType(num)
-	}
+	mst.GenericTypeParams = bcs.DeserializeSequence[MoveType](deserializer)
 }
 
 // enum
