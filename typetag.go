@@ -3,6 +3,9 @@ package aptos
 import (
 	"fmt"
 	"strings"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
 type TypeTagType uint64
@@ -22,7 +25,7 @@ const (
 )
 
 type TypeTagImpl interface {
-	BCSStruct
+	bcs.Struct
 	GetType() TypeTagType
 	String() string
 }
@@ -31,12 +34,12 @@ type TypeTag struct {
 	Value TypeTagImpl
 }
 
-func (tt *TypeTag) MarshalBCS(bcs *Serializer) {
+func (tt *TypeTag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Uleb128(uint32(tt.Value.GetType()))
 	tt.Value.MarshalBCS(bcs)
 
 }
-func (tt *TypeTag) UnmarshalBCS(bcs *Deserializer) {
+func (tt *TypeTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	variant := bcs.Uleb128()
 	switch TypeTagType(variant) {
 	case TypeTag_Bool:
@@ -94,11 +97,11 @@ func (xt *BoolTag) GetType() TypeTagType {
 	return TypeTag_Bool
 }
 
-func (xt *BoolTag) MarshalBCS(bcs *Serializer) {
+func (xt *BoolTag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Bool(xt.Value)
 
 }
-func (xt *BoolTag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *BoolTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value = bcs.Bool()
 }
 
@@ -114,11 +117,11 @@ func (xt *U8Tag) GetType() TypeTagType {
 	return TypeTag_U8
 }
 
-func (xt *U8Tag) MarshalBCS(bcs *Serializer) {
+func (xt *U8Tag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.U8(xt.Value)
 
 }
-func (xt *U8Tag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *U8Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value = bcs.U8()
 }
 
@@ -134,11 +137,11 @@ func (xt *U16Tag) GetType() TypeTagType {
 	return TypeTag_U16
 }
 
-func (xt *U16Tag) MarshalBCS(bcs *Serializer) {
+func (xt *U16Tag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.U16(xt.Value)
 
 }
-func (xt *U16Tag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *U16Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value = bcs.U16()
 }
 
@@ -154,11 +157,11 @@ func (xt *U32Tag) GetType() TypeTagType {
 	return TypeTag_U32
 }
 
-func (xt *U32Tag) MarshalBCS(bcs *Serializer) {
+func (xt *U32Tag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.U32(xt.Value)
 
 }
-func (xt *U32Tag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *U32Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value = bcs.U32()
 }
 
@@ -174,49 +177,50 @@ func (xt *U64Tag) GetType() TypeTagType {
 	return TypeTag_U64
 }
 
-func (xt *U64Tag) MarshalBCS(bcs *Serializer) {
+func (xt *U64Tag) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.U64(xt.Value)
 
 }
-func (xt *U64Tag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *U64Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value = bcs.U64()
 }
 
 type AccountAddressTag struct {
-	Value AccountAddress
+	Value core.AccountAddress
 }
 
 func (xt *AccountAddressTag) GetType() TypeTagType {
 	return TypeTag_AccountAddress
 }
 
-func (xt *AccountAddressTag) MarshalBCS(bcs *Serializer) {
+func (xt *AccountAddressTag) MarshalBCS(bcs *bcs.Serializer) {
 	xt.Value.MarshalBCS(bcs)
 
 }
-func (xt *AccountAddressTag) UnmarshalBCS(bcs *Deserializer) {
+func (xt *AccountAddressTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	xt.Value.UnmarshalBCS(bcs)
 }
 
 type StructTag struct {
-	Address    AccountAddress
+	Address    core.AccountAddress
 	Module     string
 	Name       string
 	TypeParams []TypeTag
 }
 
-func (st *StructTag) MarshalBCS(bcs *Serializer) {
-	st.Address.MarshalBCS(bcs)
-	bcs.WriteString(st.Module)
-	bcs.WriteString(st.Name)
-	SerializeSequence(st.TypeParams, bcs)
+func (st *StructTag) MarshalBCS(serializer *bcs.Serializer) {
+	st.Address.MarshalBCS(serializer)
+	serializer.WriteString(st.Module)
+	serializer.WriteString(st.Name)
+	bcs.SerializeSequence(st.TypeParams, serializer)
 }
-func (st *StructTag) UnmarshalBCS(bcs *Deserializer) {
-	st.Address.UnmarshalBCS(bcs)
-	st.Module = bcs.ReadString()
-	st.Name = bcs.ReadString()
-	st.TypeParams = DeserializeSequence[TypeTag](bcs)
+func (st *StructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
+	st.Address.UnmarshalBCS(deserializer)
+	st.Module = deserializer.ReadString()
+	st.Name = deserializer.ReadString()
+	st.TypeParams = bcs.DeserializeSequence[TypeTag](deserializer)
 }
+
 func (st *StructTag) GetType() TypeTagType {
 	return TypeTag_Struct
 }

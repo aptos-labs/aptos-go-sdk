@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,12 +26,9 @@ func TestMoveResourceBCS(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, blob)
 
-	bcs := NewDeserializer(blob)
-	//resources := DeserializeSequence[MoveResource](bcs)
-	//resourceKeys, resourceValues := DeserializeMap[StructTag, []byte](bcs)
-	// like client.go AccountResourcesBCS
-	resources := DeserializeSequence[AccountResourceRecord](bcs)
-	assert.NoError(t, bcs.Error())
+	deserializer := bcs.NewDeserializer(blob)
+	resources := bcs.DeserializeSequence[AccountResourceRecord](deserializer)
+	assert.NoError(t, deserializer.Error())
 	assert.Equal(t, 2, len(resources))
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", resources[0].Tag.String())
 	assert.Equal(t, "0x1::account::Account", resources[1].Tag.String())

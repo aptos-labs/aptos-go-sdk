@@ -1,9 +1,10 @@
-package aptos
+package crypto
 
 import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 type Ed25519PrivateKey struct {
@@ -36,7 +37,7 @@ func (key *Ed25519PrivateKey) ToHex() string {
 }
 
 func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
-	bytes, err := ParseHex(hexStr)
+	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
 	}
@@ -78,7 +79,7 @@ func (key *Ed25519PublicKey) ToHex() string {
 }
 
 func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
-	bytes, err := ParseHex(hexStr)
+	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
 	}

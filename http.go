@@ -7,7 +7,7 @@ import (
 	"net/url"
 )
 
-const HTTP_ERR_SUMMARY_LEN = 100
+const HTTP_ERR_SUMMARY_LEN = 1000
 
 type HttpError struct {
 	Status     string // e.g. "200 OK"

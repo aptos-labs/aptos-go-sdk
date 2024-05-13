@@ -1,4 +1,4 @@
-package aptos
+package bcs
 
 import (
 	"bytes"
@@ -7,9 +7,16 @@ import (
 	"math/big"
 )
 
-type BCSStruct interface {
+type Marshaler interface {
 	MarshalBCS(*Serializer)
+}
+type Unmarshaler interface {
 	UnmarshalBCS(*Deserializer)
+}
+
+type Struct interface {
+	Marshaler
+	Unmarshaler
 }
 
 type Serializer struct {
@@ -17,35 +24,35 @@ type Serializer struct {
 	err error
 }
 
-func (bcs *Serializer) Error() error {
-	return bcs.err
+func (ser *Serializer) Error() error {
+	return ser.err
 }
 
 // If the data is well formed but nonsense, MarshalBCS() code can set error
-func (bcs *Serializer) SetError(err error) {
-	bcs.err = err
+func (ser *Serializer) SetError(err error) {
+	ser.err = err
 }
 
-func (bcs *Serializer) U8(v uint8) {
-	bcs.out.WriteByte(v)
+func (ser *Serializer) U8(v uint8) {
+	ser.out.WriteByte(v)
 }
 
-func (bcs *Serializer) U16(v uint16) {
+func (ser *Serializer) U16(v uint16) {
 	var ub [2]byte
 	binary.LittleEndian.PutUint16(ub[:], v)
-	bcs.out.Write(ub[:])
+	ser.out.Write(ub[:])
 }
 
-func (bcs *Serializer) U32(v uint32) {
+func (ser *Serializer) U32(v uint32) {
 	var ub [4]byte
 	binary.LittleEndian.PutUint32(ub[:], v)
-	bcs.out.Write(ub[:])
+	ser.out.Write(ub[:])
 }
 
-func (bcs *Serializer) U64(v uint64) {
+func (ser *Serializer) U64(v uint64) {
 	var ub [8]byte
 	binary.LittleEndian.PutUint64(ub[:], v)
-	bcs.out.Write(ub[:])
+	ser.out.Write(ub[:])
 }
 
 func reverse(ub []byte) {
@@ -60,68 +67,68 @@ func reverse(ub []byte) {
 	}
 }
 
-func (bcs *Serializer) U128(v big.Int) {
+func (ser *Serializer) U128(v big.Int) {
 	var ub [16]byte
 	v.FillBytes(ub[:])
 	reverse(ub[:])
-	bcs.out.Write(ub[:])
+	ser.out.Write(ub[:])
 }
 
-func (bcs *Serializer) U256(v big.Int) {
+func (ser *Serializer) U256(v big.Int) {
 	var ub [32]byte
 	v.FillBytes(ub[:])
 	reverse(ub[:])
-	bcs.out.Write(ub[:])
+	ser.out.Write(ub[:])
 }
 
-func (bcs *Serializer) Uleb128(v uint32) {
+func (ser *Serializer) Uleb128(v uint32) {
 	for v > 0x80 {
 		nb := uint8(v & 0x7f)
-		bcs.out.WriteByte(0x80 | nb)
+		ser.out.WriteByte(0x80 | nb)
 		v = v >> 7
 	}
-	bcs.out.WriteByte(uint8(v & 0x7f))
+	ser.out.WriteByte(uint8(v & 0x7f))
 }
 
-func (bcs *Serializer) WriteBytes(v []byte) {
-	bcs.Uleb128(uint32(len(v)))
-	bcs.out.Write(v)
+func (ser *Serializer) WriteBytes(v []byte) {
+	ser.Uleb128(uint32(len(v)))
+	ser.out.Write(v)
 }
 
-func (bcs *Serializer) WriteString(v string) {
-	bcs.WriteBytes([]byte(v))
+func (ser *Serializer) WriteString(v string) {
+	ser.WriteBytes([]byte(v))
 }
 
 // Something somewhere already knows how long this byte string will be
-func (bcs *Serializer) FixedBytes(v []byte) {
-	bcs.out.Write(v)
+func (ser *Serializer) FixedBytes(v []byte) {
+	ser.out.Write(v)
 }
 
-func (bcs *Serializer) Bool(v bool) {
+func (ser *Serializer) Bool(v bool) {
 	if v {
-		bcs.out.WriteByte(1)
+		ser.out.WriteByte(1)
 	} else {
-		bcs.out.WriteByte(0)
+		ser.out.WriteByte(0)
 	}
 }
 
-func (bcs *Serializer) Struct(x BCSStruct) {
-	x.MarshalBCS(bcs)
+func (ser *Serializer) Struct(x Marshaler) {
+	x.MarshalBCS(ser)
 }
 
-func (bcs *Serializer) ToBytes() []byte {
-	return bcs.out.Bytes()
+func (ser *Serializer) ToBytes() []byte {
+	return ser.out.Bytes()
 }
 
 func SerializeSequence[AT []T, T any](x AT, bcs *Serializer) {
 	bcs.Uleb128(uint32(len(x)))
 	for i, v := range x {
-		mv, ok := any(v).(BCSStruct)
+		mv, ok := any(v).(Marshaler)
 		if ok {
 			mv.MarshalBCS(bcs)
 			continue
 		}
-		mv, ok = any(&v).(BCSStruct)
+		mv, ok = any(&v).(Marshaler)
 		if ok {
 			mv.MarshalBCS(bcs)
 			continue
@@ -139,7 +146,7 @@ func DeserializeSequence[T any](bcs *Deserializer) []T {
 	out := make([]T, slen)
 	for i := 0; i < int(slen); i++ {
 		v := &(out[i])
-		mv, ok := any(v).(BCSStruct)
+		mv, ok := any(v).(Unmarshaler)
 		if ok {
 			mv.UnmarshalBCS(bcs)
 		} else {
@@ -159,13 +166,13 @@ func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) 
 		var nextk K
 		var nextv V
 		switch sv := any(&nextk).(type) {
-		case BCSStruct:
+		case Unmarshaler:
 			sv.UnmarshalBCS(bcs)
 		case *string:
 			*sv = bcs.ReadString()
 		}
 		switch sv := any(&nextv).(type) {
-		case BCSStruct:
+		case Unmarshaler:
 			sv.UnmarshalBCS(bcs)
 		case *string:
 			*sv = bcs.ReadString()
@@ -178,7 +185,8 @@ func DeserializeMapToSlices[K, V any](bcs *Deserializer) (keys []K, values []V) 
 	return
 }
 
-func BcsSerialize(value BCSStruct) (bcsBlob []byte, err error) {
+// Serialize serializes a single item
+func Serialize(value Marshaler) (bcsBlob []byte, err error) {
 	var bcs Serializer
 	value.MarshalBCS(&bcs)
 	err = bcs.Error()
@@ -189,7 +197,8 @@ func BcsSerialize(value BCSStruct) (bcsBlob []byte, err error) {
 	return
 }
 
-func BcsDeserialize(dest BCSStruct, bcsBlob []byte) error {
+// Deserialize deserializes a single item
+func Deserialize(dest Unmarshaler, bcsBlob []byte) error {
 	bcs := Deserializer{
 		source: bcsBlob,
 		pos:    0,
@@ -339,6 +348,6 @@ func (d *Deserializer) U256() big.Int {
 	return out
 }
 
-func (d *Deserializer) Struct(x BCSStruct) {
+func (d *Deserializer) Struct(x Unmarshaler) {
 	x.UnmarshalBCS(d)
 }

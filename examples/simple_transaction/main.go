@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
 )
 
@@ -14,7 +15,7 @@ func main() {
 	}
 
 	// Create a sender locally
-	sender, err := aptos.NewEd25519Account()
+	sender, err := core.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -23,7 +24,7 @@ func main() {
 	err = client.Fund(sender.Address, 100_000_000)
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := core.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())

@@ -1,8 +1,21 @@
-package aptos
+package crypto
 
 import (
 	"crypto/ed25519"
 	"fmt"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+)
+
+// Seeds for deriving addresses from addresses
+const (
+	Ed25519Scheme         = uint8(0)
+	MultiEd25519Scheme    = uint8(1)
+	SingleKeyScheme       = uint8(2)
+	MultiKeyScheme        = uint8(3)
+	DeriveObjectScheme    = uint8(252)
+	NamedObjectScheme     = uint8(254)
+	ResourceAccountScheme = uint8(255)
 )
 
 // AuthenticatorType single byte representing the spot in the enum from the Rust implementation
@@ -21,11 +34,11 @@ type Authenticator struct {
 	Auth AuthenticatorImpl
 }
 
-func (ea *Authenticator) MarshalBCS(bcs *Serializer) {
+func (ea *Authenticator) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Uleb128(uint32(ea.Kind))
 	ea.Auth.MarshalBCS(bcs)
 }
-func (ea *Authenticator) UnmarshalBCS(bcs *Deserializer) {
+func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	kindu := bcs.Uleb128()
 	if bcs.Error() != nil {
 		return
@@ -46,7 +59,7 @@ func (ea *Authenticator) Verify(data []byte) bool {
 }
 
 type AuthenticatorImpl interface {
-	BCSStruct
+	bcs.Struct
 
 	// Verify Return true if this Authenticator approves
 	Verify(data []byte) bool
@@ -57,11 +70,11 @@ type Ed25519Authenticator struct {
 	Signature [ed25519.SignatureSize]byte
 }
 
-func (ea *Ed25519Authenticator) MarshalBCS(bcs *Serializer) {
+func (ea *Ed25519Authenticator) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.WriteBytes(ea.PublicKey[:])
 	bcs.WriteBytes(ea.Signature[:])
 }
-func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *Deserializer) {
+func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	kb := bcs.ReadBytes()
 	if len(kb) != ed25519.PublicKeySize {
 		bcs.SetError(fmt.Errorf("bad ed25519 public key, expected %d bytes but got %d", ed25519.PublicKeySize, len(kb)))

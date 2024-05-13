@@ -1,4 +1,4 @@
-package aptos
+package crypto
 
 // Signer a generic interface for any kind of signing
 type Signer interface {
