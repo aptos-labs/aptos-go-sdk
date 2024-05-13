@@ -1,32 +1,29 @@
 # aptos-go-sdk
+
 Aptos Go SDK
 
+## How does it work?
+
+Take a look at `examples/` for some examples of how to write clients.
+
 ## TODO List
-### Milestone 1 (Reading from chain)
-1. [BCS Support](bcs.go)
-    - 90%? Works but more interoperability testing is always good.
-2. sequence number reading
-    - Done. [RestClient.Account()](client.go)
-3. Account / object resource listing
-    - Good. JSON map[string]any mode and BCS mode.
-4. Transaction waiting / reads (by hash)
-    - Rough. TransactionByHash() returns map[string]any rather than struct.
 
-### Milestone 2 (Creating accounts)
-1. Faucet support
-    - Works. See [faucet.go](faucet.go) and usage in [goclient.go](cmd/goclient/goclient.go)
+### Important
 
-### Milestone 3 (Writing to chain)
-1. ED25519 Private key support
-    - Works. See [authenticator.go](authenticator.go)
-2. Transaction submission (no fee payer)
-    - Works. See [util.go](util.go)  and usage in [goclient.go](cmd/goclient/goclient.go)
+1. Indexer support
+2. Struct support for well known types like transactions e.g. TransactionByHash
+3. Secp256k1 and general signer support (should be proven by ^)
+4. Basic documentation
+5. Additional examples
+6. External signing by implementing a signer (example)
+7. Fee payer support, with example
+8. Multi-agent support? And an example?
+9. On-chain Multi-sig support? and an example?
 
-### Milestone 4 (View functions)
-1. 
+### Less important
 
-### Miscellaneous after
-1. Object address derivation
-2. Indexer reading support
-3. Transaction reading by version
-4. View functions
+1. See if there's a better way to handle collection serialization, may need to wrap the collection with a function added
+2. Move remaining files into packages, they are partially moved now to keep some separation of code
+3. Additional test coverage and examples
+4. Parallel submission? Instead of just serially (sequence number handling etc.)
+5. Off-chain multi-sig support?
