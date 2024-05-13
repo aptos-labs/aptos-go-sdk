@@ -1,6 +1,8 @@
 package aptos
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"strconv"
 	"testing"
 
@@ -36,7 +38,7 @@ func Test_Flow(t *testing.T) {
 	assert.Less(t, uint8(4), chainId)
 
 	// Create an account
-	account, err := NewEd25519Account()
+	account, err := core.NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
@@ -45,8 +47,11 @@ func Test_Flow(t *testing.T) {
 
 	// Send money to 0x1
 	// Build transaction
-	signed_txn, err := APTTransferTransaction(client, account, AccountOne, 100)
+	signed_txn, err := APTTransferTransaction(client, account, core.AccountOne, 100)
 	assert.NoError(t, err)
+
+	serializer := bcs.Serializer{}
+	signed_txn.MarshalBCS(&serializer)
 
 	// Send transaction
 	result, err := client.SubmitTransaction(signed_txn)
@@ -74,4 +79,22 @@ func Test_Flow(t *testing.T) {
 
 	// Assert that both are the same
 	assert.Equal(t, txn, txnByVersion)
+}
+
+func TestAPTTransferTransaction(t *testing.T) {
+	sender, err := core.NewEd25519Account()
+	assert.NoError(t, err)
+	dest, err := core.NewEd25519Account()
+	assert.NoError(t, err)
+
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+	stxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	assert.NoError(t, err)
+	assert.NotNil(t, stxn)
+
+	// use defaults for: max gas amount, gas unit price
+	stxn, err = APTTransferTransaction(client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	assert.NoError(t, err)
+	assert.NotNil(t, stxn)
 }

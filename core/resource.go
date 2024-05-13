@@ -1,16 +1,18 @@
-package aptos
+package core
+
+import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
 type MoveResource struct {
 	Tag   MoveStructTag
 	Value map[string]any // MoveStructValue // TODO: api/types/src/move_types.rs probably actually has more to say about what a MoveStructValue is, but at first read it effectively says map[string]any; there's probably convention elesewhere about what goes into those 'any' parts
 }
 
-func (mr *MoveResource) MarshalBCS(bcs *Serializer) {
+func (mr *MoveResource) MarshalBCS(bcs *bcs.Serializer) {
 	mr.Tag.MarshalBCS(bcs)
 	// We can't unmarshal `any`, BCS needs to know what destination struct type is
 	panic("TODO")
 }
-func (mr *MoveResource) UnmarshalBCS(bcs *Deserializer) {
+func (mr *MoveResource) UnmarshalBCS(bcs *bcs.Deserializer) {
 	mr.Tag.UnmarshalBCS(bcs)
 	// We can't unmarshal `any`, BCS needs to know what destination struct type is
 	panic("TODO")
@@ -23,17 +25,25 @@ type MoveStructTag struct {
 	GenericTypeParams []MoveType
 }
 
-func (mst *MoveStructTag) MarshalBCS(bcs *Serializer) {
+func (mst *MoveStructTag) MarshalBCS(bcs *bcs.Serializer) {
 	mst.Address.MarshalBCS(bcs)
 	bcs.WriteString(mst.Module)
 	bcs.WriteString(mst.Name)
-	SerializeSequence(mst.GenericTypeParams, bcs)
+
+	for i := range mst.GenericTypeParams {
+		bcs.Struct(&mst.GenericTypeParams[i])
+	}
 }
-func (mst *MoveStructTag) UnmarshalBCS(bcs *Deserializer) {
-	mst.Address.UnmarshalBCS(bcs)
-	mst.Module = bcs.ReadString()
-	mst.Name = bcs.ReadString()
-	mst.GenericTypeParams = DeserializeSequence[MoveType](bcs)
+func (mst *MoveStructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
+	mst.Address.UnmarshalBCS(deserializer)
+	mst.Module = deserializer.ReadString()
+	mst.Name = deserializer.ReadString()
+
+	bytes := deserializer.ReadBytes()
+	mst.GenericTypeParams = make([]MoveType, len(bytes))
+	for i, num := range bytes {
+		mst.GenericTypeParams[i] = MoveType(num)
+	}
 }
 
 // enum
@@ -56,9 +66,9 @@ const (
 	MoveType_Unparsable       MoveType = 13 // contains a string
 )
 
-func (mt *MoveType) MarshalBCS(bcs *Serializer) {
+func (mt *MoveType) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Uleb128(uint32(*mt))
 }
-func (mt *MoveType) UnmarshalBCS(bcs *Deserializer) {
+func (mt *MoveType) UnmarshalBCS(bcs *bcs.Deserializer) {
 	*mt = MoveType(bcs.Uleb128())
 }

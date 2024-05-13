@@ -2,16 +2,19 @@ package aptos
 
 import (
 	"encoding/binary"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := NewEd25519Account()
+	sender, err := core.NewEd25519Account()
 	assert.NoError(t, err)
 
-	var dest AccountAddress
+	var dest core.AccountAddress
 	dest.Random()
 
 	sn := uint64(1)
@@ -23,7 +26,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: AccountOne,
+				Address: core.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
@@ -42,20 +45,20 @@ func TestRawTransactionSign(t *testing.T) {
 	stxn, err := txn.Sign(sender)
 	assert.NoError(t, err)
 
-	_, ok := stxn.Authenticator.Auth.(*Ed25519Authenticator)
+	_, ok := stxn.Authenticator.Auth.(*crypto.Ed25519Authenticator)
 	assert.True(t, ok)
 
 	assert.NoError(t, stxn.Verify())
 
 	// Serialize, Deserialze, Serialize
 	// out1 and out3 should be the same
-	ser := Serializer{}
+	ser := bcs.Serializer{}
 	txn.MarshalBCS(&ser)
 	assert.NoError(t, ser.Error())
 	txn2 := RawTransaction{}
 	txn1Bytes := ser.ToBytes()
-	BcsDeserialize(&txn2, txn1Bytes)
-	ser2 := Serializer{}
+	bcs.BcsDeserialize(&txn2, txn1Bytes)
+	ser2 := bcs.Serializer{}
 	txn2.MarshalBCS(&ser2)
 	txn2Bytes := ser2.ToBytes()
 	assert.Equal(t, txn1Bytes, txn2Bytes)
@@ -64,7 +67,7 @@ func TestRawTransactionSign(t *testing.T) {
 
 func TestTPMarshal(t *testing.T) {
 	var wat TransactionPayload
-	var ser Serializer
+	var ser bcs.Serializer
 	wat.MarshalBCS(&ser)
 	// without payload it should fail
 	assert.Error(t, ser.Error())

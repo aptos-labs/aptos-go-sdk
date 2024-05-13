@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"log/slog"
 	"net/url"
 	"os"
@@ -123,7 +124,7 @@ func main() {
 		maybefail(err, "client error: %s", err)
 	}
 
-	var account aptos.AccountAddress
+	var account core.AccountAddress
 	if accountStr != "" {
 		err := account.ParseStringRelaxed(accountStr)
 		maybefail(err, "could not parse address: %s", err)
@@ -207,14 +208,14 @@ func main() {
 			}
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
-			alice, err := aptos.NewEd25519Account()
+			alice, err := core.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
 
-			bob, err := aptos.NewEd25519Account()
+			bob, err := core.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
@@ -252,8 +253,8 @@ func main() {
 			fmt.Printf("bob   addr %s\n", bob.Address.String())
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
-			var sender aptos.AccountAddress
-			var dest aptos.AccountAddress
+			var sender core.AccountAddress
+			var dest core.AccountAddress
 			var amount uint64
 			err := sender.ParseStringRelaxed(misc[argi+1])
 			maybefail(err, "bad sender, %s", err)
@@ -281,7 +282,7 @@ func main() {
 				SequenceNumber: sn + 1,
 				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 					Module: aptos.ModuleId{
-						Address: aptos.AccountOne,
+						Address: core.AccountOne,
 						Name:    "aptos_account",
 					},
 					Function: "transfer",

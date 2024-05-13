@@ -1,22 +1,14 @@
-package aptos
+package core
 
 import (
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 	"strings"
-)
-
-// Seeds for deriving addresses from addresses
-const (
-	Ed25519Scheme         = uint8(0)
-	MultiEd25519Scheme    = uint8(1)
-	SingleKeyScheme       = uint8(2)
-	MultiKeyScheme        = uint8(3)
-	deriveObjectScheme    = uint8(252)
-	namedObjectScheme     = uint8(254)
-	resourceAccountScheme = uint8(255)
 )
 
 // AccountAddress a 32-byte representation of an onchain address
@@ -55,12 +47,12 @@ func (aa *AccountAddress) String() string {
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
-func (aa AccountAddress) MarshalBCS(bcs *Serializer) {
+func (aa AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.FixedBytes(aa[:])
 }
 
 // UnmarshalBCS Converts the AccountAddress from BCS encoded bytes
-func (aa *AccountAddress) UnmarshalBCS(bcs *Deserializer) {
+func (aa *AccountAddress) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
 }
 
@@ -71,8 +63,8 @@ func (aa *AccountAddress) Random() {
 
 // FromPublicKey Generates an account address from a public key using the appropriate
 // account address scheme
-func (aa *AccountAddress) FromPublicKey(pubkey PublicKey) {
-	bytes := SHA3_256Hash([][]byte{
+func (aa *AccountAddress) FromPublicKey(pubkey crypto.PublicKey) {
+	bytes := util.SHA3_256Hash([][]byte{
 		pubkey.Bytes(),
 		{pubkey.Scheme()},
 	})
@@ -81,22 +73,22 @@ func (aa *AccountAddress) FromPublicKey(pubkey PublicKey) {
 
 // NamedObjectAddress derives a named object address based on the input address as the creator
 func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
-	return aa.DerivedAddress(seed, namedObjectScheme)
+	return aa.DerivedAddress(seed, crypto.NamedObjectScheme)
 }
 
 // ObjectAddressFromObject derives a object address based on the input address as the creator object
 func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
-	return aa.DerivedAddress(objectAddress[:], deriveObjectScheme)
+	return aa.DerivedAddress(objectAddress[:], crypto.DeriveObjectScheme)
 }
 
 // ResourceAccount derives a object address based on the input address as the creator
 func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
-	return aa.DerivedAddress(seed, resourceAccountScheme)
+	return aa.DerivedAddress(seed, crypto.ResourceAccountScheme)
 }
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
 func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
-	bytes := SHA3_256Hash([][]byte{
+	bytes := util.SHA3_256Hash([][]byte{
 		aa[:],
 		seed[:],
 		{typeByte},
@@ -108,12 +100,12 @@ func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAd
 // Account represents an onchain account, with an associated signer, which may be a PrivateKey
 type Account struct {
 	Address AccountAddress
-	Signer  Signer
+	Signer  crypto.Signer
 }
 
 // NewEd25519Account creates an account with a new random Ed25519 private key
 func NewEd25519Account() (*Account, error) {
-	privkey, pubkey, err := GenerateEd5519Keys()
+	privkey, pubkey, err := crypto.GenerateEd5519Keys()
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +116,7 @@ func NewEd25519Account() (*Account, error) {
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
-func (account *Account) Sign(message []byte) (authenticator Authenticator, err error) {
+func (account *Account) Sign(message []byte) (authenticator crypto.Authenticator, err error) {
 	return account.Signer.Sign(message)
 }
 

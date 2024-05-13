@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"io"
 	"log/slog"
 	"net/http"
@@ -75,7 +77,7 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	return
 }
 
-func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
+func (rc *NodeClient) Account(address core.AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -104,7 +106,7 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 	return
 }
 
-func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
+func (rc *NodeClient) AccountResource(address core.AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
 	if len(ledger_version) > 0 {
@@ -133,7 +135,7 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
+func (rc *NodeClient) AccountResources(address core.AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -212,7 +214,7 @@ func (nb *NilBody) Close() error {
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+func (rc *NodeClient) AccountResourcesBCS(address core.AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -234,9 +236,9 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version
 		return
 	}
 	response.Body.Close()
-	bcs := NewDeserializer(blob)
+	deserializer := bcs.NewDeserializer(blob)
 	// See resource_test.go TestMoveResourceBCS
-	resources = DeserializeSequence[AccountResourceRecord](bcs)
+	resources = bcs.DeserializeSequence[AccountResourceRecord](deserializer)
 	return
 }
 
@@ -445,13 +447,13 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 }
 
 func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
-	bcs := Serializer{}
-	stxn.MarshalBCS(&bcs)
-	err = bcs.Error()
+	serializer := bcs.Serializer{}
+	stxn.MarshalBCS(&serializer)
+	err = serializer.Error()
 	if err != nil {
 		return
 	}
-	sblob := bcs.ToBytes()
+	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions")
 	response, err := rc.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
@@ -503,7 +505,7 @@ type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing
 // Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption
-func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+func (rc *NodeClient) BuildTransaction(sender core.AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
 	gasUnitPrice := uint64(100)     // Default to min gas price
@@ -576,7 +578,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *core.Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return
@@ -601,24 +603,24 @@ type ViewPayload struct {
 	Args     [][]byte
 }
 
-func (vp *ViewPayload) MarshalBCS(bcs *Serializer) {
-	vp.Module.MarshalBCS(bcs)
-	bcs.WriteString(vp.Function)
-	SerializeSequence(vp.ArgTypes, bcs)
-	bcs.Uleb128(uint32(len(vp.Args)))
+func (vp *ViewPayload) MarshalBCS(serializer *bcs.Serializer) {
+	vp.Module.MarshalBCS(serializer)
+	serializer.WriteString(vp.Function)
+	SerializeTypeTags(serializer, vp.ArgTypes)
+	serializer.Uleb128(uint32(len(vp.Args)))
 	for _, a := range vp.Args {
-		bcs.WriteBytes(a)
+		serializer.WriteBytes(a)
 	}
 }
 
 func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
-	bcs := Serializer{}
-	payload.MarshalBCS(&bcs)
-	err = bcs.Error()
+	serializer := bcs.Serializer{}
+	payload.MarshalBCS(&serializer)
+	err = serializer.Error()
 	if err != nil {
 		return
 	}
-	sblob := bcs.ToBytes()
+	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("view")
 	response, err := rc.Post(au.String(), APTOS_VIEW_BCS, bodyReader)

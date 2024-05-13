@@ -1,6 +1,8 @@
 package main
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -21,7 +23,7 @@ func main() {
 	println("New client:    ", time.Since(before).Milliseconds(), "ms")
 
 	// Create a sender locally
-	sender, err := aptos.NewEd25519Account()
+	sender, err := core.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -38,7 +40,7 @@ func main() {
 	before = time.Now()
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := core.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
@@ -46,8 +48,8 @@ func main() {
 	amount := uint64(100)
 
 	// Serialize arguments
-	receiverArg, err := aptos.BcsSerialize(&receiver)
-	serializer := aptos.Serializer{}
+	receiverArg, err := bcs.BcsSerialize(&receiver)
+	serializer := bcs.Serializer{}
 	serializer.U64(amount)
 	err = serializer.Error()
 	if err != nil {
@@ -58,7 +60,7 @@ func main() {
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
+				Address: core.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",

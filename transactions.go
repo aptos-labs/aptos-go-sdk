@@ -3,13 +3,16 @@ package aptos
 import (
 	"errors"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/core"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"math/big"
 
 	"golang.org/x/crypto/sha3"
 )
 
 type RawTransaction struct {
-	Sender         AccountAddress
+	Sender         core.AccountAddress
 	SequenceNumber uint64
 	Payload        TransactionPayload
 	MaxGasAmount   uint64
@@ -21,7 +24,7 @@ type RawTransaction struct {
 	ChainId uint8
 }
 
-func (txn *RawTransaction) MarshalBCS(bcs *Serializer) {
+func (txn *RawTransaction) MarshalBCS(bcs *bcs.Serializer) {
 	txn.Sender.MarshalBCS(bcs)
 	bcs.U64(txn.SequenceNumber)
 	txn.Payload.MarshalBCS(bcs)
@@ -31,7 +34,7 @@ func (txn *RawTransaction) MarshalBCS(bcs *Serializer) {
 	bcs.U8(txn.ChainId)
 }
 
-func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
+func (txn *RawTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
 	txn.Sender.UnmarshalBCS(bcs)
 	txn.SequenceNumber = bcs.U64()
 	txn.Payload.UnmarshalBCS(bcs)
@@ -42,7 +45,7 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *Deserializer) {
 }
 
 func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
-	ser := Serializer{}
+	ser := bcs.Serializer{}
 	txn.MarshalBCS(&ser)
 	err = ser.Error()
 	if err != nil {
@@ -56,7 +59,7 @@ func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
 	return signableBytes, nil
 }
 
-func (txn *RawTransaction) Sign(sender *Account) (stxn *SignedTransaction, err error) {
+func (txn *RawTransaction) Sign(sender *core.Account) (stxn *SignedTransaction, err error) {
 	signableBytes, err := txn.SignableBytes()
 	if err != nil {
 		return
@@ -91,7 +94,7 @@ func RawTransactionPrehash() []byte {
 }
 
 type TransactionPayload struct {
-	Payload BCSStruct
+	Payload bcs.BCSStruct
 }
 
 const (
@@ -101,7 +104,7 @@ const (
 	TransactionPayload_Multisig      = 3 // TODO? defined in aptos-core/types/src/transaction/mod.rs
 )
 
-func (txn *TransactionPayload) MarshalBCS(bcs *Serializer) {
+func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
 	switch p := txn.Payload.(type) {
 	case *Script:
 		bcs.Uleb128(TransactionPayload_Script)
@@ -117,7 +120,7 @@ func (txn *TransactionPayload) MarshalBCS(bcs *Serializer) {
 		bcs.SetError(fmt.Errorf("bad txn payload, %T", txn.Payload))
 	}
 }
-func (txn *TransactionPayload) UnmarshalBCS(bcs *Deserializer) {
+func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
 	kind := bcs.Uleb128()
 	switch kind {
 	case TransactionPayload_Script:
@@ -145,15 +148,23 @@ type Script struct {
 	Args     []ScriptArgument
 }
 
-func (sc *Script) MarshalBCS(bcs *Serializer) {
-	bcs.WriteBytes(sc.Code)
-	SerializeSequence(sc.ArgTypes, bcs)
-	SerializeSequence(sc.Args, bcs)
+func (sc *Script) MarshalBCS(serializer *bcs.Serializer) {
+	serializer.WriteBytes(sc.Code)
+	SerializeTypeTags(serializer, sc.ArgTypes)
+	serializer.Uleb128(uint32(len(sc.Args)))
+	for _, arg := range sc.Args {
+		serializer.Struct(&arg)
+	}
 }
-func (sc *Script) UnmarshalBCS(bcs *Deserializer) {
-	sc.Code = bcs.ReadBytes()
-	sc.ArgTypes = DeserializeSequence[TypeTag](bcs)
-	sc.Args = DeserializeSequence[ScriptArgument](bcs)
+
+func (sc *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
+	sc.Code = deserializer.ReadBytes()
+	sc.ArgTypes = DeserializeTypeTags(deserializer)
+	numArgs := deserializer.Uleb128()
+	sc.Args = make([]ScriptArgument, numArgs)
+	for i := range numArgs {
+		deserializer.Struct(&sc.Args[i])
+	}
 }
 
 type ScriptArgument struct {
@@ -175,7 +186,7 @@ const (
 	ScriptArgument_U256     ScriptArgumentVariant = 8
 )
 
-func (sa *ScriptArgument) MarshalBCS(bcs *Serializer) {
+func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.U8(uint8(sa.Variant))
 	switch sa.Variant {
 	case ScriptArgument_U8:
@@ -191,7 +202,7 @@ func (sa *ScriptArgument) MarshalBCS(bcs *Serializer) {
 	case ScriptArgument_U256:
 		bcs.U256(sa.Value.(big.Int))
 	case ScriptArgument_Address:
-		sa.Value.(AccountAddress).MarshalBCS(bcs)
+		sa.Value.(core.AccountAddress).MarshalBCS(bcs)
 	case ScriptArgument_U8Vector:
 		bcs.WriteBytes(sa.Value.([]byte))
 	case ScriptArgument_Bool:
@@ -211,7 +222,7 @@ func (sa *ScriptArgument) SetU128(v big.Int) {
 	sa.Value = v
 }
 
-func (sa *ScriptArgument) UnmarshalBCS(bcs *Deserializer) {
+func (sa *ScriptArgument) UnmarshalBCS(bcs *bcs.Deserializer) {
 	variant := bcs.U8()
 	switch ScriptArgumentVariant(variant) {
 	case ScriptArgument_U8:
@@ -227,7 +238,7 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *Deserializer) {
 	case ScriptArgument_U256:
 		sa.Value = bcs.U256()
 	case ScriptArgument_Address:
-		aa := AccountAddress{}
+		aa := core.AccountAddress{}
 		aa.UnmarshalBCS(bcs)
 		sa.Value = aa
 	case ScriptArgument_U8Vector:
@@ -241,10 +252,10 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *Deserializer) {
 type ModuleBundle struct {
 }
 
-func (txn *ModuleBundle) MarshalBCS(bcs *Serializer) {
+func (txn *ModuleBundle) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.SetError(errors.New("ModuleBunidle unimplemented"))
 }
-func (txn *ModuleBundle) UnmarshalBCS(bcs *Deserializer) {
+func (txn *ModuleBundle) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.SetError(errors.New("ModuleBunidle unimplemented"))
 }
 
@@ -256,50 +267,50 @@ type EntryFunction struct {
 	Args     [][]byte
 }
 
-func (sf *EntryFunction) MarshalBCS(bcs *Serializer) {
+func (sf *EntryFunction) MarshalBCS(bcs *bcs.Serializer) {
 	sf.Module.MarshalBCS(bcs)
 	bcs.WriteString(sf.Function)
-	SerializeSequence(sf.ArgTypes, bcs)
+	SerializeTypeTags(bcs, sf.ArgTypes)
 	bcs.Uleb128(uint32(len(sf.Args)))
 	for _, a := range sf.Args {
 		bcs.WriteBytes(a)
 	}
 }
-func (sf *EntryFunction) UnmarshalBCS(bcs *Deserializer) {
-	sf.Module.UnmarshalBCS(bcs)
-	sf.Function = bcs.ReadString()
-	sf.ArgTypes = DeserializeSequence[TypeTag](bcs)
-	alen := bcs.Uleb128()
+func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
+	sf.Module.UnmarshalBCS(deserializer)
+	sf.Function = deserializer.ReadString()
+	sf.ArgTypes = DeserializeTypeTags(deserializer)
+	alen := deserializer.Uleb128()
 	sf.Args = make([][]byte, alen)
 	for i := range alen {
-		sf.Args[i] = bcs.ReadBytes()
+		sf.Args[i] = deserializer.ReadBytes()
 	}
 }
 
 type ModuleId struct {
-	Address AccountAddress
+	Address core.AccountAddress
 	Name    string
 }
 
-func (mod *ModuleId) MarshalBCS(bcs *Serializer) {
+func (mod *ModuleId) MarshalBCS(bcs *bcs.Serializer) {
 	mod.Address.MarshalBCS(bcs)
 	bcs.WriteString(mod.Name)
 }
-func (mod *ModuleId) UnmarshalBCS(bcs *Deserializer) {
+func (mod *ModuleId) UnmarshalBCS(bcs *bcs.Deserializer) {
 	mod.Address.UnmarshalBCS(bcs)
 	mod.Name = bcs.ReadString()
 }
 
 type SignedTransaction struct {
 	Transaction   RawTransaction
-	Authenticator Authenticator
+	Authenticator crypto.Authenticator
 }
 
-func (txn *SignedTransaction) MarshalBCS(bcs *Serializer) {
+func (txn *SignedTransaction) MarshalBCS(bcs *bcs.Serializer) {
 	txn.Transaction.MarshalBCS(bcs)
 	txn.Authenticator.MarshalBCS(bcs)
 }
-func (txn *SignedTransaction) UnmarshalBCS(bcs *Deserializer) {
+func (txn *SignedTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
 	txn.Transaction.UnmarshalBCS(bcs)
 	txn.Authenticator.UnmarshalBCS(bcs)
 }

@@ -1,4 +1,4 @@
-package aptos
+package bcs
 
 import (
 	"encoding/hex"

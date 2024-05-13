@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"encoding/base64"
+	bcs2 "github.com/aptos-labs/aptos-go-sdk/bcs"
 	"io"
 	"strings"
 	"testing"
@@ -24,11 +25,11 @@ func TestMoveResourceBCS(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, blob)
 
-	bcs := NewDeserializer(blob)
+	bcs := bcs2.NewDeserializer(blob)
 	//resources := DeserializeSequence[MoveResource](bcs)
 	//resourceKeys, resourceValues := DeserializeMap[StructTag, []byte](bcs)
 	// like client.go AccountResourcesBCS
-	resources := DeserializeSequence[AccountResourceRecord](bcs)
+	resources := bcs2.DeserializeSequence[AccountResourceRecord](bcs)
 	assert.NoError(t, bcs.Error())
 	assert.Equal(t, 2, len(resources))
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", resources[0].Tag.String())
