@@ -95,7 +95,7 @@ func RawTransactionPrehash() []byte {
 }
 
 type TransactionPayload struct {
-	Payload bcs.BCSStruct
+	Payload bcs.Struct
 }
 
 const (

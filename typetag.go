@@ -25,7 +25,7 @@ const (
 )
 
 type TypeTagImpl interface {
-	bcs.BCSStruct
+	bcs.Struct
 	GetType() TypeTagType
 	String() string
 }
