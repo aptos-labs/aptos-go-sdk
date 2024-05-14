@@ -5,23 +5,22 @@ import (
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
 type TypeTagType uint64
 
 const (
-	TypeTag_Bool           TypeTagType = 0
-	TypeTag_U8             TypeTagType = 1
-	TypeTag_U64            TypeTagType = 2
-	TypeTag_U128           TypeTagType = 3
-	TypeTag_AccountAddress TypeTagType = 4
-	TypeTag_Signer         TypeTagType = 5
-	TypeTag_Vector         TypeTagType = 6
-	TypeTag_Struct         TypeTagType = 7
-	TypeTag_U16            TypeTagType = 8
-	TypeTag_U32            TypeTagType = 9
-	TypeTag_U256           TypeTagType = 10
+	TypeTagBool           TypeTagType = 0
+	TypeTagU8             TypeTagType = 1
+	TypeTagU64            TypeTagType = 2
+	TypeTagU128           TypeTagType = 3
+	TypeTagAccountAddress TypeTagType = 4
+	TypeTagSigner         TypeTagType = 5
+	TypeTagVector         TypeTagType = 6
+	TypeTagStruct         TypeTagType = 7
+	TypeTagU16            TypeTagType = 8
+	TypeTagU32            TypeTagType = 9
+	TypeTagU256           TypeTagType = 10
 )
 
 type TypeTagImpl interface {
@@ -42,27 +41,27 @@ func (tt *TypeTag) MarshalBCS(bcs *bcs.Serializer) {
 func (tt *TypeTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 	variant := bcs.Uleb128()
 	switch TypeTagType(variant) {
-	case TypeTag_Bool:
+	case TypeTagBool:
 		xt := &BoolTag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
-	case TypeTag_U8:
+	case TypeTagU8:
 		xt := &U8Tag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
-	case TypeTag_U16:
+	case TypeTagU16:
 		xt := &U16Tag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
-	case TypeTag_U32:
+	case TypeTagU32:
 		xt := &U32Tag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
-	case TypeTag_U64:
+	case TypeTagU64:
 		xt := &U64Tag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
-	case TypeTag_Struct:
+	case TypeTagStruct:
 		xt := &StructTag{}
 		xt.UnmarshalBCS(bcs)
 		tt.Value = xt
@@ -94,7 +93,7 @@ func (xt *BoolTag) String() string {
 }
 
 func (xt *BoolTag) GetType() TypeTagType {
-	return TypeTag_Bool
+	return TypeTagBool
 }
 
 func (xt *BoolTag) MarshalBCS(bcs *bcs.Serializer) {
@@ -114,7 +113,7 @@ func (xt *U8Tag) String() string {
 }
 
 func (xt *U8Tag) GetType() TypeTagType {
-	return TypeTag_U8
+	return TypeTagU8
 }
 
 func (xt *U8Tag) MarshalBCS(bcs *bcs.Serializer) {
@@ -134,7 +133,7 @@ func (xt *U16Tag) String() string {
 }
 
 func (xt *U16Tag) GetType() TypeTagType {
-	return TypeTag_U16
+	return TypeTagU16
 }
 
 func (xt *U16Tag) MarshalBCS(bcs *bcs.Serializer) {
@@ -154,7 +153,7 @@ func (xt *U32Tag) String() string {
 }
 
 func (xt *U32Tag) GetType() TypeTagType {
-	return TypeTag_U32
+	return TypeTagU32
 }
 
 func (xt *U32Tag) MarshalBCS(bcs *bcs.Serializer) {
@@ -174,7 +173,7 @@ func (xt *U64Tag) String() string {
 }
 
 func (xt *U64Tag) GetType() TypeTagType {
-	return TypeTag_U64
+	return TypeTagU64
 }
 
 func (xt *U64Tag) MarshalBCS(bcs *bcs.Serializer) {
@@ -186,11 +185,11 @@ func (xt *U64Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type AccountAddressTag struct {
-	Value core.AccountAddress
+	Value AccountAddress
 }
 
 func (xt *AccountAddressTag) GetType() TypeTagType {
-	return TypeTag_AccountAddress
+	return TypeTagAccountAddress
 }
 
 func (xt *AccountAddressTag) MarshalBCS(bcs *bcs.Serializer) {
@@ -202,7 +201,7 @@ func (xt *AccountAddressTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type StructTag struct {
-	Address    core.AccountAddress
+	Address    AccountAddress
 	Module     string
 	Name       string
 	TypeParams []TypeTag
@@ -222,7 +221,7 @@ func (st *StructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
 }
 
 func (st *StructTag) GetType() TypeTagType {
-	return TypeTag_Struct
+	return TypeTagStruct
 }
 
 func (st *StructTag) String() string {

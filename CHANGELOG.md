@@ -1,8 +1,15 @@
 # Aptos Go SDK Changelog
 
-All notable changes to the Aptos Go SDK will be captured in this file. This changelog is written by hand for now. It adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+All notable changes to the Aptos Go SDK will be captured in this file. This changelog is written by hand for now. It
+adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+
+- Refactored all pieces into new packages, this may break previous users
+- [`Fix`] Misspelling of expiration time
+- Added documentation for many functions and structs
+
+# v0.1.0 (5/7/2024)
 
 - Ed25519 support
 - Ed25519 transaction support

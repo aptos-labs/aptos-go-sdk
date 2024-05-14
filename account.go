@@ -1,4 +1,4 @@
-package core
+package aptos
 
 import (
 	"crypto/rand"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/util"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"strings"
 )
 

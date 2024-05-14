@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/core"
+	"github.com/aptos-labs/aptos-go-sdk"
 	"log/slog"
 	"net/url"
 	"os"
@@ -13,8 +13,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	aptos "github.com/aptos-labs/aptos-go-sdk"
 )
 
 var (
@@ -124,7 +122,7 @@ func main() {
 		maybefail(err, "client error: %s", err)
 	}
 
-	var account core.AccountAddress
+	var account aptos.AccountAddress
 	if accountStr != "" {
 		err := account.ParseStringRelaxed(accountStr)
 		maybefail(err, "could not parse address: %s", err)
@@ -208,14 +206,14 @@ func main() {
 			}
 			os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
-			alice, err := core.NewEd25519Account()
+			alice, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
 
-			bob, err := core.NewEd25519Account()
+			bob, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
@@ -253,8 +251,8 @@ func main() {
 			fmt.Printf("bob   addr %s\n", bob.Address.String())
 		} else if arg == "send" {
 			// next three args: source addr, dest addr, amount
-			var sender core.AccountAddress
-			var dest core.AccountAddress
+			var sender aptos.AccountAddress
+			var dest aptos.AccountAddress
 			var amount uint64
 			err := sender.ParseStringRelaxed(misc[argi+1])
 			maybefail(err, "bad sender, %s", err)
@@ -282,7 +280,7 @@ func main() {
 				SequenceNumber: sn + 1,
 				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 					Module: aptos.ModuleId{
-						Address: core.AccountOne,
+						Address: aptos.AccountOne,
 						Name:    "aptos_account",
 					},
 					Function: "transfer",
@@ -296,13 +294,13 @@ func main() {
 						amountbytes[:],
 					},
 				}},
-				MaxGasAmount:              1000,
-				GasUnitPrice:              2000,
-				ExpirationTimetampSeconds: uint64(now + 100),
-				ChainId:                   4,
+				MaxGasAmount:               1000,
+				GasUnitPrice:               2000,
+				ExpirationTimestampSeconds: uint64(now + 100),
+				ChainId:                    4,
 			}
-			txnblob, err := txn.SignableBytes()
-			maybefail(err, "txn SignableBytes, %s", err)
+			txnblob, err := txn.SigningMessage()
+			maybefail(err, "txn SigningMessage, %s", err)
 			//ser := aptos.Serializer{}
 			//txn.MarshalBCS(&ser)
 			//err = ser.Error()

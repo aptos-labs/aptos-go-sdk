@@ -5,17 +5,16 @@ import (
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := core.NewEd25519Account()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
 
-	var dest core.AccountAddress
+	var dest AccountAddress
 	dest.Random()
 
 	sn := uint64(1)
@@ -27,7 +26,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: core.AccountOne,
+				Address: AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
@@ -37,10 +36,10 @@ func TestRawTransactionSign(t *testing.T) {
 				amountbytes[:],
 			},
 		}},
-		MaxGasAmount:              1000,
-		GasUnitPrice:              2000,
-		ExpirationTimetampSeconds: 1714158778,
-		ChainId:                   4,
+		MaxGasAmount:               1000,
+		GasUnitPrice:               2000,
+		ExpirationTimestampSeconds: 1714158778,
+		ChainId:                    4,
 	}
 
 	stxn, err := txn.Sign(sender)

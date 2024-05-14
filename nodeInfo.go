@@ -5,6 +5,7 @@ import (
 	"strconv"
 )
 
+// NodeInfo information retrieved about the current state of the blockchain on API requests
 type NodeInfo struct {
 	ChainId                uint8  `json:"chain_id"`
 	EpochStr               string `json:"epoch"`
@@ -16,6 +17,7 @@ type NodeInfo struct {
 	GitHash                string `json:"git_hash"`
 }
 
+// Epoch the current epoch of the network.  On Mainnet, this is usually every 2 hours.
 func (info NodeInfo) Epoch() uint64 {
 	value, err := strconv.ParseUint(info.EpochStr, 10, 64)
 	if err != nil {
@@ -25,6 +27,7 @@ func (info NodeInfo) Epoch() uint64 {
 	return value
 }
 
+// LedgerVersion the newest transaction available on the full node
 func (info NodeInfo) LedgerVersion() uint64 {
 	value, err := strconv.ParseUint(info.LedgerVersionStr, 10, 64)
 	if err != nil {
@@ -34,6 +37,7 @@ func (info NodeInfo) LedgerVersion() uint64 {
 	return value
 }
 
+// OldestLedgerVersion the oldest ledger version not pruned on the full node
 func (info NodeInfo) OldestLedgerVersion() uint64 {
 	value, err := strconv.ParseUint(info.OldestLedgerVersionStr, 10, 64)
 	if err != nil {
@@ -43,6 +47,7 @@ func (info NodeInfo) OldestLedgerVersion() uint64 {
 	return value
 }
 
+// BlockHeight the newest block available on the full node (by the time you call this there's already a new one!)
 func (info NodeInfo) BlockHeight() uint64 {
 	value, err := strconv.ParseUint(info.BlockHeightStr, 10, 64)
 	if err != nil {
@@ -52,6 +57,7 @@ func (info NodeInfo) BlockHeight() uint64 {
 	return value
 }
 
+// OldestBlockHeight the oldest block note pruned on the full node
 func (info NodeInfo) OldestBlockHeight() uint64 {
 	value, err := strconv.ParseUint(info.OldestBlockHeightStr, 10, 64)
 	if err != nil {

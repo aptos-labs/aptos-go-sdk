@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"strconv"
 	"testing"
 
@@ -38,7 +37,7 @@ func Test_Flow(t *testing.T) {
 	assert.Less(t, uint8(4), chainId)
 
 	// Create an account
-	account, err := core.NewEd25519Account()
+	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
@@ -47,7 +46,7 @@ func Test_Flow(t *testing.T) {
 
 	// Send money to 0x1
 	// Build transaction
-	signed_txn, err := APTTransferTransaction(client, account, core.AccountOne, 100)
+	signed_txn, err := APTTransferTransaction(client, account, AccountOne, 100)
 	assert.NoError(t, err)
 
 	serializer := bcs.Serializer{}
@@ -82,9 +81,9 @@ func Test_Flow(t *testing.T) {
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
-	sender, err := core.NewEd25519Account()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
-	dest, err := core.NewEd25519Account()
+	dest, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	client, err := NewClient(DevnetConfig)

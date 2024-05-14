@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"errors"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"time"
 )
 
@@ -117,24 +116,24 @@ func (client *Client) Info() (info NodeInfo, err error) {
 }
 
 // Account Retrieves information about the account such as SequenceNumber and AuthenticationKey
-func (client *Client) Account(address core.AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
+func (client *Client) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
 	return client.nodeClient.Account(address, ledgerVersion...)
 }
 
 // AccountResource Retrieves a single resource given its struct name.
 // Can also fetch at a specific ledger version
-func (client *Client) AccountResource(address core.AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
+func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
 	return client.nodeClient.AccountResource(address, resourceType, ledgerVersion...)
 }
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (client *Client) AccountResources(address core.AccountAddress, ledgerVersion ...int) (resources []AccountResourceInfo, err error) {
+func (client *Client) AccountResources(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceInfo, err error) {
 	return client.nodeClient.AccountResources(address, ledgerVersion...)
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (client *Client) AccountResourcesBCS(address core.AccountAddress, ledgerVersion ...int) (resources []AccountResourceRecord, err error) {
+func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceRecord, err error) {
 	return client.nodeClient.AccountResourcesBCS(address, ledgerVersion...)
 }
 
@@ -193,19 +192,19 @@ func (client *Client) GetChainId() (chainId uint8, err error) {
 }
 
 // Fund Uses the faucet to fund an address, only applies to non-production networks
-func (client *Client) Fund(address core.AccountAddress, amount uint64) error {
+func (client *Client) Fund(address AccountAddress, amount uint64) error {
 	return client.faucetClient.Fund(address, amount)
 }
 
 // BuildTransaction Builds a raw transaction from the payload and fetches any necessary information
 // from onchain
-func (client *Client) BuildTransaction(sender core.AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+func (client *Client) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 	return client.nodeClient.BuildTransaction(sender, payload, options...)
 }
 
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
 // for more configuration, please use them separately
-func (client *Client) BuildSignAndSubmitTransaction(sender *core.Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 
