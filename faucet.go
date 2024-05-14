@@ -7,52 +7,23 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/core"
 	"log/slog"
 	"net/url"
-	"path"
 	"strconv"
-	"strings"
 )
-
-func truthy(x any) bool {
-	switch v := x.(type) {
-	case nil:
-		return false
-	case bool:
-		return v
-	case int:
-		return v != 0
-	case int8:
-		return v != 0
-	case int16:
-		return v != 0
-	case int32:
-		return v != 0
-	case int64:
-		return v != 0
-	case uint:
-		return v != 0
-	case uint8:
-		return v != 0
-	case uint16:
-		return v != 0
-	case uint32:
-		return v != 0
-	case uint64:
-		return v != 0
-	case float32:
-		return v != 0
-	case float64:
-		return v != 0
-	case string:
-		v = strings.ToLower(v)
-		return (v == "t") || (v == "true")
-	default:
-		return false
-	}
-}
 
 type FaucetClient struct {
 	nodeClient *NodeClient
-	url        url.URL
+	url        *url.URL
+}
+
+func NewFaucetClient(nodeClient *NodeClient, faucetUrl string) (*FaucetClient, error) {
+	url, err := url.Parse(faucetUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse faucet url '%s': %+w", faucetUrl, err)
+	}
+	return &FaucetClient{
+		nodeClient,
+		url,
+	}, nil
 }
 
 // Fund account with the given amount of AptosCoin
@@ -60,8 +31,7 @@ func (faucetClient *FaucetClient) Fund(address core.AccountAddress, amount uint6
 	if faucetClient.nodeClient == nil {
 		return errors.New("faucet's node-client not initialized")
 	}
-	mintUrl := faucetClient.url
-	mintUrl.Path = path.Join(mintUrl.Path, "mint")
+	mintUrl := faucetClient.url.JoinPath("mint")
 	params := url.Values{}
 	params.Set("amount", strconv.FormatUint(amount, 10))
 	params.Set("address", address.String())
