@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/core"
-	"github.com/aptos-labs/aptos-go-sdk/types"
 	"github.com/aptos-labs/aptos-go-sdk/util"
 	"log/slog"
 	"net/url"
@@ -278,11 +277,11 @@ func main() {
 
 			var amountbytes [8]byte
 			binary.LittleEndian.PutUint64(amountbytes[:], amount)
-			txn := types.RawTransaction{
+			txn := aptos.RawTransaction{
 				Sender:         sender,
 				SequenceNumber: sn + 1,
-				Payload: types.TransactionPayload{Payload: &types.EntryFunction{
-					Module: types.ModuleId{
+				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
+					Module: aptos.ModuleId{
 						Address: core.AccountOne,
 						Name:    "aptos_account",
 					},
@@ -291,7 +290,7 @@ func main() {
 					// 	aptos.TypeTag{Value: &aptos.AccountAddressTag{Value: dest}},
 					// 	aptos.TypeTag{Value: &aptos.U64Tag{Value: amount}},
 					// },
-					ArgTypes: []types.TypeTag{},
+					ArgTypes: []aptos.TypeTag{},
 					Args: [][]byte{
 						dest[:],
 						amountbytes[:],

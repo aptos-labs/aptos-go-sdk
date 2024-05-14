@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/types"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -59,13 +58,13 @@ func main() {
 	amountArg := serializer.ToBytes()
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
-		types.TransactionPayload{Payload: &types.EntryFunction{
-			Module: types.ModuleId{
+		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
+			Module: aptos.ModuleId{
 				Address: core.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
-			ArgTypes: []types.TypeTag{},
+			ArgTypes: []aptos.TypeTag{},
 			Args:     [][]byte{receiverArg, amountArg},
 		}}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
