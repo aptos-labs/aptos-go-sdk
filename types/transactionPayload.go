@@ -1,98 +1,12 @@
-package aptos
+package types
 
 import (
 	"errors"
 	"fmt"
-	"math/big"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/core"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-
-	"golang.org/x/crypto/sha3"
+	"math/big"
 )
-
-type RawTransaction struct {
-	Sender         core.AccountAddress
-	SequenceNumber uint64
-	Payload        TransactionPayload
-	MaxGasAmount   uint64
-	GasUnitPrice   uint64
-
-	// ExpirationTimetampSeconds is seconds since Unix epoch
-	ExpirationTimetampSeconds uint64
-
-	ChainId uint8
-}
-
-func (txn *RawTransaction) MarshalBCS(bcs *bcs.Serializer) {
-	txn.Sender.MarshalBCS(bcs)
-	bcs.U64(txn.SequenceNumber)
-	txn.Payload.MarshalBCS(bcs)
-	bcs.U64(txn.MaxGasAmount)
-	bcs.U64(txn.GasUnitPrice)
-	bcs.U64(txn.ExpirationTimetampSeconds)
-	bcs.U8(txn.ChainId)
-}
-
-func (txn *RawTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
-	txn.Sender.UnmarshalBCS(bcs)
-	txn.SequenceNumber = bcs.U64()
-	txn.Payload.UnmarshalBCS(bcs)
-	txn.MaxGasAmount = bcs.U64()
-	txn.GasUnitPrice = bcs.U64()
-	txn.ExpirationTimetampSeconds = bcs.U64()
-	txn.ChainId = bcs.U8()
-}
-
-func (txn *RawTransaction) SignableBytes() (signableBytes []byte, err error) {
-	ser := bcs.Serializer{}
-	txn.MarshalBCS(&ser)
-	err = ser.Error()
-	if err != nil {
-		return
-	}
-	prehash := RawTransactionPrehash()
-	txnbytes := ser.ToBytes()
-	signableBytes = make([]byte, len(prehash)+len(txnbytes))
-	copy(signableBytes, prehash)
-	copy(signableBytes[len(prehash):], txnbytes)
-	return signableBytes, nil
-}
-
-func (txn *RawTransaction) Sign(sender *core.Account) (stxn *SignedTransaction, err error) {
-	signableBytes, err := txn.SignableBytes()
-	if err != nil {
-		return
-	}
-	authenticator, err := sender.Sign(signableBytes)
-	if err != nil {
-		return
-	}
-
-	stxn = &SignedTransaction{
-		Transaction:   *txn,
-		Authenticator: authenticator,
-	}
-	return
-}
-
-var rawTransactionPrehash []byte
-
-const rawTransactionPrehashStr = "APTOS::RawTransaction"
-
-// Return the sha3-256 prehash for RawTransaction
-// Do not write to the []byte returned
-func RawTransactionPrehash() []byte {
-	if rawTransactionPrehash == nil {
-		b32 := sha3.Sum256([]byte(rawTransactionPrehashStr))
-		out := make([]byte, len(b32))
-		copy(out, b32[:])
-		rawTransactionPrehash = out
-		return out
-	}
-	return rawTransactionPrehash
-}
 
 type TransactionPayload struct {
 	Payload bcs.Struct
@@ -279,43 +193,4 @@ func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	for i := range alen {
 		sf.Args[i] = deserializer.ReadBytes()
 	}
-}
-
-type ModuleId struct {
-	Address core.AccountAddress
-	Name    string
-}
-
-func (mod *ModuleId) MarshalBCS(bcs *bcs.Serializer) {
-	mod.Address.MarshalBCS(bcs)
-	bcs.WriteString(mod.Name)
-}
-func (mod *ModuleId) UnmarshalBCS(bcs *bcs.Deserializer) {
-	mod.Address.UnmarshalBCS(bcs)
-	mod.Name = bcs.ReadString()
-}
-
-type SignedTransaction struct {
-	Transaction   RawTransaction
-	Authenticator crypto.Authenticator
-}
-
-func (txn *SignedTransaction) MarshalBCS(bcs *bcs.Serializer) {
-	txn.Transaction.MarshalBCS(bcs)
-	txn.Authenticator.MarshalBCS(bcs)
-}
-func (txn *SignedTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
-	txn.Transaction.UnmarshalBCS(bcs)
-	txn.Authenticator.UnmarshalBCS(bcs)
-}
-
-func (txn *SignedTransaction) Verify() error {
-	tbytes, err := txn.Transaction.SignableBytes()
-	if err != nil {
-		return err
-	}
-	if txn.Authenticator.Verify(tbytes) {
-		return nil
-	}
-	return errors.New("Bad Signature")
 }

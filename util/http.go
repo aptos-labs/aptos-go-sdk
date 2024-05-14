@@ -1,4 +1,4 @@
-package aptos
+package util
 
 import (
 	"fmt"

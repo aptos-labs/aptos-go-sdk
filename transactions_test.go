@@ -1,7 +1,8 @@
-package aptos
+package aptos_go_sdk_test
 
 import (
 	"encoding/binary"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -22,16 +23,16 @@ func TestRawTransactionSign(t *testing.T) {
 	amount := uint64(10_000)
 	var amountbytes [8]byte
 	binary.LittleEndian.PutUint64(amountbytes[:], amount)
-	txn := RawTransaction{
+	txn := types.RawTransaction{
 		Sender:         sender.Address,
 		SequenceNumber: sn + 1,
-		Payload: TransactionPayload{Payload: &EntryFunction{
-			Module: ModuleId{
+		Payload: types.TransactionPayload{Payload: &types.EntryFunction{
+			Module: types.ModuleId{
 				Address: core.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
-			ArgTypes: []TypeTag{},
+			ArgTypes: []types.TypeTag{},
 			Args: [][]byte{
 				dest[:],
 				amountbytes[:],
@@ -56,7 +57,7 @@ func TestRawTransactionSign(t *testing.T) {
 	ser := bcs.Serializer{}
 	txn.MarshalBCS(&ser)
 	assert.NoError(t, ser.Error())
-	txn2 := RawTransaction{}
+	txn2 := types.RawTransaction{}
 	txn1Bytes := ser.ToBytes()
 	bcs.Deserialize(&txn2, txn1Bytes)
 	ser2 := bcs.Serializer{}
@@ -67,7 +68,7 @@ func TestRawTransactionSign(t *testing.T) {
 }
 
 func TestTPMarshal(t *testing.T) {
-	var wat TransactionPayload
+	var wat types.TransactionPayload
 	var ser bcs.Serializer
 	wat.MarshalBCS(&ser)
 	// without payload it should fail

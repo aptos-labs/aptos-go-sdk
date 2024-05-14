@@ -1,10 +1,11 @@
-package aptos
+package aptos_go_sdk
 
 import (
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/core"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -41,7 +42,7 @@ func (faucetClient *FaucetClient) Fund(address core.AccountAddress, amount uint6
 		return err
 	}
 	if response.StatusCode >= 400 {
-		return NewHttpError(response)
+		return util.NewHttpError(response)
 	}
 	decoder := json.NewDecoder(response.Body)
 	var txnHashes []string

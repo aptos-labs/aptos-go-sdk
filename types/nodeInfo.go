@@ -1,4 +1,4 @@
-package aptos
+package types
 
 import (
 	"log/slog"

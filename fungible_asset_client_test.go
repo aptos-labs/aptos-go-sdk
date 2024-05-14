@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -22,16 +21,16 @@ func TestClient(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Owner address
-	ownerAddress := core.AccountAddress{}
+	ownerAddress := AccountAddress{}
 	err = ownerAddress.ParseStringRelaxed(defaultOwner)
 	assert.NoError(t, err)
 
 	// TODO: This flow seems awkward and I made mistakes by running Parse on the same address multiple times
-	metadataAddress := core.AccountAddress{}
+	metadataAddress := AccountAddress{}
 	err = metadataAddress.ParseStringRelaxed(defaultMetadata)
 	assert.NoError(t, err)
 
-	primaryStoreAddress := core.AccountAddress{}
+	primaryStoreAddress := AccountAddress{}
 	err = primaryStoreAddress.ParseStringRelaxed(defaultStore)
 	assert.NoError(t, err)
 
@@ -64,7 +63,7 @@ func TestClient(t *testing.T) {
 	assert.True(t, storeExists)
 
 	// This should hold
-	storeNotExist, err := faClient.StoreExists(core.AccountOne)
+	storeNotExist, err := faClient.StoreExists(AccountOne)
 	assert.NoError(t, err)
 	assert.False(t, storeNotExist)
 

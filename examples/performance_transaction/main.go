@@ -1,9 +1,10 @@
 package main
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
@@ -16,7 +17,7 @@ func main() {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos_go_sdk.NewClient(aptos_go_sdk.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -58,15 +59,15 @@ func main() {
 	amountArg := serializer.ToBytes()
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
-		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
+		types.TransactionPayload{Payload: &types.EntryFunction{
+			Module: types.ModuleId{
 				Address: core.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
+			ArgTypes: []types.TypeTag{},
 			Args:     [][]byte{receiverArg, amountArg},
-		}}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
+		}}, aptos_go_sdk.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}

@@ -5,7 +5,10 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/core"
+	"github.com/aptos-labs/aptos-go-sdk/types"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 	"log/slog"
 	"net/url"
 	"os"
@@ -13,8 +16,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	aptos "github.com/aptos-labs/aptos-go-sdk"
 )
 
 var (
@@ -110,14 +111,14 @@ func main() {
 		argi++
 	}
 
-	var client *aptos.Client
+	var client *aptos_go_sdk.Client
 	var err error
 
 	if network != "" {
-		client, err = aptos.NewClientFromNetworkName(network)
+		client, err = aptos_go_sdk.NewClientFromNetworkName(network)
 		maybefail(err, "client error: %s", err)
 	} else {
-		client, err = aptos.NewClient(aptos.NetworkConfig{
+		client, err = aptos_go_sdk.NewClient(aptos_go_sdk.NetworkConfig{
 			NodeUrl:   nodeUrl,
 			FaucetUrl: faucetUrl,
 		})
@@ -223,13 +224,13 @@ func main() {
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
 
 			time.Sleep(2 * time.Second)
-			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
+			stxn, err := aptos_go_sdk.APTTransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			slog.Debug("transfer", "stxn", stxn)
 			submitStart := time.Now()
 			result, err := client.SubmitTransaction(stxn)
 			if err != nil {
-				if he, ok := err.(*aptos.HttpError); ok {
+				if he, ok := err.(*util.HttpError); ok {
 					fmt.Fprintf(os.Stdout, "txn err:\n\t%s\n", string(he.Body))
 				}
 				maybefail(err, "could not submit transfer txn, %s", err)
@@ -277,11 +278,11 @@ func main() {
 
 			var amountbytes [8]byte
 			binary.LittleEndian.PutUint64(amountbytes[:], amount)
-			txn := aptos.RawTransaction{
+			txn := types.RawTransaction{
 				Sender:         sender,
 				SequenceNumber: sn + 1,
-				Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
-					Module: aptos.ModuleId{
+				Payload: types.TransactionPayload{Payload: &types.EntryFunction{
+					Module: types.ModuleId{
 						Address: core.AccountOne,
 						Name:    "aptos_account",
 					},
@@ -290,7 +291,7 @@ func main() {
 					// 	aptos.TypeTag{Value: &aptos.AccountAddressTag{Value: dest}},
 					// 	aptos.TypeTag{Value: &aptos.U64Tag{Value: amount}},
 					// },
-					ArgTypes: []aptos.TypeTag{},
+					ArgTypes: []types.TypeTag{},
 					Args: [][]byte{
 						dest[:],
 						amountbytes[:],
@@ -337,7 +338,7 @@ func prettyJson(x any) string {
 }
 
 func hebody(err error) string {
-	he, ok := err.(*aptos.HttpError)
+	he, ok := err.(*util.HttpError)
 	if !ok {
 		return ""
 	}

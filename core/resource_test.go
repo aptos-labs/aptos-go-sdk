@@ -1,7 +1,8 @@
-package aptos
+package core_test
 
 import (
 	"encoding/base64"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 	"io"
 	"strings"
 	"testing"
@@ -27,7 +28,7 @@ func TestMoveResourceBCS(t *testing.T) {
 	assert.NotNil(t, blob)
 
 	deserializer := bcs.NewDeserializer(blob)
-	resources := bcs.DeserializeSequence[AccountResourceRecord](deserializer)
+	resources := bcs.DeserializeSequence[types.AccountResourceRecord](deserializer)
 	assert.NoError(t, deserializer.Error())
 	assert.Equal(t, 2, len(resources))
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", resources[0].Tag.String())

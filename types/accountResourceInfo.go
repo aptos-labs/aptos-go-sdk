@@ -1,4 +1,4 @@
-package aptos
+package types
 
 // AccountResourceInfo is returned by #AccountResource() and #AccountResources()
 type AccountResourceInfo struct {

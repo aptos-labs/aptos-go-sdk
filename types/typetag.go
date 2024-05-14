@@ -1,11 +1,11 @@
-package aptos
+package types
 
 import (
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/core"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
 type TypeTagType uint64
