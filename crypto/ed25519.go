@@ -4,6 +4,8 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
@@ -88,4 +90,33 @@ func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
 	}
 	key.inner = bytes
 	return nil
+}
+
+type Ed25519Authenticator struct {
+	PublicKey [ed25519.PublicKeySize]byte
+	Signature [ed25519.SignatureSize]byte
+}
+
+func (ea *Ed25519Authenticator) MarshalBCS(bcs *bcs.Serializer) {
+	bcs.WriteBytes(ea.PublicKey[:])
+	bcs.WriteBytes(ea.Signature[:])
+}
+func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+	kb := bcs.ReadBytes()
+	if len(kb) != ed25519.PublicKeySize {
+		bcs.SetError(fmt.Errorf("bad ed25519 public key, expected %d bytes but got %d", ed25519.PublicKeySize, len(kb)))
+		return
+	}
+	sb := bcs.ReadBytes()
+	if len(sb) != ed25519.SignatureSize {
+		bcs.SetError(fmt.Errorf("bad ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(sb)))
+		return
+	}
+	copy(ea.PublicKey[:], kb)
+	copy(ea.Signature[:], sb)
+}
+
+// Verify Return true if the data was well signed
+func (ea *Ed25519Authenticator) Verify(data []byte) bool {
+	return ed25519.Verify(ed25519.PublicKey(ea.PublicKey[:]), data, ea.Signature[:])
 }

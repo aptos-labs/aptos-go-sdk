@@ -5,6 +5,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
+// ModuleId the identifier for a module e.g. 0x1::coin
 type ModuleId struct {
 	Address core.AccountAddress
 	Name    string
