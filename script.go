@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"math/big"
 )
 
@@ -61,7 +60,7 @@ func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
 	case ScriptArgumentU256:
 		bcs.U256(sa.Value.(big.Int))
 	case ScriptArgumentAddress:
-		sa.Value.(core.AccountAddress).MarshalBCS(bcs)
+		sa.Value.(AccountAddress).MarshalBCS(bcs)
 	case ScriptArgumentU8Vector:
 		bcs.WriteBytes(sa.Value.([]byte))
 	case ScriptArgumentBool:
@@ -85,7 +84,7 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *bcs.Deserializer) {
 	case ScriptArgumentU256:
 		sa.Value = bcs.U256()
 	case ScriptArgumentAddress:
-		aa := core.AccountAddress{}
+		aa := AccountAddress{}
 		aa.UnmarshalBCS(bcs)
 		sa.Value = aa
 	case ScriptArgumentU8Vector:

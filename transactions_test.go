@@ -6,17 +6,16 @@ import (
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := core.NewEd25519Account()
+	sender, err := aptos.NewEd25519Account()
 	assert.NoError(t, err)
 
-	var dest core.AccountAddress
+	var dest aptos.AccountAddress
 	dest.Random()
 
 	sn := uint64(1)
@@ -28,7 +27,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
-				Address: core.AccountOne,
+				Address: aptos.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",

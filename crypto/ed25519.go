@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/util"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 type Ed25519PrivateKey struct {

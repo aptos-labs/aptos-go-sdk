@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -186,7 +185,7 @@ func (xt *U64Tag) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type AccountAddressTag struct {
-	Value core.AccountAddress
+	Value AccountAddress
 }
 
 func (xt *AccountAddressTag) GetType() TypeTagType {
@@ -202,7 +201,7 @@ func (xt *AccountAddressTag) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type StructTag struct {
-	Address    core.AccountAddress
+	Address    AccountAddress
 	Module     string
 	Name       string
 	TypeParams []TypeTag

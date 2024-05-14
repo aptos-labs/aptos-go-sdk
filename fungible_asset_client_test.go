@@ -5,12 +5,6 @@ import (
 	"testing"
 )
 
-const (
-	defaultMetadata = "0x2ebb2ccac5e027a87fa0e2e5f656a3a4238d6a48d93ec9b610d570fc0aa0df12"
-	defaultStore    = "0x8a9d57692a9d4deb1680eaf107b83c152436e10f7bb521143fa403fa95ef76a"
-	defaultOwner    = "0xc67545d6f3d36ed01efc9b28cbfd0c1ae326d5d262dd077a29539bcee0edce9e"
-)
-
 func TestClient(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test expects network connection to mainnet")

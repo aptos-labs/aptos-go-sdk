@@ -2,13 +2,12 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 	"golang.org/x/crypto/sha3"
 )
 
 // RawTransaction representation of a transaction's parts prior to signing
 type RawTransaction struct {
-	Sender         core.AccountAddress
+	Sender         AccountAddress
 	SequenceNumber uint64
 	Payload        TransactionPayload
 	MaxGasAmount   uint64
@@ -56,7 +55,7 @@ func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
 	return message, nil
 }
 
-func (txn *RawTransaction) Sign(sender *core.Account) (signedTxn *SignedTransaction, err error) {
+func (txn *RawTransaction) Sign(sender *Account) (signedTxn *SignedTransaction, err error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
 		return

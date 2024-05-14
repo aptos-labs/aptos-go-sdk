@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/util"
 	"io"
 	"log/slog"
 	"net/http"
@@ -17,7 +16,6 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/core"
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -64,7 +62,7 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -80,7 +78,7 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	return
 }
 
-func (rc *NodeClient) Account(address core.AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
+func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -93,7 +91,7 @@ func (rc *NodeClient) Account(address core.AccountAddress, ledger_version ...int
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -109,7 +107,7 @@ func (rc *NodeClient) Account(address core.AccountAddress, ledger_version ...int
 	return
 }
 
-func (rc *NodeClient) AccountResource(address core.AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
+func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
 	if len(ledger_version) > 0 {
@@ -123,7 +121,7 @@ func (rc *NodeClient) AccountResource(address core.AccountAddress, resourceType 
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -138,7 +136,7 @@ func (rc *NodeClient) AccountResource(address core.AccountAddress, resourceType 
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *NodeClient) AccountResources(address core.AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
+func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -151,7 +149,7 @@ func (rc *NodeClient) AccountResources(address core.AccountAddress, ledger_versi
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -217,7 +215,7 @@ func (nb *NilBody) Close() error {
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (rc *NodeClient) AccountResourcesBCS(address core.AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledger_version) > 0 {
 		params := url.Values{}
@@ -230,7 +228,7 @@ func (rc *NodeClient) AccountResourcesBCS(address core.AccountAddress, ledger_ve
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -280,7 +278,7 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]an
 
 	// Handle Errors TODO: Handle ratelimits, etc.
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 
@@ -311,7 +309,7 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data m
 		if err == nil {
 			return
 		}
-		if httpErr, ok := err.(*util.HttpError); ok {
+		if httpErr, ok := err.(*HttpError); ok {
 			if httpErr.StatusCode == 404 {
 				if time.Now().Before(deadline) {
 					time.Sleep(period)
@@ -408,7 +406,7 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[str
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -436,7 +434,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -465,7 +463,7 @@ func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[strin
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return nil, err
 	}
 	blob, err := io.ReadAll(response.Body)
@@ -508,7 +506,7 @@ type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing
 // Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption
-func (rc *NodeClient) BuildTransaction(sender core.AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
 	gasUnitPrice := uint64(100)     // Default to min gas price
@@ -581,7 +579,7 @@ func (rc *NodeClient) BuildTransaction(sender core.AccountAddress, payload Trans
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *core.Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return
@@ -632,7 +630,7 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 		return
 	}
 	if response.StatusCode >= 400 {
-		err = util.NewHttpError(response)
+		err = NewHttpError(response)
 		return nil, err
 	}
 	blob, err := io.ReadAll(response.Body)

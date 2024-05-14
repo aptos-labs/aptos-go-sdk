@@ -1,4 +1,4 @@
-package core_test
+package aptos_test
 
 import (
 	"encoding/base64"

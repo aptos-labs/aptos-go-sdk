@@ -1,4 +1,4 @@
-package core
+package aptos
 
 import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
