@@ -6,6 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
+// SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
 	Transaction   RawTransaction
 	Authenticator crypto.Authenticator
@@ -20,13 +21,14 @@ func (txn *SignedTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
 	txn.Authenticator.UnmarshalBCS(bcs)
 }
 
+// Verify checks a signed transaction's signature
 func (txn *SignedTransaction) Verify() error {
-	tbytes, err := txn.Transaction.SignableBytes()
+	bytes, err := txn.Transaction.SigningMessage()
 	if err != nil {
 		return err
 	}
-	if txn.Authenticator.Verify(tbytes) {
+	if txn.Authenticator.Verify(bytes) {
 		return nil
 	}
-	return errors.New("Bad Signature")
+	return errors.New("signature is invalid")
 }

@@ -302,8 +302,8 @@ func main() {
 				ExpirationTimestampSeconds: uint64(now + 100),
 				ChainId:                    4,
 			}
-			txnblob, err := txn.SignableBytes()
-			maybefail(err, "txn SignableBytes, %s", err)
+			txnblob, err := txn.SigningMessage()
+			maybefail(err, "txn SigningMessage, %s", err)
 			//ser := aptos.Serializer{}
 			//txn.MarshalBCS(&ser)
 			//err = ser.Error()
