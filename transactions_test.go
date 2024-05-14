@@ -38,10 +38,10 @@ func TestRawTransactionSign(t *testing.T) {
 				amountbytes[:],
 			},
 		}},
-		MaxGasAmount:              1000,
-		GasUnitPrice:              2000,
-		ExpirationTimetampSeconds: 1714158778,
-		ChainId:                   4,
+		MaxGasAmount:               1000,
+		GasUnitPrice:               2000,
+		ExpirationTimestampSeconds: 1714158778,
+		ChainId:                    4,
 	}
 
 	stxn, err := txn.Sign(sender)

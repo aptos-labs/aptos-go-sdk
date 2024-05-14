@@ -568,13 +568,13 @@ func (rc *NodeClient) BuildTransaction(sender core.AccountAddress, payload types
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
 	rawTxn = &types.RawTransaction{
-		Sender:                    sender,
-		SequenceNumber:            sequenceNumber,
-		Payload:                   payload,
-		MaxGasAmount:              maxGasAmount,
-		GasUnitPrice:              gasUnitPrice,
-		ExpirationTimetampSeconds: expirationTimestampSeconds,
-		ChainId:                   chainId,
+		Sender:                     sender,
+		SequenceNumber:             sequenceNumber,
+		Payload:                    payload,
+		MaxGasAmount:               maxGasAmount,
+		GasUnitPrice:               gasUnitPrice,
+		ExpirationTimestampSeconds: expirationTimestampSeconds,
+		ChainId:                    chainId,
 	}
 
 	return

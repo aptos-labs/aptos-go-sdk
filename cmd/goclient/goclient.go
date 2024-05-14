@@ -297,10 +297,10 @@ func main() {
 						amountbytes[:],
 					},
 				}},
-				MaxGasAmount:              1000,
-				GasUnitPrice:              2000,
-				ExpirationTimetampSeconds: uint64(now + 100),
-				ChainId:                   4,
+				MaxGasAmount:               1000,
+				GasUnitPrice:               2000,
+				ExpirationTimestampSeconds: uint64(now + 100),
+				ChainId:                    4,
 			}
 			txnblob, err := txn.SignableBytes()
 			maybefail(err, "txn SignableBytes, %s", err)

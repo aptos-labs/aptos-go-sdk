@@ -13,8 +13,8 @@ type RawTransaction struct {
 	MaxGasAmount   uint64
 	GasUnitPrice   uint64
 
-	// ExpirationTimetampSeconds is seconds since Unix epoch
-	ExpirationTimetampSeconds uint64
+	// ExpirationTimestampSeconds is seconds since Unix epoch
+	ExpirationTimestampSeconds uint64
 
 	ChainId uint8
 }
@@ -25,7 +25,7 @@ func (txn *RawTransaction) MarshalBCS(bcs *bcs.Serializer) {
 	txn.Payload.MarshalBCS(bcs)
 	bcs.U64(txn.MaxGasAmount)
 	bcs.U64(txn.GasUnitPrice)
-	bcs.U64(txn.ExpirationTimetampSeconds)
+	bcs.U64(txn.ExpirationTimestampSeconds)
 	bcs.U8(txn.ChainId)
 }
 
@@ -35,7 +35,7 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
 	txn.Payload.UnmarshalBCS(bcs)
 	txn.MaxGasAmount = bcs.U64()
 	txn.GasUnitPrice = bcs.U64()
-	txn.ExpirationTimetampSeconds = bcs.U64()
+	txn.ExpirationTimestampSeconds = bcs.U64()
 	txn.ChainId = bcs.U8()
 }
 
