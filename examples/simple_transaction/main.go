@@ -9,7 +9,7 @@ import (
 // main This example shows you how to make an APT transfer transaction in the simplest possible way
 func main() {
 	// Create a client for Aptos
-	client, err := aptos_go_sdk.NewClient(aptos_go_sdk.DevnetConfig)
+	client, err := aptos.NewClient(aptos.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -32,7 +32,7 @@ func main() {
 	amount := uint64(100)
 
 	// Sign transaction
-	signedTxn, err := aptos_go_sdk.APTTransferTransaction(client, sender, receiver, amount)
+	signedTxn, err := aptos.APTTransferTransaction(client, sender, receiver, amount)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}

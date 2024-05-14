@@ -17,7 +17,7 @@ func main() {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos_go_sdk.NewClient(aptos_go_sdk.DevnetConfig)
+	client, err := aptos.NewClient(aptos.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -67,7 +67,7 @@ func main() {
 			Function: "transfer",
 			ArgTypes: []types.TypeTag{},
 			Args:     [][]byte{receiverArg, amountArg},
-		}}, aptos_go_sdk.SequenceNumber(0)) // Use the sequence number to skip fetching it
+		}}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}

@@ -111,14 +111,14 @@ func main() {
 		argi++
 	}
 
-	var client *aptos_go_sdk.Client
+	var client *aptos.Client
 	var err error
 
 	if network != "" {
-		client, err = aptos_go_sdk.NewClientFromNetworkName(network)
+		client, err = aptos.NewClientFromNetworkName(network)
 		maybefail(err, "client error: %s", err)
 	} else {
-		client, err = aptos_go_sdk.NewClient(aptos_go_sdk.NetworkConfig{
+		client, err = aptos.NewClient(aptos.NetworkConfig{
 			NodeUrl:   nodeUrl,
 			FaucetUrl: faucetUrl,
 		})
@@ -224,7 +224,7 @@ func main() {
 			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
 
 			time.Sleep(2 * time.Second)
-			stxn, err := aptos_go_sdk.APTTransferTransaction(client, alice, bob.Address, 42)
+			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
 			maybefail(err, "could not make transfer txn, %s", err)
 			slog.Debug("transfer", "stxn", stxn)
 			submitStart := time.Now()

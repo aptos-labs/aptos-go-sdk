@@ -1,4 +1,4 @@
-package aptos_go_sdk_test
+package aptos_test
 
 import (
 	"encoding/binary"
