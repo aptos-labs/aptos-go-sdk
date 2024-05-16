@@ -8,6 +8,10 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Refactored all pieces into new packages, this may break previous users
 - [`Fix`] Misspelling of expiration time
 - Added documentation for many functions and structs
+- Added all remaining Type tags
+- [`Fix`] Improved type tag parsing and printing for all types, including vector
+- [`Fix`] Fixed bug in deserializing bools
+- Added significantly more test coverage, including for scripts
 
 # v0.1.0 (5/7/2024)
 
