@@ -285,7 +285,7 @@ func main() {
 					},
 					Function: "transfer",
 					// ArgTypes: []aptos.TypeTag{
-					// 	aptos.TypeTag{Value: &aptos.AccountAddressTag{Value: dest}},
+					// 	aptos.TypeTag{Value: &aptos.AddressTag{Value: dest}},
 					// 	aptos.TypeTag{Value: &aptos.U64Tag{Value: amount}},
 					// },
 					ArgTypes: []aptos.TypeTag{},
