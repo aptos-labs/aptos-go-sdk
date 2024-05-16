@@ -132,3 +132,15 @@ func TestAPTTransferTransaction(t *testing.T) {
 	assert.NoError(t, err)
 	assert.NotNil(t, stxn)
 }
+
+func Test_Indexer(t *testing.T) {
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+
+	// TODO: copy indexer client calls to the main client
+	_, err = client.indexerClient.GetCoinBalances(AccountOne)
+	assert.NoError(t, err)
+
+	_, err = client.indexerClient.GetProcessorStatus("default_processor")
+	assert.NoError(t, err)
+}

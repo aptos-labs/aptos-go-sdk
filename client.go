@@ -18,30 +18,31 @@ type NetworkConfig struct {
 }
 
 var LocalnetConfig = NetworkConfig{
-	Name:       "localnet",
-	ChainId:    4,
-	NodeUrl:    "http://localhost:8080/v1",
-	IndexerUrl: "",
-	FaucetUrl:  "http://localhost:8081/v1",
+	Name:    "localnet",
+	ChainId: 4,
+	// We use 127.0.0.1 as it is more foolproof than localhost
+	NodeUrl:    "http://127.0.0.1:8080/v1",
+	IndexerUrl: "http://127.0.0.1:8090/v1/graphql",
+	FaucetUrl:  "http://127.0.0.1:8081/v1",
 }
 var DevnetConfig = NetworkConfig{
 	Name:       "devnet",
 	NodeUrl:    "https://api.devnet.aptoslabs.com/v1",
-	IndexerUrl: "",
+	IndexerUrl: "https://api.devnet.aptoslabs.com/v1/graphql",
 	FaucetUrl:  "https://faucet.devnet.aptoslabs.com/",
 }
 var TestnetConfig = NetworkConfig{
 	Name:       "testnet",
 	ChainId:    2,
 	NodeUrl:    "https://api.testnet.aptoslabs.com/v1",
-	IndexerUrl: "",
+	IndexerUrl: "https://api.testnet.aptoslabs.com/v1/graphql",
 	FaucetUrl:  "https://faucet.testnet.aptoslabs.com/",
 }
 var MainnetConfig = NetworkConfig{
 	Name:       "mainnet",
 	ChainId:    1,
 	NodeUrl:    "https://api.mainnet.aptoslabs.com/v1",
-	IndexerUrl: "",
+	IndexerUrl: "https://api.mainnet.aptoslabs.com/v1/graphql",
 	FaucetUrl:  "",
 }
 
