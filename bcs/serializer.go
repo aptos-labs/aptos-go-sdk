@@ -38,9 +38,9 @@ func (ser *Serializer) SetError(err error) {
 // Bool serialize a bool into a single byte
 func (ser *Serializer) Bool(v bool) {
 	if v {
-		ser.out.WriteByte(1)
+		ser.U8(1)
 	} else {
-		ser.out.WriteByte(0)
+		ser.U8(0)
 	}
 }
 

@@ -21,6 +21,20 @@ func (st *TestStruct) UnmarshalBCS(bcs *Deserializer) {
 	st.b = bcs.Bool()
 }
 
+type TestStruct2 struct {
+	num uint8
+	b   bool
+}
+
+func (st TestStruct2) MarshalBCS(bcs *Serializer) {
+	bcs.U8(st.num)
+	bcs.Bool(st.b)
+}
+func (st TestStruct2) UnmarshalBCS(bcs *Deserializer) {
+	st.num = bcs.U8()
+	st.b = bcs.Bool()
+}
+
 func Test_U8(t *testing.T) {
 	serialized := []string{"00", "01", "ff"}
 	deserialized := []uint8{0, 1, 0xff}
@@ -181,8 +195,98 @@ func Test_Struct(t *testing.T) {
 	}
 }
 
-func Test_Deserializer(t *testing.T) {
-	serialized, _ := hex.DecodeString("00010002")
+func Test_DeserializeSequence(t *testing.T) {
+	deserialized := []TestStruct{{0, false}, {5, true}, {255, true}}
+	serialized := []byte{0x03, 0x00, 0x00, 0x05, 0x01, 0xFF, 0x01}
+
+	ser := &Serializer{}
+	SerializeSequence(deserialized, ser)
+	assert.NoError(t, ser.Error())
+	actualSerialized := ser.ToBytes()
+	assert.Equal(t, serialized, actualSerialized)
+
+	des := NewDeserializer(actualSerialized)
+	actualDeserialized := DeserializeSequence[TestStruct](des)
+	assert.NoError(t, ser.Error())
+	assert.Equal(t, deserialized, actualDeserialized)
+}
+
+func Test_InvalidBool(t *testing.T) {
+	des := NewDeserializer([]byte{0x02})
+	des.Bool()
+	assert.Error(t, des.Error())
+}
+
+func Test_InvalidBytes(t *testing.T) {
+	des := NewDeserializer([]byte{0x02})
+	des.ReadBytes()
+	assert.Error(t, des.Error())
+}
+
+func Test_InvalidFixedBytesInto(t *testing.T) {
+	des := NewDeserializer([]byte{0x02})
+	bytes := make([]byte, 2)
+	des.ReadFixedBytesInto(bytes)
+	assert.Error(t, des.Error())
+}
+
+func Test_DoubleSetError(t *testing.T) {
+	des := NewDeserializer([]byte{0x02})
+	des.setError("first error")
+	des.setError("second error")
+	assert.Equal(t, "first error", des.Error().Error())
+}
+
+func Test_SerializeSequence(t *testing.T) {
+	// Test not implementing Marshal
+	ser := Serializer{}
+	SerializeSequence([]byte{0x00}, &ser)
+	assert.Error(t, ser.Error())
+
+	// Test by reference
+	testStruct := TestStruct{
+		num: 22,
+		b:   true,
+	}
+	data := []TestStruct{testStruct}
+	ser = Serializer{}
+	SerializeSequence(data, &ser)
+	assert.NoError(t, ser.Error())
+	assert.True(t, len(ser.ToBytes()) != 0)
+
+	// Test reset
+	ser.Reset()
+	assert.True(t, len(ser.ToBytes()) == 0)
+
+	// Test by value
+	testStruct2 := TestStruct2{
+		num: 52,
+		b:   false,
+	}
+	data2 := []TestStruct2{testStruct2}
+	SerializeSequence(data2, &ser)
+	assert.NoError(t, ser.Error())
+}
+
+func Test_DeserializeSequenceError(t *testing.T) {
+	// Test no leading size byte
+	des := NewDeserializer([]byte{})
+	DeserializeSequence[TestStruct](des)
+	assert.Error(t, des.Error())
+
+	// Test no bytes for struct
+	des = NewDeserializer([]byte{0x01})
+	DeserializeSequence[TestStruct](des)
+	assert.Error(t, des.Error())
+
+	// Test not a struct type to deserialize
+	des = NewDeserializer([]byte{0x01})
+	DeserializeSequence[uint8](des)
+	assert.Error(t, des.Error())
+}
+
+func Test_DeserializerErrors(t *testing.T) {
+	serialized, _ := hex.DecodeString("000100FF")
 	des := NewDeserializer(serialized)
 	assert.Equal(t, 4, des.Remaining())
 	assert.Equal(t, uint8(0), des.U8())
@@ -192,6 +296,9 @@ func Test_Deserializer(t *testing.T) {
 	des.U16()
 	assert.Error(t, des.Error())
 	des.SetError(nil)
+	assert.Equal(t, uint8(0xff), des.U8())
+	assert.NoError(t, des.Error())
+
 	des.Bool()
 	assert.Error(t, des.Error())
 	des.SetError(nil)
@@ -215,6 +322,31 @@ func Test_Deserializer(t *testing.T) {
 	des.SetError(nil)
 	des.U256()
 	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.Uleb128()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.ReadBytes()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U8()
+	assert.Error(t, des.Error())
+}
+
+func Test_ConvenienceFunctions(t *testing.T) {
+	str := TestStruct{
+		num: 10,
+		b:   true,
+	}
+
+	bytes, err := Serialize(&str)
+	assert.NoError(t, err)
+
+	str2 := TestStruct{}
+	err = Deserialize(&str2, bytes)
+	assert.NoError(t, err)
+
+	assert.Equal(t, str, str2)
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
