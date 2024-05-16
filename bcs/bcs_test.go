@@ -173,12 +173,48 @@ func Test_Struct(t *testing.T) {
 	// Deserializer
 	for i, input := range serialized {
 		bytes, _ := hex.DecodeString(input)
-		deserializer := &Deserializer{source: bytes}
+		deserializer := NewDeserializer(bytes)
 		st := TestStruct{}
 		deserializer.Struct(&st)
 		assert.Equal(t, deserialized[i], st)
 		assert.NoError(t, deserializer.Error())
 	}
+}
+
+func Test_Deserializer(t *testing.T) {
+	serialized, _ := hex.DecodeString("00010002")
+	des := NewDeserializer(serialized)
+	assert.Equal(t, 4, des.Remaining())
+	assert.Equal(t, uint8(0), des.U8())
+	assert.Equal(t, 3, des.Remaining())
+	assert.Equal(t, uint16(1), des.U16())
+	assert.Equal(t, 1, des.Remaining())
+	des.U16()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.Bool()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.ReadFixedBytes(2)
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U16()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U32()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U64()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U128()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U256()
+	assert.Error(t, des.Error())
+	des.SetError(nil)
+	des.U256()
+	assert.Error(t, des.Error())
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
@@ -195,7 +231,7 @@ func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *t
 	// Deserializer
 	for i, input := range serialized {
 		bytes, _ := hex.DecodeString(input)
-		deserializer := &Deserializer{source: bytes}
+		deserializer := NewDeserializer(bytes)
 		assert.Equal(t, deserialized[i], deserialize(deserializer))
 		assert.NoError(t, deserializer.Error())
 	}
@@ -216,7 +252,7 @@ func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, se
 	// Deserializer
 	for i, input := range serialized {
 		bytes, _ := hex.DecodeString(input)
-		deserializer := &Deserializer{source: bytes}
+		deserializer := NewDeserializer(bytes)
 		actual := deserialize(deserializer)
 		assert.NoError(t, deserializer.Error())
 		assert.Equal(t, 0, deserialized[i].Cmp(&actual))
