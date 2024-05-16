@@ -62,9 +62,9 @@ func init() {
 // Client is a facade over the multiple types of underlying clients, as the user doesn't actually care where the data
 // comes from.  It will be then handled underneath
 type Client struct {
-	nodeClient   *NodeClient
-	faucetClient *FaucetClient
-	// TODO: Add indexer client
+	nodeClient    *NodeClient
+	faucetClient  *FaucetClient
+	indexerClient *IndexerClient
 }
 
 var ErrUnknownNetworkName = errors.New("Unknown network name")
@@ -87,10 +87,19 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	if err != nil {
 		return nil, err
 	}
+	// Indexer may not be present
+	var indexerClient *IndexerClient = nil
+	if config.IndexerUrl != "" {
+		indexerClient = NewIndexerClient(nodeClient, config.IndexerUrl)
+	}
 
-	faucetClient, err := NewFaucetClient(nodeClient, config.FaucetUrl)
-	if err != nil {
-		return nil, err
+	// Faucet may not be present
+	var faucetClient *FaucetClient = nil
+	if config.FaucetUrl != "" {
+		faucetClient, err = NewFaucetClient(nodeClient, config.FaucetUrl)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Fetch the chain Id if it isn't in the config
@@ -101,6 +110,7 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	client = &Client{
 		nodeClient,
 		faucetClient,
+		indexerClient,
 	}
 	return
 }
