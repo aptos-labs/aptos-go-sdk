@@ -60,10 +60,10 @@ type ModuleBundle struct {
 }
 
 func (txn *ModuleBundle) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.SetError(errors.New("ModuleBunidle unimplemented"))
+	bcs.SetError(errors.New("ModuleBundle unimplemented"))
 }
 func (txn *ModuleBundle) UnmarshalBCS(bcs *bcs.Deserializer) {
-	bcs.SetError(errors.New("ModuleBunidle unimplemented"))
+	bcs.SetError(errors.New("ModuleBundle unimplemented"))
 }
 
 // EntryFunction call a single published entry function

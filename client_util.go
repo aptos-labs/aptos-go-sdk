@@ -1,8 +1,8 @@
 package aptos
 
 import (
-	"encoding/binary"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"net/url"
 	"runtime/debug"
 )
@@ -51,8 +51,10 @@ func init() {
 //
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
 func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
-	var amountBytes [8]byte
-	binary.LittleEndian.PutUint64(amountBytes[:], amount)
+	// TODO: Make this easier
+	ser := &bcs.Serializer{}
+	ser.U64(amount)
+	amountBytes := ser.ToBytes()
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		TransactionPayload{Payload: &EntryFunction{
@@ -64,7 +66,7 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 			ArgTypes: []TypeTag{},
 			Args: [][]byte{
 				dest[:],
-				amountBytes[:],
+				amountBytes,
 			},
 		}}, options...)
 	if err != nil {
