@@ -46,7 +46,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 	err := ic.Query(&q, variables)
 
 	if err != nil {
-		return out, err
+		return nil, err
 	}
 
 	for _, coin := range q.Current_coin_balances {
