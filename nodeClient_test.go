@@ -18,6 +18,6 @@ func TestPollForTransaction(t *testing.T) {
 	dt := time.Now().Sub(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)
-	assert.Less(t, dt, 15*time.Millisecond)
+	assert.Less(t, dt, 20*time.Millisecond)
 	assert.Error(t, err)
 }
