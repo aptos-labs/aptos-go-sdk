@@ -46,6 +46,11 @@ func (aa *AccountAddress) String() string {
 	}
 }
 
+// StringLong Returns the long string representation of the AccountAddress
+func (aa *AccountAddress) StringLong() string {
+	return "0x" + hex.EncodeToString(aa[:])
+}
+
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
 func (aa AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.FixedBytes(aa[:])
