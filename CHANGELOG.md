@@ -12,6 +12,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Improved type tag parsing and printing for all types, including vector
 - [`Fix`] Fixed bug in deserializing bools
 - Added significantly more test coverage, including for scripts
+- Add block APIs
+- Add private key imports, and authentication key
+- Add signed transaction hashes
 
 # v0.1.0 (5/7/2024)
 
