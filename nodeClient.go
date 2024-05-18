@@ -293,6 +293,44 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]an
 	return
 }
 
+func (rc *NodeClient) BlockByHash(blockHash string, withTransactions bool) (data map[string]any, err error) {
+	restUrl := rc.baseUrl.JoinPath("blocks/by_hash", blockHash)
+	return rc.getBlockCommon(restUrl, withTransactions)
+}
+
+func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data map[string]any, err error) {
+	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
+	return rc.getBlockCommon(restUrl, withTransactions)
+}
+func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data map[string]any, err error) {
+	params := url.Values{}
+	params.Set("with_transactions", strconv.FormatBool(withTransactions))
+	restUrl.RawQuery = params.Encode()
+
+	// Fetch block
+	response, err := rc.Get(restUrl.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", restUrl.String(), err)
+		return
+	}
+
+	// Handle Errors TODO: Handle ratelimits, etc.
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+
+	// Read body to JSON TODO: BCS
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	_ = response.Body.Close() // We don't care about the error about closing the body
+	err = json.Unmarshal(blob, &data)
+	return
+}
+
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
 // Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
 // Accept option arguments PollPeriod and PollTimeout like PollForTransactions.

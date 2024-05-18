@@ -66,16 +66,6 @@ func (aa *AccountAddress) Random() {
 	rand.Read((*aa)[:])
 }
 
-// FromPublicKey Generates an account address from a public key using the appropriate
-// account address scheme
-func (aa *AccountAddress) FromPublicKey(pubkey crypto.PublicKey) {
-	bytes := util.SHA3_256Hash([][]byte{
-		pubkey.Bytes(),
-		{pubkey.Scheme()},
-	})
-	copy((*aa)[:], bytes)
-}
-
 // NamedObjectAddress derives a named object address based on the input address as the creator
 func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(seed, crypto.NamedObjectScheme)
@@ -102,22 +92,33 @@ func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAd
 	return
 }
 
-// Account represents an onchain account, with an associated signer, which may be a PrivateKey
+// Account represents an on-chain account, with an associated signer, which may be a PrivateKey
 type Account struct {
 	Address AccountAddress
 	Signer  crypto.Signer
 }
 
+func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.AuthenticationKey) (*Account, error) {
+	out := &Account{}
+	if len(authKey) == 1 {
+		copy(out.Address[:], authKey[0][:])
+	} else if len(authKey) > 1 {
+		// Throw error
+		return nil, errors.New("Must only provide one auth key")
+	} else {
+		copy(out.Address[:], signer.AuthKey()[:])
+	}
+	out.Signer = signer
+	return out, nil
+}
+
 // NewEd25519Account creates an account with a new random Ed25519 private key
 func NewEd25519Account() (*Account, error) {
-	privkey, pubkey, err := crypto.GenerateEd5519Keys()
+	privkey, _, err := crypto.GenerateEd5519Keys()
 	if err != nil {
 		return nil, err
 	}
-	out := &Account{}
-	out.Address.FromPublicKey(&pubkey)
-	out.Signer = &privkey
-	return out, nil
+	return NewAccountFromSigner(&privkey)
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
