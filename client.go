@@ -127,7 +127,7 @@ func (client *Client) Info() (info NodeInfo, err error) {
 	return client.nodeClient.Info()
 }
 
-// Account Retrieves information about the account such as SequenceNumber and AuthenticationKey
+// Account Retrieves information about the account such as SequenceNumber and AuthKey
 func (client *Client) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
 	return client.nodeClient.Account(address, ledgerVersion...)
 }
@@ -154,7 +154,7 @@ func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (
 	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
 }
 
-// BlockByHeight fetches a block by height
+// BlockByHash fetches a block by hash
 func (client *Client) BlockByHash(blockHash string, withTransactions bool) (data map[string]any, err error) {
 	return client.nodeClient.BlockByHash(blockHash, withTransactions)
 }

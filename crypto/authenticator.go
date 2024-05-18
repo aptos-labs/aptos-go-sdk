@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
@@ -66,6 +67,16 @@ func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 // Verify verifies a message with the public key and signature
 func (ea *Authenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
+}
+
+type AuthenticationKey [32]byte
+
+func (ak *AuthenticationKey) FromPublicKey(pubkey PublicKey) {
+	bytes := util.SHA3_256Hash([][]byte{
+		pubkey.Bytes(),
+		{pubkey.Scheme()},
+	})
+	copy((*ak)[:], bytes)
 }
 
 // TODO: FeePayerAuthenticator, MultiAgentAuthenticator, MultiEd25519Authenticator, SingleSenderAuthenticator, SingleKeyAuthenticator

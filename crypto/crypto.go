@@ -6,7 +6,11 @@ type Signer interface {
 	// then a placeholder
 	ToHex
 
+	// Sign signs a transaction and returns an associated authenticator
 	Sign(msg []byte) (authenticator Authenticator, err error)
+
+	// AuthKey gives the AuthenticationKey associated with the signer
+	AuthKey() *AuthenticationKey
 }
 
 // PrivateKey a generic interface for a signing private key

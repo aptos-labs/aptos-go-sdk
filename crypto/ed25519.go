@@ -30,6 +30,12 @@ func (key *Ed25519PrivateKey) PubKey() PublicKey {
 	}
 }
 
+func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
+	out := &AuthenticationKey{}
+	out.FromPublicKey(key.PubKey())
+	return out
+}
+
 func (key *Ed25519PrivateKey) Bytes() []byte {
 	return key.inner[:]
 }
@@ -43,6 +49,10 @@ func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
 	if err != nil {
 		return err
 	}
+	return key.FromBytes(bytes)
+}
+
+func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != ed25519.PrivateKeySize {
 		return errors.New("invalid ed25519 private key size")
 	}
