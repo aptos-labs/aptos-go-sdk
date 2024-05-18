@@ -32,3 +32,22 @@ func (txn *SignedTransaction) Verify() error {
 	}
 	return errors.New("signature is invalid")
 }
+
+func (txn *SignedTransaction) Hash() ([]byte, error) {
+	if TransactionPrefix == nil {
+		hash := SHA3_256Hash([][]byte{[]byte("APTOS::Transaction")})
+		TransactionPrefix = &hash
+	}
+
+	txnBytes, err := bcs.Serialize(txn)
+	if err != nil {
+		return nil, err
+	}
+
+	// Transaction signature is defined as, the domain separated prefix based on struct (Transaction)
+	// Then followed by the type of the transaction for the enum, UserTransaction is 0
+	// Then followed by BCS encoded bytes of the signed transaction
+	return SHA3_256Hash([][]byte{*TransactionPrefix, {0}, txnBytes}), nil
+}
+
+var TransactionPrefix *[]byte
