@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"errors"
+	"github.com/hasura/go-graphql-client"
 	"time"
 )
 
@@ -148,6 +149,16 @@ func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 	return client.nodeClient.AccountResourcesBCS(address, ledgerVersion...)
 }
 
+// BlockByHeight fetches a block by height
+func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data map[string]any, err error) {
+	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
+}
+
+// BlockByHeight fetches a block by height
+func (client *Client) BlockByHash(blockHash string, withTransactions bool) (data map[string]any, err error) {
+	return client.nodeClient.BlockByHash(blockHash, withTransactions)
+}
+
 // TransactionByHash gets info on a transaction
 // The transaction may be pending or recently committed.
 //
@@ -223,4 +234,10 @@ func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload Tra
 // TODO: support ledger version
 func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
 	return client.nodeClient.View(payload)
+}
+
+// QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer
+// client on how to make queries
+func (client *Client) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {
+	return client.indexerClient.Query(query, variables, options...)
 }
