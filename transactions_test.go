@@ -14,8 +14,9 @@ func TestRawTransactionSign(t *testing.T) {
 	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
 
-	var dest AccountAddress
-	dest.Random()
+	receiver, err := NewEd25519Account()
+	assert.NoError(t, err)
+	dest := receiver.Address
 
 	sn := uint64(1)
 	amount := uint64(10_000)
