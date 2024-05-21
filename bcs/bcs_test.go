@@ -2,6 +2,7 @@ package bcs
 
 import (
 	"encoding/hex"
+	"errors"
 	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
@@ -33,6 +34,21 @@ func (st TestStruct2) MarshalBCS(bcs *Serializer) {
 func (st TestStruct2) UnmarshalBCS(bcs *Deserializer) {
 	st.num = bcs.U8()
 	st.b = bcs.Bool()
+}
+
+type TestStruct3 struct {
+	num uint16
+}
+
+func (st TestStruct3) MarshalBCS(bcs *Serializer) {
+	if st.num > 255 {
+		bcs.SetError(errors.New("value is greater than 255"))
+		return
+	}
+	bcs.U8(uint8(st.num))
+}
+func (st TestStruct3) UnmarshalBCS(bcs *Deserializer) {
+	st.num = uint16(bcs.U8())
 }
 
 func Test_U8(t *testing.T) {
@@ -230,11 +246,21 @@ func Test_InvalidFixedBytesInto(t *testing.T) {
 	assert.Error(t, des.Error())
 }
 
-func Test_DoubleSetError(t *testing.T) {
-	des := NewDeserializer([]byte{0x02})
-	des.setError("first error")
-	des.setError("second error")
-	assert.Equal(t, "first error", des.Error().Error())
+func Test_FailedStructSerialize(t *testing.T) {
+	str := TestStruct3{
+		num: uint16(5),
+	}
+	_, err := Serialize(&str)
+	assert.NoError(t, err)
+	str.num = uint16(256)
+	_, err = Serialize(&str)
+	assert.Error(t, err)
+}
+
+func Test_FailedStructDeserialize(t *testing.T) {
+	str := TestStruct{}
+	err := Deserialize(&str, []byte{})
+	assert.Error(t, err)
 }
 
 func Test_SerializeSequence(t *testing.T) {
