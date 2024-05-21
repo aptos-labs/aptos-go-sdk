@@ -9,6 +9,7 @@ import (
 type NodeInfo struct {
 	ChainId                uint8  `json:"chain_id"`
 	EpochStr               string `json:"epoch"`
+	LedgerTimestampStr     string `json:"ledger_timestamp"`
 	LedgerVersionStr       string `json:"ledger_version"`
 	OldestLedgerVersionStr string `json:"oldest_ledger_version"`
 	NodeRole               string `json:"node_role"`
@@ -22,6 +23,15 @@ func (info NodeInfo) Epoch() uint64 {
 	value, err := strconv.ParseUint(info.EpochStr, 10, 64)
 	if err != nil {
 		slog.Error("bad epoch", "v", info.EpochStr, "err", err)
+		return 0
+	}
+	return value
+}
+
+func (info NodeInfo) LedgerTimestamp() uint64 {
+	value, err := strconv.ParseUint(info.LedgerTimestampStr, 10, 64)
+	if err != nil {
+		slog.Error("bad ledger_timestamp", "v", info.LedgerTimestampStr, "err", err)
 		return 0
 	}
 	return value
