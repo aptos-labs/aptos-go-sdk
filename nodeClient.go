@@ -19,8 +19,12 @@ import (
 )
 
 // For Content-Type header when POST-ing a Transaction
-const APTOS_SIGNED_BCS = "application/x.aptos.signed_transaction+bcs"
-const APTOS_VIEW_BCS = "application/x.aptos.view_function+bcs"
+
+// ContentTypeAptosSignedTxnBcs header for sending BCS transaction payloads
+const ContentTypeAptosSignedTxnBcs = "application/x.aptos.signed_transaction+bcs"
+
+// ContentTypeAptosViewFunctionBcs header for sending BCS view function payloads
+const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
 type NodeClient struct {
 	client  *http.Client
@@ -46,7 +50,7 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
 	baseUrl, err := url.Parse(rpcUrl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse RPC url '%s': %+w", rpcUrl, err)
+		return nil, fmt.Errorf("failed to parse RPC url '%s': %w", rpcUrl, err)
 	}
 	return &NodeClient{
 		client:  client,
@@ -78,11 +82,11 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	return
 }
 
-func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (info AccountInfo, err error) {
+func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
-	if len(ledger_version) > 0 {
+	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -107,12 +111,12 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 	return
 }
 
-func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledger_version ...int) (data map[string]any, err error) {
+func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
-	if len(ledger_version) > 0 {
+	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -136,11 +140,11 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *NodeClient) AccountResources(address AccountAddress, ledger_version ...int) (resources []AccountResourceInfo, err error) {
+func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
-	if len(ledger_version) > 0 {
+	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -167,7 +171,7 @@ func (rc *NodeClient) Get(getUrl string) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	req.Header.Set(ClientHeader, ClientHeaderValue)
 	return rc.client.Do(req)
 }
 
@@ -177,7 +181,7 @@ func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 		return nil, err
 	}
 	req.Header.Set("Accept", "application/x-bcs")
-	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	req.Header.Set(ClientHeader, ClientHeaderValue)
 	return rc.client.Do(req)
 }
 
@@ -187,7 +191,7 @@ func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (
 		return nil, err
 	}
 	req.Header.Set("Content-Type", contentType)
-	req.Header.Set(APTOS_CLIENT_HEADER, AptosClientHeaderValue)
+	req.Header.Set(ClientHeader, ClientHeaderValue)
 	if body == nil {
 		req.Body = &nilBodySingleton
 	} else {
@@ -207,7 +211,7 @@ type NilBody struct {
 
 var nilBodySingleton NilBody
 
-func (nb *NilBody) Read(p []byte) (n int, err error) {
+func (nb *NilBody) Read(_ []byte) (n int, err error) {
 	return 0, io.EOF
 }
 func (nb *NilBody) Close() error {
@@ -215,11 +219,11 @@ func (nb *NilBody) Close() error {
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version ...int) (resources []AccountResourceRecord, err error) {
+func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
-	if len(ledger_version) > 0 {
+	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledger_version[0]))
+		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.GetBCS(au.String())
@@ -347,7 +351,8 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data m
 		if err == nil {
 			return
 		}
-		if httpErr, ok := err.(*HttpError); ok {
+		var httpErr *HttpError
+		if errors.As(err, &httpErr) {
 			if httpErr.StatusCode == 404 {
 				if time.Now().Before(deadline) {
 					time.Sleep(period)
@@ -355,8 +360,6 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data m
 					return
 				}
 			}
-		} else {
-			return
 		}
 	}
 
@@ -495,7 +498,7 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data map[
 	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions")
-	response, err := rc.Post(au.String(), APTOS_SIGNED_BCS, bodyReader)
+	response, err := rc.Post(au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -661,7 +664,7 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("view")
-	response, err := rc.Post(au.String(), APTOS_VIEW_BCS, bodyReader)
+	response, err := rc.Post(au.String(), ContentTypeAptosViewFunctionBcs, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return

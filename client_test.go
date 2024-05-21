@@ -20,8 +20,8 @@ func TestNamedConfig(t *testing.T) {
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
-	assert.Greater(t, len(AptosClientHeaderValue), 0)
-	assert.NotEqual(t, "aptos-go-sdk/unk", AptosClientHeaderValue)
+	assert.Greater(t, len(ClientHeaderValue), 0)
+	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
@@ -152,7 +152,7 @@ func Test_Indexer(t *testing.T) {
 }
 
 func Test_Block(t *testing.T) {
-	// Check block 1, it's always a reconfig
+	// Check block 1, it's always a reconfiguration
 	client, err := NewClient(DevnetConfig)
 	assert.NoError(t, err)
 	blockByHeight, err := client.BlockByHeight(1, true)

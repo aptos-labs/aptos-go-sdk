@@ -17,10 +17,10 @@ import (
 )
 
 var (
-	verbose    bool   = false
-	accountStr string = ""
-	network    string = ""
-	txnHash    string = ""
+	verbose    = false
+	accountStr = ""
+	network    = ""
+	txnHash    = ""
 )
 
 func getenv(name string, defaultValue string) string {
@@ -31,7 +31,7 @@ func getenv(name string, defaultValue string) string {
 	return value
 }
 
-const APTOS_CLIENT_HEADER = "x-aptos-client"
+const AptosClientHeader = "x-aptos-client"
 
 var AptosClientHeaderValue = "aptos-go-sdk/unk"
 
@@ -146,7 +146,7 @@ func main() {
 		if arg == "account" {
 			data, err := client.Account(account)
 			maybefail(err, "could not get account %s: %s", accountStr, err)
-			os.Stdout.WriteString(prettyJson(data))
+			_, _ = os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "account_resources" {
 			localAccountStr := accountStr
 			if (localAccountStr == "") && ((argi + 1) < len(misc)) {
@@ -157,15 +157,15 @@ func main() {
 			}
 			resources, err := client.AccountResources(account)
 			maybefail(err, "could not get account resources %s: %s", localAccountStr, err)
-			os.Stdout.WriteString(prettyJson(resources))
+			_, _ = os.Stdout.WriteString(prettyJson(resources))
 		} else if arg == "txn_by_hash" {
 			data, err := client.TransactionByHash(txnHash)
 			maybefail(err, "could not get txn %s: %s %s", txnHash, err, hebody(err))
-			os.Stdout.WriteString(prettyJson(data))
+			_, _ = os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "info" {
 			data, err := client.Info()
 			maybefail(err, "could not get info: %s", err)
-			os.Stdout.WriteString(prettyJson(data))
+			_, _ = os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "transactions" {
 			exceptSystem := false
 
@@ -216,21 +216,21 @@ func main() {
 				slog.Debug("txns filtered", "orig", len(data), "kept", len(nd))
 				data = nd
 			}
-			os.Stdout.WriteString(prettyJson(data))
+			_, _ = os.Stdout.WriteString(prettyJson(data))
 		} else if arg == "naf" {
 			alice, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			amount := uint64(200_000_000)
 			err = client.Fund(alice.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
+			_, _ = fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", alice.Address.String(), amount)
 
 			bob, err := aptos.NewEd25519Account()
 			maybefail(err, "new account: %s", err)
 			//amount = uint64(10_000_000)
 			err = client.Fund(bob.Address, amount)
 			maybefail(err, "faucet err: %s", err)
-			fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
+			_, _ = fmt.Fprintf(os.Stdout, "new account %s funded for %d\n", bob.Address.String(), amount)
 
 			time.Sleep(2 * time.Second)
 			stxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, 42)
@@ -239,8 +239,9 @@ func main() {
 			submitStart := time.Now()
 			result, err := client.SubmitTransaction(stxn)
 			if err != nil {
-				if he, ok := err.(*aptos.HttpError); ok {
-					fmt.Fprintf(os.Stdout, "txn err:\n\t%s\n", string(he.Body))
+				var he *aptos.HttpError
+				if errors.As(err, &he) {
+					_, _ = fmt.Fprintf(os.Stdout, "txn err:\n\t%s\n", string(he.Body))
 				}
 				maybefail(err, "could not submit transfer txn, %s", err)
 			}
@@ -319,11 +320,11 @@ func main() {
 			//maybefail(err, "txn BCS, %s", err)
 			//txnblob := ser.ToBytes()
 			enc := hex.NewEncoder(os.Stdout)
-			enc.Write(txnblob)
-			os.Stdout.WriteString("\n")
+			_, _ = enc.Write(txnblob)
+			_, _ = os.Stdout.WriteString("\n")
 			argi += 3
 		} else {
-			fmt.Fprintf(os.Stderr, "bad action %#v", arg)
+			_, _ = fmt.Fprintf(os.Stderr, "bad action %#v", arg)
 			os.Exit(1)
 		}
 		argi++
@@ -334,7 +335,7 @@ func maybefail(err error, msg string, args ...any) {
 	if err == nil {
 		return
 	}
-	fmt.Fprintf(os.Stderr, msg, args...)
+	_, _ = fmt.Fprintf(os.Stderr, msg, args...)
 	os.Exit(1)
 }
 
@@ -342,12 +343,13 @@ func prettyJson(x any) string {
 	out := strings.Builder{}
 	enc := json.NewEncoder(&out)
 	enc.SetIndent("", "  ")
-	enc.Encode(x)
+	_ = enc.Encode(x)
 	return out.String()
 }
 
 func hebody(err error) string {
-	he, ok := err.(*aptos.HttpError)
+	var he *aptos.HttpError
+	ok := errors.As(err, &he)
 	if !ok {
 		return ""
 	}

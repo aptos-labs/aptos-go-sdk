@@ -12,7 +12,7 @@ func ParseHex(hexStr string) ([]byte, error) {
 	return util.ParseHex(hexStr)
 }
 
-// SHA3_256Hash takes a hash of the given sets of bytes
-func SHA3_256Hash(bytes [][]byte) (output []byte) {
-	return util.SHA3_256Hash(bytes)
+// Sha3256Hash takes a hash of the given sets of bytes
+func Sha3256Hash(bytes [][]byte) (output []byte) {
+	return util.Sha3256Hash(bytes)
 }

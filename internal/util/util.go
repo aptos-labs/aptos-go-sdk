@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func SHA3_256Hash(bytes [][]byte) (output []byte) {
+func Sha3256Hash(bytes [][]byte) (output []byte) {
 	hasher := sha3.New256()
 	for _, b := range bytes {
 		hasher.Write(b)

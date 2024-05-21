@@ -51,7 +51,7 @@ func (aa *AccountAddress) StringLong() string {
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
-func (aa AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
+func (aa *AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.FixedBytes(aa[:])
 }
 
@@ -77,7 +77,7 @@ func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAd
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
 func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
-	bytes := util.SHA3_256Hash([][]byte{
+	bytes := util.Sha3256Hash([][]byte{
 		aa[:],
 		seed[:],
 		{typeByte},

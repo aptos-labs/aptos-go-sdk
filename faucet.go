@@ -15,13 +15,13 @@ type FaucetClient struct {
 }
 
 func NewFaucetClient(nodeClient *NodeClient, faucetUrl string) (*FaucetClient, error) {
-	url, err := url.Parse(faucetUrl)
+	parsedUrl, err := url.Parse(faucetUrl)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse faucet url '%s': %+w", faucetUrl, err)
+		return nil, fmt.Errorf("failed to parse faucet url '%s': %w", faucetUrl, err)
 	}
 	return &FaucetClient{
 		nodeClient,
-		url,
+		parsedUrl,
 	}, nil
 }
 

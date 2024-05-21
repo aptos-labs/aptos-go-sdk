@@ -7,9 +7,9 @@ import (
 	"runtime/debug"
 )
 
-const APTOS_CLIENT_HEADER = "x-aptos-client"
+const ClientHeader = "x-aptos-client"
 
-var AptosClientHeaderValue = "aptos-go-sdk/unk"
+var ClientHeaderValue = "aptos-go-sdk/unk"
 
 func init() {
 	vcsRevision := "unk"
@@ -43,10 +43,10 @@ func init() {
 	if goOs != "" {
 		params.Set("os", goOs)
 	}
-	AptosClientHeaderValue = fmt.Sprintf("aptos-go-sdk/%s;%s", vcsRevision, params.Encode())
+	ClientHeaderValue = fmt.Sprintf("aptos-go-sdk/%s;%s", vcsRevision, params.Encode())
 }
 
-// Move some APT from sender to dest
+// APTTransferTransaction Move some APT from sender to dest
 // Amount in Octas (10^-8 APT)
 //
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption

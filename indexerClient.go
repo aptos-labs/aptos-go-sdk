@@ -2,10 +2,8 @@ package aptos
 
 import (
 	"context"
-	"encoding/json"
 	"github.com/hasura/go-graphql-client"
 	"net/http"
-	"os"
 )
 
 // -- Note: all query parameters must start with capital letters --
@@ -75,14 +73,4 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 	}
 
 	return q.Processor_status[0].Last_success_version, err
-}
-
-// print Helper function for debugging and printing out query outputs
-func print(v any) {
-	w := json.NewEncoder(os.Stdout)
-	w.SetIndent("", "\t")
-	err := w.Encode(v)
-	if err != nil {
-		panic(err)
-	}
 }
