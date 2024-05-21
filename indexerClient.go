@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/hasura/go-graphql-client"
+	"net/http"
 	"os"
 )
 
@@ -13,9 +14,9 @@ type IndexerClient struct {
 	inner *graphql.Client
 }
 
-func NewIndexerClient(nodeClient *NodeClient, url string) *IndexerClient {
+func NewIndexerClient(httpClient *http.Client, url string) *IndexerClient {
 	// Reuse the HTTP client in the node client
-	client := graphql.NewClient(url, nodeClient.client)
+	client := graphql.NewClient(url, httpClient)
 	return &IndexerClient{
 		client,
 	}

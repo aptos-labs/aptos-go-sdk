@@ -102,7 +102,7 @@ func (rc *NodeClient) Account(address AccountAddress, ledger_version ...int) (in
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "account json err: %v\n%s\n", err, string(blob))
+		_, _ = fmt.Fprintf(os.Stderr, "account json err: %v\n%s\n", err, string(blob))
 	}
 	return
 }
@@ -201,7 +201,7 @@ func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (
 	return rc.client.Do(req)
 }
 
-// empty io.ReadCloser
+// NilBody empty io.ReadCloser
 type NilBody struct {
 }
 
@@ -236,7 +236,7 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledger_version
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	response.Body.Close()
+	_ = response.Body.Close()
 	deserializer := bcs.NewDeserializer(blob)
 	// See resource_test.go TestMoveResourceBCS
 	resources = bcs.DeserializeSequence[AccountResourceRecord](deserializer)
@@ -423,12 +423,12 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 	return nil
 }
 
-// Get recent transactions.
+// Transactions Get recent transactions.
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("transactions")
-	var params url.Values
+	params := url.Values{}
 	if start != nil {
 		params.Set("start", strconv.FormatUint(*start, 10))
 	}
@@ -622,7 +622,6 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload Tra
 	if err != nil {
 		return
 	}
-	// TODO: This shows we should be taking the account, and let it handle the sign part rather than the private key
 	signedTxn, err := rawTxn.Sign(sender)
 	if err != nil {
 		return

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"log/slog"
@@ -112,7 +113,18 @@ func main() {
 	var err error
 
 	if network != "" {
-		client, err = aptos.NewClientFromNetworkName(network)
+		var config aptos.NetworkConfig
+		switch network {
+		case "devnet":
+			config = aptos.DevnetConfig
+		case "testnet":
+			config = aptos.TestnetConfig
+		case "mainnet":
+			config = aptos.MainnetConfig
+		default:
+			maybefail(errors.New("unknown network type"), "client error: %s", err)
+		}
+		client, err = aptos.NewClient(config)
 		maybefail(err, "client error: %s", err)
 	} else {
 		client, err = aptos.NewClient(aptos.NetworkConfig{
