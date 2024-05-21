@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"errors"
 	"github.com/hasura/go-graphql-client"
 	"time"
 )
@@ -47,7 +46,7 @@ var MainnetConfig = NetworkConfig{
 	FaucetUrl:  "",
 }
 
-// Map from network name to NetworkConfig
+// NamedNetworks Map from network name to NetworkConfig
 var NamedNetworks map[string]NetworkConfig
 
 func init() {
@@ -69,22 +68,8 @@ type Client struct {
 	indexerClient *IndexerClient
 }
 
-var ErrUnknownNetworkName = errors.New("Unknown network name")
-
-// NewClientFromNetworkName Creates a new client for a specific network name
-func NewClientFromNetworkName(networkName string) (client *Client, err error) {
-	config, ok := NamedNetworks[networkName]
-	if !ok {
-		return nil, ErrUnknownNetworkName
-
-	}
-	return NewClient(config)
-}
-
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig) (client *Client, err error) {
-	// TODO: add indexer
-
 	nodeClient, err := NewNodeClient(config.NodeUrl, config.ChainId)
 	if err != nil {
 		return nil, err
@@ -92,7 +77,7 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	// Indexer may not be present
 	var indexerClient *IndexerClient = nil
 	if config.IndexerUrl != "" {
-		indexerClient = NewIndexerClient(nodeClient, config.IndexerUrl)
+		indexerClient = NewIndexerClient(nodeClient.client, config.IndexerUrl)
 	}
 
 	// Faucet may not be present
@@ -190,7 +175,7 @@ func (client *Client) PollForTransactions(txnHashes []string, options ...any) er
 	return client.nodeClient.PollForTransactions(txnHashes, options...)
 }
 
-// Do a long-GET for one transaction and wait for it to complete
+// WaitForTransaction Do a long-GET for one transaction and wait for it to complete
 func (client *Client) WaitForTransaction(txnHash string) (data map[string]any, err error) {
 	return client.nodeClient.WaitForTransaction(txnHash)
 }
@@ -240,4 +225,14 @@ func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
 // client on how to make queries
 func (client *Client) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {
 	return client.indexerClient.Query(query, variables, options...)
+}
+
+// GetProcessorStatus returns the ledger version up to which the processor has processed
+func (client *Client) GetProcessorStatus(processorName string) (uint64, error) {
+	return client.indexerClient.GetProcessorStatus(processorName)
+}
+
+// GetCoinBalances gets the balances of all coins associated with a given address
+func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
+	return client.indexerClient.GetCoinBalances(address)
 }

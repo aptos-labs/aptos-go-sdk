@@ -138,9 +138,86 @@ func Test_Indexer(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TODO: copy indexer client calls to the main client
-	_, err = client.indexerClient.GetCoinBalances(AccountOne)
+	_, err = client.GetCoinBalances(AccountOne)
 	assert.NoError(t, err)
 
-	_, err = client.indexerClient.GetProcessorStatus("default_processor")
+	status, err := client.GetProcessorStatus("default_processor")
 	assert.NoError(t, err)
+	assert.Greater(t, status, uint64(0))
+}
+
+func Test_Block(t *testing.T) {
+	// Check block 1, it's always a reconfig
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+	blockByHeight, err := client.BlockByHeight(1, true)
+	assert.NoError(t, err)
+	blockByVersion, err := client.BlockByVersion(1, true)
+	assert.NoError(t, err)
+
+	assert.Equal(t, blockByHeight, blockByVersion)
+	assert.Equal(t, "1", blockByHeight["block_height"].(string))
+	assert.True(t, len(blockByHeight["transactions"].([]any)) > 0)
+}
+
+func Test_Account(t *testing.T) {
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+	account, err := client.Account(AccountOne)
+	assert.NoError(t, err)
+	sequenceNumber, err := account.SequenceNumber()
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(0), sequenceNumber)
+	authKey, err := account.AuthenticationKey()
+	assert.NoError(t, err)
+	assert.Equal(t, AccountOne[:], authKey[:])
+}
+
+func Test_Transactions(t *testing.T) {
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+
+	start := uint64(1)
+	count := uint64(2)
+	// Specific 2 should only give 2
+	transactions, err := client.Transactions(&start, &count)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 2)
+
+	// This will give the latest 2
+	transactions, err = client.Transactions(nil, &count)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 2)
+
+	// This will give the 25 from 2
+	transactions, err = client.Transactions(&start, nil)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 25)
+
+	// This will give the latest 25
+	transactions, err = client.Transactions(nil, nil)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 25)
+}
+
+func Test_Info(t *testing.T) {
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+
+	info, err := client.Info()
+	assert.NoError(t, err)
+	assert.Greater(t, info.BlockHeight(), uint64(0))
+}
+
+func Test_AccountResources(t *testing.T) {
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+
+	resources, err := client.AccountResources(AccountOne)
+	assert.NoError(t, err)
+	assert.Greater(t, len(resources), 0)
+
+	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
+	assert.NoError(t, err)
+	assert.Greater(t, len(resourcesBcs), 0)
 }
