@@ -10,7 +10,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Added documentation for many functions and structs
 - Added all remaining Type tags
 - [`Fix`] Improved type tag parsing and printing for all types, including vector
-- [`Fix`] Fixed bug in deserializing bools
+- [`Fix`] Fixed bug in deserializing bool
 - Added significantly more test coverage, including for scripts
 - Add block APIs
 - Add private key imports, and authentication key

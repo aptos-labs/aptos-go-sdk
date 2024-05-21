@@ -20,8 +20,8 @@ func TestRawTransactionSign(t *testing.T) {
 
 	sn := uint64(1)
 	amount := uint64(10_000)
-	var amountbytes [8]byte
-	binary.LittleEndian.PutUint64(amountbytes[:], amount)
+	var amountBytes [8]byte
+	binary.LittleEndian.PutUint64(amountBytes[:], amount)
 	txn := RawTransaction{
 		Sender:         sender.Address,
 		SequenceNumber: sn + 1,
@@ -34,7 +34,7 @@ func TestRawTransactionSign(t *testing.T) {
 			ArgTypes: []TypeTag{},
 			Args: [][]byte{
 				dest[:],
-				amountbytes[:],
+				amountBytes[:],
 			},
 		}},
 		MaxGasAmount:               1000,
@@ -43,15 +43,15 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                    4,
 	}
 
-	stxn, err := txn.Sign(sender)
+	signedTxn, err := txn.Sign(sender)
 	assert.NoError(t, err)
 
-	_, ok := stxn.Authenticator.Auth.(*crypto.Ed25519Authenticator)
+	_, ok := signedTxn.Authenticator.Auth.(*crypto.Ed25519Authenticator)
 	assert.True(t, ok)
 
-	assert.NoError(t, stxn.Verify())
+	assert.NoError(t, signedTxn.Verify())
 
-	// Serialize, Deserialze, Serialize
+	// Serialize, Deserialize, Serialize
 	// out1 and out3 should be the same
 	ser := bcs.Serializer{}
 	txn.MarshalBCS(&ser)

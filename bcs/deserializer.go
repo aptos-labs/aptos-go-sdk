@@ -240,15 +240,15 @@ func DeserializeMapToSlices[K, V any](des *Deserializer) (keys []K, values []V) 
 	keys = make([]K, 0, count)
 	values = make([]V, 0, count)
 	for _ = range count {
-		var nextk K
-		var nextv V
-		switch sv := any(&nextk).(type) {
+		var nextK K
+		var nextV V
+		switch sv := any(&nextK).(type) {
 		case Unmarshaler:
 			sv.UnmarshalBCS(des)
 		case *string:
 			*sv = des.ReadString()
 		}
-		switch sv := any(&nextv).(type) {
+		switch sv := any(&nextV).(type) {
 		case Unmarshaler:
 			sv.UnmarshalBCS(des)
 		case *string:
@@ -256,8 +256,8 @@ func DeserializeMapToSlices[K, V any](des *Deserializer) (keys []K, values []V) 
 		case *[]byte:
 			*sv = des.ReadBytes()
 		}
-		keys = append(keys, nextk)
-		values = append(values, nextv)
+		keys = append(keys, nextK)
+		values = append(values, nextV)
 	}
 	return
 }

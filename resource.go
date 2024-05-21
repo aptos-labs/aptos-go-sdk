@@ -4,7 +4,7 @@ import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
 type MoveResource struct {
 	Tag   MoveStructTag
-	Value map[string]any // MoveStructValue // TODO: api/types/src/move_types.rs probably actually has more to say about what a MoveStructValue is, but at first read it effectively says map[string]any; there's probably convention elesewhere about what goes into those 'any' parts
+	Value map[string]any // MoveStructValue // TODO: api/types/src/move_types.rs probably actually has more to say about what a MoveStructValue is, but at first read it effectively says map[string]any; there's probably convention elsewhere about what goes into those 'any' parts
 }
 
 func (mr *MoveResource) MarshalBCS(bcs *bcs.Serializer) {
@@ -56,7 +56,7 @@ const (
 	MoveType_Signer           MoveType = 8
 	MoveType_Vector           MoveType = 9  // contains MoveType of items of vector
 	MoveType_MoveStructTag    MoveType = 10 // contains a MoveStructTag
-	MoveType_GeneritTypeParam MoveType = 11 // contains a uint16
+	MoveType_GenericTypeParam MoveType = 11 // contains a uint16
 	MoveType_Reference        MoveType = 12 // {mutable bool, to MoveType}
 	MoveType_Unparsable       MoveType = 13 // contains a string
 )

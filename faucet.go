@@ -49,11 +49,11 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 		return fmt.Errorf("response json decode error, %w", err)
 	}
 	if faucetClient.nodeClient == nil {
-		slog.Debug("FundAccount no txns to wait for")
+		slog.Debug("FundAccount no transactions to wait for")
 		// no Aptos client to wait on txn completion
 		return nil
 	}
-	slog.Debug("FundAccount wait for txns", "ntxn", len(txnHashes))
+	slog.Debug("FundAccount wait for transactions", "number of txns", len(txnHashes))
 	if len(txnHashes) == 1 {
 		_, err = faucetClient.nodeClient.WaitForTransaction(txnHashes[0])
 		return err

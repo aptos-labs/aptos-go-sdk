@@ -219,7 +219,7 @@ func (client *Client) Fund(address AccountAddress, amount uint64) error {
 }
 
 // BuildTransaction Builds a raw transaction from the payload and fetches any necessary information
-// from onchain
+// from on-chain
 func (client *Client) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 	return client.nodeClient.BuildTransaction(sender, payload, options...)
 }

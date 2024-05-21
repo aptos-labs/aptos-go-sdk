@@ -31,7 +31,7 @@ func main() {
 
 	before = time.Now()
 
-	// Fund the sender with the faucet to create it onchain
+	// Fund the sender with the faucet to create it on-chain
 	err = client.Fund(sender.Address, 100_000_000)
 
 	println("Fund sender:", time.Since(before).Milliseconds(), "ms")

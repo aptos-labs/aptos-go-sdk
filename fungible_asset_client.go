@@ -32,7 +32,7 @@ func NewFungibleAssetClient(client *Client, metadataAddress AccountAddress) (faC
 
 // -- Entry functions -- //
 
-func (client *FungibleAssetClient) Transfer(sender *Account, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) Transfer(sender *Account, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
@@ -61,11 +61,11 @@ func (client *FungibleAssetClient) Transfer(sender *Account, senderStore Account
 	}
 
 	// Sign transaction
-	stxn, err = rawTxn.Sign(sender)
-	return stxn, err
+	signedTxn, err = rawTxn.Sign(sender)
+	return signedTxn, err
 }
 
-func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress AccountAddress, amount uint64) (stxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
@@ -94,8 +94,8 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receive
 	}
 
 	// Sign transaction
-	stxn, err = rawTxn.Sign(sender)
-	return stxn, err
+	signedTxn, err = rawTxn.Sign(sender)
+	return signedTxn, err
 }
 
 // -- View functions -- //

@@ -59,7 +59,7 @@ func Test_ScriptFlow(t *testing.T) {
 func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *Account) (*SignedTransaction, error)) {
 	if testing.Short() {
 		// TODO: only run this in some integration mode set by environment variable?
-		// TODO: allow this to be harmlessly flakey if devnet is down?
+		// TODO: allow this to be harmlessly flaky if devnet is down?
 		// TODO: write a framework to optionally run things against `aptos node run-localnet`
 		t.Skip("integration test expects network connection to devnet in cloud")
 	}
@@ -123,14 +123,14 @@ func TestAPTTransferTransaction(t *testing.T) {
 
 	client, err := NewClient(DevnetConfig)
 	assert.NoError(t, err)
-	stxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	signedTxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
 	assert.NoError(t, err)
-	assert.NotNil(t, stxn)
+	assert.NotNil(t, signedTxn)
 
 	// use defaults for: max gas amount, gas unit price
-	stxn, err = APTTransferTransaction(client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	signedTxn, err = APTTransferTransaction(client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
 	assert.NoError(t, err)
-	assert.NotNil(t, stxn)
+	assert.NotNil(t, signedTxn)
 }
 
 func Test_Indexer(t *testing.T) {

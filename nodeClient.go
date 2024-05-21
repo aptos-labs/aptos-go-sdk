@@ -371,14 +371,14 @@ type PollTimeout time.Duration
 func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, options ...any) (period time.Duration, timeout time.Duration, err error) {
 	period = defaultPeriod
 	timeout = defaultTimeout
-	for argi, arg := range options {
+	for i, arg := range options {
 		switch value := arg.(type) {
 		case PollPeriod:
 			period = time.Duration(value)
 		case PollTimeout:
 			timeout = time.Duration(value)
 		default:
-			err = fmt.Errorf("PollForTransactions arg %d bad type %T", argi+1, arg)
+			err = fmt.Errorf("PollForTransactions arg %d bad type %T", i+1, arg)
 			return
 		}
 	}
@@ -485,9 +485,9 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 	return
 }
 
-func (rc *NodeClient) SubmitTransaction(stxn *SignedTransaction) (data map[string]any, err error) {
+func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data map[string]any, err error) {
 	serializer := bcs.Serializer{}
-	stxn.MarshalBCS(&serializer)
+	signedTxn.MarshalBCS(&serializer)
 	err = serializer.Error()
 	if err != nil {
 		return
@@ -598,7 +598,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 		}
 	}
 
-	// TODO: fetch gas price onchain
+	// TODO: fetch gas price on-chain
 	// TODO: optionally simulate for max gas
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
