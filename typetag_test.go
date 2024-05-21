@@ -73,7 +73,8 @@ func TestStructTag(t *testing.T) {
 	}
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", st.String())
 	var aa3 AccountAddress
-	aa3.ParseStringRelaxed("0x3")
+	err := aa3.ParseStringRelaxed("0x3")
+	assert.NoError(t, err)
 	st.TypeParams = append(st.TypeParams, TypeTag{Value: &StructTag{
 		Address:    aa3,
 		Module:     "other",
