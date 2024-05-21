@@ -24,9 +24,8 @@ func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
 		bcs.Uleb128(TransactionPayloadScript)
 		p.MarshalBCS(bcs)
 	case *ModuleBundle:
-		// Deprecated, should never be seen
-		bcs.Uleb128(TransactionPayloadModuleBundle)
-		p.MarshalBCS(bcs)
+		// Deprecated, this never was used in production, and we will just drop it
+		bcs.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
 	case *EntryFunction:
 		bcs.Uleb128(TransactionPayloadEntryFunction)
 		p.MarshalBCS(bcs)
@@ -42,10 +41,8 @@ func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
 		xs.UnmarshalBCS(bcs)
 		txn.Payload = xs
 	case TransactionPayloadModuleBundle:
-		// Deprecated, should never be seen
-		xs := &ModuleBundle{}
-		xs.UnmarshalBCS(bcs)
-		txn.Payload = xs
+		// Deprecated, should never be in production
+		bcs.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
 	case TransactionPayloadEntryFunction:
 		xs := &EntryFunction{}
 		xs.UnmarshalBCS(bcs)

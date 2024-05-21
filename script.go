@@ -61,7 +61,8 @@ func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
 	case ScriptArgumentU256:
 		bcs.U256(sa.Value.(big.Int))
 	case ScriptArgumentAddress:
-		sa.Value.(AccountAddress).MarshalBCS(bcs)
+		addr := sa.Value.(AccountAddress)
+		bcs.Struct(&addr)
 	case ScriptArgumentU8Vector:
 		bcs.WriteBytes(sa.Value.([]byte))
 	case ScriptArgumentBool:

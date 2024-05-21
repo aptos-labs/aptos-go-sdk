@@ -345,12 +345,12 @@ func unwrapAggregator(val any) (num *big.Int, err error) {
 	return ToU128OrU256(numStr)
 }
 
-// TODO: Move somewhere more useful
+// ToU64 TODO: Move somewhere more useful
 func ToU64(val string) (uint64, error) {
 	return strconv.ParseUint(val, 10, 64)
 }
 
-// TODO: move somewhere more useful
+// ToU128OrU256 TODO: move somewhere more useful
 func ToU128OrU256(val string) (num *big.Int, err error) {
 	_, ok := num.SetString(val, 10)
 	if !ok {

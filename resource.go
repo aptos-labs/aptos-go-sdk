@@ -41,24 +41,24 @@ func (mst *MoveStructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	mst.GenericTypeParams = bcs.DeserializeSequence[MoveType](deserializer)
 }
 
-// enum
+// MoveType enum
 type MoveType uint8
 
 const (
-	MoveType_Bool             MoveType = 0
-	MoveType_U8               MoveType = 1
-	MoveType_U16              MoveType = 2
-	MoveType_U32              MoveType = 3
-	MoveType_U64              MoveType = 4
-	MoveType_U128             MoveType = 5
-	MoveType_U256             MoveType = 6
-	MoveType_Address          MoveType = 7
-	MoveType_Signer           MoveType = 8
-	MoveType_Vector           MoveType = 9  // contains MoveType of items of vector
-	MoveType_MoveStructTag    MoveType = 10 // contains a MoveStructTag
-	MoveType_GenericTypeParam MoveType = 11 // contains a uint16
-	MoveType_Reference        MoveType = 12 // {mutable bool, to MoveType}
-	MoveType_Unparsable       MoveType = 13 // contains a string
+	MoveTypeBool             MoveType = 0
+	MoveTypeU8               MoveType = 1
+	MoveTypeU16              MoveType = 2
+	MoveTypeU32              MoveType = 3
+	MoveTypeU64              MoveType = 4
+	MoveTypeU128             MoveType = 5
+	MoveTypeU256             MoveType = 6
+	MoveTypeAddress          MoveType = 7
+	MoveTypeSigner           MoveType = 8
+	MoveTypeVector           MoveType = 9  // contains MoveType of items of vector
+	MoveTypeMoveStructTag    MoveType = 10 // contains a MoveStructTag
+	MoveTypeGenericTypeParam MoveType = 11 // contains a uint16
+	MoveTypeReference        MoveType = 12 // {mutable bool, to MoveType}
+	MoveTypeUnparsable       MoveType = 13 // contains a string
 )
 
 func (mt *MoveType) MarshalBCS(bcs *bcs.Serializer) {

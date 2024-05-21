@@ -74,7 +74,7 @@ type AuthenticationKey [32]byte
 
 // FromPublicKey for private / public key pairs, the authentication key is derived from the public key directly
 func (ak *AuthenticationKey) FromPublicKey(publicKey PublicKey) {
-	bytes := util.SHA3_256Hash([][]byte{
+	bytes := util.Sha3256Hash([][]byte{
 		publicKey.Bytes(),
 		{publicKey.Scheme()},
 	})

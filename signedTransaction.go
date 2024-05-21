@@ -35,7 +35,7 @@ func (txn *SignedTransaction) Verify() error {
 
 func (txn *SignedTransaction) Hash() ([]byte, error) {
 	if TransactionPrefix == nil {
-		hash := SHA3_256Hash([][]byte{[]byte("APTOS::Transaction")})
+		hash := Sha3256Hash([][]byte{[]byte("APTOS::Transaction")})
 		TransactionPrefix = &hash
 	}
 
@@ -47,7 +47,7 @@ func (txn *SignedTransaction) Hash() ([]byte, error) {
 	// Transaction signature is defined as, the domain separated prefix based on struct (Transaction)
 	// Then followed by the type of the transaction for the enum, UserTransaction is 0
 	// Then followed by BCS encoded bytes of the signed transaction
-	return SHA3_256Hash([][]byte{*TransactionPrefix, {0}, txnBytes}), nil
+	return Sha3256Hash([][]byte{*TransactionPrefix, {0}, txnBytes}), nil
 }
 
 var TransactionPrefix *[]byte

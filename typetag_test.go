@@ -63,7 +63,7 @@ func TestStructTag(t *testing.T) {
 		Module:  "coin",
 		Name:    "CoinStore",
 		TypeParams: []TypeTag{
-			TypeTag{Value: &StructTag{
+			{Value: &StructTag{
 				Address:    AccountOne,
 				Module:     "aptos_coin",
 				Name:       "AptosCoin",

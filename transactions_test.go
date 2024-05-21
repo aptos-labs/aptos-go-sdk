@@ -58,7 +58,8 @@ func TestRawTransactionSign(t *testing.T) {
 	assert.NoError(t, ser.Error())
 	txn2 := RawTransaction{}
 	txn1Bytes := ser.ToBytes()
-	bcs.Deserialize(&txn2, txn1Bytes)
+	err = bcs.Deserialize(&txn2, txn1Bytes)
+	assert.NoError(t, err)
 	ser2 := bcs.Serializer{}
 	txn2.MarshalBCS(&ser2)
 	txn2Bytes := ser2.ToBytes()
@@ -70,6 +71,6 @@ func TestTPMarshal(t *testing.T) {
 	var wat TransactionPayload
 	var ser bcs.Serializer
 	wat.MarshalBCS(&ser)
-	// without payload it should fail
+	// without a payload, it should fail
 	assert.Error(t, ser.Error())
 }

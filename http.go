@@ -7,7 +7,7 @@ import (
 	"net/url"
 )
 
-const HTTP_ERR_SUMMARY_LEN = 1000
+const HttpErrSummaryLength = 1000
 
 type HttpError struct {
 	Status     string // e.g. "200 OK"
@@ -33,7 +33,7 @@ func NewHttpError(response *http.Response) *HttpError {
 
 // implement error interface
 func (he *HttpError) Error() string {
-	if len(he.Body) < HTTP_ERR_SUMMARY_LEN {
+	if len(he.Body) < HttpErrSummaryLength {
 		return fmt.Sprintf("HttpError %s %#v -> %#v %#v",
 			he.Method, he.RequestUrl.String(), he.Status,
 			string(he.Body),
@@ -43,7 +43,7 @@ func (he *HttpError) Error() string {
 		return fmt.Sprintf("HttpError %s %#v -> %#v %s %#v...[+%d]",
 			he.Method, he.RequestUrl.String(), he.Status,
 			he.Header.Get("Content-Type"),
-			string(he.Body)[:HTTP_ERR_SUMMARY_LEN-10], len(he.Body)-(HTTP_ERR_SUMMARY_LEN-10),
+			string(he.Body)[:HttpErrSummaryLength-10], len(he.Body)-(HttpErrSummaryLength-10),
 		)
 	}
 }

@@ -64,7 +64,7 @@ func TestSerialize(t *testing.T) {
 
 	for i := 0; i < len(inputs); i++ {
 		addr := AccountAddress(inputs[i])
-		bytes, err := bcs.Serialize(addr)
+		bytes, err := bcs.Serialize(&addr)
 		assert.NoError(t, err)
 		assert.Equal(t, bytes, inputs[i])
 

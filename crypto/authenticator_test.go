@@ -16,7 +16,7 @@ func TestAuthenticationKey_FromPublicKey(t *testing.T) {
 	authKey := AuthenticationKey{}
 	authKey.FromPublicKey(&publicKey)
 
-	hash := util.SHA3_256Hash([][]byte{
+	hash := util.Sha3256Hash([][]byte{
 		publicKey.Bytes(),
 		{Ed25519Scheme},
 	})

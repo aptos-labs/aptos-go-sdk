@@ -51,12 +51,12 @@ func (des *Deserializer) Remaining() int {
 
 // Bool deserializes a single byte as a bool
 func (des *Deserializer) Bool() bool {
-	out := false
 	if des.pos >= len(des.source) {
 		des.setError("not enough bytes remaining to deserialize bool")
-		return out
+		return false
 	}
 
+	out := false
 	switch des.U8() {
 	case 0:
 		out = false
@@ -239,7 +239,7 @@ func DeserializeMapToSlices[K, V any](des *Deserializer) (keys []K, values []V) 
 	count := des.Uleb128()
 	keys = make([]K, 0, count)
 	values = make([]V, 0, count)
-	for _ = range count {
+	for range count {
 		var nextK K
 		var nextV V
 		switch sv := any(&nextK).(type) {

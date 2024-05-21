@@ -86,7 +86,7 @@ func (ser *Serializer) U256(v big.Int) {
 	ser.out.Write(ub[:])
 }
 
-// Uleb128 serialize an unsigned 32-bit integer as a Uleb128.  This is used specifically for sequence lengths
+// Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths
 func (ser *Serializer) Uleb128(v uint32) {
 	for v > 0x80 {
 		nb := uint8(v & 0x7f)
