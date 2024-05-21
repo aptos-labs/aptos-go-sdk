@@ -680,6 +680,32 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	return
 }
 
+func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
+	au := rc.baseUrl.JoinPath("estimate_gas_price")
+	response, err := rc.Get(au.String())
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", au.String(), err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	_ = response.Body.Close()
+
+	err = json.Unmarshal(blob, &info)
+	if err != nil {
+		err = fmt.Errorf("failed to deserialize estimate gas price response: %w", err)
+		return
+	}
+	return
+}
+
 func truthy(x any) bool {
 	switch v := x.(type) {
 	case nil:

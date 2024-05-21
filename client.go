@@ -221,6 +221,11 @@ func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
 	return client.nodeClient.View(payload)
 }
 
+// EstimateGasPrice Retrieves the gas estimate from the network.
+func (client *Client) EstimateGasPrice() (info EstimateGasInfo, err error) {
+	return client.nodeClient.EstimateGasPrice()
+}
+
 // QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer
 // client on how to make queries
 func (client *Client) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {

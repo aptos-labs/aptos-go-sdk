@@ -72,6 +72,11 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	assert.NoError(t, err)
 	assert.Less(t, uint8(4), chainId)
 
+	// Verify gas estimation works
+	estimateGasInfo, err := client.EstimateGasPrice()
+	assert.NoError(t, err)
+	assert.Greater(t, estimateGasInfo.GasEstimate, uint64(0))
+
 	// Create an account
 	account, err := NewEd25519Account()
 	assert.NoError(t, err)
