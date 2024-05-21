@@ -69,14 +69,29 @@ func (ea *Authenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
 }
 
+// AuthenticationKey a hash representing the method for authorizing an account
 type AuthenticationKey [32]byte
 
+// FromPublicKey for private / public key pairs, the authentication key is derived from the public key directly
 func (ak *AuthenticationKey) FromPublicKey(publicKey PublicKey) {
 	bytes := util.SHA3_256Hash([][]byte{
 		publicKey.Bytes(),
 		{publicKey.Scheme()},
 	})
 	copy((*ak)[:], bytes)
+}
+
+func (ak *AuthenticationKey) MarshalBCS(bcs *bcs.Serializer) {
+	bcs.Uleb128(32)
+	bcs.FixedBytes(ak[:])
+}
+
+func (ak *AuthenticationKey) UnmarshalBCS(bcs *bcs.Deserializer) {
+	length := bcs.Uleb128()
+	if length != 32 {
+		bcs.SetError(fmt.Errorf("authentication key has wrong length %d", length))
+	}
+	bcs.ReadFixedBytesInto(ak[:])
 }
 
 // TODO: FeePayerAuthenticator, MultiAgentAuthenticator, MultiEd25519Authenticator, SingleSenderAuthenticator, SingleKeyAuthenticator

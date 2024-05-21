@@ -16,26 +16,27 @@ type Signer interface {
 // PrivateKey a generic interface for a signing private key
 type PrivateKey interface {
 	Signer
+	ToHex
 	FromHex
+	ToBytes
+	FromBytes
 
-	/// PubKey Retrieve the public key for signature verification
+	// PubKey Retrieve the public key for signature verification
 	PubKey() PublicKey
-
-	Bytes() []byte
 }
 
 // PublicKey a generic interface for a public key associated with the private key
 type PublicKey interface {
 	ToHex
 	FromHex
-
-	// Bytes the raw bytes for an authenticator
-	Bytes() []byte
+	ToBytes
+	FromBytes
 
 	// Scheme The scheme used for address derivation
 	Scheme() uint8
 
-	// TODO: add verify
+	// Verify verifies a message with the public key
+	Verify(msg []byte, sig []byte) bool
 }
 
 type FromHex interface {
@@ -45,4 +46,14 @@ type FromHex interface {
 
 type ToHex interface {
 	ToHex() string
+}
+
+type FromBytes interface {
+	// FromBytes loads the key from bytes
+	FromBytes([]byte) error
+}
+
+type ToBytes interface {
+	// Bytes loads the key from bytes
+	Bytes() []byte
 }
