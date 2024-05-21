@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -61,22 +60,17 @@ func (aa *AccountAddress) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
 }
 
-// Random generates a random account address, mainly for testing
-func (aa *AccountAddress) Random() {
-	rand.Read((*aa)[:])
-}
-
 // NamedObjectAddress derives a named object address based on the input address as the creator
 func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(seed, crypto.NamedObjectScheme)
 }
 
-// ObjectAddressFromObject derives a object address based on the input address as the creator object
+// ObjectAddressFromObject derives an object address based on the input address as the creator object
 func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(objectAddress[:], crypto.DeriveObjectScheme)
 }
 
-// ResourceAccount derives a object address based on the input address as the creator
+// ResourceAccount derives an object address based on the input address as the creator
 func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(seed, crypto.ResourceAccountScheme)
 }
@@ -104,7 +98,7 @@ func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.Authentication
 		copy(out.Address[:], authKey[0][:])
 	} else if len(authKey) > 1 {
 		// Throw error
-		return nil, errors.New("Must only provide one auth key")
+		return nil, errors.New("must only provide one auth key")
 	} else {
 		copy(out.Address[:], signer.AuthKey()[:])
 	}
