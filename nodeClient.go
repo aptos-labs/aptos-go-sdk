@@ -293,8 +293,8 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]an
 	return
 }
 
-func (rc *NodeClient) BlockByHash(blockHash string, withTransactions bool) (data map[string]any, err error) {
-	restUrl := rc.baseUrl.JoinPath("blocks/by_hash", blockHash)
+func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data map[string]any, err error) {
+	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 

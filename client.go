@@ -154,9 +154,9 @@ func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (
 	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
 }
 
-// BlockByHash fetches a block by hash
-func (client *Client) BlockByHash(blockHash string, withTransactions bool) (data map[string]any, err error) {
-	return client.nodeClient.BlockByHash(blockHash, withTransactions)
+// BlockByVersion fetches a block by ledger version
+func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data map[string]any, err error) {
+	return client.nodeClient.BlockByVersion(ledgerVersion, withTransactions)
 }
 
 // TransactionByHash gets info on a transaction
