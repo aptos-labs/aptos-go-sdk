@@ -49,18 +49,18 @@ func (ea *Authenticator) MarshalBCS(bcs *bcs.Serializer) {
 }
 
 func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	kindu := bcs.Uleb128()
+	kindNum := bcs.Uleb128()
 	if bcs.Error() != nil {
 		return
 	}
-	kind := AuthenticatorType(kindu)
+	kind := AuthenticatorType(kindNum)
 	switch kind {
 	case AuthenticatorEd25519:
 		auth := &Ed25519Authenticator{}
 		auth.UnmarshalBCS(bcs)
 		ea.Auth = auth
 	default:
-		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindu))
+		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindNum))
 	}
 }
 
@@ -71,10 +71,10 @@ func (ea *Authenticator) Verify(data []byte) bool {
 
 type AuthenticationKey [32]byte
 
-func (ak *AuthenticationKey) FromPublicKey(pubkey PublicKey) {
+func (ak *AuthenticationKey) FromPublicKey(publicKey PublicKey) {
 	bytes := util.SHA3_256Hash([][]byte{
-		pubkey.Bytes(),
-		{pubkey.Scheme()},
+		publicKey.Bytes(),
+		{publicKey.Scheme()},
 	})
 	copy((*ak)[:], bytes)
 }

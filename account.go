@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-// AccountAddress a 32-byte representation of an onchain address
+// AccountAddress a 32-byte representation of an on-chain address
 type AccountAddress [32]byte
 
 var AccountZero = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
@@ -108,11 +108,11 @@ func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.Authentication
 
 // NewEd25519Account creates an account with a new random Ed25519 private key
 func NewEd25519Account() (*Account, error) {
-	privkey, _, err := crypto.GenerateEd5519Keys()
+	privateKey, _, err := crypto.GenerateEd5519Keys()
 	if err != nil {
 		return nil, err
 	}
-	return NewAccountFromSigner(&privkey)
+	return NewAccountFromSigner(&privateKey)
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
@@ -138,12 +138,12 @@ func (aa *AccountAddress) ParseStringRelaxed(x string) error {
 	if len(x)%2 != 0 {
 		x = "0" + x
 	}
-	abytes, err := hex.DecodeString(x)
+	bytes, err := hex.DecodeString(x)
 	if err != nil {
 		return err
 	}
 	// zero-prefix/right-align what bytes we got
-	copy((*aa)[32-len(abytes):], abytes)
+	copy((*aa)[32-len(bytes):], bytes)
 
 	return nil
 }

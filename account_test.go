@@ -153,7 +153,7 @@ func TestGenerateEd25519Account(t *testing.T) {
 
 func TestNewAccountFromSigner(t *testing.T) {
 	message := []byte{0x12, 0x34}
-	key, pubkey, err := crypto.GenerateEd5519Keys()
+	key, publicKey, err := crypto.GenerateEd5519Keys()
 	assert.NoError(t, err)
 
 	account, err := NewAccountFromSigner(&key)
@@ -164,7 +164,7 @@ func TestNewAccountFromSigner(t *testing.T) {
 	assert.True(t, output.Auth.Verify(message))
 
 	authKey := crypto.AuthenticationKey{}
-	authKey.FromPublicKey(&pubkey)
+	authKey.FromPublicKey(&publicKey)
 	assert.Equal(t, authKey[:], account.Address[:])
 }
 

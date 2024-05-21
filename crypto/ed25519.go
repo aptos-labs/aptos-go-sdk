@@ -13,20 +13,20 @@ type Ed25519PrivateKey struct {
 	inner ed25519.PrivateKey
 }
 
-func GenerateEd5519Keys() (privkey Ed25519PrivateKey, pubkey Ed25519PublicKey, err error) {
+func GenerateEd5519Keys() (privateKey Ed25519PrivateKey, publicKey Ed25519PublicKey, err error) {
 	pub, priv, err := ed25519.GenerateKey(nil)
 	if err != nil {
 		return
 	}
-	privkey = Ed25519PrivateKey{priv}
-	pubkey = Ed25519PublicKey{pub}
+	privateKey = Ed25519PrivateKey{priv}
+	publicKey = Ed25519PublicKey{pub}
 	return
 }
 
 func (key *Ed25519PrivateKey) PubKey() PublicKey {
-	pubkey := key.inner.Public()
+	pubKey := key.inner.Public()
 	return &Ed25519PublicKey{
-		pubkey.(ed25519.PublicKey),
+		pubKey.(ed25519.PublicKey),
 	}
 }
 
