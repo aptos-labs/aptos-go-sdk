@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Breaking`] Some refactoring of names to be proper camel casing
+- [`Fix`] fixed bug with transactions listing
 - Refactored all pieces into new packages, this may break previous users
 - [`Fix`] Misspelling of expiration time
 - Added documentation for many functions and structs
