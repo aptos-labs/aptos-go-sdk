@@ -186,36 +186,16 @@ func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
 }
 
 func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (resp *http.Response, err error) {
-	req, err := http.NewRequest("POST", postUrl, nil)
+	if body == nil {
+		body = http.NoBody
+	}
+	req, err := http.NewRequest("POST", postUrl, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set(ClientHeader, ClientHeaderValue)
-	if body == nil {
-		req.Body = &nilBodySingleton
-	} else {
-		readCloser, ok := body.(io.ReadCloser)
-		if ok {
-			req.Body = readCloser
-		} else {
-			req.Body = io.NopCloser(body)
-		}
-	}
 	return rc.client.Do(req)
-}
-
-// NilBody empty io.ReadCloser
-type NilBody struct {
-}
-
-var nilBodySingleton NilBody
-
-func (nb *NilBody) Read(_ []byte) (n int, err error) {
-	return 0, io.EOF
-}
-func (nb *NilBody) Close() error {
-	return nil
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
