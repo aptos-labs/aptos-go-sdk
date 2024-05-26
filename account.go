@@ -116,7 +116,7 @@ func NewEd25519Account() (*Account, error) {
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
-func (account *Account) Sign(message []byte) (authenticator crypto.Authenticator, err error) {
+func (account *Account) Sign(message []byte) (authenticator *crypto.Authenticator, err error) {
 	return account.Signer.Sign(message)
 }
 
