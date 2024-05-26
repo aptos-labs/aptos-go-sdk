@@ -37,11 +37,11 @@ func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
 }
 
 func (key *Ed25519PrivateKey) Bytes() []byte {
-	return key.inner[:]
+	return key.inner.Seed()
 }
 
 func (key *Ed25519PrivateKey) ToHex() string {
-	return hex.EncodeToString(key.Bytes())
+	return "0x" + hex.EncodeToString(key.Bytes())
 }
 
 func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
@@ -60,14 +60,14 @@ func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
 	return nil
 }
 
-func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator Authenticator, err error) {
+func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *Authenticator, err error) {
 	publicKeyBytes := key.PubKey().Bytes()
 	signature := ed25519.Sign(key.inner, msg)
 
 	auth := &Ed25519Authenticator{}
-	auth.PublicKey = Ed25519PublicKey{inner: publicKeyBytes}
-	copy(auth.Signature[:], signature[:]) // TODO: Signature type?
-	authenticator = Authenticator{
+	auth.publicKey = Ed25519PublicKey{inner: publicKeyBytes}
+	copy(auth.signature[:], signature[:]) // TODO: Signature type?
+	authenticator = &Authenticator{
 		AuthenticatorEd25519,
 		auth,
 	}
@@ -87,7 +87,7 @@ func (key *Ed25519PublicKey) Scheme() uint8 {
 }
 
 func (key *Ed25519PublicKey) ToHex() string {
-	return hex.EncodeToString(key.Bytes())
+	return "0x" + hex.EncodeToString(key.Bytes())
 }
 
 func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
@@ -127,16 +127,25 @@ func (key *Ed25519PublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type Ed25519Authenticator struct {
-	PublicKey Ed25519PublicKey
-	Signature [ed25519.SignatureSize]byte
+	publicKey Ed25519PublicKey
+	signature [ed25519.SignatureSize]byte
+}
+
+func (ea *Ed25519Authenticator) PublicKey() PublicKey {
+	return &ea.publicKey
+}
+
+func (ea *Ed25519Authenticator) Signature() []byte {
+	return ea.signature[:]
 }
 
 func (ea *Ed25519Authenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Struct(&ea.PublicKey)
-	bcs.WriteBytes(ea.Signature[:])
+	bcs.Struct(ea.PublicKey())
+	bcs.WriteBytes(ea.Signature())
 }
+
 func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	bcs.Struct(&ea.PublicKey)
+	bcs.Struct(ea.PublicKey())
 	err := bcs.Error()
 	if err != nil {
 		return
@@ -146,10 +155,10 @@ func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 		bcs.SetError(fmt.Errorf("bad ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(sb)))
 		return
 	}
-	copy(ea.Signature[:], sb)
+	copy(ea.Signature(), sb)
 }
 
 // Verify Return true if the data was well signed
 func (ea *Ed25519Authenticator) Verify(data []byte) bool {
-	return ea.PublicKey.Verify(data, ea.Signature[:])
+	return ea.PublicKey().Verify(data, ea.Signature())
 }

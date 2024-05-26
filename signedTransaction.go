@@ -9,7 +9,7 @@ import (
 // SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
 	Transaction   RawTransaction
-	Authenticator crypto.Authenticator
+	Authenticator *crypto.Authenticator
 }
 
 func (txn *SignedTransaction) MarshalBCS(bcs *bcs.Serializer) {

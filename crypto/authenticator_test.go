@@ -57,15 +57,16 @@ func Test_AuthenticatorSerialization(t *testing.T) {
 	authenticator, err := privateKey.Sign(msg)
 	assert.NoError(t, err)
 
-	serialized, err := bcs.Serialize(&authenticator)
+	serialized, err := bcs.Serialize(authenticator)
 	assert.NoError(t, err)
 	assert.Equal(t, uint8(AuthenticatorEd25519), serialized[0])
 	assert.Len(t, serialized, 1+(1+ed25519.PublicKeySize)+(1+ed25519.SignatureSize))
 
-	newAuthenticator := Authenticator{}
-	err = bcs.Deserialize(&newAuthenticator, serialized)
+	newAuthenticator := &Authenticator{}
+	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.NoError(t, err)
-	assert.Equal(t, authenticator, newAuthenticator)
+	assert.Equal(t, authenticator.Kind, newAuthenticator.Kind)
+	assert.Equal(t, authenticator.Auth, newAuthenticator.Auth)
 }
 
 func Test_AuthenticatorVerification(t *testing.T) {

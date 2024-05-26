@@ -17,6 +17,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add block APIs
 - Add private key imports, and authentication key
 - Add signed transaction hashes
+- [`Fix`] Private key imports without public key
 
 # v0.1.0 (5/7/2024)
 
