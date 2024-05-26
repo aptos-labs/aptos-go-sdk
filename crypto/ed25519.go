@@ -53,10 +53,10 @@ func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
 }
 
 func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
-	if len(bytes) != ed25519.PrivateKeySize {
-		return errors.New("invalid ed25519 private key size")
+	if len(bytes) != ed25519.SeedSize {
+		return fmt.Errorf("invalid ed25519 private key size %d", len(bytes))
 	}
-	key.inner = bytes
+	key.inner = ed25519.NewKeyFromSeed(bytes)
 	return nil
 }
 
