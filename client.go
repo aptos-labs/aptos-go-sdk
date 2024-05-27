@@ -23,7 +23,7 @@ var LocalnetConfig = NetworkConfig{
 	// We use 127.0.0.1 as it is more foolproof than localhost
 	NodeUrl:    "http://127.0.0.1:8080/v1",
 	IndexerUrl: "http://127.0.0.1:8090/v1/graphql",
-	FaucetUrl:  "http://127.0.0.1:8081/v1",
+	FaucetUrl:  "http://127.0.0.1:8081",
 }
 var DevnetConfig = NetworkConfig{
 	Name:       "devnet",
