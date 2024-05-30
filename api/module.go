@@ -1,29 +1,13 @@
 package api
 
 import (
-	"encoding/json"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
 // MoveBytecode describes a module, or script, and it's associated ABI
 type MoveBytecode struct {
-	Bytecode []byte
-	Abi      *MoveModule // Optional
-}
-
-func (o *MoveBytecode) UnmarshalJSON(b []byte) error {
-	type inner struct {
-		Bytecode []byte      `json:"bytecode"`
-		Abi      *MoveModule `json:"abi,omitempty"`
-	}
-	data := &inner{}
-	err := json.Unmarshal(b, &data)
-	if err != nil {
-		return err
-	}
-	o.Bytecode = data.Bytecode
-	o.Abi = data.Abi
-	return nil
+	Bytecode []byte      `json:"bytecode"`
+	Abi      *MoveModule `json:"abi,omitempty"` // Optional
 }
 
 // MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin
@@ -40,30 +24,15 @@ type MoveModule struct {
 }
 
 type MoveScript struct {
-	Bytecode []byte
-	Abi      *MoveFunction // Optional
-}
-
-func (o *MoveScript) UnmarshalJSON(b []byte) error {
-	type inner struct {
-		Bytecode []byte        `json:"bytecode"`
-		Abi      *MoveFunction `json:"abi,omitempty"`
-	}
-	data := &inner{}
-	err := json.Unmarshal(b, &data)
-	if err != nil {
-		return err
-	}
-	o.Bytecode = data.Bytecode
-	o.Abi = data.Abi
-	return nil
+	Bytecode []byte        `json:"bytecode"`
+	Abi      *MoveFunction `json:"abi,omitempty"` // Optional
 }
 
 // MoveFunction describes a move function and its associated properties
 type MoveFunction struct {
 	Name              MoveComponentId     `json:"name"`
 	Visibility        MoveVisibility      `json:"visibility"` // TODO: Typing?
-	IsEntry           bool                `json:"is_entry""`
+	IsEntry           bool                `json:"is_entry"`
 	IsView            bool                `json:"is_view"`
 	GenericTypeParams []*GenericTypeParam `json:"generic_type_params"`
 	Params            []string            `json:"params"`
