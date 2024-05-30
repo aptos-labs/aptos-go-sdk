@@ -13,7 +13,6 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -474,7 +473,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 	return
 }
 
-func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data map[string]any, err error) {
+func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	serializer := bcs.Serializer{}
 	signedTxn.MarshalBCS(&serializer)
 	err = serializer.Error()
@@ -606,7 +605,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (response *api.SubmitTransactionResponse, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return
@@ -616,11 +615,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload Tra
 		return
 	}
 
-	response, err := rc.SubmitTransaction(signedTxn)
-	if err != nil {
-		return
-	}
-	return response["hash"].(string), nil
+	return rc.SubmitTransaction(signedTxn)
 }
 
 type ViewPayload struct {
@@ -693,42 +688,4 @@ func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 		return
 	}
 	return
-}
-
-func truthy(x any) bool {
-	switch v := x.(type) {
-	case nil:
-		return false
-	case bool:
-		return v
-	case int:
-		return v != 0
-	case int8:
-		return v != 0
-	case int16:
-		return v != 0
-	case int32:
-		return v != 0
-	case int64:
-		return v != 0
-	case uint:
-		return v != 0
-	case uint8:
-		return v != 0
-	case uint16:
-		return v != 0
-	case uint32:
-		return v != 0
-	case uint64:
-		return v != 0
-	case float32:
-		return v != 0
-	case float64:
-		return v != 0
-	case string:
-		v = strings.ToLower(v)
-		return (v == "t") || (v == "true")
-	default:
-		return false
-	}
 }

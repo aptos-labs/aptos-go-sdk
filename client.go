@@ -188,8 +188,8 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Tr
 	return client.nodeClient.Transactions(start, limit)
 }
 
-// SubmitTransaction Submits an already signed transaction to the blockchain
-func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data map[string]any, err error) {
+// SubmitTransaction Submits an already sixgned transaction to the blockchain
+func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
 }
 
@@ -212,7 +212,7 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
 // for more configuration, please use them separately
-func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 

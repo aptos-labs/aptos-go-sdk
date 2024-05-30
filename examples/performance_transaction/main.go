@@ -87,7 +87,7 @@ func main() {
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
-	txnHash := submitResult["hash"].(string)
+	txnHash := submitResult.Hash
 	println("Submit transaction:", time.Since(before).Milliseconds(), "ms")
 
 	// Wait for the transaction
