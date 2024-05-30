@@ -3,7 +3,6 @@ package aptos
 import (
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -26,18 +25,18 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *types.Account) (*SignedTransaction, error) {
-		return APTTransferTransaction(client, sender, types.AccountOne, 100)
+	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
+		return APTTransferTransaction(client, sender, AccountOne, 100)
 	})
 }
 
 func Test_ScriptFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *types.Account) (*SignedTransaction, error) {
+	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
 		scriptBytes, err := ParseHex(singleSignerScript)
 		assert.NoError(t, err)
 
 		amount := uint64(1)
-		dest := types.AccountOne
+		dest := AccountOne
 
 		rawTxn, err := client.BuildTransaction(sender.Address,
 			TransactionPayload{Payload: &Script{
@@ -57,7 +56,7 @@ func Test_ScriptFlow(t *testing.T) {
 		return rawTxn.Sign(sender)
 	})
 }
-func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *types.Account) (*SignedTransaction, error)) {
+func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *Account) (*SignedTransaction, error)) {
 	if testing.Short() {
 		// TODO: only run this in some integration mode set by environment variable?
 		// TODO: allow this to be harmlessly flaky if devnet is down?
@@ -82,7 +81,7 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	assert.NoError(t, err)
 
 	// Create an account
-	account, err := types.NewEd25519Account()
+	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
@@ -122,9 +121,9 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
-	sender, err := types.NewEd25519Account()
+	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
-	dest, err := types.NewEd25519Account()
+	dest, err := NewEd25519Account()
 	assert.NoError(t, err)
 
 	client, err := createTestClient()
@@ -144,7 +143,7 @@ func Test_Indexer(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TODO: copy indexer client calls to the main client
-	_, err = client.GetCoinBalances(types.AccountOne)
+	_, err = client.GetCoinBalances(AccountOne)
 	assert.NoError(t, err)
 
 	status, err := client.GetProcessorStatus("default_processor")
@@ -185,14 +184,14 @@ func Test_Block(t *testing.T) {
 func Test_Account(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
-	account, err := client.Account(types.AccountOne)
+	account, err := client.Account(AccountOne)
 	assert.NoError(t, err)
 	sequenceNumber, err := account.SequenceNumber()
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0), sequenceNumber)
 	authKey, err := account.AuthenticationKey()
 	assert.NoError(t, err)
-	assert.Equal(t, types.AccountOne[:], authKey[:])
+	assert.Equal(t, AccountOne[:], authKey[:])
 }
 
 func Test_Transactions(t *testing.T) {
@@ -235,11 +234,11 @@ func Test_AccountResources(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	resources, err := client.AccountResources(types.AccountOne)
+	resources, err := client.AccountResources(AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resources), 0)
 
-	resourcesBcs, err := client.AccountResourcesBCS(types.AccountOne)
+	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resourcesBcs), 0)
 }

@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"io"
 	"log/slog"
 	"net/http"
@@ -603,7 +602,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *types.Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return
