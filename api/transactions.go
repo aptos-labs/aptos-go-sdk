@@ -21,6 +21,10 @@ type Transaction struct {
 	Inner TransactionImpl
 }
 
+func (o *Transaction) Hash() Hash {
+	return o.Inner.TxnHash()
+}
+
 func (o *Transaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Type string `json:"type"`
@@ -51,6 +55,7 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 }
 
 type TransactionImpl interface {
+	TxnHash() Hash
 }
 
 // UserTransaction is a user submitted transaction as an entry function or script
@@ -74,6 +79,10 @@ type UserTransaction struct {
 	Signature               *Signature
 	Timestamp               uint64 // TODO: native time?
 	StateCheckpointHash     Hash   //Optional
+}
+
+func (o *UserTransaction) TxnHash() Hash {
+	return o.Hash
 }
 
 func (o *UserTransaction) UnmarshalJSON(b []byte) error {
@@ -136,6 +145,10 @@ type PendingTransaction struct {
 	Signature               *Signature
 }
 
+func (o *PendingTransaction) TxnHash() Hash {
+	return o.Hash
+}
+
 func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Hash                    Hash                  `json:"hash"`
@@ -176,6 +189,10 @@ type GenesisTransaction struct {
 	Events              []*Event
 	Payload             *TransactionPayload
 	StateCheckpointHash Hash // Optional
+}
+
+func (o *GenesisTransaction) TxnHash() Hash {
+	return o.Hash
 }
 
 func (o *GenesisTransaction) UnmarshalJSON(b []byte) error {
@@ -232,6 +249,10 @@ type BlockMetadataTransaction struct {
 	Events                   []*Event
 	Timestamp                uint64
 	StateCheckpointHash      Hash
+}
+
+func (o *BlockMetadataTransaction) TxnHash() Hash {
+	return o.Hash
 }
 
 func (o *BlockMetadataTransaction) UnmarshalJSON(b []byte) error {
@@ -296,6 +317,10 @@ type StateCheckpointTransaction struct {
 	StateCheckpointHash Hash // This is optional
 }
 
+func (o *StateCheckpointTransaction) TxnHash() Hash {
+	return o.Hash
+}
+
 func (o *StateCheckpointTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Version             U64               `json:"version"`
@@ -345,6 +370,10 @@ type ValidatorTransaction struct {
 	StateCheckpointHash Hash // This is optional
 }
 
+func (o *ValidatorTransaction) TxnHash() Hash {
+	return o.Hash
+}
+
 func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Version             U64               `json:"version"`
@@ -378,5 +407,43 @@ func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {
 	o.Timestamp = data.Timestamp.toUint64()
 	o.StateCheckpointHash = data.StateCheckpointHash
 
+	return nil
+}
+
+type SubmitTransactionResponse struct {
+	Hash                    Hash
+	Sender                  *types.AccountAddress
+	SequenceNumber          uint64
+	MaxGasAmount            uint64
+	GasUnitPrice            uint64
+	ExpirationTimestampSecs uint64
+	Payload                 *TransactionPayload
+	Signature               *Signature
+}
+
+func (o *SubmitTransactionResponse) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Hash                    Hash                  `json:"hash"`
+		Sender                  *types.AccountAddress `json:"sender"`
+		SequenceNumber          U64                   `json:"sequence_number"`
+		MaxGasAmount            U64                   `json:"max_gas_amount"`
+		GasUnitPrice            U64                   `json:"gas_unit_price"`
+		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
+		Payload                 *TransactionPayload   `json:"payload"`
+		Signature               *Signature            `json:"signature"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+	o.Hash = data.Hash
+	o.Sender = data.Sender
+	o.SequenceNumber = data.SequenceNumber.toUint64()
+	o.MaxGasAmount = data.MaxGasAmount.toUint64()
+	o.GasUnitPrice = data.GasUnitPrice.toUint64()
+	o.ExpirationTimestampSecs = data.ExpirationTimestampSecs.toUint64()
+	o.Payload = data.Payload
+	o.Signature = data.Signature
 	return nil
 }

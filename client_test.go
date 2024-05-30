@@ -99,7 +99,7 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	result, err := client.SubmitTransaction(signedTxn)
 	assert.NoError(t, err)
 
-	hash := result["hash"].(string)
+	hash := result.Hash
 
 	// Wait for the transaction
 	_, err = client.WaitForTransaction(hash)
