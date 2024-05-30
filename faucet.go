@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"log/slog"
 	"net/url"
 	"strconv"
@@ -27,7 +26,7 @@ func NewFaucetClient(nodeClient *NodeClient, faucetUrl string) (*FaucetClient, e
 }
 
 // Fund account with the given amount of AptosCoin
-func (faucetClient *FaucetClient) Fund(address types.AccountAddress, amount uint64) error {
+func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) error {
 	if faucetClient.nodeClient == nil {
 		return errors.New("faucet's node-client not initialized")
 	}

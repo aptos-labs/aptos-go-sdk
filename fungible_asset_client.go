@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"math/big"
 	"strconv"
 )
@@ -33,18 +32,18 @@ func NewFungibleAssetClient(client *Client, metadataAddress AccountAddress) (faC
 
 // -- Entry functions -- //
 
-func (client *FungibleAssetClient) Transfer(sender *types.Account, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) Transfer(sender *Account, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
 
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
 
 	// Build transaction
 	rawTxn, err := client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: "transfer",
@@ -66,18 +65,18 @@ func (client *FungibleAssetClient) Transfer(sender *types.Account, senderStore A
 	return signedTxn, err
 }
 
-func (client *FungibleAssetClient) TransferPrimaryStore(sender *types.Account, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
 
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "store"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "store"}
 	typeTag := TypeTag{Value: structTag}
 
 	// Build transaction
 	rawTxn, err := client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "primary_fungible_store",
 		},
 		Function: "transfer",
@@ -159,7 +158,7 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress AccountAddress) (isFroz
 func (client *FungibleAssetClient) StoreExists(storeAddress AccountAddress) (exists bool, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: "store_exists",
@@ -229,11 +228,11 @@ func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 }
 
 func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "Metadata"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
 	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: functionName,
@@ -250,11 +249,11 @@ func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName stri
 }
 
 func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: functionName,
@@ -271,11 +270,11 @@ func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string)
 }
 
 func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "primary_fungible_store",
 		},
 		Function: functionName,
@@ -292,11 +291,11 @@ func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName 
 }
 
 func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: types.AccountOne, Module: "fungible_asset", Name: "Metadata"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
 	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
-			Address: types.AccountOne,
+			Address: AccountOne,
 			Name:    "primary_fungible_store",
 		},
 		Function: functionName,

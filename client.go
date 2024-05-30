@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/hasura/go-graphql-client"
 	"time"
 )
@@ -213,7 +212,7 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
 // for more configuration, please use them separately
-func (client *Client) BuildSignAndSubmitTransaction(sender *types.Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 

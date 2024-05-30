@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -277,7 +276,7 @@ func NewVectorTag(inner TypeTagImpl) *VectorTag {
 
 func NewStringTag() *StructTag {
 	return &StructTag{
-		Address:    types.AccountOne,
+		Address:    AccountOne,
 		Module:     "string",
 		Name:       "String",
 		TypeParams: []TypeTag{},
@@ -286,7 +285,7 @@ func NewStringTag() *StructTag {
 
 func NewOptionTag(inner TypeTagImpl) *StructTag {
 	return &StructTag{
-		Address:    types.AccountOne,
+		Address:    AccountOne,
 		Module:     "option",
 		Name:       "Option",
 		TypeParams: []TypeTag{NewTypeTag(inner)},
@@ -295,7 +294,7 @@ func NewOptionTag(inner TypeTagImpl) *StructTag {
 
 func NewObjectTag(inner TypeTagImpl) *StructTag {
 	return &StructTag{
-		Address:    types.AccountOne,
+		Address:    AccountOne,
 		Module:     "object",
 		Name:       "Object",
 		TypeParams: []TypeTag{NewTypeTag(inner)},
