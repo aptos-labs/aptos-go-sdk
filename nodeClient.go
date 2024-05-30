@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"io"
 	"log/slog"
 	"net/http"
@@ -106,7 +108,7 @@ func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...int) (inf
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &info)
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "account json err: %v\n%s\n", err, string(blob))
+		_, _ = fmt.Fprintf(os.Stderr, "account api err: %v\n%s\n", err, string(blob))
 	}
 	return
 }
@@ -242,17 +244,17 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 //			// known to local mempool, but not committed yet
 //		}
 //	}
-func (rc *NodeClient) TransactionByHash(txnHash string) (data map[string]any, err error) {
+func (rc *NodeClient) TransactionByHash(txnHash string) (data *api.Transaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/by_hash", txnHash)
 	return rc.getTransactionCommon(restUrl)
 }
 
-func (rc *NodeClient) TransactionByVersion(version uint64) (data map[string]any, err error) {
+func (rc *NodeClient) TransactionByVersion(version uint64) (data *api.Transaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/by_version", strconv.FormatUint(version, 10))
 	return rc.getTransactionCommon(restUrl)
 }
 
-func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]any, err error) {
+func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transaction, err error) {
 	// Fetch transaction
 	response, err := rc.Get(restUrl.String())
 	if err != nil {
@@ -277,16 +279,17 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data map[string]an
 	return
 }
 
-func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data map[string]any, err error) {
+func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
-func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data map[string]any, err error) {
+func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
-func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data map[string]any, err error) {
+
+func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data api.Block, err error) {
 	params := url.Values{}
 	params.Set("with_transactions", strconv.FormatBool(withTransactions))
 	restUrl.RawQuery = params.Encode()
@@ -318,7 +321,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
 // Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
 // Accept option arguments PollPeriod and PollTimeout like PollForTransactions.
-func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data map[string]any, err error) {
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.Transaction, err error) {
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 1*time.Second, options...)
 	if err != nil {
 		return nil, err
@@ -391,14 +394,14 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 				// already done
 				continue
 			}
-			status, err := rc.TransactionByHash(hash)
+			txn, err := rc.TransactionByHash(hash)
 			if err == nil {
-				if status["type"] == "pending_transaction" {
+				if txn.Type == api.EnumPendingTransaction {
 					// not done yet!
-				} else if truthy(status["success"]) {
+				} else if txn.Type == api.EnumUserTransaction {
 					// done!
 					delete(hashSet, hash)
-					slog.Debug("txn done", "hash", hash, "status", status["success"])
+					slog.Debug("txn done", "hash", hash)
 				}
 			}
 		}
@@ -449,7 +452,7 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 	}
 	bodyReader := bytes.NewReader(rblob)
 	au := rc.baseUrl.JoinPath("transactions/encode_submission")
-	response, err := rc.Post(au.String(), "application/json", bodyReader)
+	response, err := rc.Post(au.String(), "application/api", bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
 		return
@@ -600,7 +603,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
 // from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *types.Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
 	if err != nil {
 		return

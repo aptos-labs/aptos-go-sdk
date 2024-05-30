@@ -37,7 +37,7 @@ type AuthenticatorImpl interface {
 	PublicKey() PublicKey
 
 	// Signature return the signature bytes
-	Signature() []byte
+	Signature() Signature
 
 	// Verify Return true if this Authenticator approves
 	Verify(data []byte) bool
@@ -53,7 +53,7 @@ func (ea *Authenticator) PublicKey() PublicKey {
 	return ea.Auth.PublicKey()
 }
 
-func (ea *Authenticator) Signature() []byte {
+func (ea *Authenticator) Signature() Signature {
 	return ea.Auth.Signature()
 }
 

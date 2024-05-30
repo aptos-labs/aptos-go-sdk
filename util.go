@@ -16,3 +16,11 @@ func ParseHex(hexStr string) ([]byte, error) {
 func Sha3256Hash(bytes [][]byte) (output []byte) {
 	return util.Sha3256Hash(bytes)
 }
+
+var testConfig = DevnetConfig
+
+// createTestClient to use for testing for only one place to configure the network
+// TODO: Allow overrides with environment variable?
+func createTestClient() (*Client, error) {
+	return NewClient(testConfig)
+}

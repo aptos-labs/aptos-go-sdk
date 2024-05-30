@@ -10,7 +10,7 @@ import (
 )
 
 type Ed25519PrivateKey struct {
-	inner ed25519.PrivateKey
+	Inner ed25519.PrivateKey
 }
 
 func GenerateEd5519Keys() (privateKey Ed25519PrivateKey, publicKey Ed25519PublicKey, err error) {
@@ -24,7 +24,7 @@ func GenerateEd5519Keys() (privateKey Ed25519PrivateKey, publicKey Ed25519Public
 }
 
 func (key *Ed25519PrivateKey) PubKey() PublicKey {
-	pubKey := key.inner.Public()
+	pubKey := key.Inner.Public()
 	return &Ed25519PublicKey{
 		pubKey.(ed25519.PublicKey),
 	}
@@ -37,7 +37,7 @@ func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
 }
 
 func (key *Ed25519PrivateKey) Bytes() []byte {
-	return key.inner.Seed()
+	return key.Inner.Seed()
 }
 
 func (key *Ed25519PrivateKey) ToHex() string {
@@ -56,17 +56,20 @@ func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != ed25519.SeedSize {
 		return fmt.Errorf("invalid ed25519 private key size %d", len(bytes))
 	}
-	key.inner = ed25519.NewKeyFromSeed(bytes)
+	key.Inner = ed25519.NewKeyFromSeed(bytes)
 	return nil
 }
 
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *Authenticator, err error) {
 	publicKeyBytes := key.PubKey().Bytes()
-	signature := ed25519.Sign(key.inner, msg)
+	signature := ed25519.Sign(key.Inner, msg)
 
 	auth := &Ed25519Authenticator{}
-	auth.publicKey = Ed25519PublicKey{inner: publicKeyBytes}
-	copy(auth.signature[:], signature[:]) // TODO: Signature type?
+	auth.PubKey = &Ed25519PublicKey{Inner: publicKeyBytes}
+
+	var sigBytes [ed25519.SignatureSize]byte
+	copy(sigBytes[:], signature[:])
+	auth.Sig = &Ed25519Signature{Inner: sigBytes}
 	authenticator = &Authenticator{
 		AuthenticatorEd25519,
 		auth,
@@ -75,11 +78,11 @@ func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *Authenticator, er
 }
 
 type Ed25519PublicKey struct {
-	inner ed25519.PublicKey
+	Inner ed25519.PublicKey
 }
 
 func (key *Ed25519PublicKey) Bytes() []byte {
-	return key.inner[:]
+	return key.Inner[:]
 }
 
 func (key *Ed25519PublicKey) Scheme() uint8 {
@@ -98,7 +101,7 @@ func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
 	if len(bytes) != ed25519.PublicKeySize {
 		return errors.New("invalid ed25519 public key size")
 	}
-	key.inner = bytes
+	key.Inner = bytes
 	return nil
 }
 
@@ -106,16 +109,16 @@ func (key *Ed25519PublicKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != ed25519.PublicKeySize {
 		return errors.New("invalid ed25519 public key size")
 	}
-	key.inner = bytes
+	key.Inner = bytes
 	return nil
 }
 
-func (key *Ed25519PublicKey) Verify(msg []byte, sig []byte) bool {
-	return ed25519.Verify(key.inner, msg, sig)
+func (key *Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
+	return ed25519.Verify(key.Inner, msg, sig.Bytes())
 }
 
 func (key *Ed25519PublicKey) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.WriteBytes(key.inner)
+	bcs.WriteBytes(key.Inner)
 }
 func (key *Ed25519PublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 	kb := bcs.ReadBytes()
@@ -123,42 +126,92 @@ func (key *Ed25519PublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 		bcs.SetError(fmt.Errorf("bad ed25519 public key, expected %d bytes but got %d", ed25519.PublicKeySize, len(kb)))
 		return
 	}
-	key.inner = kb
+	key.Inner = kb
 }
 
 type Ed25519Authenticator struct {
-	publicKey Ed25519PublicKey
-	signature [ed25519.SignatureSize]byte
+	PubKey *Ed25519PublicKey
+	Sig    *Ed25519Signature
 }
 
 func (ea *Ed25519Authenticator) PublicKey() PublicKey {
-	return &ea.publicKey
+	return ea.PubKey
 }
 
-func (ea *Ed25519Authenticator) Signature() []byte {
-	return ea.signature[:]
+func (ea *Ed25519Authenticator) Signature() Signature {
+	return ea.Sig
 }
 
 func (ea *Ed25519Authenticator) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Struct(ea.PublicKey())
-	bcs.WriteBytes(ea.Signature())
+	bcs.Struct(ea.Signature())
 }
 
 func (ea *Ed25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	bcs.Struct(ea.PublicKey())
+	ea.PubKey = &Ed25519PublicKey{}
+	bcs.Struct(ea.PubKey)
 	err := bcs.Error()
 	if err != nil {
 		return
 	}
-	sb := bcs.ReadBytes()
-	if len(sb) != ed25519.SignatureSize {
-		bcs.SetError(fmt.Errorf("bad ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(sb)))
-		return
-	}
-	copy(ea.Signature(), sb)
+	ea.Sig = &Ed25519Signature{}
+	bcs.Struct(ea.Sig)
 }
 
 // Verify Return true if the data was well signed
-func (ea *Ed25519Authenticator) Verify(data []byte) bool {
-	return ea.PublicKey().Verify(data, ea.Signature())
+func (ea *Ed25519Authenticator) Verify(msg []byte) bool {
+	return ea.Sig.Verify(ea.PubKey, msg)
+}
+
+// Ed25519Signature a wrapper for serialization of Ed25519 signatures
+type Ed25519Signature struct {
+	Inner [ed25519.SignatureSize]byte
+}
+
+func (e *Ed25519Signature) Bytes() []byte {
+	return e.Inner[:]
+}
+
+func (e *Ed25519Signature) MarshalBCS(bcs *bcs.Serializer) {
+	bcs.WriteBytes(e.Bytes())
+}
+
+func (e *Ed25519Signature) UnmarshalBCS(bcs *bcs.Deserializer) {
+	bytes := bcs.ReadBytes()
+	if bcs.Error() != nil {
+		return
+	}
+	if len(bytes) != ed25519.SignatureSize {
+		bcs.SetError(fmt.Errorf("cannot deserialize ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(bytes)))
+		return
+	}
+	copy(e.Inner[:], bytes)
+}
+
+func (e *Ed25519Signature) Verify(publicKey *Ed25519PublicKey, msg []byte) bool {
+	return publicKey.Verify(msg, e)
+}
+
+func (e *Ed25519Signature) ToHex() string {
+	return "0x" + hex.EncodeToString(e.Bytes())
+}
+
+func (e *Ed25519Signature) FromHex(hexStr string) (err error) {
+	bytes, err := util.ParseHex(hexStr)
+	if err != nil {
+		return err
+	}
+	if len(bytes) != ed25519.SignatureSize {
+		return errors.New("invalid ed25519 signature size")
+	}
+	copy(e.Inner[:], bytes)
+	return nil
+}
+
+func (e *Ed25519Signature) FromBytes(bytes []byte) (err error) {
+	if len(bytes) != ed25519.SignatureSize {
+		return errors.New("invalid ed25519 signature size")
+	}
+	copy(e.Inner[:], bytes)
+	return nil
 }

@@ -1,6 +1,9 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import (
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+)
 
 type MoveResource struct {
 	Tag   MoveStructTag
@@ -19,7 +22,7 @@ func (mr *MoveResource) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type MoveStructTag struct {
-	Address           AccountAddress
+	Address           types.AccountAddress
 	Module            string
 	Name              string
 	GenericTypeParams []MoveType

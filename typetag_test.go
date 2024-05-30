@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,12 +60,12 @@ func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagType, 
 
 func TestStructTag(t *testing.T) {
 	st := StructTag{
-		Address: AccountOne,
+		Address: types.AccountOne,
 		Module:  "coin",
 		Name:    "CoinStore",
 		TypeParams: []TypeTag{
 			{Value: &StructTag{
-				Address:    AccountOne,
+				Address:    types.AccountOne,
 				Module:     "aptos_coin",
 				Name:       "AptosCoin",
 				TypeParams: nil,

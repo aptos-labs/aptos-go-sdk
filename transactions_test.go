@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"encoding/binary"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -11,10 +12,10 @@ import (
 )
 
 func TestRawTransactionSign(t *testing.T) {
-	sender, err := NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	assert.NoError(t, err)
 
-	receiver, err := NewEd25519Account()
+	receiver, err := types.NewEd25519Account()
 	assert.NoError(t, err)
 	dest := receiver.Address
 
@@ -27,7 +28,7 @@ func TestRawTransactionSign(t *testing.T) {
 		SequenceNumber: sn + 1,
 		Payload: TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: AccountOne,
+				Address: types.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",

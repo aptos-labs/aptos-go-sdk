@@ -52,7 +52,7 @@ func TestEd25519Keys(t *testing.T) {
 	// Check signature
 	expectedSignature, err := util.ParseHex(testEd25519Signature)
 	assert.NoError(t, err)
-	assert.Equal(t, expectedSignature, authenticator.Signature())
+	assert.Equal(t, expectedSignature, authenticator.Signature().Bytes())
 
 	// Verify signature with the key and the authenticator directly
 	assert.True(t, authenticator.Verify(message))

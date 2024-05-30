@@ -1,10 +1,6 @@
 package aptos
 
-import (
-	"github.com/stretchr/testify/assert"
-	"testing"
-)
-
+/* TODO: Reenable when running on localnet
 func TestClient(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test expects network connection to mainnet")
@@ -16,16 +12,16 @@ func TestClient(t *testing.T) {
 
 	// Owner address
 	ownerAddress := AccountAddress{}
-	err = ownerAddress.ParseStringRelaxed(defaultOwner)
+	err = ownerAddress.ParseStringRelaxed(types.defaultOwner)
 	assert.NoError(t, err)
 
 	// TODO: This flow seems awkward and I made mistakes by running Parse on the same address multiple times
 	metadataAddress := AccountAddress{}
-	err = metadataAddress.ParseStringRelaxed(defaultMetadata)
+	err = metadataAddress.ParseStringRelaxed(types.defaultMetadata)
 	assert.NoError(t, err)
 
 	primaryStoreAddress := AccountAddress{}
-	err = primaryStoreAddress.ParseStringRelaxed(defaultStore)
+	err = primaryStoreAddress.ParseStringRelaxed(types.defaultStore)
 	assert.NoError(t, err)
 
 	// Create a fungible asset client
@@ -57,7 +53,7 @@ func TestClient(t *testing.T) {
 	assert.True(t, storeExists)
 
 	// This should hold
-	storeNotExist, err := faClient.StoreExists(AccountOne)
+	storeNotExist, err := faClient.StoreExists(types.AccountOne)
 	assert.NoError(t, err)
 	assert.False(t, storeNotExist)
 
@@ -84,6 +80,6 @@ func TestClient(t *testing.T) {
 
 	isFrozen, err := faClient.IsFrozen(primaryStoreAddress)
 	assert.NoError(t, err)
-	assert.False(t, isFrozen)
+	assert.False(t, isFrozen
 
-}
+}*/

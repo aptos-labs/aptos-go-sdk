@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -55,7 +56,7 @@ func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
 	return message, nil
 }
 
-func (txn *RawTransaction) Sign(sender *Account) (signedTxn *SignedTransaction, err error) {
+func (txn *RawTransaction) Sign(sender *types.Account) (signedTxn *SignedTransaction, err error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
 		return

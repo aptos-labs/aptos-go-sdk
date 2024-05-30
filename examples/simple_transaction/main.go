@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
 // main This example shows you how to make an APT transfer transaction in the simplest possible way
@@ -14,7 +15,7 @@ func main() {
 	}
 
 	// Create a sender locally
-	sender, err := aptos.NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -23,7 +24,7 @@ func main() {
 	err = client.Fund(sender.Address, 100_000_000)
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := types.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
