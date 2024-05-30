@@ -17,7 +17,7 @@ func Sha3256Hash(bytes [][]byte) (output []byte) {
 	return util.Sha3256Hash(bytes)
 }
 
-var testConfig = TestnetConfig
+var testConfig = DevnetConfig
 
 // createTestClient to use for testing for only one place to configure the network
 // TODO: Allow overrides with environment variable?
