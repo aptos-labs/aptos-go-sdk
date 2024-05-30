@@ -37,7 +37,7 @@ func (client *FungibleAssetClient) Transfer(sender *Account, senderStore Account
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
 
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "store"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
 
 	// Build transaction
