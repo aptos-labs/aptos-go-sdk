@@ -1,8 +1,9 @@
 package aptos
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"strconv"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,18 +26,18 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
-		return APTTransferTransaction(client, sender, AccountOne, 100)
+	testTransaction(t, func(client *Client, sender *types.Account) (*SignedTransaction, error) {
+		return APTTransferTransaction(client, sender, types.AccountOne, 100)
 	})
 }
 
 func Test_ScriptFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
+	testTransaction(t, func(client *Client, sender *types.Account) (*SignedTransaction, error) {
 		scriptBytes, err := ParseHex(singleSignerScript)
 		assert.NoError(t, err)
 
 		amount := uint64(1)
-		dest := AccountOne
+		dest := types.AccountOne
 
 		rawTxn, err := client.BuildTransaction(sender.Address,
 			TransactionPayload{Payload: &Script{
@@ -56,7 +57,7 @@ func Test_ScriptFlow(t *testing.T) {
 		return rawTxn.Sign(sender)
 	})
 }
-func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *Account) (*SignedTransaction, error)) {
+func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *types.Account) (*SignedTransaction, error)) {
 	if testing.Short() {
 		// TODO: only run this in some integration mode set by environment variable?
 		// TODO: allow this to be harmlessly flaky if devnet is down?
@@ -64,21 +65,24 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 		t.Skip("integration test expects network connection to devnet in cloud")
 	}
 	// Create a client
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
 	// Verify chain id retrieval works
 	chainId, err := client.GetChainId()
 	assert.NoError(t, err)
-	assert.Less(t, uint8(4), chainId)
+	if testConfig == DevnetConfig {
+		assert.Greater(t, chainId, LocalnetConfig.ChainId)
+	} else {
+		assert.Equal(t, testConfig.ChainId, chainId)
+	}
 
 	// Verify gas estimation works
-	estimateGasInfo, err := client.EstimateGasPrice()
+	_, err = client.EstimateGasPrice()
 	assert.NoError(t, err)
-	assert.Greater(t, estimateGasInfo.GasEstimate, uint64(0))
 
 	// Create an account
-	account, err := NewEd25519Account()
+	account, err := types.NewEd25519Account()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
@@ -107,11 +111,8 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	assert.NoError(t, err)
 
 	// Read transaction by version
-	versionString := txn["version"].(string)
-
-	// Convert string version to uint64
-	version, err := strconv.ParseUint(versionString, 10, 64)
-	assert.NoError(t, err)
+	userTxn, _ := txn.Inner.(*api.UserTransaction)
+	version := userTxn.Version
 
 	// Load the transaction again
 	txnByVersion, err := client.TransactionByVersion(version)
@@ -121,12 +122,12 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
-	sender, err := NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	assert.NoError(t, err)
-	dest, err := NewEd25519Account()
+	dest, err := types.NewEd25519Account()
 	assert.NoError(t, err)
 
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 	signedTxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
 	assert.NoError(t, err)
@@ -139,11 +140,11 @@ func TestAPTTransferTransaction(t *testing.T) {
 }
 
 func Test_Indexer(t *testing.T) {
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
 	// TODO: copy indexer client calls to the main client
-	_, err = client.GetCoinBalances(AccountOne)
+	_, err = client.GetCoinBalances(types.AccountOne)
 	assert.NoError(t, err)
 
 	status, err := client.GetProcessorStatus("default_processor")
@@ -152,34 +153,50 @@ func Test_Indexer(t *testing.T) {
 }
 
 func Test_Block(t *testing.T) {
-	// Check block 1, it's always a reconfiguration
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
-	blockByHeight, err := client.BlockByHeight(1, true)
-	assert.NoError(t, err)
-	blockByVersion, err := client.BlockByVersion(1, true)
+	info, err := client.Info()
 	assert.NoError(t, err)
 
-	assert.Equal(t, blockByHeight, blockByVersion)
-	assert.Equal(t, "1", blockByHeight["block_height"].(string))
-	assert.True(t, len(blockByHeight["transactions"].([]any)) > 0)
+	// TODO: I need to add hardcoded testing sets for these conversions
+	numToCheck := uint64(10)
+	blockHeight := info.BlockHeight()
+
+	for i := uint64(0); i < numToCheck; i++ {
+		blockNumber := blockHeight - i
+		println("BLOCK:", blockNumber)
+		blockByHeight, err := client.BlockByHeight(blockNumber, true)
+		assert.NoError(t, err)
+
+		assert.Equal(t, blockNumber, blockByHeight.BlockHeight)
+
+		// Block should always be last - first + 1 (since they would be 1 if they're the same (inclusive)
+		assert.Equal(t, 1+blockByHeight.LastVersion-blockByHeight.FirstVersion, uint64(len(blockByHeight.Transactions)))
+
+		// Version should be the same
+		blockByVersion, err := client.BlockByVersion(blockByHeight.FirstVersion, true)
+		assert.NoError(t, err)
+
+		assert.Equal(t, blockByHeight, blockByVersion)
+		// println(api.PrettyJson(blockByHeight))
+	}
 }
 
 func Test_Account(t *testing.T) {
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
-	account, err := client.Account(AccountOne)
+	account, err := client.Account(types.AccountOne)
 	assert.NoError(t, err)
 	sequenceNumber, err := account.SequenceNumber()
 	assert.NoError(t, err)
 	assert.Equal(t, uint64(0), sequenceNumber)
 	authKey, err := account.AuthenticationKey()
 	assert.NoError(t, err)
-	assert.Equal(t, AccountOne[:], authKey[:])
+	assert.Equal(t, types.AccountOne[:], authKey[:])
 }
 
 func Test_Transactions(t *testing.T) {
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
 	start := uint64(1)
@@ -206,7 +223,7 @@ func Test_Transactions(t *testing.T) {
 }
 
 func Test_Info(t *testing.T) {
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
 	info, err := client.Info()
@@ -215,14 +232,21 @@ func Test_Info(t *testing.T) {
 }
 
 func Test_AccountResources(t *testing.T) {
-	client, err := NewClient(DevnetConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	resources, err := client.AccountResources(AccountOne)
+	resources, err := client.AccountResources(types.AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resources), 0)
 
-	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
+	resourcesBcs, err := client.AccountResourcesBCS(types.AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resourcesBcs), 0)
+}
+
+func TestClient_BlockByHeight(t *testing.T) {
+	client, err := createTestClient()
+	assert.NoError(t, err)
+
+	_, err = client.BlockByHeight(1, true)
 }

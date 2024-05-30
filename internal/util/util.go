@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/hex"
 	"golang.org/x/crypto/sha3"
+	"strconv"
 	"strings"
 )
 
@@ -20,4 +21,8 @@ func ParseHex(hexStr string) ([]byte, error) {
 		hexStr = hexStr[2:]
 	}
 	return hex.DecodeString(hexStr)
+}
+
+func StrToUint64(s string) (uint64, error) {
+	return strconv.ParseUint(s, 10, 64)
 }

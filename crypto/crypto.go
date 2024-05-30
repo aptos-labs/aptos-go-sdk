@@ -38,7 +38,16 @@ type PublicKey interface {
 	Scheme() uint8
 
 	// Verify verifies a message with the public key
-	Verify(msg []byte, sig []byte) bool
+	Verify(msg []byte, sig Signature) bool
+}
+
+type Signature interface {
+	bcs.Struct
+	CryptoMaterial
+	ToHex
+	FromHex
+	ToBytes
+	FromBytes
 }
 
 type CryptoMaterial interface {

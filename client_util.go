@@ -3,6 +3,7 @@ package aptos
 import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"net/url"
 	"runtime/debug"
 )
@@ -50,7 +51,7 @@ func init() {
 // Amount in Octas (10^-8 APT)
 //
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
-func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
+func APTTransferTransaction(client *Client, sender *types.Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
 	// TODO: Make this easier
 	ser := &bcs.Serializer{}
 	ser.U64(amount)
@@ -59,7 +60,7 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		TransactionPayload{Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: AccountOne,
+				Address: types.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",

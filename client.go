@@ -1,6 +1,8 @@
 package aptos
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/hasura/go-graphql-client"
 	"time"
 )
@@ -135,12 +137,12 @@ func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 }
 
 // BlockByHeight fetches a block by height
-func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data map[string]any, err error) {
+func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data api.Block, err error) {
 	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
 }
 
 // BlockByVersion fetches a block by ledger version
-func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data map[string]any, err error) {
+func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data api.Block, err error) {
 	return client.nodeClient.BlockByVersion(ledgerVersion, withTransactions)
 }
 
@@ -159,13 +161,13 @@ func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool
 //			// known to local mempool, but not committed yet
 //		}
 //	}
-func (client *Client) TransactionByHash(txnHash string) (data map[string]any, err error) {
+func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, err error) {
 	return client.nodeClient.TransactionByHash(txnHash)
 }
 
 // TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
 // committed to have a ledger version
-func (client *Client) TransactionByVersion(version uint64) (data map[string]any, err error) {
+func (client *Client) TransactionByVersion(version uint64) (data *api.Transaction, err error) {
 	return client.nodeClient.TransactionByVersion(version)
 }
 
@@ -176,7 +178,7 @@ func (client *Client) PollForTransactions(txnHashes []string, options ...any) er
 }
 
 // WaitForTransaction Do a long-GET for one transaction and wait for it to complete
-func (client *Client) WaitForTransaction(txnHash string) (data map[string]any, err error) {
+func (client *Client) WaitForTransaction(txnHash string) (data *api.Transaction, err error) {
 	return client.nodeClient.WaitForTransaction(txnHash)
 }
 
@@ -211,7 +213,7 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
 // for more configuration, please use them separately
-func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (hash string, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender *types.Account, payload TransactionPayload, options ...any) (hash string, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 
