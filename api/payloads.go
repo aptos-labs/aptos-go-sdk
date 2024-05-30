@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
@@ -19,11 +20,17 @@ type TransactionPayload struct {
 	Inner TransactionPayloadImpl
 }
 
-func (o *TransactionPayload) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Type, err = toString(data, "type")
+func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Type string `json:"type"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
+	o.Type = data.Type
+	// TODO: for all enums, we will likely have to add an "unknown type" so it doesn't just crash
 	switch o.Type {
 	case EnumTransactionPayloadEntryFunction:
 		o.Inner = &TransactionPayloadEntryFunction{}
@@ -38,93 +45,34 @@ func (o *TransactionPayload) UnmarshalJSONFromMap(data map[string]any) (err erro
 	default:
 		return fmt.Errorf("unknown transaction payload type: %s", o.Type)
 	}
-
-	return o.Inner.UnmarshalJSONFromMap(data)
+	return json.Unmarshal(b, o.Inner)
 }
 
 // TransactionPayloadImpl is all the interfaces required for all transaction payloads
 type TransactionPayloadImpl interface {
-	UnmarshalFromMap
 }
 
 // TransactionPayloadEntryFunction describes an entry function call by a transaction
 type TransactionPayloadEntryFunction struct {
-	Function      string
-	TypeArguments []string // TODO: Stronger typing?  (needs parser)
-	Arguments     []any
-}
-
-func (o *TransactionPayloadEntryFunction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Function, err = toString(data, "function")
-	if err != nil {
-		return err
-	}
-	o.TypeArguments, err = toStrings(data, "type_arguments")
-	if err != nil {
-		return err
-	}
-	o.Arguments = data["arguments"].([]any)
-	return nil
+	Function      string   `json:"function"`
+	TypeArguments []string `json:"type_arguments"` // TODO: Stronger typing?  (needs parser)
+	Arguments     []any    `json:"arguments"`
 }
 
 // TransactionPayloadScript describes a script payload along with associated
 type TransactionPayloadScript struct {
-	Code          *MoveScript
-	TypeArguments []string // TODO: Stronger typing?  (needs parser)
-	Arguments     []any
-}
-
-func (o *TransactionPayloadScript) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Code, err = toMoveScript(data, "code")
-	if err != nil {
-		return err
-	}
-	// Convert all to strings
-	o.TypeArguments, err = toStrings(data, "type_arguments")
-
-	o.Arguments = data["arguments"].([]any)
-	return nil
+	Code          *MoveScript `json:"code"`
+	TypeArguments []string    `json:"type_arguments"`
+	Arguments     []any       `json:"arguments"`
 }
 
 // TransactionPayloadMultisig describes multisig running an entry function
 type TransactionPayloadMultisig struct {
-	MultisigAddress    *types.AccountAddress
-	TransactionPayload *TransactionPayloadEntryFunction // Optional
-}
-
-func (o *TransactionPayloadMultisig) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.MultisigAddress, err = toAccountAddress(data, "multisig_address")
-	if err != nil {
-		return err
-	}
-	payload, err := toMap(data, "transaction_payload")
-	if err == nil {
-		o.TransactionPayload = &TransactionPayloadEntryFunction{}
-		err = o.TransactionPayload.UnmarshalJSONFromMap(payload)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+	MultisigAddress    *types.AccountAddress            `json:"multisig_address"`
+	TransactionPayload *TransactionPayloadEntryFunction `json:"transaction_payload,omitempty"` // Optional
 }
 
 // TransactionPayloadWriteSet  describes a write set transaction, such as genesis
-type TransactionPayloadWriteSet struct {
-	Inner *DirectWriteSet
-}
+type TransactionPayloadWriteSet = DirectWriteSet
 
-func (o *TransactionPayloadWriteSet) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Inner = &DirectWriteSet{}
-	writeSetData, err := toMap(data, "write_set")
-	if err != nil {
-		return err
-	}
-	return o.Inner.UnmarshalJSONFromMap(writeSetData)
-}
-
-type TransactionPayloadModuleBundle struct {
-}
-
-func (o *TransactionPayloadModuleBundle) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	return nil
-}
+type TransactionPayloadModuleBundle struct{}

@@ -1,6 +1,9 @@
 package api
 
-import "github.com/aptos-labs/aptos-go-sdk/internal/types"
+import (
+	"encoding/json"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+)
 
 // MoveBytecode describes a module, or script, and it's associated ABI
 type MoveBytecode struct {
@@ -8,20 +11,19 @@ type MoveBytecode struct {
 	Abi      *MoveModule // Optional
 }
 
-func (o *MoveBytecode) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Bytecode, err = toBytes(data, "bytecode")
+func (o *MoveBytecode) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Bytecode []byte      `json:"bytecode"`
+		Abi      *MoveModule `json:"abi,omitempty"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	if data["abi"] != nil {
-		o.Abi = &MoveModule{}
-		abiData, err := toMap(data, "abi")
-		if err != nil {
-			return err
-		}
-		err = o.Abi.UnmarshalJSONFromMap(abiData)
-	}
-	return err
+	o.Bytecode = data.Bytecode
+	o.Abi = data.Abi
+	return nil
 }
 
 // MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin
@@ -30,32 +32,11 @@ type MoveComponentId = string
 
 // MoveModule describes the abilities and types associated with a specific module
 type MoveModule struct {
-	Address          *types.AccountAddress
-	Name             string
-	Friends          []MoveComponentId // TODO more typing
-	ExposedFunctions []*MoveFunction   // TODO: more typing?
-	Structs          []*MoveStruct
-}
-
-func (o *MoveModule) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Address, err = toAccountAddress(data, "address")
-	if err != nil {
-		return err
-	}
-	o.Name, err = toString(data, "name")
-	if err != nil {
-		return err
-	}
-	o.Friends, err = toStrings(data, "friends")
-	if err != nil {
-		return err
-	}
-	o.ExposedFunctions, err = toMoveFunctions(data, "exposed_functions")
-	if err != nil {
-		return err
-	}
-	o.Structs, err = toMoveStructs(data, "structs")
-	return err
+	Address          *types.AccountAddress `json:"address"`
+	Name             string                `json:"name"`
+	Friends          []MoveComponentId     `json:"friends"`           // TODO more typing
+	ExposedFunctions []*MoveFunction       `json:"exposed_functions"` // TODO: more typing?
+	Structs          []*MoveStruct         `json:"structs"`
 }
 
 type MoveScript struct {
@@ -63,67 +44,36 @@ type MoveScript struct {
 	Abi      *MoveFunction // Optional
 }
 
-func (o *MoveScript) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Bytecode, err = toBytes(data, "bytecode")
+func (o *MoveScript) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Bytecode []byte        `json:"bytecode"`
+		Abi      *MoveFunction `json:"abi,omitempty"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	// ABI is optional
-	if data["abi"] != nil {
-		o.Abi, err = toMoveFunction(data, "abi")
-	}
-	return err
+	o.Bytecode = data.Bytecode
+	o.Abi = data.Abi
+	return nil
 }
 
 // MoveFunction describes a move function and its associated properties
 type MoveFunction struct {
-	Name              MoveComponentId
-	Visibility        MoveVisibility // TODO: Typing
-	IsEntry           bool
-	IsView            bool
-	GenericTypeParams []*GenericTypeParam
-	Params            []string
-	Return            []string
-}
-
-func (o *MoveFunction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Name, err = toString(data, "name")
-	if err != nil {
-		return err
-	}
-	o.Visibility, err = toString(data, "visibility")
-	if err != nil {
-		return err
-	}
-	o.IsEntry, err = toBool(data, "is_entry")
-	if err != nil {
-		return err
-	}
-	o.IsView, err = toBool(data, "is_view")
-	if err != nil {
-		return err
-	}
-	o.GenericTypeParams, err = toGenericTypeParams(data, "generic_type_params")
-	if err != nil {
-		return err
-	}
-	o.Params, err = toStrings(data, "params")
-	if err != nil {
-		return err
-	}
-	o.Return, err = toStrings(data, "return")
-	return err
+	Name              MoveComponentId     `json:"name"`
+	Visibility        MoveVisibility      `json:"visibility"` // TODO: Typing?
+	IsEntry           bool                `json:"is_entry""`
+	IsView            bool                `json:"is_view"`
+	GenericTypeParams []*GenericTypeParam `json:"generic_type_params"`
+	Params            []string            `json:"params"`
+	Return            []string            `json:"return"`
 }
 
 // GenericTypeParam is a set of requirements for a generic.  These can be applied via different
 // MoveAbility constraints required on the type
 type GenericTypeParam struct {
-	Constraints []MoveAbility
-}
-
-func (o *GenericTypeParam) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Constraints, err = toStrings(data, "constraints")
-	return err
+	Constraints []MoveAbility `json:"constraints"`
 }
 
 const (
@@ -149,45 +99,15 @@ type MoveVisibility = string
 
 // MoveStruct describes the layout for a struct, and its constraints
 type MoveStruct struct {
-	Name              string
-	IsNative          bool
-	Abilities         []MoveAbility
-	GenericTypeParams []*GenericTypeParam
-	Fields            []*MoveStructField
-}
-
-func (o *MoveStruct) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Name, err = toString(data, "name")
-	if err != nil {
-		return err
-	}
-	o.IsNative, err = toBool(data, "is_native")
-	if err != nil {
-		return err
-	}
-	o.Abilities, err = toStrings(data, "abilities")
-	if err != nil {
-		return err
-	}
-	o.GenericTypeParams, err = toGenericTypeParams(data, "generic_type_params")
-	if err != nil {
-		return err
-	}
-	o.Fields, err = toMoveStructFields(data, "fields")
-	return err
+	Name              string              `json:"name"`
+	IsNative          bool                `json:"is_native"`
+	Abilities         []MoveAbility       `json:"abilities"`
+	GenericTypeParams []*GenericTypeParam `json:"generic_type_params"`
+	Fields            []*MoveStructField  `json:"fields"`
 }
 
 // MoveStructField represents a single field in a struct, and it's associated type
 type MoveStructField struct {
-	Name string
-	Type string
-}
-
-func (o *MoveStructField) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Name, err = toString(data, "name")
-	if err != nil {
-		return err
-	}
-	o.Type, err = toString(data, "type")
-	return err
+	Name string `json:"name"`
+	Type string `json:"type"`
 }

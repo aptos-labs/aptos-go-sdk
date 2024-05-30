@@ -136,12 +136,12 @@ func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 }
 
 // BlockByHeight fetches a block by height
-func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data api.Block, err error) {
+func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
 	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
 }
 
 // BlockByVersion fetches a block by ledger version
-func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data api.Block, err error) {
+func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
 	return client.nodeClient.BlockByVersion(ledgerVersion, withTransactions)
 }
 
@@ -184,7 +184,7 @@ func (client *Client) WaitForTransaction(txnHash string) (data *api.Transaction,
 // Transactions Get recent transactions.
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
-func (client *Client) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
+func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Transaction, err error) {
 	return client.nodeClient.Transactions(start, limit)
 }
 

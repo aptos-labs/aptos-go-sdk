@@ -278,17 +278,17 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transact
 	return
 }
 
-func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data api.Block, err error) {
+func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
-func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data api.Block, err error) {
+func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
-func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data api.Block, err error) {
+func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data *api.Block, err error) {
 	params := url.Values{}
 	params.Set("with_transactions", strconv.FormatBool(withTransactions))
 	restUrl.RawQuery = params.Encode()
@@ -313,7 +313,8 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 		return
 	}
 	_ = response.Body.Close() // We don't care about the error about closing the body
-	err = json.Unmarshal(blob, &data)
+	data = &api.Block{}
+	err = json.Unmarshal(blob, data)
 	return
 }
 
@@ -411,7 +412,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 // Transactions Get recent transactions.
 // Start is a version number. Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[string]any, err error) {
+func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.Transaction, err error) {
 	au := rc.baseUrl.JoinPath("transactions")
 	params := url.Values{}
 	if start != nil {
@@ -426,19 +427,22 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []map[str
 	response, err := rc.Get(au.String())
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", au.String(), err)
-		return
+		return nil, err
 	}
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
-		return
+		return nil, err
 	}
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
-		return
+		return nil, err
 	}
 	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &data)
+	if err != nil {
+		return nil, err
+	}
 	return
 }
 

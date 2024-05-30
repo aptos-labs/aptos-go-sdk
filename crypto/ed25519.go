@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"crypto/ed25519"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -41,7 +40,7 @@ func (key *Ed25519PrivateKey) Bytes() []byte {
 }
 
 func (key *Ed25519PrivateKey) ToHex() string {
-	return "0x" + hex.EncodeToString(key.Bytes())
+	return util.BytesToHex(key.Bytes())
 }
 
 func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
@@ -90,7 +89,7 @@ func (key *Ed25519PublicKey) Scheme() uint8 {
 }
 
 func (key *Ed25519PublicKey) ToHex() string {
-	return "0x" + hex.EncodeToString(key.Bytes())
+	return util.BytesToHex(key.Bytes())
 }
 
 func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
@@ -193,7 +192,7 @@ func (e *Ed25519Signature) Verify(publicKey *Ed25519PublicKey, msg []byte) bool 
 }
 
 func (e *Ed25519Signature) ToHex() string {
-	return "0x" + hex.EncodeToString(e.Bytes())
+	return util.BytesToHex(e.Bytes())
 }
 
 func (e *Ed25519Signature) FromHex(hexStr string) (err error) {
