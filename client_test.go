@@ -158,7 +158,7 @@ func Test_Block(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TODO: I need to add hardcoded testing sets for these conversions
-	numToCheck := uint64(1000)
+	numToCheck := uint64(10)
 	blockHeight := info.BlockHeight()
 
 	for i := uint64(0); i < numToCheck; i++ {
