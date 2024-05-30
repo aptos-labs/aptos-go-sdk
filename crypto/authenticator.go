@@ -1,7 +1,6 @@
 package crypto
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 
@@ -114,7 +113,7 @@ func (ak *AuthenticationKey) FromBytes(bytes []byte) (err error) {
 }
 
 func (ak *AuthenticationKey) ToHex() string {
-	return "0x" + hex.EncodeToString(ak[:])
+	return util.BytesToHex(ak[:])
 }
 
 func (ak *AuthenticationKey) Bytes() []byte {

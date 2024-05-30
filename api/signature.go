@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
@@ -22,14 +23,19 @@ type Signature struct {
 	Inner SignatureImpl
 }
 
-func (o *Signature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Type, err = toString(data, "type")
+func (o *Signature) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Type string `json:"type"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
+	o.Type = data.Type
 	switch o.Type {
 	case EnumSignatureEd25519:
-		o.Inner = &Ed25519Authenticator{}
+		o.Inner = &Ed25519Signature{}
 	case EnumSignatureMultiAgent:
 		o.Inner = &MultiAgentSignature{}
 	case EnumSignatureFeePayer:
@@ -41,170 +47,92 @@ func (o *Signature) UnmarshalJSONFromMap(data map[string]any) (err error) {
 	default:
 		return fmt.Errorf("unknown signature type: %s", o.Type)
 	}
-	return o.Inner.UnmarshalJSONFromMap(data)
+	return json.Unmarshal(b, o.Inner)
 }
 
-type SignatureImpl interface {
-	UnmarshalFromMap
-}
+type SignatureImpl interface{}
 
-// Ed25519Authenticator represents an Ed25519 signature, which actually is the authenticator.
-type Ed25519Authenticator struct {
-	Inner *crypto.Ed25519Authenticator
-}
+// Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the authenticator.
+// It's poorly named Ed25519Signature in the API spec
+type Ed25519Signature crypto.Ed25519Authenticator
 
-func (o *Ed25519Authenticator) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Inner = &crypto.Ed25519Authenticator{}
-	pubKey := &Ed25519PublicKey{}
-	err = pubKey.UnmarshalJSONFromMap(data)
+// TODO: apply directly to the upstream type?
+func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		PublicKey HexBytes `json:"public_key"`
+		Signature HexBytes `json:"signature"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	o.Inner.PubKey = pubKey.Inner
-	signature := &Ed25519Signature{}
-	err = pubKey.UnmarshalJSONFromMap(data)
+	o.PubKey = &crypto.Ed25519PublicKey{}
+	err = o.PubKey.FromBytes(data.PublicKey)
 	if err != nil {
 		return err
 	}
-	o.Inner.Sig = signature.Inner
-	return nil
-}
-
-type Ed25519PublicKey struct {
-	Inner *crypto.Ed25519PublicKey
-}
-
-func (o *Ed25519PublicKey) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Inner = &crypto.Ed25519PublicKey{}
-	hexStr, err := toString(data, "public_key")
-	if err != nil {
-		return err
-	}
-	err = o.Inner.FromHex(hexStr)
-	return err
-}
-
-type Ed25519Signature struct {
-	Inner *crypto.Ed25519Signature
-}
-
-func (o *Ed25519Signature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Inner = &crypto.Ed25519Signature{}
-	hexStr, err := toString(data, "signature")
-	if err != nil {
-		return err
-	}
-	err = o.Inner.FromHex(hexStr)
-	return err
+	o.Sig = &crypto.Ed25519Signature{}
+	return o.Sig.FromBytes(data.Signature)
 }
 
 // SingleSenderSignature is a map of the possible keys, the API needs an update to describe the type of key
 // TODO: Implement single sender crypto properly, needs updates on the API side
-type SingleSenderSignature struct {
-	Inner map[string]any
-}
-
-func (o *SingleSenderSignature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Inner = data
-	return nil
-}
+type SingleSenderSignature map[string]any
 
 type FeePayerSignature struct {
-	FeePayerAddress          *types.AccountAddress
-	FeePayerSigner           *Signature
-	SecondarySignerAddresses []*types.AccountAddress
-	SecondarySigners         []*Signature
-	Sender                   *Signature
-}
-
-func (o *FeePayerSignature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.FeePayerAddress, err = toAccountAddress(data, "fee_payer_address")
-	if err != nil {
-		return err
-	}
-	o.FeePayerSigner, err = toSignature(data, "fee_payer_signer")
-	if err != nil {
-		return err
-	}
-	multiAgent := &MultiAgentSignature{}
-	err = multiAgent.UnmarshalJSONFromMap(data)
-	if err != nil {
-		return err
-	}
-	o.SecondarySignerAddresses = multiAgent.SecondarySignerAddresses
-	o.SecondarySigners = multiAgent.SecondarySigners
-	o.Sender = multiAgent.Sender
-	return nil
+	FeePayerAddress          *types.AccountAddress   `json:"fee_payer_address"`
+	FeePayerSigner           *Signature              `json:"fee_payer_signer"`
+	SecondarySignerAddresses []*types.AccountAddress `json:"secondary_signer_addresses"`
+	SecondarySigners         []*Signature            `json:"secondary_signers"`
+	Sender                   *Signature              `json:"sender"`
 }
 
 type MultiAgentSignature struct {
-	SecondarySignerAddresses []*types.AccountAddress
-	SecondarySigners         []*Signature
-	Sender                   *Signature
+	SecondarySignerAddresses []*types.AccountAddress `json:"secondary_signer_addresses"`
+	SecondarySigners         []*Signature            `json:"secondary_signers"`
+	Sender                   *Signature              `json:"sender"`
 }
 
-func (o *MultiAgentSignature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.SecondarySignerAddresses, err = toAccountAddresses(data, "secondary_signer_addresses")
-	if err != nil {
-		return err
-	}
-	o.SecondarySigners, err = toSignatures(data, "secondary_signers")
-	if err != nil {
-		return err
-	}
-	o.Sender, err = toSignature(data, "sender")
-	return err
-}
-
+// TODO: add the MultiEd25519 crypto type directly, and remove this extra redirection
+// Note that public keys and signatures should be the same length, unless the transaction failed
 type MultiEd25519Signature struct {
 	PublicKeys []*crypto.Ed25519PublicKey
-	Signatures []*Ed25519Authenticator
+	Signatures []*crypto.Ed25519Signature
 	Threshold  uint8
 	Bitmap     []byte
 }
 
-func (o *MultiEd25519Signature) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	publicKeyData, ok := data["public_keys"].([]any)
-	if !ok {
-		return fmt.Errorf("public_keys is not an array")
+func (o *MultiEd25519Signature) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		PublicKeys []HexBytes `json:"public_keys"`
+		Signatures []HexBytes `json:"signatures"`
+		Threshold  uint8      `json:"threshold"`
+		Bitmap     HexBytes   `json:"bitmap"`
 	}
-	signatureData, ok := data["authenticators"].([]any)
-	if !ok {
-		return fmt.Errorf("public_keys is not an array")
-	}
-	numSignatures := len(signatureData)
-	if len(publicKeyData) != numSignatures {
-		return fmt.Errorf("public_keys and authenticators length mismatch")
-	}
-	authenticators := make([]*Ed25519Authenticator, numSignatures)
-	for i := 0; i < len(publicKeyData); i++ {
-		authenticators[i] = &Ed25519Authenticator{}
-		pubKey := &Ed25519PublicKey{}
-		pubKeyEntry, ok := publicKeyData[i].(map[string]any)
-		if !ok {
-			return fmt.Errorf("public_key[%d] is invalid", i)
-		}
-		err = pubKey.UnmarshalJSONFromMap(pubKeyEntry)
-		if err != nil {
-			return err
-		}
-		authenticators[i].Inner.PubKey = pubKey.Inner
-		sig := &Ed25519Signature{}
-		sigEntry, ok := signatureData[i].(map[string]any)
-		if !ok {
-			return fmt.Errorf("signature[%d] is invalid", i)
-		}
-		err = sig.UnmarshalJSONFromMap(sigEntry)
-		if err != nil {
-			return err
-		}
-		authenticators[i].Inner.Sig = sig.Inner
-	}
-
-	o.Threshold, err = toUint8(data, "threshold")
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	o.Bitmap, err = toBytes(data, "bitmap")
-	return err
+	// For some reason, this is different in structure from Ed25519Signature, making it need custom logic
+	o.PublicKeys = make([]*crypto.Ed25519PublicKey, len(data.PublicKeys))
+	for i, key := range data.PublicKeys {
+		o.PublicKeys[i] = &crypto.Ed25519PublicKey{}
+		err = o.PublicKeys[i].FromBytes(key)
+		if err != nil {
+			return err
+		}
+	}
+	o.Signatures = make([]*crypto.Ed25519Signature, len(data.Signatures))
+	for i, signature := range data.Signatures {
+		o.Signatures[i] = &crypto.Ed25519Signature{}
+		err = o.Signatures[i].FromBytes(signature)
+		if err != nil {
+			return err
+		}
+	}
+	o.Threshold = data.Threshold
+	o.Bitmap = data.Bitmap
+	return nil
 }

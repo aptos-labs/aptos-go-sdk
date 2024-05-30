@@ -23,6 +23,10 @@ func ParseHex(hexStr string) ([]byte, error) {
 	return hex.DecodeString(hexStr)
 }
 
+func BytesToHex(bytes []byte) string {
+	return "0x" + hex.EncodeToString(bytes)
+}
+
 func StrToUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, 10, 64)
 }

@@ -21,11 +21,16 @@ type Transaction struct {
 	Inner TransactionImpl
 }
 
-func (o *Transaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Type, err = toString(data, "type")
+func (o *Transaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Type string `json:"type"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
+	o.Type = data.Type
 	switch o.Type {
 	case EnumPendingTransaction:
 		o.Inner = &PendingTransaction{}
@@ -42,20 +47,19 @@ func (o *Transaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
 	default:
 		return fmt.Errorf("unknown transaction type: %s", o.Type)
 	}
-	return o.Inner.UnmarshalJSONFromMap(data)
+	return json.Unmarshal(b, o.Inner)
 }
 
 type TransactionImpl interface {
-	UnmarshalFromMap
 }
 
 // UserTransaction is a user submitted transaction as an entry function or script
 type UserTransaction struct {
 	Version                 uint64
-	Hash                    string
-	AccumulatorRootHash     string
-	StateChangeHash         string
-	EventRootHash           string
+	Hash                    Hash
+	AccumulatorRootHash     Hash
+	StateChangeHash         Hash
+	EventRootHash           Hash
 	GasUsed                 uint64
 	Success                 bool
 	VmStatus                string
@@ -69,42 +73,56 @@ type UserTransaction struct {
 	Payload                 *TransactionPayload
 	Signature               *Signature
 	Timestamp               uint64 // TODO: native time?
-	// TODO: State checkpoint hash is optional
+	StateCheckpointHash     Hash   //Optional
 }
 
-func (o *UserTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	info := &TransactionInfo{}
-	err = info.UnmarshalJSONFromMap(data)
+func (o *UserTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Version                 U64                   `json:"version"`
+		Hash                    Hash                  `json:"hash"`
+		AccumulatorRootHash     Hash                  `json:"accumulator_root_hash"`
+		StateChangeHash         Hash                  `json:"state_change_hash"`
+		EventRootHash           Hash                  `json:"event_root_hash"`
+		GasUsed                 U64                   `json:"gas_used"`
+		Success                 bool                  `json:"success"`
+		VmStatus                string                `json:"vm_status"`
+		Changes                 []*WriteSetChange     `json:"changes"`
+		Events                  []*Event              `json:"events"`
+		Sender                  *types.AccountAddress `json:"sender"`
+		SequenceNumber          U64                   `json:"sequence_number"`
+		MaxGasAmount            U64                   `json:"max_gas_amount"`
+		GasUnitPrice            U64                   `json:"gas_unit_price"`
+		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
+		Payload                 *TransactionPayload   `json:"payload"`
+		Signature               *Signature            `json:"signature"`
+		Timestamp               U64                   `json:"timestamp"`
+		StateCheckpointHash     Hash                  `json:"state_checkpoint_hash"` // Optional
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-
-	o.Version = info.Version
-	o.Hash = info.Hash
-	o.AccumulatorRootHash = info.AccumulatorRootHash
-	o.StateChangeHash = info.StateChangeHash
-	o.EventRootHash = info.EventRootHash
-	o.GasUsed = info.GasUsed
-	o.Success = info.Success
-	o.VmStatus = info.VmStatus
-	o.Changes = info.Changes
-	o.Events = info.Events
-
-	userInfo := &UserTransactionInfo{}
-	err = userInfo.UnmarshalJSONFromMap(data)
-	if err != nil {
-		return err
-	}
-	o.Sender = userInfo.Sender
-	o.SequenceNumber = userInfo.SequenceNumber
-	o.MaxGasAmount = userInfo.MaxGasAmount
-	o.GasUnitPrice = userInfo.GasUnitPrice
-	o.ExpirationTimestampSecs = userInfo.ExpirationTimestampSecs
-	o.Payload = userInfo.Payload
-	o.Signature = userInfo.Signature
-
-	o.Timestamp, err = toUint64(data, "timestamp")
-	return err
+	o.Version = data.Version.toUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.toUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Events = data.Events
+	o.Sender = data.Sender
+	o.SequenceNumber = data.SequenceNumber.toUint64()
+	o.MaxGasAmount = data.MaxGasAmount.toUint64()
+	o.GasUnitPrice = data.GasUnitPrice.toUint64()
+	o.ExpirationTimestampSecs = data.ExpirationTimestampSecs.toUint64()
+	o.Payload = data.Payload
+	o.Signature = data.Signature
+	o.Timestamp = data.Timestamp.toUint64()
+	o.StateCheckpointHash = data.StateCheckpointHash
+	return nil
 }
 
 type PendingTransaction struct {
@@ -118,60 +136,81 @@ type PendingTransaction struct {
 	Signature               *Signature
 }
 
-func (o *PendingTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Hash, err = toHash(data, "hash")
+func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Hash                    Hash                  `json:"hash"`
+		Sender                  *types.AccountAddress `json:"sender"`
+		SequenceNumber          U64                   `json:"sequence_number"`
+		MaxGasAmount            U64                   `json:"max_gas_amount"`
+		GasUnitPrice            U64                   `json:"gas_unit_price"`
+		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
+		Payload                 *TransactionPayload   `json:"payload"`
+		Signature               *Signature            `json:"signature"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	userInfo := &UserTransactionInfo{}
-	err = userInfo.UnmarshalJSONFromMap(data)
-	if err != nil {
-		return err
-	}
-	o.Sender = userInfo.Sender
-	o.SequenceNumber = userInfo.SequenceNumber
-	o.MaxGasAmount = userInfo.MaxGasAmount
-	o.GasUnitPrice = userInfo.GasUnitPrice
-	o.ExpirationTimestampSecs = userInfo.ExpirationTimestampSecs
-	o.Payload = userInfo.Payload
-	o.Signature = userInfo.Signature
+	o.Hash = data.Hash
+	o.Sender = data.Sender
+	o.SequenceNumber = data.SequenceNumber.toUint64()
+	o.MaxGasAmount = data.MaxGasAmount.toUint64()
+	o.GasUnitPrice = data.GasUnitPrice.toUint64()
+	o.ExpirationTimestampSecs = data.ExpirationTimestampSecs.toUint64()
+	o.Payload = data.Payload
+	o.Signature = data.Signature
 	return nil
 }
 
 type GenesisTransaction struct {
 	Version             uint64
-	Hash                string
-	AccumulatorRootHash string
-	StateChangeHash     string
-	EventRootHash       string
+	Hash                Hash
+	AccumulatorRootHash Hash
+	StateChangeHash     Hash
+	EventRootHash       Hash
 	GasUsed             uint64
 	Success             bool
 	VmStatus            string
 	Changes             []*WriteSetChange
 	Events              []*Event
 	Payload             *TransactionPayload
+	StateCheckpointHash Hash // Optional
 }
 
-func (o *GenesisTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	info := &TransactionInfo{}
-	err = info.UnmarshalJSONFromMap(data)
+func (o *GenesisTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Version             U64                 `json:"version"`
+		Hash                Hash                `json:"hash"`
+		AccumulatorRootHash Hash                `json:"accumulator_root_hash"`
+		StateChangeHash     Hash                `json:"state_change_hash"`
+		EventRootHash       Hash                `json:"event_root_hash"`
+		GasUsed             U64                 `json:"gas_used"`
+		Success             bool                `json:"success"`
+		VmStatus            string              `json:"vm_status"`
+		Changes             []*WriteSetChange   `json:"changes"`
+		Events              []*Event            `json:"events"`
+		Payload             *TransactionPayload `json:"payload"`
+		StateCheckpointHash Hash                `json:"state_checkpoint_hash"` // Optional
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-
-	o.Version = info.Version
-	o.Hash = info.Hash
-	o.AccumulatorRootHash = info.AccumulatorRootHash
-	o.StateChangeHash = info.StateChangeHash
-	o.EventRootHash = info.EventRootHash
-	o.GasUsed = info.GasUsed
-	o.Success = info.Success
-	o.VmStatus = info.VmStatus
-	o.Changes = info.Changes
-	o.Events = info.Events
-
-	o.Payload, err = toPayload(data, "payload")
-	return err
+	o.Version = data.Version.toUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.toUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Events = data.Events
+	o.Payload = data.Payload
+	o.StateCheckpointHash = data.StateCheckpointHash
+	return nil
 }
 
 type BlockMetadataTransaction struct {
@@ -183,244 +222,161 @@ type BlockMetadataTransaction struct {
 	FailedProposerIndices    []uint32
 	Version                  uint64
 	Hash                     string
-	AccumulatorRootHash      string
-	StateChangeHash          string
-	EventRootHash            string
+	AccumulatorRootHash      Hash
+	StateChangeHash          Hash
+	EventRootHash            Hash
 	GasUsed                  uint64
 	Success                  bool
 	VmStatus                 string
 	Changes                  []*WriteSetChange
 	Events                   []*Event
 	Timestamp                uint64
-	// TODO State checkpoint hash is optional
+	StateCheckpointHash      Hash
 }
 
-func (o *BlockMetadataTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Id, err = toString(data, "id")
-	if err != nil {
-		return err
+func (o *BlockMetadataTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Id                       string                `json:"id"`
+		Epoch                    U64                   `json:"epoch"`
+		Round                    U64                   `json:"round"`
+		PreviousBlockVotesBitvec []byte                `json:"previous_block_votes_bitvec"` // TODO: this had to be float64 earlier
+		Proposer                 *types.AccountAddress `json:"proposer"`
+		FailedProposerIndices    []uint32              `json:"failed_proposer_indices"` // TODO: verify
+		Version                  U64                   `json:"version"`
+		Hash                     Hash                  `json:"hash"`
+		AccumulatorRootHash      Hash                  `json:"accumulator_root_hash"`
+		StateChangeHash          Hash                  `json:"state_change_hash"`
+		EventRootHash            Hash                  `json:"event_root_hash"`
+		GasUsed                  U64                   `json:"gas_used"`
+		Success                  bool                  `json:"success"`
+		VmStatus                 string                `json:"vm_status"`
+		Changes                  []*WriteSetChange     `json:"changes"`
+		Events                   []*Event              `json:"events"`
+		Timestamp                U64                   `json:"timestamp"`
+		StateCheckpointHash      Hash                  `json:"state_checkpoint_hash,omitempty"` // Optional
 	}
-	o.Epoch, err = toUint64(data, "epoch")
-	if err != nil {
-		return err
-	}
-	o.Round, err = toUint64(data, "round")
-	if err != nil {
-		return err
-	}
-	o.PreviousBlockVotesBitvec, err = toUint8Array(data, "previous_block_votes_bitvec")
-	if err != nil {
-		return err
-	}
-	o.Proposer, err = toAccountAddress(data, "proposer")
-	if err != nil {
-		return err
-	}
-	o.FailedProposerIndices, err = toUint32Array(data, "failed_proposer_indices")
-	if err != nil {
-		return err
-	}
-
-	info := &TransactionInfo{}
-	err = info.UnmarshalJSONFromMap(data)
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
 
-	o.Version = info.Version
-	o.Hash = info.Hash
-	o.AccumulatorRootHash = info.AccumulatorRootHash
-	o.StateChangeHash = info.StateChangeHash
-	o.EventRootHash = info.EventRootHash
-	o.GasUsed = info.GasUsed
-	o.Success = info.Success
-	o.VmStatus = info.VmStatus
-	o.Changes = info.Changes
-	o.Events = info.Events
-
-	o.Timestamp, err = toUint64(data, "timestamp")
-	return err
+	o.Id = data.Id
+	o.Epoch = data.Epoch.toUint64()
+	o.Round = data.Round.toUint64()
+	o.PreviousBlockVotesBitvec = data.PreviousBlockVotesBitvec
+	o.Proposer = data.Proposer
+	o.FailedProposerIndices = data.FailedProposerIndices
+	o.Version = data.Version.toUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.toUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Events = data.Events
+	o.Timestamp = data.Timestamp.toUint64()
+	o.StateCheckpointHash = data.StateCheckpointHash
+	return nil
 }
 
 type StateCheckpointTransaction struct {
 	Version             uint64
-	Hash                string
-	AccumulatorRootHash string
-	StateChangeHash     string
-	EventRootHash       string
+	Hash                Hash
+	AccumulatorRootHash Hash
+	StateChangeHash     Hash
+	EventRootHash       Hash
 	GasUsed             uint64
 	Success             bool
 	VmStatus            string
 	Changes             []*WriteSetChange
 	Timestamp           uint64
-	StateCheckpointHash string // This is optional
+	StateCheckpointHash Hash // This is optional
 }
 
-func (o *StateCheckpointTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	info := &TransactionInfo{}
-	err = info.UnmarshalJSONFromMap(data)
+func (o *StateCheckpointTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Version             U64               `json:"version"`
+		Hash                Hash              `json:"hash"`
+		AccumulatorRootHash Hash              `json:"accumulator_root_hash"`
+		StateChangeHash     Hash              `json:"state_change_hash"`
+		EventRootHash       Hash              `json:"event_root_hash"`
+		GasUsed             U64               `json:"gas_used"`
+		Success             bool              `json:"success"`
+		VmStatus            string            `json:"vm_status"`
+		Changes             []*WriteSetChange `json:"changes"`
+		Timestamp           U64               `json:"timestamp"`
+		StateCheckpointHash Hash              `json:"state_checkpoint_hash"` // Optional
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
 
-	o.Version = info.Version
-	o.Hash = info.Hash
-	o.AccumulatorRootHash = info.AccumulatorRootHash
-	o.StateChangeHash = info.StateChangeHash
-	o.EventRootHash = info.EventRootHash
-	o.GasUsed = info.GasUsed
-	o.Success = info.Success
-	o.VmStatus = info.VmStatus
-	o.Changes = info.Changes
-
-	o.Timestamp, err = toUint64(data, "timestamp")
-	if err != nil {
-		return err
-	}
-	// Optional Fields
-	stateCheckpointHash, ok := data["state_checkpoint_hash"].(string)
-	if ok {
-		o.StateCheckpointHash = stateCheckpointHash
-	}
+	o.Version = data.Version.toUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.toUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Timestamp = data.Timestamp.toUint64()
+	o.StateCheckpointHash = data.StateCheckpointHash
 	return nil
 }
 
 type ValidatorTransaction struct {
 	Version             uint64
-	Hash                string
-	AccumulatorRootHash string
-	StateChangeHash     string
-	EventRootHash       string
+	Hash                Hash
+	AccumulatorRootHash Hash
+	StateChangeHash     Hash
+	EventRootHash       Hash
 	GasUsed             uint64
 	Success             bool
 	VmStatus            string
 	Changes             []*WriteSetChange
 	Events              []*Event
 	Timestamp           uint64
-	// TODO: StateCheckpointHash is optional
+	StateCheckpointHash Hash // This is optional
 }
 
-func (o *ValidatorTransaction) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	info := &TransactionInfo{}
-	err = info.UnmarshalJSONFromMap(data)
-	if err != nil {
-		return err
+func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Version             U64               `json:"version"`
+		Hash                Hash              `json:"hash"`
+		AccumulatorRootHash Hash              `json:"accumulator_root_hash"`
+		StateChangeHash     Hash              `json:"state_change_hash"`
+		EventRootHash       Hash              `json:"event_root_hash"`
+		GasUsed             U64               `json:"gas_used"`
+		Success             bool              `json:"success"`
+		VmStatus            string            `json:"vm_status"`
+		Changes             []*WriteSetChange `json:"changes"`
+		Events              []*Event          `json:"events"`
+		Timestamp           U64               `json:"timestamp"`
+		StateCheckpointHash Hash              `json:"state_checkpoint_hash"` // Optional
 	}
-
-	o.Version = info.Version
-	o.Hash = info.Hash
-	o.AccumulatorRootHash = info.AccumulatorRootHash
-	o.StateChangeHash = info.StateChangeHash
-	o.EventRootHash = info.EventRootHash
-	o.GasUsed = info.GasUsed
-	o.Success = info.Success
-	o.VmStatus = info.VmStatus
-	o.Changes = info.Changes
-	o.Events = info.Events
-
-	o.Timestamp, err = toUint64(data, "timestamp")
-	return err
-}
-
-func (o *Transaction) UnmarshalJSON(b []byte) error {
-	var data map[string]any
+	data := &inner{}
 	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
-	return o.UnmarshalJSONFromMap(data)
-}
+	o.Version = data.Version.toUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.toUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Events = data.Events
+	o.Timestamp = data.Timestamp.toUint64()
+	o.StateCheckpointHash = data.StateCheckpointHash
 
-type TransactionInfo struct {
-	Version             uint64
-	Hash                string
-	AccumulatorRootHash string
-	StateChangeHash     string
-	EventRootHash       string
-	GasUsed             uint64
-	Success             bool
-	VmStatus            string
-	Changes             []*WriteSetChange
-	Events              []*Event
-}
-
-func (o *TransactionInfo) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.Version, err = toUint64(data, "version")
-	if err != nil {
-		return err
-	}
-	o.Hash, err = toHash(data, "hash")
-	if err != nil {
-		return err
-	}
-	o.AccumulatorRootHash, err = toHash(data, "accumulator_root_hash")
-	if err != nil {
-		return err
-	}
-	o.StateChangeHash, err = toHash(data, "state_change_hash")
-	if err != nil {
-		return err
-	}
-	o.EventRootHash, err = toHash(data, "event_root_hash")
-	if err != nil {
-		return err
-	}
-	o.GasUsed, err = toUint64(data, "gas_used")
-	if err != nil {
-		return err
-	}
-	o.Success, err = toBool(data, "success")
-	if err != nil {
-		return err
-	}
-	o.VmStatus, err = toString(data, "vm_status")
-	if err != nil {
-		return err
-	}
-	o.Changes, err = toWriteSetChanges(data, "changes")
-	if err != nil {
-		return err
-	}
-	o.Events, err = toEvents(data, "events")
-	return err
-}
-
-type UserTransactionInfo struct {
-	SequenceNumber          uint64
-	MaxGasAmount            uint64
-	GasUnitPrice            uint64
-	ExpirationTimestampSecs uint64
-	Sender                  *types.AccountAddress
-	Payload                 *TransactionPayload
-	Signature               *Signature
-}
-
-func (o *UserTransactionInfo) UnmarshalJSONFromMap(data map[string]any) (err error) {
-	o.SequenceNumber, err = toUint64(data, "sequence_number")
-	if err != nil {
-		return err
-	}
-	o.MaxGasAmount, err = toUint64(data, "max_gas_amount")
-	if err != nil {
-		return err
-	}
-	o.GasUnitPrice, err = toUint64(data, "gas_unit_price")
-	if err != nil {
-		return err
-	}
-	o.ExpirationTimestampSecs, err = toUint64(data, "expiration_timestamp_secs")
-	if err != nil {
-		return err
-	}
-	o.Sender, err = toAccountAddress(data, "sender")
-	if err != nil {
-		return err
-	}
-	o.Payload, err = toPayload(data, "payload")
-	if err != nil {
-		return err
-	}
-	o.Signature, err = toSignature(data, "signature")
-
-	return err
+	return nil
 }

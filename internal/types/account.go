@@ -2,6 +2,7 @@ package types
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -41,13 +42,13 @@ func (aa *AccountAddress) String() string {
 	if aa.IsSpecial() {
 		return fmt.Sprintf("0x%x", aa[31])
 	} else {
-		return "0x" + hex.EncodeToString(aa[:])
+		return util.BytesToHex(aa[:])
 	}
 }
 
 // StringLong Returns the long string representation of the AccountAddress
 func (aa *AccountAddress) StringLong() string {
-	return "0x" + hex.EncodeToString(aa[:])
+	return util.BytesToHex(aa[:])
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
@@ -58,6 +59,23 @@ func (aa *AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
 // UnmarshalBCS Converts the AccountAddress from BCS encoded bytes
 func (aa *AccountAddress) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.ReadFixedBytesInto((*aa)[:])
+}
+
+func (aa *AccountAddress) MarshalJSON() ([]byte, error) {
+	return json.Marshal(aa.String())
+}
+
+func (aa *AccountAddress) UnmarshalJSON(b []byte) error {
+	var str string
+	err := json.Unmarshal(b, &str)
+	if err != nil {
+		return fmt.Errorf("failed to convert input to AccountAdddress: %w", err)
+	}
+	err = aa.ParseStringRelaxed(str)
+	if err != nil {
+		return fmt.Errorf("failed to convert input to AccountAdddress: %w", err)
+	}
+	return nil
 }
 
 // NamedObjectAddress derives a named object address based on the input address as the creator
