@@ -11,14 +11,15 @@ import (
 // FungibleAssetClient This is an example client around a single fungible asset
 type FungibleAssetClient struct {
 	aptosClient     *Client
-	metadataAddress AccountAddress
+	metadataAddress *AccountAddress
 }
 
 // NewFungibleAssetClient verifies the address exists when creating the client
 // TODO: Add lookup of other metadata information such as symbol, supply, etc
-func NewFungibleAssetClient(client *Client, metadataAddress AccountAddress) (faClient *FungibleAssetClient, err error) {
+func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (faClient *FungibleAssetClient, err error) {
 	// Retrieve the Metadata resource to ensure the fungible asset actually exists
-	_, err = client.AccountResource(metadataAddress, "0x1::fungible_asset::Metadata")
+	// TODO: all functions should take *AccountAddress
+	_, err = client.AccountResource(*metadataAddress, "0x1::fungible_asset::Metadata")
 	if err != nil {
 		return
 	}
@@ -32,7 +33,7 @@ func NewFungibleAssetClient(client *Client, metadataAddress AccountAddress) (faC
 
 // -- Entry functions -- //
 
-func (client *FungibleAssetClient) Transfer(sender *Account, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) Transfer(sender *Account, senderStore *AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
@@ -65,7 +66,7 @@ func (client *FungibleAssetClient) Transfer(sender *Account, senderStore Account
 	return signedTxn, err
 }
 
-func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress *AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Encode inputs
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
@@ -100,17 +101,17 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receive
 
 // -- View functions -- //
 
-func (client *FungibleAssetClient) PrimaryStoreAddress(owner AccountAddress) (address AccountAddress, err error) {
+func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (address *AccountAddress, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
 	if err != nil {
 		return
 	}
-
+	address = &AccountAddress{}
 	err = address.ParseStringRelaxed(val.(string))
 	return
 }
 
-func (client *FungibleAssetClient) PrimaryStoreExists(owner AccountAddress) (exists bool, err error) {
+func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (exists bool, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
 	if err != nil {
 		return
@@ -120,7 +121,7 @@ func (client *FungibleAssetClient) PrimaryStoreExists(owner AccountAddress) (exi
 	return
 }
 
-func (client *FungibleAssetClient) PrimaryBalance(owner AccountAddress) (balance uint64, err error) {
+func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress) (balance uint64, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "balance")
 	if err != nil {
 		return
@@ -129,7 +130,7 @@ func (client *FungibleAssetClient) PrimaryBalance(owner AccountAddress) (balance
 	return ToU64(balanceStr)
 }
 
-func (client *FungibleAssetClient) PrimaryIsFrozen(owner AccountAddress) (isFrozen bool, err error) {
+func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress) (isFrozen bool, err error) {
 	val, err := client.viewPrimaryStore([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen")
 	if err != nil {
 		return
@@ -138,7 +139,7 @@ func (client *FungibleAssetClient) PrimaryIsFrozen(owner AccountAddress) (isFroz
 	return
 }
 
-func (client *FungibleAssetClient) Balance(storeAddress AccountAddress) (balance uint64, err error) {
+func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress) (balance uint64, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "balance")
 	if err != nil {
 		return
@@ -146,7 +147,7 @@ func (client *FungibleAssetClient) Balance(storeAddress AccountAddress) (balance
 	balanceStr := val.(string)
 	return strconv.ParseUint(balanceStr, 10, 64)
 }
-func (client *FungibleAssetClient) IsFrozen(storeAddress AccountAddress) (isFrozen bool, err error) {
+func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress) (isFrozen bool, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "is_frozen")
 	if err != nil {
 		return
@@ -155,7 +156,7 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress AccountAddress) (isFroz
 	return
 }
 
-func (client *FungibleAssetClient) StoreExists(storeAddress AccountAddress) (exists bool, err error) {
+func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress) (exists bool, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
@@ -175,7 +176,7 @@ func (client *FungibleAssetClient) StoreExists(storeAddress AccountAddress) (exi
 	return
 }
 
-func (client *FungibleAssetClient) StoreMetadata(storeAddress AccountAddress) (metadataAddress AccountAddress, err error) {
+func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress) (metadataAddress *AccountAddress, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_metadata")
 	if err != nil {
 		return
@@ -313,13 +314,14 @@ func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, funct
 
 // Helper function to pull out the object address
 // TODO: Move to somewhere more useful
-func unwrapObject(val any) (address AccountAddress, err error) {
+func unwrapObject(val any) (address *AccountAddress, err error) {
 	inner, ok := val.(map[string]any)
 	if !ok {
 		err = errors.New("bad view return from node, could not unwrap object")
 		return
 	}
 	addressString := inner["inner"].(string)
+	address = &AccountAddress{}
 	err = address.ParseStringRelaxed(addressString)
 	return
 }
@@ -352,9 +354,10 @@ func ToU64(val string) (uint64, error) {
 
 // ToU128OrU256 TODO: move somewhere more useful
 func ToU128OrU256(val string) (num *big.Int, err error) {
+	num = &big.Int{}
 	_, ok := num.SetString(val, 10)
 	if !ok {
-		return num, fmt.Errorf("num %s is not integer", val)
+		return nil, fmt.Errorf("num %s is not integer", val)
 	}
-	return
+	return num, nil
 }
