@@ -24,6 +24,9 @@ type Transaction struct {
 func (o *Transaction) Hash() Hash {
 	return o.Inner.TxnHash()
 }
+func (o *Transaction) Success() *bool {
+	return o.Inner.TxnSuccess()
+}
 
 func (o *Transaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -54,7 +57,50 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, o.Inner)
 }
 
+func (o *Transaction) UserTransaction() (*UserTransaction, error) {
+	if o.Type == EnumUserTransaction {
+		return o.Inner.(*UserTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
+}
+
+func (o *Transaction) PendingTransaction() (*PendingTransaction, error) {
+	if o.Type == EnumPendingTransaction {
+		return o.Inner.(*PendingTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not pending: %s", o.Type)
+}
+
+func (o *Transaction) GenesisTransaction() (*GenesisTransaction, error) {
+	if o.Type == EnumGenesisTransaction {
+		return o.Inner.(*GenesisTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
+}
+
+func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
+	if o.Type == EnumBlockMetadataTransaction {
+		return o.Inner.(*BlockMetadataTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
+}
+
+func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
+	if o.Type == EnumStateCheckpointTransaction {
+		return o.Inner.(*StateCheckpointTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
+}
+
+func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
+	if o.Type == EnumValidatorTransaction {
+		return o.Inner.(*ValidatorTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
+}
+
 type TransactionImpl interface {
+	TxnSuccess() *bool
 	TxnHash() Hash
 }
 
@@ -83,6 +129,9 @@ type UserTransaction struct {
 
 func (o *UserTransaction) TxnHash() Hash {
 	return o.Hash
+}
+func (o *UserTransaction) TxnSuccess() *bool {
+	return &o.Success
 }
 
 func (o *UserTransaction) UnmarshalJSON(b []byte) error {
@@ -148,6 +197,9 @@ type PendingTransaction struct {
 func (o *PendingTransaction) TxnHash() Hash {
 	return o.Hash
 }
+func (o *PendingTransaction) TxnSuccess() *bool {
+	return nil
+}
 
 func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -193,6 +245,9 @@ type GenesisTransaction struct {
 
 func (o *GenesisTransaction) TxnHash() Hash {
 	return o.Hash
+}
+func (o *GenesisTransaction) TxnSuccess() *bool {
+	return &o.Success
 }
 
 func (o *GenesisTransaction) UnmarshalJSON(b []byte) error {
@@ -253,6 +308,9 @@ type BlockMetadataTransaction struct {
 
 func (o *BlockMetadataTransaction) TxnHash() Hash {
 	return o.Hash
+}
+func (o *BlockMetadataTransaction) TxnSuccess() *bool {
+	return &o.Success
 }
 
 func (o *BlockMetadataTransaction) UnmarshalJSON(b []byte) error {
@@ -320,6 +378,9 @@ type StateCheckpointTransaction struct {
 func (o *StateCheckpointTransaction) TxnHash() Hash {
 	return o.Hash
 }
+func (o *StateCheckpointTransaction) TxnSuccess() *bool {
+	return &o.Success
+}
 
 func (o *StateCheckpointTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -372,6 +433,9 @@ type ValidatorTransaction struct {
 
 func (o *ValidatorTransaction) TxnHash() Hash {
 	return o.Hash
+}
+func (o *ValidatorTransaction) TxnSuccess() *bool {
+	return &o.Success
 }
 
 func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {
