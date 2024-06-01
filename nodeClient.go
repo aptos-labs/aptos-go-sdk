@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"io"
 	"log/slog"
 	"net/http"
@@ -688,4 +689,23 @@ func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 		return
 	}
 	return
+}
+
+func (rc *NodeClient) AccountAPTBalance(account *AccountAddress) (balance uint64, err error) {
+	accountBytes, err := bcs.Serialize(account)
+	if err != nil {
+		return 0, err
+	}
+	values, err := rc.View(&ViewPayload{Module: ModuleId{
+		Address: AccountOne,
+		Name:    "coin",
+	},
+		Function: "balance",
+		ArgTypes: []TypeTag{AptosCoinTypeTag},
+		Args:     [][]byte{accountBytes},
+	})
+	if err != nil {
+		return 0, err
+	}
+	return util.StrToUint64(values[0].(string))
 }

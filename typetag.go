@@ -300,3 +300,10 @@ func NewObjectTag(inner TypeTagImpl) *StructTag {
 		TypeParams: []TypeTag{NewTypeTag(inner)},
 	}
 }
+
+var AptosCoinTypeTag = TypeTag{&StructTag{
+	Address: AccountOne,
+	Module:  "aptos_coin",
+	Name:    "AptosCoin",
+},
+}

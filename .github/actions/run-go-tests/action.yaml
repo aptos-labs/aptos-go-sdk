@@ -22,6 +22,6 @@ runs:
     - shell: bash
       run: 'go test ./...'
     - shell: bash
-      run: 'go run examples/simple_transaction/main.go'
+      run: 'go run examples/transfer_coin/main.go'
     - shell: bash
       run: 'go run examples/performance_transaction/main.go'
