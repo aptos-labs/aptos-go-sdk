@@ -227,6 +227,11 @@ func (client *Client) EstimateGasPrice() (info EstimateGasInfo, err error) {
 	return client.nodeClient.EstimateGasPrice()
 }
 
+// AccountAPTBalance retrieves the APT balance in the account
+func (client *Client) AccountAPTBalance(address *AccountAddress) (uint64, error) {
+	return client.nodeClient.AccountAPTBalance(address)
+}
+
 // QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer
 // client on how to make queries
 func (client *Client) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {
