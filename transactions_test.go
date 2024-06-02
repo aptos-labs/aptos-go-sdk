@@ -5,8 +5,6 @@ import (
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -46,7 +44,7 @@ func TestRawTransactionSign(t *testing.T) {
 	signedTxn, err := txn.Sign(sender)
 	assert.NoError(t, err)
 
-	_, ok := signedTxn.Authenticator.Auth.(*crypto.Ed25519Authenticator)
+	_, ok := signedTxn.Authenticator.Auth.(*Ed25519TransactionAuthenticator)
 	assert.True(t, ok)
 
 	assert.NoError(t, signedTxn.Verify())
