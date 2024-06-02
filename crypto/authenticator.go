@@ -133,4 +133,4 @@ func (ak *AuthenticationKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.ReadFixedBytesInto(ak[:])
 }
 
-// TODO: FeePayerAuthenticator, MultiAgentAuthenticator, MultiEd25519Authenticator, SingleSenderAuthenticator, SingleKeyAuthenticator
+// TODO: FeePayerAuthenticator, MultiAgentAuthenticator, SingleSenderAuthenticator, SingleKeyAuthenticator
