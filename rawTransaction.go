@@ -64,10 +64,17 @@ func (txn *RawTransaction) Sign(sender *Account) (signedTxn *SignedTransaction, 
 	if err != nil {
 		return
 	}
+	// TODO: This needs to be more complex to support other types of signatures, will need to redo this flow
+	txnAuth := &TransactionAuthenticator{
+		Kind: TransactionAuthenticatorEd25519,
+		Auth: &Ed25519TransactionAuthenticator{
+			authenticator,
+		},
+	}
 
 	signedTxn = &SignedTransaction{
 		Transaction:   *txn,
-		Authenticator: authenticator,
+		Authenticator: txnAuth,
 	}
 	return
 }
