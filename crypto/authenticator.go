@@ -24,9 +24,8 @@ type AuthenticatorType uint8
 const (
 	AuthenticatorEd25519      AuthenticatorType = 0
 	AuthenticatorMultiEd25519 AuthenticatorType = 1
-	AuthenticatorMultiAgent   AuthenticatorType = 2
-	AuthenticatorFeePayer     AuthenticatorType = 3
-	AuthenticatorSingleSender AuthenticatorType = 4
+	AuthenticatorSingleKey    AuthenticatorType = 2
+	AuthenticatorMultiKey     AuthenticatorType = 3
 )
 
 // AuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types
@@ -66,15 +65,21 @@ func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	if bcs.Error() != nil {
 		return
 	}
-	kind := AuthenticatorType(kindNum)
-	switch kind {
+	ea.Kind = AuthenticatorType(kindNum)
+	switch ea.Kind {
 	case AuthenticatorEd25519:
-		auth := &Ed25519Authenticator{}
-		auth.UnmarshalBCS(bcs)
-		ea.Auth = auth
+		ea.Auth = &Ed25519Authenticator{}
+	case AuthenticatorMultiEd25519:
+		ea.Auth = &MultiEd25519Authenticator{}
+	case AuthenticatorSingleKey:
+		ea.Auth = &SingleKeyAuthenticator{}
+	case AuthenticatorMultiKey:
+		// TODO
+		//ea.Auth = &MultiKeyAuthenticator{}
 	default:
 		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindNum))
 	}
+	ea.Auth.UnmarshalBCS(bcs)
 }
 
 // Verify verifies a message with the public key and signature
@@ -132,5 +137,3 @@ func (ak *AuthenticationKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 	}
 	bcs.ReadFixedBytesInto(ak[:])
 }
-
-// TODO: FeePayerAuthenticator, MultiAgentAuthenticator, SingleSenderAuthenticator, SingleKeyAuthenticator

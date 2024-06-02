@@ -118,10 +118,15 @@ func main() {
 		panic("Failed to sign message:" + err.Error())
 	}
 
+	txnAuth := &aptos.TransactionAuthenticator{
+		Kind: aptos.TransactionAuthenticatorEd25519,
+		Auth: auth,
+	}
+
 	// Build a signed transaction
 	signedTxn := &aptos.SignedTransaction{
 		Transaction:   rawTxn,
-		Authenticator: auth,
+		Authenticator: txnAuth,
 	}
 	// TODO: Show how to send over a wire with an encoding
 
