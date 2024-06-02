@@ -74,10 +74,10 @@ func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	case AuthenticatorSingleKey:
 		ea.Auth = &SingleKeyAuthenticator{}
 	case AuthenticatorMultiKey:
-		// TODO
-		//ea.Auth = &MultiKeyAuthenticator{}
+		ea.Auth = &MultiKeyAuthenticator{}
 	default:
 		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindNum))
+		return
 	}
 	ea.Auth.UnmarshalBCS(bcs)
 }

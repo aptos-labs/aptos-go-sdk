@@ -64,12 +64,14 @@ type Ed25519TransactionAuthenticator struct {
 }
 
 func (ea *Ed25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	ea.Sender.MarshalBCS(bcs)
+	ea.Sender.Auth.MarshalBCS(bcs)
 }
 
 func (ea *Ed25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	ea.Sender = &crypto.Authenticator{}
-	bcs.Struct(ea.Sender)
+	ea.Sender.Kind = crypto.AuthenticatorEd25519
+	ea.Sender.Auth = &crypto.Ed25519Authenticator{}
+	bcs.Struct(ea.Sender.Auth)
 }
 
 func (ea *Ed25519TransactionAuthenticator) Verify(msg []byte) bool {
@@ -86,7 +88,9 @@ func (ea *MultiEd25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) 
 
 func (ea *MultiEd25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	ea.Sender = &crypto.Authenticator{}
-	bcs.Struct(ea.Sender)
+	ea.Sender.Kind = crypto.AuthenticatorMultiEd25519
+	ea.Sender.Auth = &crypto.MultiEd25519Authenticator{}
+	bcs.Struct(ea.Sender.Auth)
 }
 
 func (ea *MultiEd25519TransactionAuthenticator) Verify(msg []byte) bool {

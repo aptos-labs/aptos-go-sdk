@@ -82,11 +82,12 @@ func Test_AuthenticatorVerification(t *testing.T) {
 
 func Test_InvalidAuthenticatorDeserialization(t *testing.T) {
 	serialized := []byte{0xFF}
-	newAuthenticator := Authenticator{}
-	err := bcs.Deserialize(&newAuthenticator, serialized)
+	newAuthenticator := &Authenticator{}
+	err := bcs.Deserialize(newAuthenticator, serialized)
 	assert.Error(t, err)
 	serialized = []byte{0x4F}
-	err = bcs.Deserialize(&newAuthenticator, serialized)
+	newAuthenticator = &Authenticator{}
+	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.Error(t, err)
 }
 func Test_InvalidAuthenticationKeyDeserialization(t *testing.T) {
