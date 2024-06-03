@@ -24,6 +24,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Re-export types from internal account file to external account file
 - Add more crypto support for MultiEd25519 and single sender
 - [`Breaking`] Change ledgerVersion arg to a uint64 to be more accurate to the possible inputs
+- Add single serialize functions to simplify duplicated code
 
 # v0.1.0 (5/7/2024)
 

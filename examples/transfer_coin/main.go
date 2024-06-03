@@ -85,13 +85,10 @@ func main() {
 		panic("Failed to serialize bob's address:" + err.Error())
 	}
 
-	serializer := &bcs.Serializer{}
-	serializer.U64(TransferAmount)
-	err = serializer.Error()
+	amountBytes, err := bcs.SerializeU64(TransferAmount)
 	if err != nil {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
-	amountBytes := serializer.ToBytes()
 
 	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{

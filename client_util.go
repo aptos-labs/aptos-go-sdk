@@ -51,10 +51,10 @@ func init() {
 //
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
 func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
-	// TODO: Make this easier
-	ser := &bcs.Serializer{}
-	ser.U64(amount)
-	amountBytes := ser.ToBytes()
+	amountBytes, err := bcs.SerializeU64(amount)
+	if err != nil {
+		return nil, err
+	}
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		TransactionPayload{Payload: &EntryFunction{

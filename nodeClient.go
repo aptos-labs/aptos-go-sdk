@@ -475,13 +475,10 @@ func (rc *NodeClient) transactionEncode(request map[string]any) (data []byte, er
 }
 
 func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
-	serializer := bcs.Serializer{}
-	signedTxn.MarshalBCS(&serializer)
-	err = serializer.Error()
+	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
 		return
 	}
-	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions")
 	response, err := rc.Post(au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)

@@ -51,16 +51,13 @@ func TestRawTransactionSign(t *testing.T) {
 
 	// Serialize, Deserialize, Serialize
 	// out1 and out3 should be the same
-	ser := bcs.Serializer{}
-	txn.MarshalBCS(&ser)
-	assert.NoError(t, ser.Error())
+	txn1Bytes, err := bcs.Serialize(&txn)
+	assert.NoError(t, err)
 	txn2 := RawTransaction{}
-	txn1Bytes := ser.ToBytes()
 	err = bcs.Deserialize(&txn2, txn1Bytes)
 	assert.NoError(t, err)
-	ser2 := bcs.Serializer{}
-	txn2.MarshalBCS(&ser2)
-	txn2Bytes := ser2.ToBytes()
+	txn2Bytes, err := bcs.Serialize(&txn2)
+	assert.NoError(t, err)
 	assert.Equal(t, txn1Bytes, txn2Bytes)
 	assert.Equal(t, txn, txn2)
 }

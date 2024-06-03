@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,9 +90,6 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	// Build transaction
 	signedTxn, err := buildAndSignTransaction(client, account)
 	assert.NoError(t, err)
-
-	serializer := bcs.Serializer{}
-	signedTxn.MarshalBCS(&serializer)
 
 	// Send transaction
 	result, err := client.SubmitTransaction(signedTxn)

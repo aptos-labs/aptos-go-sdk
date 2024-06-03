@@ -7,6 +7,8 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
+const MULTI_ED25519_BITMAP_LEN = 4
+
 type MultiEd25519PublicKey struct {
 	PublicKeys []Ed25519PublicKey
 	Threshold  uint8
@@ -116,7 +118,7 @@ func (e *MultiEd25519Signature) Bytes() []byte {
 
 func (e *MultiEd25519Signature) MarshalBCS(bcs *bcs.Serializer) {
 	// This is a weird one, we need to serialize in set bytes
-	sigBytes := make([]byte, len(e.Signatures)*ed25519.SignatureSize+4) // TODO: move to a constant
+	sigBytes := make([]byte, len(e.Signatures)*ed25519.SignatureSize+MULTI_ED25519_BITMAP_LEN)
 	for i, signature := range e.Signatures {
 		start := i * ed25519.SignatureSize
 		end := start + ed25519.SignatureSize
