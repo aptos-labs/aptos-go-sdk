@@ -7,19 +7,21 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+type SignatureVariant string
+
 const (
-	EnumSignatureEd25519      = "ed25519_signature"
-	EnumSignatureMultiEd25519 = "multi_ed25519_signature"
-	EnumSignatureMultiAgent   = "multi_agent_signature"
-	EnumSignatureFeePayer     = "fee_payer_signature"
-	EnumSignatureSingleSender = "single_sender"
-	EnumSignatureSingleKey    = "single_key_signature"
-	EnumSignatureMultiKey     = "multi_key_signature"
+	SignatureVariantEd25519      SignatureVariant = "ed25519_signature"
+	SignatureVariantMultiEd25519 SignatureVariant = "multi_ed25519_signature"
+	SignatureVariantMultiAgent   SignatureVariant = "multi_agent_signature"
+	SignatureVariantFeePayer     SignatureVariant = "fee_payer_signature"
+	SignatureVariantSingleSender SignatureVariant = "single_sender"
+	SignatureVariantSingleKey    SignatureVariant = "single_key_signature"
+	SignatureVariantMultiKey     SignatureVariant = "multi_key_signature"
 )
 
 // Signature is an enum of all possible signatures on Aptos
 type Signature struct {
-	Type  string
+	Type  SignatureVariant
 	Inner SignatureImpl
 }
 
@@ -32,17 +34,17 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.Type = data.Type
+	o.Type = SignatureVariant(data.Type)
 	switch o.Type {
-	case EnumSignatureEd25519:
+	case SignatureVariantEd25519:
 		o.Inner = &Ed25519Signature{}
-	case EnumSignatureMultiAgent:
+	case SignatureVariantMultiAgent:
 		o.Inner = &MultiAgentSignature{}
-	case EnumSignatureFeePayer:
+	case SignatureVariantFeePayer:
 		o.Inner = &FeePayerSignature{}
-	case EnumSignatureSingleSender:
+	case SignatureVariantSingleSender:
 		o.Inner = &SingleSenderSignature{}
-	case EnumSignatureMultiEd25519:
+	case SignatureVariantMultiEd25519:
 		o.Inner = &MultiEd25519Signature{}
 	default:
 		return fmt.Errorf("unknown signature type: %s", o.Type)

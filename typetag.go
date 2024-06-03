@@ -7,7 +7,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-type TypeTagType uint64
+type TypeTagType uint32
 
 const (
 	TypeTagBool    TypeTagType = 0

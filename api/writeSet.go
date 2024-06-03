@@ -6,13 +6,15 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+type WriteSetVariant string
+
 const (
-	EnumWriteSetDirect = "direct_write_set"
-	EnumWriteSetScript = "script_write_set"
+	WriteSetVariantDirect WriteSetVariant = "direct_write_set"
+	WriteSetVariantScript WriteSetVariant = "script_write_set"
 )
 
 type WriteSet struct {
-	Type  string
+	Type  WriteSetVariant
 	Inner WriteSetImpl
 }
 
@@ -25,11 +27,11 @@ func (o *WriteSet) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.Type = data.Type
+	o.Type = WriteSetVariant(data.Type)
 	switch o.Type {
-	case EnumWriteSetDirect:
+	case WriteSetVariantDirect:
 		o.Inner = &DirectWriteSet{}
-	case EnumWriteSetScript:
+	case WriteSetVariantScript:
 		o.Inner = &ScriptWriteSet{}
 	default:
 		return fmt.Errorf("unknown writeset type: %s", o.Type)
@@ -50,17 +52,19 @@ type ScriptWriteSet struct {
 	Script    *TransactionPayloadScript `json:"script"`
 }
 
+type WriteSetChangeVariant string
+
 const (
-	EnumWriteSetChangeWriteResource   = "write_resource"
-	EnumWriteSetChangeDeleteResource  = "delete_resource"
-	EnumWriteSetChangeWriteModule     = "write_module"
-	EnumWriteSetChangeDeleteModule    = "delete_module"
-	EnumWriteSetChangeWriteTableItem  = "write_table_item"
-	EnumWriteSetChangeDeleteTableItem = "delete_table_item"
+	WriteSetChangeVariantWriteResource   WriteSetChangeVariant = "write_resource"
+	WriteSetChangeVariantDeleteResource  WriteSetChangeVariant = "delete_resource"
+	WriteSetChangeVariantWriteModule     WriteSetChangeVariant = "write_module"
+	WriteSetChangeVariantDeleteModule    WriteSetChangeVariant = "delete_module"
+	WriteSetChangeVariantWriteTableItem  WriteSetChangeVariant = "write_table_item"
+	WriteSetChangeVariantDeleteTableItem WriteSetChangeVariant = "delete_table_item"
 )
 
 type WriteSetChange struct {
-	Type  string
+	Type  WriteSetChangeVariant
 	Inner WriteSetChangeImpl
 }
 
@@ -73,19 +77,19 @@ func (o *WriteSetChange) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.Type = data.Type
+	o.Type = WriteSetChangeVariant(data.Type)
 	switch o.Type {
-	case EnumWriteSetChangeWriteResource:
+	case WriteSetChangeVariantWriteResource:
 		o.Inner = &WriteSetChangeWriteResource{}
-	case EnumWriteSetChangeDeleteResource:
+	case WriteSetChangeVariantDeleteResource:
 		o.Inner = &WriteSetChangeDeleteResource{}
-	case EnumWriteSetChangeWriteModule:
+	case WriteSetChangeVariantWriteModule:
 		o.Inner = &WriteSetChangeWriteModule{}
-	case EnumWriteSetChangeDeleteModule:
+	case WriteSetChangeVariantDeleteModule:
 		o.Inner = &WriteSetChangeDeleteModule{}
-	case EnumWriteSetChangeWriteTableItem:
+	case WriteSetChangeVariantWriteTableItem:
 		o.Inner = &WriteSetChangeWriteTableItem{}
-	case EnumWriteSetChangeDeleteTableItem:
+	case WriteSetChangeVariantDeleteTableItem:
 		o.Inner = &WriteSetChangeDeleteTableItem{}
 	default:
 		return fmt.Errorf("unknown writeset change type: %s", o.Type)

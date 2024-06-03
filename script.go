@@ -31,7 +31,7 @@ type ScriptArgument struct {
 	Value   any
 }
 
-type ScriptArgumentVariant uint8
+type ScriptArgumentVariant uint32
 
 const (
 	ScriptArgumentU8       ScriptArgumentVariant = 0
@@ -46,7 +46,7 @@ const (
 )
 
 func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.U8(uint8(sa.Variant))
+	bcs.Uleb128(uint32(sa.Variant))
 	switch sa.Variant {
 	case ScriptArgumentU8:
 		bcs.U8(sa.Value.(uint8))
@@ -71,8 +71,8 @@ func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
 }
 
 func (sa *ScriptArgument) UnmarshalBCS(bcs *bcs.Deserializer) {
-	variant := bcs.U8()
-	switch ScriptArgumentVariant(variant) {
+	sa.Variant = ScriptArgumentVariant(bcs.Uleb128())
+	switch sa.Variant {
 	case ScriptArgumentU8:
 		sa.Value = bcs.U8()
 	case ScriptArgumentU16:

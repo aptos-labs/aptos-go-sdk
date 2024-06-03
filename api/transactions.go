@@ -6,18 +6,20 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+type TransactionVariant string
+
 const (
-	EnumPendingTransaction         = "pending_transaction"
-	EnumUserTransaction            = "user_transaction"
-	EnumGenesisTransaction         = "genesis_transaction"
-	EnumBlockMetadataTransaction   = "block_metadata_transaction"
-	EnumStateCheckpointTransaction = "state_checkpoint_transaction"
-	EnumValidatorTransaction       = "validator_transaction"
+	TransactionVariantPendingTransaction         TransactionVariant = "pending_transaction"
+	TransactionVariantUserTransaction            TransactionVariant = "user_transaction"
+	TransactionVariantGenesisTransaction         TransactionVariant = "genesis_transaction"
+	TransactionVariantBlockMetadataTransaction   TransactionVariant = "block_metadata_transaction"
+	TransactionVariantStateCheckpointTransaction TransactionVariant = "state_checkpoint_transaction"
+	TransactionVariantValidatorTransaction       TransactionVariant = "validator_transaction"
 )
 
 // Transaction is an enum type for all possible transactions on the blockchain
 type Transaction struct {
-	Type  string
+	Type  TransactionVariant
 	Inner TransactionImpl
 }
 
@@ -37,19 +39,19 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.Type = data.Type
+	o.Type = TransactionVariant(data.Type)
 	switch o.Type {
-	case EnumPendingTransaction:
+	case TransactionVariantPendingTransaction:
 		o.Inner = &PendingTransaction{}
-	case EnumUserTransaction:
+	case TransactionVariantUserTransaction:
 		o.Inner = &UserTransaction{}
-	case EnumGenesisTransaction:
+	case TransactionVariantGenesisTransaction:
 		o.Inner = &GenesisTransaction{}
-	case EnumBlockMetadataTransaction:
+	case TransactionVariantBlockMetadataTransaction:
 		o.Inner = &BlockMetadataTransaction{}
-	case EnumStateCheckpointTransaction:
+	case TransactionVariantStateCheckpointTransaction:
 		o.Inner = &StateCheckpointTransaction{}
-	case EnumValidatorTransaction:
+	case TransactionVariantValidatorTransaction:
 		o.Inner = &ValidatorTransaction{}
 	default:
 		return fmt.Errorf("unknown transaction type: %s", o.Type)
@@ -58,42 +60,42 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 }
 
 func (o *Transaction) UserTransaction() (*UserTransaction, error) {
-	if o.Type == EnumUserTransaction {
+	if o.Type == TransactionVariantUserTransaction {
 		return o.Inner.(*UserTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 }
 
 func (o *Transaction) PendingTransaction() (*PendingTransaction, error) {
-	if o.Type == EnumPendingTransaction {
+	if o.Type == TransactionVariantPendingTransaction {
 		return o.Inner.(*PendingTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not pending: %s", o.Type)
 }
 
 func (o *Transaction) GenesisTransaction() (*GenesisTransaction, error) {
-	if o.Type == EnumGenesisTransaction {
+	if o.Type == TransactionVariantGenesisTransaction {
 		return o.Inner.(*GenesisTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 }
 
 func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
-	if o.Type == EnumBlockMetadataTransaction {
+	if o.Type == TransactionVariantBlockMetadataTransaction {
 		return o.Inner.(*BlockMetadataTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
 func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
-	if o.Type == EnumStateCheckpointTransaction {
+	if o.Type == TransactionVariantStateCheckpointTransaction {
 		return o.Inner.(*StateCheckpointTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
 }
 
 func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
-	if o.Type == EnumValidatorTransaction {
+	if o.Type == TransactionVariantValidatorTransaction {
 		return o.Inner.(*ValidatorTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
