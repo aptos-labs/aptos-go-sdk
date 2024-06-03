@@ -41,14 +41,11 @@ func (txn *RawTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
 
 // SigningMessage generates the bytes needed to be signed by a signer
 func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
-	ser := bcs.Serializer{}
-	txn.MarshalBCS(&ser)
-	err = ser.Error()
+	txnBytes, err := bcs.Serialize(txn)
 	if err != nil {
 		return
 	}
 	prehash := RawTransactionPrehash()
-	txnBytes := ser.ToBytes()
 	message = make([]byte, len(prehash)+len(txnBytes))
 	copy(message, prehash)
 	copy(message[len(prehash):], txnBytes)

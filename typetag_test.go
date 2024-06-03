@@ -13,11 +13,8 @@ func TestTypeTag(t *testing.T) {
 
 	assert.Equal(t, "0x1::option::Option<vector<0x1::object::Object<0x1::string::String>>>", nested.String())
 
-	ser := &bcs.Serializer{}
-	ser.Struct(&nested)
-	assert.NoError(t, ser.Error())
-
-	bytes := ser.ToBytes()
+	bytes, err := bcs.Serialize(&nested)
+	assert.NoError(t, err)
 
 	des := bcs.NewDeserializer(bytes)
 	tag := &TypeTag{}

@@ -193,11 +193,10 @@ func Test_Struct(t *testing.T) {
 
 	// Serializer
 	for i, input := range deserialized {
-		serializer := &Serializer{}
-		serializer.Struct(&input)
+		value, err := Serialize(&input)
 		expected, _ := hex.DecodeString(serialized[i])
-		assert.Equal(t, expected, serializer.ToBytes())
-		assert.NoError(t, serializer.Error())
+		assert.NoError(t, err)
+		assert.Equal(t, expected, value)
 	}
 
 	// Deserializer
@@ -215,15 +214,15 @@ func Test_DeserializeSequence(t *testing.T) {
 	deserialized := []TestStruct{{0, false}, {5, true}, {255, true}}
 	serialized := []byte{0x03, 0x00, 0x00, 0x05, 0x01, 0xFF, 0x01}
 
-	ser := &Serializer{}
-	SerializeSequence(deserialized, ser)
-	assert.NoError(t, ser.Error())
-	actualSerialized := ser.ToBytes()
+	actualSerialized, err := SerializeSingle(deserialized, func(ser *Serializer, input []TestStruct) {
+		SerializeSequence(input, ser)
+	})
+	assert.NoError(t, err)
 	assert.Equal(t, serialized, actualSerialized)
 
 	des := NewDeserializer(actualSerialized)
 	actualDeserialized := DeserializeSequence[TestStruct](des)
-	assert.NoError(t, ser.Error())
+	assert.NoError(t, des.Error())
 	assert.Equal(t, deserialized, actualDeserialized)
 }
 

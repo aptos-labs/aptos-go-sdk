@@ -48,13 +48,10 @@ func main() {
 
 	// Serialize arguments
 	receiverArg, err := bcs.Serialize(&receiver)
-	serializer := bcs.Serializer{}
-	serializer.U64(amount)
-	err = serializer.Error()
+	amountArg, err := bcs.SerializeU64(amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
-	amountArg := serializer.ToBytes()
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
 		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
