@@ -22,6 +22,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Breaking`] Add types for signatures rather than raw bytes
 - [`Fix`] Fix localhost faucet endpoint
 - Re-export types from internal account file to external account file
+- Add more crypto support for MultiEd25519 and single sender
 
 # v0.1.0 (5/7/2024)
 

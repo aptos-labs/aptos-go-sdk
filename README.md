@@ -10,12 +10,12 @@ Take a look at `examples/` for some examples of how to write clients.
 
 ### Important
 
-1. Indexer support
-2. Struct support for well known types like transactions e.g. TransactionByHash
+1. `DONE` Indexer support
+2. `DONE` Struct support for well known types like transactions e.g. TransactionByHash
 3. Secp256k1 and general signer support (should be proven by ^)
 4. Basic documentation
 5. Additional examples
-6. External signing by implementing a signer (example)
+6. `DONE` External signing by implementing a signer (example)
 7. Fee payer support, with example
 8. Multi-agent support? And an example?
 9. On-chain Multi-sig support? and an example?
@@ -26,4 +26,4 @@ Take a look at `examples/` for some examples of how to write clients.
 2. Move remaining files into packages, they are partially moved now to keep some separation of code
 3. Additional test coverage and examples
 4. Parallel submission? Instead of just serially (sequence number handling etc.)
-5. Off-chain multi-sig support?
+5. `DONE` Off-chain multi-sig support?
