@@ -35,7 +35,7 @@ type PublicKey interface {
 	FromBytes
 
 	// Scheme The scheme used for address derivation
-	Scheme() uint8
+	Scheme() DeriveScheme
 
 	// Verify verifies a message with the public key
 	Verify(msg []byte, sig Signature) bool

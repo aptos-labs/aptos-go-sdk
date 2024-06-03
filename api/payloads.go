@@ -6,17 +6,19 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+type TransactionPayloadVariant string
+
 const (
-	EnumTransactionPayloadEntryFunction = "entry_function_payload"
-	EnumTransactionPayloadScript        = "script_payload"
-	EnumTransactionPayloadMultisig      = "multisig_payload"
-	EnumTransactionPayloadWriteSet      = "write_set_payload"
-	EnumTransactionModuleBundlePayload  = "module_bundle_payload" // Deprecated
+	TransactionPayloadVariantEntryFunction       TransactionPayloadVariant = "entry_function_payload"
+	TransactionPayloadVariantScript              TransactionPayloadVariant = "script_payload"
+	TransactionPayloadVariantMultisig            TransactionPayloadVariant = "multisig_payload"
+	TransactionPayloadVariantWriteSet            TransactionPayloadVariant = "write_set_payload"
+	TransactionPayloadVariantModuleBundlePayload TransactionPayloadVariant = "module_bundle_payload" // Deprecated
 )
 
 // TransactionPayload is an enum of all possible transaction payloads
 type TransactionPayload struct {
-	Type  string
+	Type  TransactionPayloadVariant
 	Inner TransactionPayloadImpl
 }
 
@@ -29,18 +31,18 @@ func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.Type = data.Type
+	o.Type = TransactionPayloadVariant(data.Type)
 	// TODO: for all enums, we will likely have to add an "unknown type" so it doesn't just crash
 	switch o.Type {
-	case EnumTransactionPayloadEntryFunction:
+	case TransactionPayloadVariantEntryFunction:
 		o.Inner = &TransactionPayloadEntryFunction{}
-	case EnumTransactionPayloadScript:
+	case TransactionPayloadVariantScript:
 		o.Inner = &TransactionPayloadScript{}
-	case EnumTransactionPayloadMultisig:
+	case TransactionPayloadVariantMultisig:
 		o.Inner = &TransactionPayloadMultisig{}
-	case EnumTransactionPayloadWriteSet:
+	case TransactionPayloadVariantWriteSet:
 		o.Inner = &TransactionPayloadWriteSet{}
-	case EnumTransactionModuleBundlePayload:
+	case TransactionPayloadVariantModuleBundlePayload:
 		o.Inner = &TransactionPayloadModuleBundle{}
 	default:
 		return fmt.Errorf("unknown transaction payload type: %s", o.Type)

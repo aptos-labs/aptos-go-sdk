@@ -45,26 +45,26 @@ type GenericTypeParam struct {
 	Constraints []MoveAbility `json:"constraints"`
 }
 
-const (
-	EnumMoveAbilityStore = "store"
-	EnumMoveAbilityDrop  = "drop"
-	EnumMoveAbilityKey   = "key"
-	EnumMoveAbilityCopy  = "copy"
-)
-
 // MoveAbility are the types of abilities applied to structs, the possible types are listed
 // as EnumMoveAbilityStore and others
-type MoveAbility = string
+type MoveAbility string
 
 const (
-	EnumMoveVisibilityPublic  = "public"
-	EnumMoveVisibilityPrivate = "private"
-	EnumMoveVisibilityFriend  = "friend"
+	MoveAbilityVariantStore MoveAbility = "store"
+	MoveAbilityVariantDrop  MoveAbility = "drop"
+	MoveAbilityVariantKey   MoveAbility = "key"
+	MoveAbilityVariantCopy  MoveAbility = "copy"
 )
 
 // MoveVisibility is the visibility of a function or struct, the possible types are listed
 // as EnumMoveVisibilityPublic and others
-type MoveVisibility = string
+type MoveVisibility string
+
+const (
+	MoveVisibilityPublic  MoveVisibility = "public"
+	MoveVisibilityPrivate MoveVisibility = "private"
+	MoveVisibilityFriend  MoveVisibility = "friend"
+)
 
 // MoveStruct describes the layout for a struct, and its constraints
 type MoveStruct struct {
