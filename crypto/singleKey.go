@@ -6,18 +6,22 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-const (
-	AnyPublicKeyVariantEd25519   = 0
-	AnyPublicKeyVariantSecp256k1 = 1
-)
+type AnyPublicKeyVariant uint32
 
 const (
-	AnySignatureVariantEd25519   = 0
-	AnySignatureVariantSecp256k1 = 1
+	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0
+	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1
+)
+
+type AnySignatureVariant uint32
+
+const (
+	AnySignatureVariantEd25519   AnySignatureVariant = 0
+	AnySignatureVariantSecp256k1 AnySignatureVariant = 1
 )
 
 type AnyPublicKey struct {
-	Variant uint32
+	Variant AnyPublicKeyVariant
 	PubKey  PublicKey
 }
 
@@ -51,12 +55,12 @@ func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 }
 
 func (key *AnyPublicKey) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(key.Variant)
+	bcs.Uleb128(uint32(key.Variant))
 	bcs.Struct(key.PubKey)
 }
 
 func (key *AnyPublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
-	key.Variant = bcs.Uleb128()
+	key.Variant = AnyPublicKeyVariant(bcs.Uleb128())
 	switch key.Variant {
 	case AnyPublicKeyVariantEd25519:
 		key.PubKey = &Ed25519PublicKey{}
@@ -70,7 +74,7 @@ func (key *AnyPublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 }
 
 type AnySignature struct {
-	Variant   uint32
+	Variant   AnySignatureVariant
 	Signature Signature
 }
 
@@ -80,12 +84,12 @@ func (e *AnySignature) Bytes() []byte {
 }
 
 func (e *AnySignature) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(e.Variant)
+	bcs.Uleb128(uint32(e.Variant))
 	bcs.Struct(e.Signature)
 }
 
 func (e *AnySignature) UnmarshalBCS(bcs *bcs.Deserializer) {
-	e.Variant = bcs.Uleb128()
+	e.Variant = AnySignatureVariant(bcs.Uleb128())
 	switch e.Variant {
 	case AnySignatureVariantEd25519:
 		e.Signature = &Ed25519Signature{}
