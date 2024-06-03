@@ -114,24 +114,24 @@ func (client *Client) Info() (info NodeInfo, err error) {
 }
 
 // Account Retrieves information about the account such as SequenceNumber and AuthKey
-func (client *Client) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
+func (client *Client) Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
 	return client.nodeClient.Account(address, ledgerVersion...)
 }
 
 // AccountResource Retrieves a single resource given its struct name.
 // Can also fetch at a specific ledger version
-func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
+func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
 	return client.nodeClient.AccountResource(address, resourceType, ledgerVersion...)
 }
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (client *Client) AccountResources(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceInfo, err error) {
+func (client *Client) AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
 	return client.nodeClient.AccountResources(address, ledgerVersion...)
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceRecord, err error) {
+func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
 	return client.nodeClient.AccountResourcesBCS(address, ledgerVersion...)
 }
 
@@ -217,9 +217,8 @@ func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload Tra
 }
 
 // View Runs a view function on chain returning a list of return values.
-// TODO: support ledger version
-func (client *Client) View(payload *ViewPayload) (vals []any, err error) {
-	return client.nodeClient.View(payload)
+func (client *Client) View(payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error) {
+	return client.nodeClient.View(payload, ledgerVersion...)
 }
 
 // EstimateGasPrice Retrieves the gas estimate from the network.
