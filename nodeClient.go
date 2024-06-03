@@ -83,11 +83,11 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	return
 }
 
-func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...int) (info AccountInfo, err error) {
+func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -112,12 +112,12 @@ func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...int) (inf
 	return
 }
 
-func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...int) (data map[string]any, err error) {
+func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -141,11 +141,11 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceInfo, err error) {
+func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.Get(au.String())
@@ -200,11 +200,11 @@ func (rc *NodeClient) Post(postUrl string, contentType string, body io.Reader) (
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...int) (resources []AccountResourceRecord, err error) {
+func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
-		params.Set("ledger_version", strconv.Itoa(ledgerVersion[0]))
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
 	response, err := rc.GetBCS(au.String())
@@ -396,9 +396,9 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			}
 			txn, err := rc.TransactionByHash(hash)
 			if err == nil {
-				if txn.Type == api.EnumPendingTransaction {
+				if txn.Type == api.TransactionVariantPendingTransaction {
 					// not done yet!
-				} else if txn.Type == api.EnumUserTransaction {
+				} else if txn.Type == api.TransactionVariantUserTransaction {
 					// done!
 					delete(hashSet, hash)
 					slog.Debug("txn done", "hash", hash)
@@ -636,7 +636,7 @@ func (vp *ViewPayload) MarshalBCS(serializer *bcs.Serializer) {
 	}
 }
 
-func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
+func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
 	serializer := bcs.Serializer{}
 	payload.MarshalBCS(&serializer)
 	err = serializer.Error()
@@ -646,6 +646,11 @@ func (rc *NodeClient) View(payload *ViewPayload) (data []any, err error) {
 	sblob := serializer.ToBytes()
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("view")
+	if len(ledgerVersion) > 0 {
+		params := url.Values{}
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
+		au.RawQuery = params.Encode()
+	}
 	response, err := rc.Post(au.String(), ContentTypeAptosViewFunctionBcs, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
