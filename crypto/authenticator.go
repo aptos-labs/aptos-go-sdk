@@ -7,15 +7,17 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
+type DeriveScheme = uint8
+
 // Seeds for deriving addresses from addresses
 const (
-	Ed25519Scheme         = uint8(0)
-	MultiEd25519Scheme    = uint8(1)
-	SingleKeyScheme       = uint8(2)
-	MultiKeyScheme        = uint8(3)
-	DeriveObjectScheme    = uint8(252)
-	NamedObjectScheme     = uint8(254)
-	ResourceAccountScheme = uint8(255)
+	Ed25519Scheme         DeriveScheme = 0
+	MultiEd25519Scheme    DeriveScheme = 1
+	SingleKeyScheme       DeriveScheme = 2
+	MultiKeyScheme        DeriveScheme = 3
+	DeriveObjectScheme    DeriveScheme = 252
+	NamedObjectScheme     DeriveScheme = 254
+	ResourceAccountScheme DeriveScheme = 255
 )
 
 // AuthenticatorType single byte representing the spot in the enum from the Rust implementation
