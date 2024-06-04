@@ -45,7 +45,7 @@ func TestEd25519Keys(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check public keys
-	publicKey := authenticator.PublicKey()
+	publicKey := authenticator.PubKey()
 	assert.Equal(t, testEd25519PublicKey, privateKey.PubKey().ToHex())
 	assert.Equal(t, testEd25519PublicKey, publicKey.ToHex())
 
