@@ -2,23 +2,26 @@ package crypto
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-type DeriveScheme = uint8
+// AuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types
+type AuthenticatorImpl interface {
+	bcs.Struct
 
-// Seeds for deriving addresses from addresses
-const (
-	Ed25519Scheme         DeriveScheme = 0
-	MultiEd25519Scheme    DeriveScheme = 1
-	SingleKeyScheme       DeriveScheme = 2
-	MultiKeyScheme        DeriveScheme = 3
-	DeriveObjectScheme    DeriveScheme = 252
-	NamedObjectScheme     DeriveScheme = 254
-	ResourceAccountScheme DeriveScheme = 255
-)
+	// PublicKey is the public key that can be used to verify the signature.  It must be a valid on-chain representation
+	// and cannot be something like Secp256k1PublicKey on its own.
+	PublicKey() PublicKey
+
+	// Signature is a typed signature that can be verified by the public key. It must be a valid on-chain representation
+	//	// and cannot be something like Secp256k1Signature on its own.
+	Signature() Signature
+
+	// Verify Return true if the Authenticator can be cryptographically verified
+	Verify(data []byte) bool
+}
+
+//region Authenticator
 
 // AuthenticatorType single byte representing the spot in the enum from the Rust implementation
 type AuthenticatorType uint8
@@ -26,30 +29,20 @@ type AuthenticatorType uint8
 const (
 	AuthenticatorEd25519      AuthenticatorType = 0
 	AuthenticatorMultiEd25519 AuthenticatorType = 1
-	AuthenticatorSingleKey    AuthenticatorType = 2
+	AuthenticatorSingleSender AuthenticatorType = 2
 	AuthenticatorMultiKey     AuthenticatorType = 3
 )
 
-// AuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types
-type AuthenticatorImpl interface {
-	bcs.Struct
-
-	PublicKey() PublicKey
-
-	// Signature return the signature bytes
-	Signature() Signature
-
-	// Verify Return true if this Authenticator approves
-	Verify(data []byte) bool
-}
-
 // Authenticator a generic authenticator type for a transaction
+// Implements AuthenticatorImpl, bcs.Struct
 type Authenticator struct {
-	Kind AuthenticatorType
-	Auth AuthenticatorImpl
+	Variant AuthenticatorType
+	Auth    AuthenticatorImpl
 }
 
-func (ea *Authenticator) PublicKey() PublicKey {
+//region Authenticator AuthenticatorImpl implementation
+
+func (ea *Authenticator) PubKey() PublicKey {
 	return ea.Auth.PublicKey()
 }
 
@@ -57,8 +50,16 @@ func (ea *Authenticator) Signature() Signature {
 	return ea.Auth.Signature()
 }
 
+func (ea *Authenticator) Verify(data []byte) bool {
+	return ea.Auth.Verify(data)
+}
+
+//endregion
+
+//region Authenticator bcs.Struct implementation
+
 func (ea *Authenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(ea.Kind))
+	bcs.Uleb128(uint32(ea.Variant))
 	ea.Auth.MarshalBCS(bcs)
 }
 
@@ -67,13 +68,13 @@ func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	if bcs.Error() != nil {
 		return
 	}
-	ea.Kind = AuthenticatorType(kindNum)
-	switch ea.Kind {
+	ea.Variant = AuthenticatorType(kindNum)
+	switch ea.Variant {
 	case AuthenticatorEd25519:
 		ea.Auth = &Ed25519Authenticator{}
 	case AuthenticatorMultiEd25519:
 		ea.Auth = &MultiEd25519Authenticator{}
-	case AuthenticatorSingleKey:
+	case AuthenticatorSingleSender:
 		ea.Auth = &SingleKeyAuthenticator{}
 	case AuthenticatorMultiKey:
 		ea.Auth = &MultiKeyAuthenticator{}
@@ -84,58 +85,5 @@ func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	ea.Auth.UnmarshalBCS(bcs)
 }
 
-// Verify verifies a message with the public key and signature
-func (ea *Authenticator) Verify(data []byte) bool {
-	return ea.Auth.Verify(data)
-}
-
-const AuthenticationKeyLength = 32
-
-// AuthenticationKey a hash representing the method for authorizing an account
-type AuthenticationKey [AuthenticationKeyLength]byte
-
-// FromPublicKey for private / public key pairs, the authentication key is derived from the public key directly
-func (ak *AuthenticationKey) FromPublicKey(publicKey PublicKey) {
-	bytes := util.Sha3256Hash([][]byte{
-		publicKey.Bytes(),
-		{publicKey.Scheme()},
-	})
-	copy((*ak)[:], bytes)
-}
-
-func (ak *AuthenticationKey) FromHex(hexStr string) (err error) {
-	bytes, err := util.ParseHex(hexStr)
-	if err != nil {
-		return err
-	}
-	return ak.FromBytes(bytes)
-}
-
-func (ak *AuthenticationKey) FromBytes(bytes []byte) (err error) {
-	if len(bytes) != AuthenticationKeyLength {
-		return fmt.Errorf("invalid authentication key, not 32 bytes")
-	}
-	copy((*ak)[:], bytes)
-	return nil
-}
-
-func (ak *AuthenticationKey) ToHex() string {
-	return util.BytesToHex(ak[:])
-}
-
-func (ak *AuthenticationKey) Bytes() []byte {
-	return ak[:]
-}
-
-func (ak *AuthenticationKey) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(AuthenticationKeyLength)
-	bcs.FixedBytes(ak[:])
-}
-
-func (ak *AuthenticationKey) UnmarshalBCS(bcs *bcs.Deserializer) {
-	length := bcs.Uleb128()
-	if length != AuthenticationKeyLength {
-		bcs.SetError(fmt.Errorf("authentication key has wrong length %d", length))
-	}
-	bcs.ReadFixedBytesInto(ak[:])
-}
+//endregion
+//endregion

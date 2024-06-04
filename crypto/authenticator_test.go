@@ -10,11 +10,12 @@ import (
 
 func TestAuthenticationKey_FromPublicKey(t *testing.T) {
 	// Ed25519
-	_, publicKey, err := GenerateEd5519Keys()
+	privateKey, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
+	publicKey := privateKey.PubKey()
 
 	authKey := AuthenticationKey{}
-	authKey.FromPublicKey(&publicKey)
+	authKey.FromPublicKey(publicKey)
 
 	hash := util.Sha3256Hash([][]byte{
 		publicKey.Bytes(),
@@ -51,7 +52,7 @@ func Test_AuthenticationKeySerialization(t *testing.T) {
 
 func Test_AuthenticatorSerialization(t *testing.T) {
 	msg := []byte{0x01, 0x02}
-	privateKey, _, err := GenerateEd5519Keys()
+	privateKey, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
 
 	authenticator, err := privateKey.Sign(msg)
@@ -65,13 +66,13 @@ func Test_AuthenticatorSerialization(t *testing.T) {
 	newAuthenticator := &Authenticator{}
 	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.NoError(t, err)
-	assert.Equal(t, authenticator.Kind, newAuthenticator.Kind)
+	assert.Equal(t, authenticator.Variant, newAuthenticator.Variant)
 	assert.Equal(t, authenticator.Auth, newAuthenticator.Auth)
 }
 
 func Test_AuthenticatorVerification(t *testing.T) {
 	msg := []byte{0x01, 0x02}
-	privateKey, _, err := GenerateEd5519Keys()
+	privateKey, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
 
 	authenticator, err := privateKey.Sign(msg)
@@ -90,6 +91,7 @@ func Test_InvalidAuthenticatorDeserialization(t *testing.T) {
 	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.Error(t, err)
 }
+
 func Test_InvalidAuthenticationKeyDeserialization(t *testing.T) {
 	serialized := []byte{0xFF}
 	newAuthkey := AuthenticationKey{}
