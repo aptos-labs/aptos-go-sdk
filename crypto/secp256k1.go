@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"github.com/decred/dcrd/dcrec/secp256k1"
-	"math/big"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 )
 
 //region Secp256k1PrivateKey
@@ -32,10 +32,7 @@ func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
 }
 
 func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
-	signature, err := key.Inner.Sign(msg)
-	if err != nil {
-		return nil, err
-	}
+	signature := ecdsa.Sign(key.Inner, msg)
 	return &Secp256k1Signature{
 		signature,
 	}, nil
@@ -53,9 +50,7 @@ func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != secp256k1.PrivKeyBytesLen {
 		return fmt.Errorf("invalid secp256k1 private key size %d", len(bytes))
 	}
-	num := big.NewInt(0)
-	num.SetBytes(bytes)
-	key.Inner = secp256k1.NewPrivateKey(num)
+	key.Inner = secp256k1.PrivKeyFromBytes(bytes)
 	return nil
 }
 
@@ -193,33 +188,30 @@ func (ea *Secp256k1Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 // Secp256k1Signature a wrapper for serialization of Secp256k1 signatures
 // Implements Signature, CryptoMaterial
 type Secp256k1Signature struct {
-	Inner *secp256k1.Signature
+	Inner *ecdsa.Signature
 }
 
 //region Secp256k1Signature CryptoMaterial
 
 func (e *Secp256k1Signature) Bytes() []byte {
 	// TODO: This library doesn't seem to work properly with the Rust implementation, the signatures are the wrong bytes
-	// Golang for some reason outputs big ints as big endian, so we need to flip the bytes
-	output := make([]byte, 64)
-	r := e.Inner.GetR()
-	//slices.Reverse(r)
-	s := e.Inner.GetS()
-	//slices.Reverse(s)
-	copy(output[0:32], r.Bytes()[:])
+	r := e.Inner.R()
+	rBytes := r.Bytes()
+	s := e.Inner.S()
+	sBytes := s.Bytes()
 
-	copy(output[32:64], s.Bytes()[:])
-	return output
+	out := make([]byte, 64)
+	copy(out[0:32], rBytes[:])
+	copy(out[32:64], sBytes[:])
+	return out
 }
 
 func (e *Secp256k1Signature) FromBytes(bytes []byte) (err error) {
-	// We unfortunately have custom serialization, so we need custom deserialization here
-	r := &big.Int{}
-	r.SetBytes(bytes[0:32])
-	s := &big.Int{}
-	s.SetBytes(bytes[32:64])
-
-	e.Inner = secp256k1.NewSignature(r, s)
+	r := &secp256k1.ModNScalar{}
+	r.SetBytes((*[32]byte)(bytes[0:32]))
+	s := &secp256k1.ModNScalar{}
+	s.SetBytes((*[32]byte)(bytes[32:64]))
+	e.Inner = ecdsa.NewSignature(r, s)
 	return nil
 }
 
