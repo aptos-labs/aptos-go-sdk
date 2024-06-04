@@ -33,15 +33,15 @@ func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey
 
 //region Ed25519PrivateKey Signer Implementation
 
-func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *Authenticator, err error) {
+func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
 	signature, err := key.SignMessage(msg)
 	if err != nil {
 		return nil, err
 	}
 	publicKeyBytes := key.PubKey().Bytes()
 
-	return &Authenticator{
-		Variant: AuthenticatorEd25519,
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorEd25519,
 		Auth: &Ed25519Authenticator{
 			PubKey: &Ed25519PublicKey{Inner: publicKeyBytes},
 			Sig:    signature.(*Ed25519Signature),
@@ -190,13 +190,13 @@ func (key *Ed25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region Ed25519Authenticator
 
 // Ed25519Authenticator represents a verifiable signature with it's accompanied public key
-// Implements AuthenticatorImpl
+// Implements AccountAuthenticatorImpl
 type Ed25519Authenticator struct {
 	PubKey *Ed25519PublicKey
 	Sig    *Ed25519Signature
 }
 
-//region Ed25519Authenticator AuthenticatorImpl implementation
+//region Ed25519Authenticator AccountAuthenticatorImpl implementation
 
 func (ea *Ed25519Authenticator) PublicKey() PublicKey {
 	return ea.PubKey

@@ -98,7 +98,7 @@ func TestSecp256k1Keys(t *testing.T) {
 	// Test serialization and deserialization of authenticator
 	authenticatorBytes, err := bcs.Serialize(authenticator)
 	assert.NoError(t, err)
-	authenticator2 := &Authenticator{}
+	authenticator2 := &AccountAuthenticator{}
 	err = bcs.Deserialize(authenticator2, authenticatorBytes)
 	assert.NoError(t, err)
 	assert.Equal(t, authenticator.Variant, authenticator2.Variant)
