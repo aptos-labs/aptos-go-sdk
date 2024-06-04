@@ -123,13 +123,13 @@ func (key *MultiEd25519PublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
 //region MultiEd25519Authenticator
 
 // MultiEd25519Authenticator is an authenticator for a MultiEd25519Signature
-// Implements AuthenticatorImpl, bcs.Struct
+// Implements AccountAuthenticatorImpl, bcs.Struct
 type MultiEd25519Authenticator struct {
 	PubKey *MultiEd25519PublicKey
 	Sig    *MultiEd25519Signature
 }
 
-// region MultiEd25519Authenticator AuthenticatorImpl implementation
+// region MultiEd25519Authenticator AccountAuthenticatorImpl implementation
 
 func (ea *MultiEd25519Authenticator) PublicKey() PublicKey {
 	return ea.PubKey

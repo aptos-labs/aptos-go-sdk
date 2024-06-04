@@ -40,7 +40,7 @@ func (key *SingleSigner) SignMessage(msg []byte) (*AnySignature, error) {
 
 // region SingleSigner Signer implementation
 
-func (key *SingleSigner) Sign(msg []byte) (authenticator *Authenticator, err error) {
+func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
 	signature, err := key.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (key *SingleSigner) Sign(msg []byte) (authenticator *Authenticator, err err
 	auth := &SingleKeyAuthenticator{}
 	auth.PubKey = key.PubKey().(*AnyPublicKey)
 	auth.Sig = signature
-	return &Authenticator{Variant: AuthenticatorSingleSender, Auth: auth}, nil
+	return &AccountAuthenticator{Variant: AccountAuthenticatorSingleSender, Auth: auth}, nil
 }
 
 func (key *SingleSigner) AuthKey() *AuthenticationKey {
@@ -251,14 +251,13 @@ func (e *AnySignature) UnmarshalBCS(bcs *bcs.Deserializer) {
 //region SingleKeyAuthenticator
 
 // SingleKeyAuthenticator is an authenticator for a SingleSigner
-// Implements AuthenticatorImpl
-// TODO: Converge on names for all these types
+// Implements AccountAuthenticatorImpl
 type SingleKeyAuthenticator struct {
 	PubKey *AnyPublicKey
 	Sig    *AnySignature
 }
 
-//region SingleKeyAuthenticator AuthenticatorImpl implementation
+//region SingleKeyAuthenticator AccountAuthenticatorImpl implementation
 
 func (ea *SingleKeyAuthenticator) PublicKey() PublicKey {
 	return ea.PubKey

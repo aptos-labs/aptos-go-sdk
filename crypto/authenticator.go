@@ -5,8 +5,8 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-// AuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types
-type AuthenticatorImpl interface {
+// AccountAuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types
+type AccountAuthenticatorImpl interface {
 	bcs.Struct
 
 	// PublicKey is the public key that can be used to verify the signature.  It must be a valid on-chain representation
@@ -17,69 +17,69 @@ type AuthenticatorImpl interface {
 	//	// and cannot be something like Secp256k1Signature on its own.
 	Signature() Signature
 
-	// Verify Return true if the Authenticator can be cryptographically verified
+	// Verify Return true if the AccountAuthenticator can be cryptographically verified
 	Verify(data []byte) bool
 }
 
-//region Authenticator
+//region AccountAuthenticator
 
-// AuthenticatorType single byte representing the spot in the enum from the Rust implementation
-type AuthenticatorType uint8
+// AccountAuthenticatorType single byte representing the spot in the enum from the Rust implementation
+type AccountAuthenticatorType uint8
 
 const (
-	AuthenticatorEd25519      AuthenticatorType = 0
-	AuthenticatorMultiEd25519 AuthenticatorType = 1
-	AuthenticatorSingleSender AuthenticatorType = 2
-	AuthenticatorMultiKey     AuthenticatorType = 3
+	AccountAuthenticatorEd25519      AccountAuthenticatorType = 0
+	AccountAuthenticatorMultiEd25519 AccountAuthenticatorType = 1
+	AccountAuthenticatorSingleSender AccountAuthenticatorType = 2
+	AccountAuthenticatorMultiKey     AccountAuthenticatorType = 3
 )
 
-// Authenticator a generic authenticator type for a transaction
-// Implements AuthenticatorImpl, bcs.Struct
-type Authenticator struct {
-	Variant AuthenticatorType
-	Auth    AuthenticatorImpl
+// AccountAuthenticator a generic authenticator type for a transaction
+// Implements AccountAuthenticatorImpl, bcs.Struct
+type AccountAuthenticator struct {
+	Variant AccountAuthenticatorType
+	Auth    AccountAuthenticatorImpl
 }
 
-//region Authenticator AuthenticatorImpl implementation
+//region AccountAuthenticator AccountAuthenticatorImpl implementation
 
-func (ea *Authenticator) PubKey() PublicKey {
+func (ea *AccountAuthenticator) PubKey() PublicKey {
 	return ea.Auth.PublicKey()
 }
 
-func (ea *Authenticator) Signature() Signature {
+func (ea *AccountAuthenticator) Signature() Signature {
 	return ea.Auth.Signature()
 }
 
-func (ea *Authenticator) Verify(data []byte) bool {
+func (ea *AccountAuthenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
 }
 
 //endregion
 
-//region Authenticator bcs.Struct implementation
+//region AccountAuthenticator bcs.Struct implementation
 
-func (ea *Authenticator) MarshalBCS(bcs *bcs.Serializer) {
+func (ea *AccountAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Uleb128(uint32(ea.Variant))
 	ea.Auth.MarshalBCS(bcs)
 }
 
-func (ea *Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+func (ea *AccountAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	kindNum := bcs.Uleb128()
 	if bcs.Error() != nil {
 		return
 	}
-	ea.Variant = AuthenticatorType(kindNum)
+	ea.Variant = AccountAuthenticatorType(kindNum)
 	switch ea.Variant {
-	case AuthenticatorEd25519:
+	case AccountAuthenticatorEd25519:
 		ea.Auth = &Ed25519Authenticator{}
-	case AuthenticatorMultiEd25519:
+	case AccountAuthenticatorMultiEd25519:
 		ea.Auth = &MultiEd25519Authenticator{}
-	case AuthenticatorSingleSender:
+	case AccountAuthenticatorSingleSender:
 		ea.Auth = &SingleKeyAuthenticator{}
-	case AuthenticatorMultiKey:
+	case AccountAuthenticatorMultiKey:
 		ea.Auth = &MultiKeyAuthenticator{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown Authenticator kind: %d", kindNum))
+		bcs.SetError(fmt.Errorf("unknown AccountAuthenticator kind: %d", kindNum))
 		return
 	}
 	ea.Auth.UnmarshalBCS(bcs)

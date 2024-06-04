@@ -5,7 +5,7 @@ import "github.com/aptos-labs/aptos-go-sdk/bcs"
 // Signer a generic interface for any kind of signing
 type Signer interface {
 	// Sign signs a transaction and returns an associated authenticator
-	Sign(msg []byte) (authenticator *Authenticator, err error)
+	Sign(msg []byte) (authenticator *AccountAuthenticator, err error)
 
 	// AuthKey gives the AuthenticationKey associated with the signer
 	AuthKey() *AuthenticationKey

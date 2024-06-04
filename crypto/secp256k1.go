@@ -144,14 +144,14 @@ func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region Secp256k1Authenticator
 
 // Secp256k1Authenticator is the authenticator for Secp256k1, but it cannot stand on its own and must be used with SingleKeyAuthenticator
-// Implements AuthenticatorImpl, bcs.Struct
+// Implements AccountAuthenticatorImpl, bcs.Struct
 // TODO: We might want a different interface for this one
 type Secp256k1Authenticator struct {
 	PubKey *Secp256k1PublicKey
 	Sig    *Secp256k1Signature
 }
 
-//region Secp256k1Authenticator AuthenticatorImpl
+//region Secp256k1Authenticator AccountAuthenticatorImpl
 
 func (ea *Secp256k1Authenticator) PublicKey() VerifyingKey {
 	return ea.PubKey

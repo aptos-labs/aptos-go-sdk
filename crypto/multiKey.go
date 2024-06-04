@@ -153,13 +153,13 @@ func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
 //region MultiKeyAuthenticator
 
 // MultiKeyAuthenticator is an on-chain authenticator for a MultiKeySignature
-// Implements AuthenticatorImpl, bcs.Struct
+// Implements AccountAuthenticatorImpl, bcs.Struct
 type MultiKeyAuthenticator struct {
 	PubKey *MultiKey
 	Sig    *MultiKeySignature
 }
 
-//region MultiKeyAuthenticator AuthenticatorImpl implementation
+//region MultiKeyAuthenticator AccountAuthenticatorImpl implementation
 
 func (ea *MultiKeyAuthenticator) PublicKey() PublicKey {
 	return ea.PubKey

@@ -60,10 +60,10 @@ func Test_AuthenticatorSerialization(t *testing.T) {
 
 	serialized, err := bcs.Serialize(authenticator)
 	assert.NoError(t, err)
-	assert.Equal(t, uint8(AuthenticatorEd25519), serialized[0])
+	assert.Equal(t, uint8(AccountAuthenticatorEd25519), serialized[0])
 	assert.Len(t, serialized, 1+(1+ed25519.PublicKeySize)+(1+ed25519.SignatureSize))
 
-	newAuthenticator := &Authenticator{}
+	newAuthenticator := &AccountAuthenticator{}
 	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.NoError(t, err)
 	assert.Equal(t, authenticator.Variant, newAuthenticator.Variant)
@@ -83,11 +83,11 @@ func Test_AuthenticatorVerification(t *testing.T) {
 
 func Test_InvalidAuthenticatorDeserialization(t *testing.T) {
 	serialized := []byte{0xFF}
-	newAuthenticator := &Authenticator{}
+	newAuthenticator := &AccountAuthenticator{}
 	err := bcs.Deserialize(newAuthenticator, serialized)
 	assert.Error(t, err)
 	serialized = []byte{0x4F}
-	newAuthenticator = &Authenticator{}
+	newAuthenticator = &AccountAuthenticator{}
 	err = bcs.Deserialize(newAuthenticator, serialized)
 	assert.Error(t, err)
 }
