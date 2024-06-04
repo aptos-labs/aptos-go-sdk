@@ -49,6 +49,8 @@ func init() {
 // APTTransferTransaction Move some APT from sender to dest
 // Amount in Octas (10^-8 APT)
 //
+// TODO: This has to be reworked to deal with fee payer and other methods, it will likely go away
+//
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
 func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
 	amountBytes, err := bcs.SerializeU64(amount)
@@ -72,6 +74,5 @@ func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress
 	if err != nil {
 		return
 	}
-	signedTxn, err = rawTxn.Sign(sender)
-	return
+	return rawTxn.SignedTransaction(sender)
 }

@@ -42,7 +42,7 @@ func (client *FungibleAssetClient) Transfer(sender *Account, senderStore *Accoun
 	typeTag := TypeTag{Value: structTag}
 
 	// Build transaction
-	rawTxn, err := client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
+	_, err = client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "fungible_asset",
@@ -62,8 +62,8 @@ func (client *FungibleAssetClient) Transfer(sender *Account, senderStore *Accoun
 	}
 
 	// Sign transaction
-	signedTxn, err = rawTxn.Sign(sender)
-	return signedTxn, err
+	// TODO: these will need to be reworked to support fee payer etc.
+	panic("To implement")
 }
 
 func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress *AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
@@ -75,7 +75,7 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receive
 	typeTag := TypeTag{Value: structTag}
 
 	// Build transaction
-	rawTxn, err := client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
+	_, err = client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "primary_fungible_store",
@@ -95,8 +95,8 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receive
 	}
 
 	// Sign transaction
-	signedTxn, err = rawTxn.Sign(sender)
-	return signedTxn, err
+	// TODO: these will need to be reworked to support fee payer etc.
+	panic("To implement")
 }
 
 // -- View functions -- //

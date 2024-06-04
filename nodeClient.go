@@ -513,23 +513,22 @@ func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	return rc.chainId, nil
 }
 
-// MaxGasAmount is an option to APTTransferTransaction
 type MaxGasAmount uint64
 
-// GasUnitPrice is an option to APTTransferTransaction
 type GasUnitPrice uint64
 
-// ExpirationSeconds is an option to APTTransferTransaction
 type ExpirationSeconds int64
 
-// SequenceNumber is an option to APTTransferTransaction
+type FeePayer *AccountAddress
+
+type AdditionalSigners []AccountAddress
+
 type SequenceNumber uint64
 
-// ChainIdOption is an option to APTTransferTransaction
 type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing
-// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption
+// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
@@ -588,7 +587,88 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 	// TODO: optionally simulate for max gas
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
-	rawTxn = &RawTransaction{
+
+	// Base raw transaction used for all requests
+	return &RawTransaction{
+		Sender:                     sender,
+		SequenceNumber:             sequenceNumber,
+		Payload:                    payload,
+		MaxGasAmount:               maxGasAmount,
+		GasUnitPrice:               gasUnitPrice,
+		ExpirationTimestampSeconds: expirationTimestampSeconds,
+		ChainId:                    chainId,
+	}, nil
+}
+
+// BuildTransaction builds a raw transaction for signing
+// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
+func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
+
+	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
+	gasUnitPrice := uint64(100)     // Default to min gas price
+	expirationSeconds := int64(300) // Default to 5 minutes
+	sequenceNumber := uint64(0)
+	haveSequenceNumber := false
+	chainId := uint8(0)
+	haveChainId := false
+	var feePayer *AccountAddress
+	var additionalSigners []AccountAddress
+
+	for opti, option := range options {
+		switch ovalue := option.(type) {
+		case MaxGasAmount:
+			maxGasAmount = uint64(ovalue)
+		case GasUnitPrice:
+			gasUnitPrice = uint64(ovalue)
+		case ExpirationSeconds:
+			expirationSeconds = int64(ovalue)
+			if expirationSeconds < 0 {
+				err = errors.New("ExpirationSeconds cannot be less than 0")
+				return nil, err
+			}
+		case SequenceNumber:
+			sequenceNumber = uint64(ovalue)
+			haveSequenceNumber = true
+		case ChainIdOption:
+			chainId = uint8(ovalue)
+			haveChainId = true
+		case FeePayer:
+			feePayer = ovalue
+		case AdditionalSigners:
+			additionalSigners = ovalue
+		default:
+			err = fmt.Errorf("APTTransferTransaction arg [%d] unknown option type %T", opti+4, option)
+			return nil, err
+		}
+	}
+
+	// Fetch ChainId which may be cached
+	if !haveChainId {
+		chainId, err = rc.GetChainId()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Fetch sequence number unless provided
+	if !haveSequenceNumber {
+		info, err := rc.Account(sender)
+		if err != nil {
+			return nil, err
+		}
+		sequenceNumber, err = info.SequenceNumber()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// TODO: fetch gas price on-chain
+	// TODO: optionally simulate for max gas
+
+	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
+
+	// Base raw transaction used for all requests
+	rawTxn := &RawTransaction{
 		Sender:                     sender,
 		SequenceNumber:             sequenceNumber,
 		Payload:                    payload,
@@ -598,22 +678,25 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 		ChainId:                    chainId,
 	}
 
-	return
-}
-
-// BuildSignAndSubmitTransaction right now, this is "easy mode", all in one, no configuration.  More configuration comes
-// from splitting into multiple calls
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (response *api.SubmitTransactionResponse, err error) {
-	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
-	if err != nil {
-		return
+	// Based on the options, choose which to use
+	if feePayer != nil {
+		return &RawTransactionWithData{
+			Variant: MultiAgentWithFeePayerRawTransactionWithDataVariant,
+			Inner: &MultiAgentWithFeePayerRawTransactionWithData{
+				RawTxn:           rawTxn,
+				FeePayer:         feePayer,
+				SecondarySigners: additionalSigners,
+			},
+		}, nil
+	} else {
+		return &RawTransactionWithData{
+			Variant: MultiAgentRawTransactionWithDataVariant,
+			Inner: &MultiAgentRawTransactionWithData{
+				RawTxn:           rawTxn,
+				SecondarySigners: additionalSigners,
+			},
+		}, nil
 	}
-	signedTxn, err := rawTxn.Sign(sender)
-	if err != nil {
-		return
-	}
-
-	return rc.SubmitTransaction(signedTxn)
 }
 
 type ViewPayload struct {
@@ -710,4 +793,17 @@ func (rc *NodeClient) AccountAPTBalance(account *AccountAddress) (balance uint64
 		return 0, err
 	}
 	return util.StrToUint64(values[0].(string))
+}
+
+// deprecated, will need to rework accordingly, as this is only built for a single account, very useful for testing though
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
+	if err != nil {
+		return nil, err
+	}
+	signedTxn, err := rawTxn.SignedTransaction(sender)
+	if err != nil {
+		return nil, err
+	}
+	return rc.SubmitTransaction(signedTxn)
 }

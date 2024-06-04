@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -9,6 +10,7 @@ import (
 
 const (
 	singleSignerScript = "a11ceb0b060000000701000402040a030e0c041a04051e20073e30086e2000000001010204010001000308000104030401000105050601000002010203060c0305010b0001080101080102060c03010b0001090002050b00010900000a6170746f735f636f696e04636f696e04436f696e094170746f73436f696e087769746864726177076465706f7369740000000000000000000000000000000000000000000000000000000000000001000001080b000b0138000c030b020b03380102"
+	fundAmount         = 100_000_000
 )
 
 func TestNamedConfig(t *testing.T) {
@@ -24,38 +26,24 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
-		return APTTransferTransaction(client, sender, AccountOne, 100)
-	})
+	println("Legacy Ed25519")
+	testTransaction(t, NewEd25519Account, submitEntryFunction)
+	println("Single Sender Ed25519")
+	testTransaction(t, NewEd25519SingleSignerAccount, submitEntryFunction)
+	//println("Single Sender Secp256k1")
+	//testTransaction(t, types.NewSecp256k1Account, submitEntryFunction)
 }
 
-func Test_ScriptFlow(t *testing.T) {
-	testTransaction(t, func(client *Client, sender *Account) (*SignedTransaction, error) {
-		scriptBytes, err := ParseHex(singleSignerScript)
-		assert.NoError(t, err)
-
-		amount := uint64(1)
-		dest := AccountOne
-
-		rawTxn, err := client.BuildTransaction(sender.Address,
-			TransactionPayload{Payload: &Script{
-				Code:     scriptBytes,
-				ArgTypes: []TypeTag{},
-				Args: []ScriptArgument{{
-					Variant: ScriptArgumentU64,
-					Value:   amount,
-				}, {
-					Variant: ScriptArgumentAddress,
-					Value:   dest,
-				}},
-			}})
-		if err != nil {
-			return nil, err
-		}
-		return rawTxn.Sign(sender)
-	})
+func Test_Ed25519_ScriptFlow(t *testing.T) {
+	println("Legacy Ed25519")
+	testTransaction(t, NewEd25519Account, submitScript)
+	println("Single Sender Ed25519")
+	testTransaction(t, NewEd25519SingleSignerAccount, submitScript)
+	//println("Single Sender Secp256k1")
+	//testTransaction(t, types.NewSecp256k1Account, submitScript)
 }
-func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, sender *Account) (*SignedTransaction, error)) {
+
+func testTransaction(t *testing.T, createAccount func() (*Account, error), buildAndSignTransaction func(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error)) {
 	if testing.Short() {
 		// TODO: only run this in some integration mode set by environment variable?
 		// TODO: allow this to be harmlessly flaky if devnet is down?
@@ -80,15 +68,15 @@ func testTransaction(t *testing.T, buildAndSignTransaction func(client *Client, 
 	assert.NoError(t, err)
 
 	// Create an account
-	account, err := NewEd25519Account()
+	account, err := createAccount()
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
-	err = client.Fund(account.Address, 100_000_000)
+	err = client.Fund(account.Address, fundAmount)
 	assert.NoError(t, err)
 
 	// Build transaction
-	signedTxn, err := buildAndSignTransaction(client, account)
+	signedTxn, err := buildAndSignTransaction(t, client, account)
 	assert.NoError(t, err)
 
 	// Send transaction
@@ -173,7 +161,6 @@ func Test_Block(t *testing.T) {
 		assert.NoError(t, err)
 
 		assert.Equal(t, blockByHeight, blockByVersion)
-		// println(api.PrettyJson(blockByHeight))
 	}
 }
 
@@ -244,4 +231,44 @@ func TestClient_BlockByHeight(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = client.BlockByHeight(1, true)
+}
+
+// TODO: Make this really supported / better naming
+func NewEd25519SingleSignerAccount() (*Account, error) {
+	key, err := crypto.GenerateEd25519PrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	accountSigner := crypto.NewSingleSigner(key)
+	return NewAccountFromSigner(accountSigner)
+}
+
+func submitEntryFunction(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error) {
+	return APTTransferTransaction(client, sender, AccountOne, 100)
+}
+
+func submitScript(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error) {
+	scriptBytes, err := ParseHex(singleSignerScript)
+	assert.NoError(t, err)
+
+	amount := uint64(1)
+	dest := AccountOne
+
+	rawTxn, err := client.BuildTransaction(sender.Address,
+		TransactionPayload{Payload: &Script{
+			Code:     scriptBytes,
+			ArgTypes: []TypeTag{},
+			Args: []ScriptArgument{{
+				Variant: ScriptArgumentU64,
+				Value:   amount,
+			}, {
+				Variant: ScriptArgumentAddress,
+				Value:   dest,
+			}},
+		}})
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTxn.SignedTransaction(sender)
 }

@@ -20,11 +20,11 @@ const (
 
 type TransactionAuthenticatorImpl interface {
 	bcs.Struct
-	// Verify Return true if this Authenticator approves
+	// Verify Return true if this AccountAuthenticator approves
 	Verify(data []byte) bool
 }
 
-// TransactionAuthenticator is used for authorizing a transaction.  This differs from crypto.Authenticator because it handles
+// TransactionAuthenticator is used for authorizing a transaction.  This differs from crypto.AccountAuthenticator because it handles
 // constructs like FeePayer and MultiAgent.  Some keys can't stand on their own as TransactionAuthenticators.
 // Implements TransactionAuthenticatorImpl, bcs.Struct
 type TransactionAuthenticator struct {
@@ -78,7 +78,7 @@ func (ea *TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 // Ed25519TransactionAuthenticator for legacy ED25519 accounts
 // Implements TransactionAuthenticatorImpl, bcs.Struct
 type Ed25519TransactionAuthenticator struct {
-	Sender *crypto.Authenticator
+	Sender *crypto.AccountAuthenticator
 }
 
 //region Ed25519TransactionAuthenticator TransactionAuthenticatorImpl
@@ -96,8 +96,8 @@ func (ea *Ed25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
 }
 
 func (ea *Ed25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	ea.Sender = &crypto.Authenticator{}
-	ea.Sender.Variant = crypto.AuthenticatorEd25519
+	ea.Sender = &crypto.AccountAuthenticator{}
+	ea.Sender.Variant = crypto.AccountAuthenticatorEd25519
 	ea.Sender.Auth = &crypto.Ed25519Authenticator{}
 	bcs.Struct(ea.Sender.Auth)
 }
@@ -108,7 +108,7 @@ func (ea *Ed25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 //region MultiEd25519TransactionAuthenticator
 
 type MultiEd25519TransactionAuthenticator struct {
-	Sender *crypto.Authenticator
+	Sender *crypto.AccountAuthenticator
 }
 
 //region Ed25519TransactionAuthenticator TransactionAuthenticatorImpl
@@ -126,8 +126,8 @@ func (ea *MultiEd25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) 
 }
 
 func (ea *MultiEd25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	ea.Sender = &crypto.Authenticator{}
-	ea.Sender.Variant = crypto.AuthenticatorMultiEd25519
+	ea.Sender = &crypto.AccountAuthenticator{}
+	ea.Sender.Variant = crypto.AccountAuthenticatorMultiEd25519
 	ea.Sender.Auth = &crypto.MultiEd25519Authenticator{}
 	bcs.Struct(ea.Sender.Auth)
 }
@@ -138,9 +138,9 @@ func (ea *MultiEd25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializ
 //region MultiAgentTransactionAuthenticator
 
 type MultiAgentTransactionAuthenticator struct {
-	Sender                   *crypto.Authenticator
+	Sender                   *crypto.AccountAuthenticator
 	SecondarySignerAddresses []AccountAddress
-	SecondarySigners         []crypto.Authenticator
+	SecondarySigners         []crypto.AccountAuthenticator
 }
 
 //region MultiAgentTransactionAuthenticator TransactionAuthenticatorImpl
@@ -170,10 +170,10 @@ func (ea *MultiAgentTransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
 }
 
 func (ea *MultiAgentTransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
-	ea.Sender = &crypto.Authenticator{}
+	ea.Sender = &crypto.AccountAuthenticator{}
 	des.Struct(ea.Sender)
 	ea.SecondarySignerAddresses = bcs.DeserializeSequence[AccountAddress](des)
-	ea.SecondarySigners = bcs.DeserializeSequence[crypto.Authenticator](des)
+	ea.SecondarySigners = bcs.DeserializeSequence[crypto.AccountAuthenticator](des)
 }
 
 //endregion
@@ -182,11 +182,11 @@ func (ea *MultiAgentTransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer
 //region FeePayerTransactionAuthenticator
 
 type FeePayerTransactionAuthenticator struct {
-	Sender                   *crypto.Authenticator
+	Sender                   *crypto.AccountAuthenticator
 	SecondarySignerAddresses []AccountAddress
-	SecondarySigners         []crypto.Authenticator
+	SecondarySigners         []crypto.AccountAuthenticator
 	FeePayer                 *AccountAddress
-	FeePayerAuthenticator    *crypto.Authenticator
+	FeePayerAuthenticator    *crypto.AccountAuthenticator
 }
 
 //region FeePayerTransactionAuthenticator bcs.Struct
@@ -218,14 +218,14 @@ func (ea *FeePayerTransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
 }
 
 func (ea *FeePayerTransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
-	ea.Sender = &crypto.Authenticator{}
+	ea.Sender = &crypto.AccountAuthenticator{}
 	des.Struct(ea.Sender)
 	ea.SecondarySignerAddresses = bcs.DeserializeSequence[AccountAddress](des)
-	ea.SecondarySigners = bcs.DeserializeSequence[crypto.Authenticator](des)
+	ea.SecondarySigners = bcs.DeserializeSequence[crypto.AccountAuthenticator](des)
 
 	ea.FeePayer = &AccountAddress{}
 	des.Struct(ea.FeePayer)
-	ea.FeePayerAuthenticator = &crypto.Authenticator{}
+	ea.FeePayerAuthenticator = &crypto.AccountAuthenticator{}
 	des.Struct(ea.FeePayerAuthenticator)
 }
 
@@ -235,7 +235,7 @@ func (ea *FeePayerTransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) 
 //region SingleSenderTransactionAuthenticator
 
 type SingleSenderTransactionAuthenticator struct {
-	Sender *crypto.Authenticator
+	Sender *crypto.AccountAuthenticator
 }
 
 //region SingleSenderTransactionAuthenticator TransactionAuthenticatorImpl
@@ -253,7 +253,7 @@ func (ea *SingleSenderTransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) 
 }
 
 func (ea *SingleSenderTransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
-	ea.Sender = &crypto.Authenticator{}
+	ea.Sender = &crypto.AccountAuthenticator{}
 	des.Struct(ea.Sender)
 }
 

@@ -7,7 +7,7 @@ import (
 
 // SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
-	Transaction   RawTransaction
+	Transaction   RawTransactionImpl
 	Authenticator *TransactionAuthenticator
 }
 

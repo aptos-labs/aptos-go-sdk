@@ -12,10 +12,6 @@ type AlternativeSigner struct {
 	publicKey  ed25519.PublicKey
 }
 
-func (signer *AlternativeSigner) ToHex() string {
-	return ""
-}
-
 func (signer *AlternativeSigner) PublicKey() *crypto.Ed25519PublicKey {
 	pubKey := &crypto.Ed25519PublicKey{}
 	err := pubKey.FromBytes(signer.publicKey)
@@ -25,7 +21,15 @@ func (signer *AlternativeSigner) PublicKey() *crypto.Ed25519PublicKey {
 	return pubKey
 }
 
-func (signer *AlternativeSigner) Sign(msg []byte) (authenticator *crypto.Authenticator, err error) {
+func (signer *AlternativeSigner) PubKey() crypto.PublicKey {
+	return signer.PublicKey()
+}
+
+func (signer *AlternativeSigner) ToHex() string {
+	return ""
+}
+
+func (signer *AlternativeSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
 	sigBytes := ed25519.Sign(signer.privateKey, msg)
 	sig := &crypto.Ed25519Signature{}
 	copy(sig.Inner[:], sigBytes)
@@ -35,9 +39,9 @@ func (signer *AlternativeSigner) Sign(msg []byte) (authenticator *crypto.Authent
 		Sig:    sig,
 	}
 	// TODO: maybe make convenience functions for this
-	return &crypto.Authenticator{
-		Kind: crypto.AuthenticatorEd25519,
-		Auth: auth,
+	return &crypto.AccountAuthenticator{
+		Variant: crypto.AccountAuthenticatorEd25519,
+		Auth:    auth,
 	}, nil
 }
 

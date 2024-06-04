@@ -5,20 +5,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"strconv"
-	"strings"
 )
-
-// PrettyJson a simple pretty print for JSON examples
-func PrettyJson(x any) string {
-	out := strings.Builder{}
-	enc := json.NewEncoder(&out)
-	enc.SetIndent("", "  ")
-	err := enc.Encode(x)
-	if err != nil {
-		return ""
-	}
-	return out.String()
-}
 
 // GUID describes a GUID associated with things like V1 events
 type GUID struct {
