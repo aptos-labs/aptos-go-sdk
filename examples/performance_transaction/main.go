@@ -2,10 +2,9 @@ package main
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
-	"time"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/examples"
+	"time"
 )
 
 // main This example shows you how to improve performance of the transaction submission
@@ -72,8 +71,8 @@ func main() {
 	// Sign transaction
 	before = time.Now()
 
-	// TODO: maybe we should flip rawTxn.Sign to PrivateKey.Sign(rawTxn)
-	signedTxn, err := rawTxn.Sign(sender)
+	// Sign transaction
+	signedTxn, err := rawTxn.SignedTransaction(sender)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}

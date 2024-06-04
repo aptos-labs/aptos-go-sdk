@@ -13,10 +13,6 @@ type ExternalSigner struct {
 	publicKey  ed25519.PublicKey
 }
 
-func (signer *ExternalSigner) ToHex() string {
-	return ""
-}
-
 func (signer *ExternalSigner) PublicKey() *crypto.Ed25519PublicKey {
 	pubKey := &crypto.Ed25519PublicKey{}
 	err := pubKey.FromBytes(signer.publicKey)
@@ -26,7 +22,15 @@ func (signer *ExternalSigner) PublicKey() *crypto.Ed25519PublicKey {
 	return pubKey
 }
 
-func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.Authenticator, err error) {
+func (signer *ExternalSigner) PubKey() crypto.PublicKey {
+	return signer.PublicKey()
+}
+
+func (signer *ExternalSigner) ToHex() string {
+	return ""
+}
+
+func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
 	sigBytes := ed25519.Sign(signer.privateKey, msg)
 	sig := &crypto.Ed25519Signature{}
 	copy(sig.Inner[:], sigBytes)
@@ -36,9 +40,9 @@ func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.Authentica
 		Sig:    sig,
 	}
 	// TODO: maybe make convenience functions for this
-	return &crypto.Authenticator{
-		Kind: crypto.AuthenticatorEd25519,
-		Auth: auth,
+	return &crypto.AccountAuthenticator{
+		Variant: crypto.AccountAuthenticatorEd25519,
+		Auth:    auth,
 	}, nil
 }
 
@@ -85,7 +89,7 @@ func main() {
 
 	// Sign transaction
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
-	rawTxn := aptos.RawTransaction{
+	rawTxn := &aptos.RawTransaction{
 		Sender:         sender.Address,
 		SequenceNumber: 0,
 		Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
@@ -119,8 +123,8 @@ func main() {
 	}
 
 	txnAuth := &aptos.TransactionAuthenticator{
-		Kind: aptos.TransactionAuthenticatorEd25519,
-		Auth: auth,
+		Variant: aptos.TransactionAuthenticatorEd25519,
+		Auth:    auth,
 	}
 
 	// Build a signed transaction

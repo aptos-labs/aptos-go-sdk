@@ -104,7 +104,7 @@ func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAd
 	return
 }
 
-// Account represents an on-chain account, with an associated signer, which may be a PrivateKey
+// Account represents an on-chain account, with an associated signer, which may be a MessageSigner
 type Account struct {
 	Address AccountAddress
 	Signer  crypto.Signer
@@ -126,16 +126,29 @@ func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.Authentication
 
 // NewEd25519Account creates an account with a new random Ed25519 private key
 func NewEd25519Account() (*Account, error) {
-	privateKey, _, err := crypto.GenerateEd5519Keys()
+	privateKey, err := crypto.GenerateEd25519PrivateKey()
 	if err != nil {
 		return nil, err
 	}
-	return NewAccountFromSigner(&privateKey)
+	return NewAccountFromSigner(privateKey)
+}
+
+func NewSecp256k1Account() (*Account, error) {
+	privateKey := crypto.GenerateSecp256k1Key()
+	signer := &crypto.SingleSigner{Signer: &privateKey}
+	return NewAccountFromSigner(signer)
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
-func (account *Account) Sign(message []byte) (authenticator *crypto.Authenticator, err error) {
+func (account *Account) Sign(message []byte) (authenticator *crypto.AccountAuthenticator, err error) {
 	return account.Signer.Sign(message)
+}
+
+func (account *Account) PubKey() crypto.PublicKey {
+	return account.Signer.PubKey()
+}
+func (account *Account) AuthKey() *crypto.AuthenticationKey {
+	return account.Signer.AuthKey()
 }
 
 var ErrAddressTooShort = errors.New("AccountAddress too short")

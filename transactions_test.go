@@ -20,6 +20,7 @@ func TestRawTransactionSign(t *testing.T) {
 	amount := uint64(10_000)
 	var amountBytes [8]byte
 	binary.LittleEndian.PutUint64(amountBytes[:], amount)
+
 	txn := RawTransaction{
 		Sender:         sender.Address,
 		SequenceNumber: sn + 1,
@@ -41,7 +42,7 @@ func TestRawTransactionSign(t *testing.T) {
 		ChainId:                    4,
 	}
 
-	signedTxn, err := txn.Sign(sender)
+	signedTxn, err := txn.SignedTransaction(sender)
 	assert.NoError(t, err)
 
 	_, ok := signedTxn.Authenticator.Auth.(*Ed25519TransactionAuthenticator)
