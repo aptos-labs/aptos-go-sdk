@@ -12,7 +12,7 @@ const TransferAmount = 1_000
 // main This example shows you how to make an APT transfer transaction in the simplest possible way
 func main() {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos.NewClient(aptos.LocalnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}

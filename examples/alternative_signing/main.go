@@ -55,7 +55,7 @@ func (signer *AlternativeSigner) AuthKey() *crypto.AuthenticationKey {
 // main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
 func main() {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos.NewClient(aptos.LocalnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}

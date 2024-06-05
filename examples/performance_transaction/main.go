@@ -14,7 +14,7 @@ func main() {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos.NewClient(aptos.LocalnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
