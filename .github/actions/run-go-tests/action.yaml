@@ -11,6 +11,11 @@ runs:
     - uses: actions/setup-go@v5
       with:
         go-version: '>=1.22'
+    # Run a local testnet in the background. After this action runs the local testnet
+    # should be up and queryable. This also installs node and pnpm for us.
+    - uses: aptos-labs/actions/run-local-testnet@main
+      with:
+        PNPM_VERSION: 8.9.0
     # Run unit tests
     - shell: bash
       run: 'go vet ./...'
