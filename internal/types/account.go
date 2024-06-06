@@ -150,6 +150,9 @@ func (account *Account) PubKey() crypto.PublicKey {
 func (account *Account) AuthKey() *crypto.AuthenticationKey {
 	return account.Signer.AuthKey()
 }
+func (account *Account) AccountAddress() AccountAddress {
+	return account.Address
+}
 
 var ErrAddressTooShort = errors.New("AccountAddress too short")
 var ErrAddressTooLong = errors.New("AccountAddress too long")

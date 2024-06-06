@@ -19,6 +19,7 @@ Take a look at `examples/` for some examples of how to write clients.
 7. Fee payer support, with example
 8. Multi-agent support? And an example?
 9. On-chain Multi-sig support? and an example?
+10. Off-chain multi-sig support? and an example?
 
 ### Less important
 
@@ -26,4 +27,3 @@ Take a look at `examples/` for some examples of how to write clients.
 2. Move remaining files into packages, they are partially moved now to keep some separation of code
 3. Additional test coverage and examples
 4. Parallel submission? Instead of just serially (sequence number handling etc.)
-5. `DONE` Off-chain multi-sig support?

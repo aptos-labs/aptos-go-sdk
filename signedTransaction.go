@@ -3,7 +3,19 @@ package aptos
 import (
 	"errors"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
+
+// TransactionSigner is a generic interface for a way to sign transactions.  The default implementation is Account
+//
+// Note that AccountAddress is needed to be the correct on-chain value for proper signing.  This may differ from the
+// AuthKey provided by the crypto.Signer
+type TransactionSigner interface {
+	crypto.Signer
+
+	// AccountAddress returns the address of the signer, this may differ from the AuthKey derived from the inner signer
+	AccountAddress() AccountAddress
+}
 
 // SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
