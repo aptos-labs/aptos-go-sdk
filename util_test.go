@@ -21,7 +21,7 @@ func TestSHA3_256Hash(t *testing.T) {
 }
 
 func TestParseHex(t *testing.T) {
-	// TODO: Last case is very weird, unsure if we want to allow that
+	// Last case is needed from the JSON API, as an empty array comes out as just 0x
 	inputs := []string{"0x012345", "012345", "0x"}
 	expected := [][]byte{{0x01, 0x23, 0x45}, {0x01, 0x23, 0x45}, {}}
 

@@ -44,11 +44,9 @@ func Test_Ed25519_ScriptFlow(t *testing.T) {
 }
 
 func testTransaction(t *testing.T, createAccount func() (*Account, error), buildAndSignTransaction func(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error)) {
+	// All of these run against localnet
 	if testing.Short() {
-		// TODO: only run this in some integration mode set by environment variable?
-		// TODO: allow this to be harmlessly flaky if devnet is down?
-		// TODO: write a framework to optionally run things against `aptos node run-localnet`
-		t.Skip("integration test expects network connection to devnet in cloud")
+		t.Skip("integration test expects network connection to localnet")
 	}
 	// Create a client
 	client, err := createTestClient()

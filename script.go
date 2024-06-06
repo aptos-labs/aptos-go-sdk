@@ -25,7 +25,6 @@ func (sc *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
 }
 
 // ScriptArgument a Move script argument, which encodes its type with it
-// TODO: improve typing
 type ScriptArgument struct {
 	Variant ScriptArgumentVariant
 	Value   any

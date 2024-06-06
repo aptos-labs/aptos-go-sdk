@@ -3,7 +3,9 @@ package util
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"golang.org/x/crypto/sha3"
+	"math/big"
 	"strconv"
 	"strings"
 )
@@ -30,6 +32,15 @@ func BytesToHex(bytes []byte) string {
 
 func StrToUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, 10, 64)
+}
+
+func StrToBigInt(val string) (num *big.Int, err error) {
+	num = &big.Int{}
+	_, ok := num.SetString(val, 10)
+	if !ok {
+		return nil, fmt.Errorf("num %s is not an integer", val)
+	}
+	return num, nil
 }
 
 // PrettyJson a simple pretty print for JSON examples
