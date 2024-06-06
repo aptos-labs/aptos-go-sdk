@@ -267,7 +267,7 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transact
 		return
 	}
 
-	// Read body to JSON TODO: BCS
+	// Read body to JSON
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
@@ -306,7 +306,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 		return
 	}
 
-	// Read body to JSON TODO: BCS
+	// Read body to JSON
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
@@ -600,7 +600,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 	}, nil
 }
 
-// BuildTransaction builds a raw transaction for signing
+// BuildTransactionMultiAgent builds a raw transaction for signing with fee payer or multi-agent
 // Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
 
