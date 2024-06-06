@@ -29,6 +29,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add TransactionSigner
 - Fix FungibleAssetClient
 - Add predetermined payloads
+- Add support for deploying code
 
 # v0.1.0 (5/7/2024)
 
