@@ -189,8 +189,8 @@ func SerializeSingle[T any](value T, marshal func(ser *Serializer, input T)) (by
 	marshal(ser, value)
 	err = ser.Error()
 	if err != nil {
-		return
+		return nil, err
 	}
 	bytes = ser.ToBytes()
-	return
+	return bytes, nil
 }
