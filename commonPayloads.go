@@ -62,7 +62,7 @@ func FungibleAssetTransferPrimaryStoreEntryFunction(faMetadataAddress *AccountAd
 	}
 
 	// Build up the associated struct tag
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
+	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
 	typeTag := TypeTag{Value: structTag}
 
 	return &EntryFunction{
