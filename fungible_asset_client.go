@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
@@ -33,70 +32,36 @@ func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (fa
 
 // -- Entry functions -- //
 
-func (client *FungibleAssetClient) Transfer(sender *Account, senderStore *AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
-	// Encode inputs
-	var amountBytes [8]byte
-	binary.LittleEndian.PutUint64(amountBytes[:], amount)
-
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
-	typeTag := TypeTag{Value: structTag}
+func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+	payload, err := FungibleAssetTransferEntryFunction(client.metadataAddress, senderStore, receiverStore, amount)
+	if err != nil {
+		return nil, err
+	}
 
 	// Build transaction
-	_, err = client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
-		Module: ModuleId{
-			Address: AccountOne,
-			Name:    "fungible_asset",
-		},
-		Function: "transfer",
-		ArgTypes: []TypeTag{
-			typeTag,
-		},
-		Args: [][]byte{
-			senderStore[:],
-			receiverStore[:],
-			amountBytes[:],
-		},
-	}})
+	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
 	if err != nil {
 		return
 	}
 
 	// Sign transaction
-	// TODO: these will need to be reworked to support fee payer etc.
-	panic("To implement")
+
+	return rawTxn.SignedTransaction(sender)
 }
 
-func (client *FungibleAssetClient) TransferPrimaryStore(sender *Account, receiverAddress *AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
-	// Encode inputs
-	var amountBytes [8]byte
-	binary.LittleEndian.PutUint64(amountBytes[:], amount)
-
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "store"}
-	typeTag := TypeTag{Value: structTag}
-
+func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Build transaction
-	_, err = client.aptosClient.nodeClient.BuildTransaction(sender.Address, TransactionPayload{Payload: &EntryFunction{
-		Module: ModuleId{
-			Address: AccountOne,
-			Name:    "primary_fungible_store",
-		},
-		Function: "transfer",
-		ArgTypes: []TypeTag{
-			typeTag,
-		},
-		Args: [][]byte{
-			client.metadataAddress[:],
-			receiverAddress[:],
-			amountBytes[:],
-		},
-	}})
+	payload, err := FungibleAssetTransferPrimaryStoreEntryFunction(client.metadataAddress, receiverAddress, amount)
+	if err != nil {
+		return nil, err
+	}
+	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
 	if err != nil {
 		return
 	}
 
 	// Sign transaction
-	// TODO: these will need to be reworked to support fee payer etc.
-	panic("To implement")
+	return rawTxn.SignedTransaction(sender)
 }
 
 // -- View functions -- //

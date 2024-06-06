@@ -26,6 +26,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Breaking`] Change ledgerVersion arg to a uint64 to be more accurate to the possible inputs
 - Add single serialize functions to simplify duplicated code
 - [`Breaking`] Several transaction authenticator and authenticator types were changed on transaction submission
+- Add TransactionSigner
+- Fix FungibleAssetClient
+- Add predetermined payloads
 
 # v0.1.0 (5/7/2024)
 
