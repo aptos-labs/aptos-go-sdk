@@ -193,10 +193,12 @@ func Test_Struct(t *testing.T) {
 
 	// Serializer
 	for i, input := range deserialized {
-		value, err := Serialize(&input)
-		expected, _ := hex.DecodeString(serialized[i])
+		serializer := &Serializer{}
+		serializer.Struct(&input)
+		assert.NoError(t, serializer.Error())
+		expected, err := hex.DecodeString(serialized[i])
 		assert.NoError(t, err)
-		assert.Equal(t, expected, value)
+		assert.Equal(t, expected, serializer.ToBytes())
 	}
 
 	// Deserializer
@@ -372,6 +374,34 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.Equal(t, str, str2)
+
+	serializedBool, err := SerializeBool(true)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01}, serializedBool)
+
+	serializedU8, err := SerializeU8(1)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01}, serializedU8)
+
+	serializedU16, err := SerializeU16(2)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x02, 0x00}, serializedU16)
+
+	serializedU32, err := SerializeU32(3)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x03, 0x00, 0x00, 0x00}, serializedU32)
+
+	serializedU64, err := SerializeU64(4)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU64)
+
+	serializedU128, err := SerializeU128(*big.NewInt(5))
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU128)
+
+	serializedU256, err := SerializeU256(*big.NewInt(6))
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU256)
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
