@@ -402,6 +402,14 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	serializedU256, err := SerializeU256(*big.NewInt(6))
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU256)
+
+	serializedFixedBytes, err := SerializeFixedBytes([]byte{0x05})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x05}, serializedFixedBytes)
+
+	serializedBytes, err := SerializeBytes([]byte{0x05})
+	assert.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x05}, serializedBytes)
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
