@@ -30,7 +30,11 @@ func RawTransactionPrehash() []byte {
 type RawTransactionImpl interface {
 	bcs.Struct
 
+	// SigningMessage creates a raw signing message for the transaction
+	// Note that this should only be used externally if signing transactions outside the SDK.  Otherwise, use Sign.
 	SigningMessage() (message []byte, err error)
+
+	// Sign signs a transaction and returns the associated AccountAuthenticator, it will underlyingly sign the SigningMessage
 	Sign(signer crypto.Signer) (*crypto.AccountAuthenticator, error)
 }
 
