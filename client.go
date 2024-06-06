@@ -227,7 +227,7 @@ func (client *Client) EstimateGasPrice() (info EstimateGasInfo, err error) {
 }
 
 // AccountAPTBalance retrieves the APT balance in the account
-func (client *Client) AccountAPTBalance(address *AccountAddress) (uint64, error) {
+func (client *Client) AccountAPTBalance(address AccountAddress) (uint64, error) {
 	return client.nodeClient.AccountAPTBalance(address)
 }
 

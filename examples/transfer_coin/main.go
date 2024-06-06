@@ -37,11 +37,11 @@ func main() {
 		panic("Failed to fund alice:" + err.Error())
 	}
 
-	aliceBalance, err := client.AccountAPTBalance(&alice.Address)
+	aliceBalance, err := client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err := client.AccountAPTBalance(&bob.Address)
+	bobBalance, err := client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -67,11 +67,11 @@ func main() {
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	aliceBalance, err = client.AccountAPTBalance(&alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(&bob.Address)
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -113,11 +113,11 @@ func main() {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 
-	aliceBalance, err = client.AccountAPTBalance(&alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(&bob.Address)
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}

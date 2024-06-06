@@ -776,8 +776,8 @@ func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 	return
 }
 
-func (rc *NodeClient) AccountAPTBalance(account *AccountAddress) (balance uint64, err error) {
-	accountBytes, err := bcs.Serialize(account)
+func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64, err error) {
+	accountBytes, err := bcs.Serialize(&account)
 	if err != nil {
 		return 0, err
 	}
