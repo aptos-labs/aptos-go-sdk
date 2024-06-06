@@ -2,8 +2,10 @@ package aptos
 
 import (
 	"context"
+	"fmt"
 	"github.com/hasura/go-graphql-client"
 	"net/http"
+	"time"
 )
 
 // -- Note: all query parameters must start with capital letters --
@@ -77,4 +79,30 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 	}
 
 	return q.Processor_status[0].LastSuccessVersion, err
+}
+
+// WaitOnIndexer waits for the indexer processorName specified to catch up to the requestedVersion
+func (ic *IndexerClient) WaitOnIndexer(processorName string, requestedVersion uint64) error {
+	// TODO: add customizable timeout and sleep time
+	const sleepTime = 100 * time.Millisecond
+	const timeout = 5 * time.Second
+	startTime := time.Now()
+	for {
+		version, err := ic.GetProcessorStatus(processorName)
+		if err != nil {
+			// TODO: This should probably just retry, depending on the error
+			return err
+		}
+
+		// If we've caught up, skip out
+		if version >= requestedVersion {
+			break
+		} else if time.Since(startTime) > timeout {
+			return fmt.Errorf("timeout waiting on requested version.  last version seen: %d requested: %d", version, requestedVersion)
+		}
+
+		// Sleep and try again later
+		time.Sleep(sleepTime)
+	}
+	return nil
 }
