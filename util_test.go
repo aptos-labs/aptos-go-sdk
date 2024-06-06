@@ -5,6 +5,14 @@ import (
 	"testing"
 )
 
+var testConfig = LocalnetConfig
+
+// createTestClient to use for testing for only one place to configure the network
+// TODO: Allow overrides with environment variable?
+func createTestClient() (*Client, error) {
+	return NewClient(testConfig)
+}
+
 func TestSHA3_256Hash(t *testing.T) {
 	input := [][]byte{{0x1}, {0x2}, {0x3}}
 	expected, err := ParseHex("fd1780a6fc9ee0dab26ceb4b3941ab03e66ccd970d1db91612c66df4515b0a0a")
