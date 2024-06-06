@@ -14,6 +14,7 @@ func (mod *ModuleId) MarshalBCS(bcs *bcs.Serializer) {
 	mod.Address.MarshalBCS(bcs)
 	bcs.WriteString(mod.Name)
 }
+
 func (mod *ModuleId) UnmarshalBCS(bcs *bcs.Deserializer) {
 	mod.Address.UnmarshalBCS(bcs)
 	mod.Name = bcs.ReadString()

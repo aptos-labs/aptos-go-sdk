@@ -41,7 +41,7 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	params.Set("address", address.String())
 	mintUrl.RawQuery = params.Encode()
 
-	// Make request fo rfunds
+	// Make request for funds
 	response, err := faucetClient.nodeClient.Post(mintUrl.String(), "text/plain", nil)
 	if err != nil {
 		return err
