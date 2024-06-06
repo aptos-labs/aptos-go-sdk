@@ -183,6 +183,18 @@ func SerializeU256(input big.Int) ([]byte, error) {
 	})
 }
 
+func SerializeFixedBytes(input []byte) ([]byte, error) {
+	return SerializeSingle(input, func(ser *Serializer, input []byte) {
+		ser.FixedBytes(input)
+	})
+}
+
+func SerializeBytes(input []byte) ([]byte, error) {
+	return SerializeSingle(input, func(ser *Serializer, input []byte) {
+		ser.WriteBytes(input)
+	})
+}
+
 // SerializeSingle is a convenience function, to not have to create a serializer to serialize one value
 func SerializeSingle[T any](value T, marshal func(ser *Serializer, input T)) (bytes []byte, err error) {
 	ser := &Serializer{}
