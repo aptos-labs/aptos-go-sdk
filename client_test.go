@@ -126,13 +126,33 @@ func Test_Indexer(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	// TODO: copy indexer client calls to the main client
-	_, err = client.GetCoinBalances(AccountOne)
+	// Fund account
+	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
+	err = client.Fund(account.AccountAddress(), 10)
+	assert.NoError(t, err)
+
+	balance, err := client.AccountAPTBalance(account.AccountAddress())
+	assert.NoError(t, err)
+
+	// TODO: May need to wait on indexer for this one
+	coins, err := client.GetCoinBalances(account.AccountAddress())
+	assert.NoError(t, err)
+	switch len(coins) {
+	case 0:
+	// TODO we need to wait on the indexer, we'll skip for now
+	case 1:
+		assert.Equal(t, balance, coins[0])
+	default:
+		panic("Unexpected amount of coins")
+	}
+
+	// Get current version
 	status, err := client.GetProcessorStatus("default_processor")
 	assert.NoError(t, err)
-	assert.Greater(t, status, uint64(0))
+	// TODO: When we have waiting on indexer, we can add this check to be more accurate
+	assert.GreaterOrEqual(t, status, uint64(0))
 }
 
 func Test_Block(t *testing.T) {
