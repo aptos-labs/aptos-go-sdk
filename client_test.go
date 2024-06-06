@@ -141,7 +141,12 @@ func Test_Indexer(t *testing.T) {
 	case 0:
 	// TODO we need to wait on the indexer, we'll skip for now
 	case 1:
-		assert.Equal(t, balance, coins[0])
+		expectedBalance := CoinBalance{
+			CoinType: "0x1::aptos_coin::AptosCoin",
+			Amount:   balance,
+		}
+
+		assert.Equal(t, expectedBalance, coins[0])
 	default:
 		panic("Unexpected amount of coins")
 	}
