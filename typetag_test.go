@@ -80,3 +80,12 @@ func TestStructTag(t *testing.T) {
 	}})
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin,0x3::other::thing>", st.String())
 }
+
+func TestInvalidTypeTag(t *testing.T) {
+	serializer := &bcs.Serializer{}
+	serializer.Uleb128(uint32(65535))
+	bytes := serializer.ToBytes()
+	tag := &TypeTag{}
+	err := bcs.Deserialize(tag, bytes)
+	assert.Error(t, err)
+}
