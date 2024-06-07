@@ -6,47 +6,43 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-// TransactionPayload the actual instructions of which functions to call on chain
-type TransactionPayload struct {
-	Payload bcs.Struct
+type TransactionPayloadImpl interface {
+	bcs.Struct
+	PayloadType() TransactionPayloadVariant // This is specifically to ensure that wrong types don't end up here
 }
 
+// TransactionPayload the actual instructions of which functions to call on chain
+type TransactionPayload struct {
+	Payload TransactionPayloadImpl
+}
+
+type TransactionPayloadVariant uint32
+
 const (
-	TransactionPayloadScript        = 0
-	TransactionPayloadModuleBundle  = 1 // Deprecated
-	TransactionPayloadEntryFunction = 2
-	TransactionPayloadMultisig      = 3
+	TransactionPayloadVariantScript        TransactionPayloadVariant = 0
+	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = 1 // Deprecated
+	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = 2
+	TransactionPayloadVariantMultisig      TransactionPayloadVariant = 3
 )
 
 func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
-	switch p := txn.Payload.(type) {
-	case *Script:
-		bcs.Uleb128(TransactionPayloadScript)
-		p.MarshalBCS(bcs)
-	case *ModuleBundle:
-		// Deprecated, this never was used in production, and we will just drop it
-		bcs.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
-	case *EntryFunction:
-		bcs.Uleb128(TransactionPayloadEntryFunction)
-		p.MarshalBCS(bcs)
-	default:
-		bcs.SetError(fmt.Errorf("bad txn payload, %T", txn.Payload))
-	}
+	bcs.Uleb128(uint32(txn.Payload.PayloadType()))
+	txn.Payload.MarshalBCS(bcs)
 }
 func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
-	kind := bcs.Uleb128()
-	switch kind {
-	case TransactionPayloadScript:
+	payloadType := TransactionPayloadVariant(bcs.Uleb128())
+	switch payloadType {
+	case TransactionPayloadVariantScript:
 		txn.Payload = &Script{}
-	case TransactionPayloadModuleBundle:
+	case TransactionPayloadVariantModuleBundle:
 		// Deprecated, should never be in production
 		bcs.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
-	case TransactionPayloadEntryFunction:
+	case TransactionPayloadVariantEntryFunction:
 		txn.Payload = &EntryFunction{}
-	case TransactionPayloadMultisig:
+	case TransactionPayloadVariantMultisig:
 		txn.Payload = &Multisig{}
 	default:
-		bcs.SetError(fmt.Errorf("bad txn payload kind, %d", kind))
+		bcs.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
 	}
 
 	txn.Payload.UnmarshalBCS(bcs)
@@ -54,6 +50,10 @@ func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
 
 // ModuleBundle is long deprecated and no longer used, but exist as an enum position in TransactionPayload
 type ModuleBundle struct {
+}
+
+func (txn *ModuleBundle) PayloadType() TransactionPayloadVariant {
+	return TransactionPayloadVariantModuleBundle
 }
 
 func (txn *ModuleBundle) MarshalBCS(bcs *bcs.Serializer) {
@@ -69,6 +69,10 @@ type EntryFunction struct {
 	Function string
 	ArgTypes []TypeTag
 	Args     [][]byte
+}
+
+func (sf *EntryFunction) PayloadType() TransactionPayloadVariant {
+	return TransactionPayloadVariantEntryFunction
 }
 
 func (sf *EntryFunction) MarshalBCS(serializer *bcs.Serializer) {
@@ -95,6 +99,10 @@ func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
 type Multisig struct {
 	MultisigAddress AccountAddress
 	Payload         *MultisigTransactionPayload // Optional
+}
+
+func (sf *Multisig) PayloadType() TransactionPayloadVariant {
+	return TransactionPayloadVariantMultisig
 }
 
 func (sf *Multisig) MarshalBCS(serializer *bcs.Serializer) {

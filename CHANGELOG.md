@@ -30,6 +30,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Fix FungibleAssetClient
 - Add predetermined payloads
 - Add support for deploying code
+- Add support for on-chain multisig with an example
 
 # v0.1.0 (5/7/2024)
 
