@@ -15,7 +15,7 @@ type Serializer struct {
 
 // Serialize serializes a single item
 func Serialize(value Marshaler) (bytes []byte, err error) {
-	return SerializeSingle(value, func(ser *Serializer, value Marshaler) {
+	return SerializeSingle(func(ser *Serializer) {
 		value.MarshalBCS(ser)
 	})
 }
@@ -126,79 +126,90 @@ func (ser *Serializer) Reset() {
 
 // SerializeSequence serializes a sequence of Marshaler implemented types.  Prefixed with the length of the sequence
 func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
-	ser.Uleb128(uint32(len(array)))
-	for i, v := range array {
+	SerializeSequenceWithFunction(array, ser, func(ser *Serializer, item T) {
 		// Check if by value is Marshaler
-		mv, ok := any(v).(Marshaler)
+		mv, ok := any(item).(Marshaler)
 		if ok {
 			mv.MarshalBCS(ser)
-			continue
+			return
 		}
 		// Check if by reference is Marshaler
-		mv, ok = any(&v).(Marshaler)
+		mv, ok = any(&item).(Marshaler)
 		if ok {
 			mv.MarshalBCS(ser)
-			continue
+			return
 		}
-		ser.SetError(fmt.Errorf("could not serialize sequence[%d] member of %T", i, v))
 		return
+	})
+}
+
+// SerializeSequenceWithFunction allows custom serialization of a sequence, which can be useful for non-bcs.Struct types
+func SerializeSequenceWithFunction[AT []T, T any](array AT, ser *Serializer, serialize func(ser *Serializer, item T)) {
+	ser.Uleb128(uint32(len(array)))
+	for i, v := range array {
+		serialize(ser, v)
+		// Exit early if there's an error
+		if ser.Error() != nil {
+			ser.SetError(fmt.Errorf("could not serialize sequence[%d] member of %T %w", i, v, ser.Error()))
+			return
+		}
 	}
 }
 
+func SerializeSequenceOnly[AT []T, T any](input AT) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		SerializeSequence(input, ser)
+	})
+}
+
 func SerializeBool(input bool) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num bool) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.Bool(input)
 	})
 }
 
 func SerializeU8(input uint8) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num uint8) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U8(input)
 	})
 }
 
 func SerializeU16(input uint16) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num uint16) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U16(input)
 	})
 }
 func SerializeU32(input uint32) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num uint32) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U32(input)
 	})
 }
 func SerializeU64(input uint64) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num uint64) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U64(input)
 	})
 }
 func SerializeU128(input big.Int) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num big.Int) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U128(input)
 	})
 }
 func SerializeU256(input big.Int) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, num big.Int) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.U256(input)
 	})
 }
 
-func SerializeFixedBytes(input []byte) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, input []byte) {
-		ser.FixedBytes(input)
-	})
-}
-
 func SerializeBytes(input []byte) ([]byte, error) {
-	return SerializeSingle(input, func(ser *Serializer, input []byte) {
+	return SerializeSingle(func(ser *Serializer) {
 		ser.WriteBytes(input)
 	})
 }
 
 // SerializeSingle is a convenience function, to not have to create a serializer to serialize one value
-func SerializeSingle[T any](value T, marshal func(ser *Serializer, input T)) (bytes []byte, err error) {
+func SerializeSingle(marshal func(ser *Serializer)) (bytes []byte, err error) {
 	ser := &Serializer{}
-	marshal(ser, value)
+	marshal(ser)
 	err = ser.Error()
 	if err != nil {
 		return nil, err

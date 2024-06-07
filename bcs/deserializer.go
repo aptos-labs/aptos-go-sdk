@@ -215,19 +215,28 @@ func (des *Deserializer) Struct(v Unmarshaler) {
 }
 
 // DeserializeSequence deserializes an Unmarshaler implementation array
+// TODO: can T be of type Unmarshaler?
 func DeserializeSequence[T any](des *Deserializer) []T {
+	return DeserializeSequenceWithFunction(des, func(des *Deserializer, out *T) {
+		mv, ok := any(out).(Unmarshaler)
+		if ok {
+			mv.UnmarshalBCS(des)
+		}
+	})
+}
+
+// DeserializeSequenceWithFunction deserializes any array with the given function
+func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(des *Deserializer, out *T)) []T {
 	length := des.Uleb128()
 	if des.Error() != nil {
 		return nil
 	}
 	out := make([]T, length)
 	for i := 0; i < int(length); i++ {
-		v := &(out[i])
-		mv, ok := any(v).(Unmarshaler)
-		if ok {
-			mv.UnmarshalBCS(des)
-		} else {
-			des.setError("could not deserialize sequence[%d] member of %T", i, v)
+		deserialize(des, &out[i])
+
+		if des.Error() != nil {
+			des.setError("could not deserialize sequence[%d] member of %w", i, des.Error())
 			return nil
 		}
 	}

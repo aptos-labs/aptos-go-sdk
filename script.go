@@ -12,6 +12,10 @@ type Script struct {
 	Args     []ScriptArgument
 }
 
+func (sf *Script) PayloadType() TransactionPayloadVariant {
+	return TransactionPayloadVariantScript
+}
+
 func (sc *Script) MarshalBCS(serializer *bcs.Serializer) {
 	serializer.WriteBytes(sc.Code)
 	bcs.SerializeSequence(sc.ArgTypes, serializer)

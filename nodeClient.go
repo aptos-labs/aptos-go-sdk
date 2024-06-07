@@ -321,31 +321,8 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
 // Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
 // Accept option arguments PollPeriod and PollTimeout like PollForTransactions.
-func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.Transaction, err error) {
-	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 1*time.Second, options...)
-	if err != nil {
-		return nil, err
-	}
-	restUrl := rc.baseUrl.JoinPath("transactions/wait_by_hash", txnHash)
-	start := time.Now()
-	deadline := start.Add(timeout)
-	for {
-		data, err = rc.getTransactionCommon(restUrl)
-		if err == nil {
-			return
-		}
-		var httpErr *HttpError
-		if errors.As(err, &httpErr) {
-			if httpErr.StatusCode == 404 {
-				if time.Now().Before(deadline) {
-					time.Sleep(period)
-				} else {
-					return
-				}
-			}
-		}
-	}
-
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
+	return rc.PollForTransaction(txnHash, options...)
 }
 
 // PollPeriod is an option to PollForTransactions
@@ -369,6 +346,31 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 		}
 	}
 	return
+}
+
+func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
+	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
+	if err != nil {
+		return nil, err
+	}
+	start := time.Now()
+	deadline := start.Add(timeout)
+	for {
+		if time.Now().After(deadline) {
+			return nil, errors.New("timeout waiting for faucet transactions")
+		}
+		time.Sleep(period)
+		txn, err := rc.TransactionByHash(hash)
+		if err == nil {
+			if txn.Type == api.TransactionVariantPendingTransaction {
+				// not done yet!
+			} else if txn.Type == api.TransactionVariantUserTransaction {
+				// done!
+				slog.Debug("txn done", "hash", hash)
+				return txn.UserTransaction()
+			}
+		}
+	}
 }
 
 // PollForTransactions waits up to 10 seconds for transactions to be done, polling at 10Hz
