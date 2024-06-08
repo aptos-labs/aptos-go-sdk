@@ -10,12 +10,12 @@ type ModuleId struct {
 	Name    string
 }
 
-func (mod *ModuleId) MarshalBCS(bcs *bcs.Serializer) {
-	mod.Address.MarshalBCS(bcs)
-	bcs.WriteString(mod.Name)
+func (mod *ModuleId) MarshalBCS(ser *bcs.Serializer) {
+	mod.Address.MarshalBCS(ser)
+	ser.WriteString(mod.Name)
 }
 
-func (mod *ModuleId) UnmarshalBCS(bcs *bcs.Deserializer) {
-	mod.Address.UnmarshalBCS(bcs)
-	mod.Name = bcs.ReadString()
+func (mod *ModuleId) UnmarshalBCS(des *bcs.Deserializer) {
+	mod.Address.UnmarshalBCS(des)
+	mod.Name = des.ReadString()
 }

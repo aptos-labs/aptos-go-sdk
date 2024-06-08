@@ -66,13 +66,13 @@ func (txn *SignedTransaction) Hash() ([]byte, error) {
 
 //region SignedTransaction bcs.Struct
 
-func (txn *SignedTransaction) MarshalBCS(bcs *bcs.Serializer) {
-	txn.Transaction.MarshalBCS(bcs)
-	txn.Authenticator.MarshalBCS(bcs)
+func (txn *SignedTransaction) MarshalBCS(ser *bcs.Serializer) {
+	txn.Transaction.MarshalBCS(ser)
+	txn.Authenticator.MarshalBCS(ser)
 }
-func (txn *SignedTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
-	txn.Transaction.UnmarshalBCS(bcs)
-	txn.Authenticator.UnmarshalBCS(bcs)
+func (txn *SignedTransaction) UnmarshalBCS(des *bcs.Deserializer) {
+	txn.Transaction.UnmarshalBCS(des)
+	txn.Authenticator.UnmarshalBCS(des)
 }
 
 //endregion

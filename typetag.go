@@ -45,13 +45,13 @@ func (tt *TypeTag) String() string {
 
 //region TypeTag bcs.Struct
 
-func (tt *TypeTag) MarshalBCS(bcs *bcs.Serializer) {
+func (tt *TypeTag) MarshalBCS(ser *bcs.Serializer) {
 	if tt.Value == nil {
-		bcs.SetError(fmt.Errorf("nil TypeTag"))
+		ser.SetError(fmt.Errorf("nil TypeTag"))
 		return
 	}
-	bcs.Uleb128(uint32(tt.Value.GetType()))
-	bcs.Struct(tt.Value)
+	ser.Uleb128(uint32(tt.Value.GetType()))
+	ser.Struct(tt.Value)
 }
 
 func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
@@ -330,13 +330,13 @@ func (xt *VectorTag) String() string {
 
 //region TypeTagVector bcs.Struct
 
-func (xt *VectorTag) MarshalBCS(serializer *bcs.Serializer) {
-	serializer.Struct(&xt.TypeParam)
+func (xt *VectorTag) MarshalBCS(ser *bcs.Serializer) {
+	ser.Struct(&xt.TypeParam)
 }
 
-func (xt *VectorTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
+func (xt *VectorTag) UnmarshalBCS(des *bcs.Deserializer) {
 	var tag TypeTag
-	tag.UnmarshalBCS(deserializer)
+	tag.UnmarshalBCS(des)
 	xt.TypeParam = tag
 }
 
@@ -385,17 +385,17 @@ func (xt *StructTag) String() string {
 
 //region StructTag bcs.Struct
 
-func (xt *StructTag) MarshalBCS(serializer *bcs.Serializer) {
-	xt.Address.MarshalBCS(serializer)
-	serializer.WriteString(xt.Module)
-	serializer.WriteString(xt.Name)
-	bcs.SerializeSequence(xt.TypeParams, serializer)
+func (xt *StructTag) MarshalBCS(ser *bcs.Serializer) {
+	xt.Address.MarshalBCS(ser)
+	ser.WriteString(xt.Module)
+	ser.WriteString(xt.Name)
+	bcs.SerializeSequence(xt.TypeParams, ser)
 }
-func (xt *StructTag) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	xt.Address.UnmarshalBCS(deserializer)
-	xt.Module = deserializer.ReadString()
-	xt.Name = deserializer.ReadString()
-	xt.TypeParams = bcs.DeserializeSequence[TypeTag](deserializer)
+func (xt *StructTag) UnmarshalBCS(des *bcs.Deserializer) {
+	xt.Address.UnmarshalBCS(des)
+	xt.Module = des.ReadString()
+	xt.Name = des.ReadString()
+	xt.TypeParams = bcs.DeserializeSequence[TypeTag](des)
 }
 
 //endregion
