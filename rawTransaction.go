@@ -278,6 +278,7 @@ func (txn *RawTransactionWithData) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Inner = &MultiAgentWithFeePayerRawTransactionWithData{}
 	default:
 		des.SetError(fmt.Errorf("unknown RawTransactionWithData variant %d", txn.Variant))
+		return
 	}
 	des.Struct(txn.Inner)
 }

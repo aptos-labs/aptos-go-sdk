@@ -45,12 +45,14 @@ func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	case TransactionPayloadVariantModuleBundle:
 		// Deprecated, should never be in production
 		des.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
+		return
 	case TransactionPayloadVariantEntryFunction:
 		txn.Payload = &EntryFunction{}
 	case TransactionPayloadVariantMultisig:
 		txn.Payload = &Multisig{}
 	default:
 		des.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
+		return
 	}
 
 	txn.Payload.UnmarshalBCS(des)
@@ -191,6 +193,7 @@ func (sf *MultisigTransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 		sf.Payload = &EntryFunction{}
 	default:
 		des.SetError(fmt.Errorf("bad variant %d for MultisigTransactionPayload", variant))
+		return
 	}
 	des.Struct(sf.Payload)
 }
