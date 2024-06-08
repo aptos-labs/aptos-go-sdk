@@ -2,9 +2,8 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"testing"
-
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
 func TestTypeTag(t *testing.T) {
@@ -40,7 +39,7 @@ func TestTypeTagIdentities(t *testing.T) {
 	checkVariant(t, NewStringTag(), TypeTagStruct, "0x1::string::String")
 }
 
-func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagType, expectedString string) {
+func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagVariant, expectedString string) {
 	assert.Equal(t, expectedType, tag.GetType())
 	assert.Equal(t, expectedString, tag.String())
 
