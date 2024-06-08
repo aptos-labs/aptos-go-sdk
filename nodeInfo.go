@@ -28,6 +28,7 @@ func (info NodeInfo) Epoch() uint64 {
 	return value
 }
 
+// LedgerTimestamp is the timestamp the block was committed
 func (info NodeInfo) LedgerTimestamp() uint64 {
 	value, err := strconv.ParseUint(info.LedgerTimestampStr, 10, 64)
 	if err != nil {
