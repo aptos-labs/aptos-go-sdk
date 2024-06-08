@@ -33,7 +33,7 @@ func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (fa
 // -- Entry functions -- //
 
 func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
-	payload, err := FungibleAssetTransferEntryFunction(client.metadataAddress, senderStore, receiverStore, amount)
+	payload, err := FungibleAssetTransferPayload(client.metadataAddress, senderStore, receiverStore, amount)
 	if err != nil {
 		return nil, err
 	}
@@ -51,7 +51,7 @@ func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStor
 
 func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Build transaction
-	payload, err := FungibleAssetTransferPrimaryStoreEntryFunction(client.metadataAddress, receiverAddress, amount)
+	payload, err := FungibleAssetPrimaryStoreTransferPayload(client.metadataAddress, receiverAddress, amount)
 	if err != nil {
 		return nil, err
 	}

@@ -10,10 +10,10 @@ import (
  * because FeePayer, and Multi-sig transactions will use these payloads, in addition to SingleSigner transactions
  */
 
-// CoinTransferEntryFunction builds an EntryFunction payload for transferring coins
+// CoinTransferPayload builds an EntryFunction payload for transferring coins
 //
 // For coinType, if none is provided, it will transfer 0x1::aptos_coin:AptosCoin
-func CoinTransferEntryFunction(coinType *TypeTag, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
+func CoinTransferPayload(coinType *TypeTag, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	amountBytes, err := bcs.SerializeU64(amount)
 	if err != nil {
 		return nil, err
@@ -48,11 +48,11 @@ func CoinTransferEntryFunction(coinType *TypeTag, dest AccountAddress, amount ui
 	}
 }
 
-// FungibleAssetTransferPrimaryStoreEntryFunction builds an EntryFunction payload to transfer between two primary stores
-// This is similar to CoinTransferEntryFunction
+// FungibleAssetPrimaryStoreTransferPayload builds an EntryFunction payload to transfer between two primary stores
+// This is similar to CoinTransferPayload
 //
 // For now, if metadata is nil, then it will fail to build, but in the future, APT will be the default
-func FungibleAssetTransferPrimaryStoreEntryFunction(faMetadataAddress *AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
+func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")
 	}
@@ -80,10 +80,10 @@ func FungibleAssetTransferPrimaryStoreEntryFunction(faMetadataAddress *AccountAd
 	}, nil
 }
 
-// FungibleAssetTransferEntryFunction builds an EntryFunction payload to transfer between two fungible asset stores
+// FungibleAssetTransferPayload builds an EntryFunction payload to transfer between two fungible asset stores
 //
 // For now, if metadata is nil, then it will fail to build, but in the future, APT will be the default
-func FungibleAssetTransferEntryFunction(faMetadataAddress *AccountAddress, source AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
+func FungibleAssetTransferPayload(faMetadataAddress *AccountAddress, source AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")
 	}
