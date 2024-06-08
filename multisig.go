@@ -27,7 +27,11 @@ func (client *Client) FetchNextMultisigAddress(address AccountAddress) (*Account
 
 // -- Multisig payloads --
 
-func CreateMultisigAccountPayload(requiredSigners uint64, additionalAddresses []AccountAddress, metadataKeys []string, metadataValues []byte) (*EntryFunction, error) {
+// MultisigCreateAccountPayload creates a payload for setting up a multisig
+//
+// Required signers must be between 1 and the number of addresses total (sender + additional addresses).
+// Metadata values must be BCS encoded values
+func MultisigCreateAccountPayload(requiredSigners uint64, additionalAddresses []AccountAddress, metadataKeys []string, metadataValues []byte) (*EntryFunction, error) {
 	// Serialize arguments
 	additionalOwners, err := bcs.SerializeSequenceOnly(additionalAddresses)
 	if err != nil {
@@ -64,15 +68,20 @@ func CreateMultisigAccountPayload(requiredSigners uint64, additionalAddresses []
 		}}, nil
 }
 
-func MultisigCreateAddOwnerTransaction(owner AccountAddress) *EntryFunction {
+// MultisigAddOwnerPayload creates a payload to add an owner from the multisig
+func MultisigAddOwnerPayload(owner AccountAddress) *EntryFunction {
 	return multisigOwnerPayloadCommon("add_owner", owner)
 }
 
-func MultisigCreateRemoveOwnerTransaction(owner AccountAddress) *EntryFunction {
+// MultisigRemoveOwnerPayload creates a payload to remove an owner from the multisig
+func MultisigRemoveOwnerPayload(owner AccountAddress) *EntryFunction {
 	return multisigOwnerPayloadCommon("remove_owner", owner)
 }
 
-func MultisigCreateChangeThresholdTransaction(numSignaturesRequired uint64) (*EntryFunction, error) {
+// MultisigChangeThresholdPayload creates a payload to change the number of signatures required for a transaction to pass.
+//
+// For example, changing a 2-of-3 to a 3-of-3, the value for numSignaturesRequired would be 3
+func MultisigChangeThresholdPayload(numSignaturesRequired uint64) (*EntryFunction, error) {
 	thresholdBytes, err := bcs.SerializeU64(numSignaturesRequired)
 	if err != nil {
 		return nil, err
@@ -85,7 +94,12 @@ func MultisigCreateChangeThresholdTransaction(numSignaturesRequired uint64) (*En
 	}, nil
 }
 
-func MultisigCreateTransactionWithPayload(multisigAddress AccountAddress, payload *MultisigTransactionPayload) (*EntryFunction, error) {
+// MultisigCreateTransactionPayload creates a transaction to be voted upon in an on-chain multisig
+//
+// Note, this serializes an EntryFunction payload, and sends it as an argument in the transaction.  If the
+// entry function payload is large, use MultisigCreateTransactionPayloadWithHash.  The advantage of this over the
+// hash version, is visibility on-chain.
+func MultisigCreateTransactionPayload(multisigAddress AccountAddress, payload *MultisigTransactionPayload) (*EntryFunction, error) {
 	payloadBytes, err := bcs.Serialize(payload)
 	if err != nil {
 		return nil, err
@@ -95,7 +109,11 @@ func MultisigCreateTransactionWithPayload(multisigAddress AccountAddress, payloa
 	return multisigTransactionCommon("create_transaction", multisigAddress, [][]byte{payloadBytes2}), nil
 }
 
-func MultisigCreateTransactionWithHash(multisigAddress AccountAddress, payload *MultisigTransactionPayload) (*EntryFunction, error) {
+// MultisigCreateTransactionPayloadWithHash creates a transaction to be voted upon in an on-chain multisig
+//
+// This differs from MultisigCreateTransactionPayload by instead taking a SHA3-256 hash of the payload and using that as
+// the identifier of the transaction.  The transaction intent will not be stored on-chain, only the hash of it.
+func MultisigCreateTransactionPayloadWithHash(multisigAddress AccountAddress, payload *MultisigTransactionPayload) (*EntryFunction, error) {
 	payloadBytes, err := bcs.Serialize(payload)
 	if err != nil {
 		return nil, err
@@ -107,14 +125,19 @@ func MultisigCreateTransactionWithHash(multisigAddress AccountAddress, payload *
 	return multisigTransactionCommon("create_transaction_with_hash", multisigAddress, [][]byte{hashBytes}), nil
 }
 
-func MultisigApproveTransaction(multisigAddress AccountAddress, transactionId uint64) (*EntryFunction, error) {
+// MultisigApprovePayload generates a payload for approving a transaction on-chain.  The caller must be an owner of the
+// multisig
+func MultisigApprovePayload(multisigAddress AccountAddress, transactionId uint64) (*EntryFunction, error) {
 	return multisigTransactionWithTransactionIdCommon("approve_transaction", multisigAddress, transactionId)
 }
 
-func MultisigRejectTransaction(multisigAddress AccountAddress, transactionId uint64) (*EntryFunction, error) {
+// MultisigRejectPayload generates a payload for rejecting a transaction on-chain.  The caller must be an owner of the
+// multisig
+func MultisigRejectPayload(multisigAddress AccountAddress, transactionId uint64) (*EntryFunction, error) {
 	return multisigTransactionWithTransactionIdCommon("reject_transaction", multisigAddress, transactionId)
 }
 
+// multisigTransactionWithTransactionIdCommon is a helper for functions that take TransactionId
 func multisigTransactionWithTransactionIdCommon(functionName string, multisigAddress AccountAddress, transactionId uint64) (*EntryFunction, error) {
 	transactionIdBytes, err := bcs.SerializeU64(transactionId)
 	if err != nil {
@@ -123,6 +146,7 @@ func multisigTransactionWithTransactionIdCommon(functionName string, multisigAdd
 	return multisigTransactionCommon(functionName, multisigAddress, [][]byte{transactionIdBytes}), nil
 }
 
+// multisigOwnerPayloadCommon is a helper for owner based multisig operations
 func multisigTransactionCommon(functionName string, multisigAddress AccountAddress, additionalArgs [][]byte) *EntryFunction {
 	return &EntryFunction{
 		Module: ModuleId{
@@ -135,6 +159,7 @@ func multisigTransactionCommon(functionName string, multisigAddress AccountAddre
 	}
 }
 
+// multisigOwnerPayloadCommon is a helper for owner based multisig operations
 func multisigOwnerPayloadCommon(functionName string, owner AccountAddress) *EntryFunction {
 	return &EntryFunction{
 		Module:   ModuleId{Address: AccountOne, Name: "multisig_account"},
