@@ -12,13 +12,12 @@ func PublishPackagePayloadFromJsonFile(metadata []byte, bytecode [][]byte) (*Tra
 		return nil, err
 	}
 
-	// TODO: Arrays should be easier than this
-	serializer := &bcs.Serializer{}
-	serializer.Uleb128(uint32(len(bytecode)))
-	for _, b := range bytecode {
-		serializer.WriteBytes(b)
+	bytecodeBytes, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+		bcs.SerializeSequenceWithFunction(bytecode, ser, (*bcs.Serializer).WriteBytes)
+	})
+	if err != nil {
+		return nil, err
 	}
-	bytecodeBytes := serializer.ToBytes()
 
 	return &TransactionPayload{Payload: &EntryFunction{
 		Module: ModuleId{
