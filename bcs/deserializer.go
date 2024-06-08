@@ -246,7 +246,7 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	return out
 }
 
-// setError sets the deserialization error
+// setError overrides the previous error, this can only be called from within the bcs package
 func (des *Deserializer) setError(msg string, args ...any) {
 	if des.err != nil {
 		return
