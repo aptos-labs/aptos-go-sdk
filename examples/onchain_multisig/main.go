@@ -177,7 +177,7 @@ func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddr
 	if err != nil {
 		panic("Failed to serialize metadata value" + err.Error())
 	}
-	payload, err := aptos.CreateMultisigAccountPayload(
+	payload, err := aptos.MultisigCreateAccountPayload(
 		2,                   // Required signers
 		additionalAddresses, // Other owners
 		[]string{"example"}, // Metadata keys
@@ -221,7 +221,7 @@ func createMultisigTransferTransaction(client *aptos.Client, sender *aptos.Accou
 		Payload: entryFunctionPayload,
 	}
 
-	createTransactionPayload, err := aptos.MultisigCreateTransactionWithPayload(multisigAddress, multisigPayload)
+	createTransactionPayload, err := aptos.MultisigCreateTransactionPayload(multisigAddress, multisigPayload)
 	if err != nil {
 		panic("Failed to create payload to create transaction for multisig transfer: " + err.Error())
 	}
@@ -241,17 +241,17 @@ func createMultisigTransferTransactionWithHash(client *aptos.Client, sender *apt
 }
 
 func addOwnerTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, newOwner aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload := aptos.MultisigCreateAddOwnerTransaction(newOwner)
+	entryFunctionPayload := aptos.MultisigAddOwnerPayload(newOwner)
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
 func removeOwnerTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, removedOwner aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload := aptos.MultisigCreateRemoveOwnerTransaction(removedOwner)
+	entryFunctionPayload := aptos.MultisigRemoveOwnerPayload(removedOwner)
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
 func changeThresholdTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, numSignaturesRequired uint64) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.MultisigCreateChangeThresholdTransaction(numSignaturesRequired)
+	entryFunctionPayload, err := aptos.MultisigChangeThresholdPayload(numSignaturesRequired)
 	if err != nil {
 		panic("Failed to create payload for multisig remove owner: " + err.Error())
 	}
@@ -265,7 +265,7 @@ func createTransactionPayloadCommon(client *aptos.Client, sender *aptos.Account,
 		Payload: entryFunctionPayload,
 	}
 
-	createTransactionPayload, err := aptos.MultisigCreateTransactionWithHash(multisigAddress, multisigPayload)
+	createTransactionPayload, err := aptos.MultisigCreateTransactionPayloadWithHash(multisigAddress, multisigPayload)
 	if err != nil {
 		panic("Failed to create payload to create transaction for multisig: " + err.Error())
 	}
@@ -276,13 +276,13 @@ func createTransactionPayloadCommon(client *aptos.Client, sender *aptos.Account,
 }
 
 func rejectAndApprove(client *aptos.Client, multisigAddress aptos.AccountAddress, rejector *aptos.Account, approver *aptos.Account, transactionId uint64) {
-	rejectPayload, err := aptos.MultisigRejectTransaction(multisigAddress, transactionId)
+	rejectPayload, err := aptos.MultisigRejectPayload(multisigAddress, transactionId)
 	if err != nil {
 		panic("Failed to build reject transaction payload: " + err.Error())
 	}
 	submitAndWait(client, rejector, rejectPayload)
 
-	approvePayload, err := aptos.MultisigApproveTransaction(multisigAddress, transactionId)
+	approvePayload, err := aptos.MultisigApprovePayload(multisigAddress, transactionId)
 	if err != nil {
 		panic("Failed to build approve transaction payload: " + err.Error())
 	}
