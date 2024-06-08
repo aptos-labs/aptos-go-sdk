@@ -221,6 +221,9 @@ func DeserializeSequence[T any](des *Deserializer) []T {
 		mv, ok := any(out).(Unmarshaler)
 		if ok {
 			mv.UnmarshalBCS(des)
+		} else {
+			// If it isn't of type Unmarshaler, we pass up an error
+			des.setError("type is not Unmarshaler")
 		}
 	})
 }
