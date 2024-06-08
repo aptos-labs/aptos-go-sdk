@@ -6,6 +6,17 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
+//region TransactionPayload
+
+type TransactionPayloadVariant uint32
+
+const (
+	TransactionPayloadVariantScript        TransactionPayloadVariant = 0
+	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = 1 // Deprecated
+	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = 2
+	TransactionPayloadVariantMultisig      TransactionPayloadVariant = 3
+)
+
 type TransactionPayloadImpl interface {
 	bcs.Struct
 	PayloadType() TransactionPayloadVariant // This is specifically to ensure that wrong types don't end up here
@@ -16,14 +27,7 @@ type TransactionPayload struct {
 	Payload TransactionPayloadImpl
 }
 
-type TransactionPayloadVariant uint32
-
-const (
-	TransactionPayloadVariantScript        TransactionPayloadVariant = 0
-	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = 1 // Deprecated
-	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = 2
-	TransactionPayloadVariantMultisig      TransactionPayloadVariant = 3
-)
+//region TransactionPayload bcs.Struct
 
 func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
 	if txn == nil || txn.Payload == nil {
@@ -52,9 +56,13 @@ func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
 	txn.Payload.UnmarshalBCS(bcs)
 }
 
+//endregion
+//endregion
+
+//region ModuleBundle
+
 // ModuleBundle is long deprecated and no longer used, but exist as an enum position in TransactionPayload
-type ModuleBundle struct {
-}
+type ModuleBundle struct{}
 
 func (txn *ModuleBundle) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantModuleBundle
@@ -67,7 +75,11 @@ func (txn *ModuleBundle) UnmarshalBCS(bcs *bcs.Deserializer) {
 	bcs.SetError(errors.New("ModuleBundle unimplemented"))
 }
 
-// EntryFunction call a single published entry function
+//endregion ModuleBundle
+
+//region EntryFunction
+
+// EntryFunction call a single published entry function arguments are ordered BCS encoded bytes
 type EntryFunction struct {
 	Module   ModuleId
 	Function string
@@ -75,9 +87,15 @@ type EntryFunction struct {
 	Args     [][]byte
 }
 
+//region EntryFunction TransactionPayloadImpl
+
 func (sf *EntryFunction) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantEntryFunction
 }
+
+//endregion
+
+//region EntryFunction bcs.Struct
 
 func (sf *EntryFunction) MarshalBCS(serializer *bcs.Serializer) {
 	sf.Module.MarshalBCS(serializer)
@@ -99,15 +117,26 @@ func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	}
 }
 
+//endregion
+//endregion
+
+//region Multisig
+
 // Multisig is an on-chain multisig transaction, that calls an entry function associated
 type Multisig struct {
 	MultisigAddress AccountAddress
 	Payload         *MultisigTransactionPayload // Optional
 }
 
+//region Multisig TransactionPayloadImpl
+
 func (sf *Multisig) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantMultisig
 }
+
+//endregion
+
+//region Multisig bcs.Struct
 
 func (sf *Multisig) MarshalBCS(serializer *bcs.Serializer) {
 	serializer.Struct(&sf.MultisigAddress)
@@ -126,6 +155,11 @@ func (sf *Multisig) UnmarshalBCS(deserializer *bcs.Deserializer) {
 	}
 }
 
+//endregion
+//endregion
+
+//region MultisigTransactionPayload
+
 type MultisigTransactionPayloadVariant uint32
 
 const (
@@ -137,10 +171,14 @@ type MultisigTransactionImpl interface {
 }
 
 // MultisigTransactionPayload is an enum allowing for multiple types of transactions to be called via multisig
+//
+// Note this does not implement TransactionPayloadImpl
 type MultisigTransactionPayload struct {
 	Variant MultisigTransactionPayloadVariant
 	Payload MultisigTransactionImpl
 }
+
+//region MultisigTransactionPayload bcs.Struct
 
 func (sf *MultisigTransactionPayload) MarshalBCS(serializer *bcs.Serializer) {
 	serializer.Uleb128(uint32(sf.Variant))
@@ -156,3 +194,6 @@ func (sf *MultisigTransactionPayload) UnmarshalBCS(deserializer *bcs.Deserialize
 	}
 	deserializer.Struct(sf.Payload)
 }
+
+//endregion
+//endregion
