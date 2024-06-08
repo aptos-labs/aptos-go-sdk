@@ -160,23 +160,23 @@ func (key *AnyPublicKey) FromHex(hexStr string) (err error) {
 
 //region AnyPublicKey bcs.Struct implementation
 
-func (key *AnyPublicKey) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(key.Variant))
-	bcs.Struct(key.PubKey)
+func (key *AnyPublicKey) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(key.Variant))
+	ser.Struct(key.PubKey)
 }
 
-func (key *AnyPublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
-	key.Variant = AnyPublicKeyVariant(bcs.Uleb128())
+func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
+	key.Variant = AnyPublicKeyVariant(des.Uleb128())
 	switch key.Variant {
 	case AnyPublicKeyVariantEd25519:
 		key.PubKey = &Ed25519PublicKey{}
 	case AnyPublicKeyVariantSecp256k1:
 		key.PubKey = &Secp256k1PublicKey{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
+		des.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
 		return
 	}
-	bcs.Struct(key.PubKey)
+	des.Struct(key.PubKey)
 }
 
 //endregion
@@ -226,23 +226,23 @@ func (e *AnySignature) FromHex(hexStr string) (err error) {
 
 //region AnySignature bcs.Struct implementation
 
-func (e *AnySignature) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(e.Variant))
-	bcs.Struct(e.Signature)
+func (e *AnySignature) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(e.Variant))
+	ser.Struct(e.Signature)
 }
 
-func (e *AnySignature) UnmarshalBCS(bcs *bcs.Deserializer) {
-	e.Variant = AnySignatureVariant(bcs.Uleb128())
+func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
+	e.Variant = AnySignatureVariant(des.Uleb128())
 	switch e.Variant {
 	case AnySignatureVariantEd25519:
 		e.Signature = &Ed25519Signature{}
 	case AnySignatureVariantSecp256k1:
 		e.Signature = &Secp256k1Signature{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
+		des.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
 		return
 	}
-	bcs.Struct(e.Signature)
+	des.Struct(e.Signature)
 }
 
 //endregion
@@ -275,20 +275,20 @@ func (ea *SingleKeyAuthenticator) Verify(msg []byte) bool {
 
 //region SingleKeyAuthenticator bcs.Struct implementation
 
-func (ea *SingleKeyAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Struct(ea.PublicKey())
-	bcs.Struct(ea.Signature())
+func (ea *SingleKeyAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ser.Struct(ea.PublicKey())
+	ser.Struct(ea.Signature())
 }
 
-func (ea *SingleKeyAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+func (ea *SingleKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.PubKey = &AnyPublicKey{}
-	bcs.Struct(ea.PubKey)
-	err := bcs.Error()
+	des.Struct(ea.PubKey)
+	err := des.Error()
 	if err != nil {
 		return
 	}
 	ea.Sig = &AnySignature{}
-	bcs.Struct(ea.Sig)
+	des.Struct(ea.Sig)
 }
 
 //endregion

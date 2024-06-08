@@ -42,14 +42,14 @@ func (ea *TransactionAuthenticator) Verify(msg []byte) bool {
 
 //region TransactionAuthenticator bcs.Struct
 
-func (ea *TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(ea.Variant))
-	ea.Auth.MarshalBCS(bcs)
+func (ea *TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(ea.Variant))
+	ea.Auth.MarshalBCS(ser)
 }
 
-func (ea *TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	kindNum := bcs.Uleb128()
-	if bcs.Error() != nil {
+func (ea *TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
+	kindNum := des.Uleb128()
+	if des.Error() != nil {
 		return
 	}
 	ea.Variant = TransactionAuthenticatorVariant(kindNum)
@@ -65,9 +65,9 @@ func (ea *TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	case TransactionAuthenticatorSingleSender:
 		ea.Auth = &SingleSenderTransactionAuthenticator{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown TransactionAuthenticator kind: %d", kindNum))
+		des.SetError(fmt.Errorf("unknown TransactionAuthenticator kind: %d", kindNum))
 	}
-	ea.Auth.UnmarshalBCS(bcs)
+	ea.Auth.UnmarshalBCS(des)
 }
 
 //endregion
@@ -91,15 +91,15 @@ func (ea *Ed25519TransactionAuthenticator) Verify(msg []byte) bool {
 
 //region Ed25519TransactionAuthenticator bcs.Struct
 
-func (ea *Ed25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	ea.Sender.Auth.MarshalBCS(bcs)
+func (ea *Ed25519TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ea.Sender.Auth.MarshalBCS(ser)
 }
 
-func (ea *Ed25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+func (ea *Ed25519TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.Sender = &crypto.AccountAuthenticator{}
 	ea.Sender.Variant = crypto.AccountAuthenticatorEd25519
 	ea.Sender.Auth = &crypto.Ed25519Authenticator{}
-	bcs.Struct(ea.Sender.Auth)
+	des.Struct(ea.Sender.Auth)
 }
 
 //endregion
@@ -121,15 +121,15 @@ func (ea *MultiEd25519TransactionAuthenticator) Verify(msg []byte) bool {
 
 //region MultiEd25519TransactionAuthenticator bcs.Struct
 
-func (ea *MultiEd25519TransactionAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	ea.Sender.MarshalBCS(bcs)
+func (ea *MultiEd25519TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ea.Sender.MarshalBCS(ser)
 }
 
-func (ea *MultiEd25519TransactionAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+func (ea *MultiEd25519TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.Sender = &crypto.AccountAuthenticator{}
 	ea.Sender.Variant = crypto.AccountAuthenticatorMultiEd25519
 	ea.Sender.Auth = &crypto.MultiEd25519Authenticator{}
-	bcs.Struct(ea.Sender.Auth)
+	des.Struct(ea.Sender.Auth)
 }
 
 //endregion

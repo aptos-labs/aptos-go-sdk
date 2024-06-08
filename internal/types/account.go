@@ -52,13 +52,13 @@ func (aa *AccountAddress) StringLong() string {
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
-func (aa *AccountAddress) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.FixedBytes(aa[:])
+func (aa *AccountAddress) MarshalBCS(ser *bcs.Serializer) {
+	ser.FixedBytes(aa[:])
 }
 
 // UnmarshalBCS Converts the AccountAddress from BCS encoded bytes
-func (aa *AccountAddress) UnmarshalBCS(bcs *bcs.Deserializer) {
-	bcs.ReadFixedBytesInto((*aa)[:])
+func (aa *AccountAddress) UnmarshalBCS(des *bcs.Deserializer) {
+	des.ReadFixedBytesInto((*aa)[:])
 }
 
 func (aa *AccountAddress) MarshalJSON() ([]byte, error) {

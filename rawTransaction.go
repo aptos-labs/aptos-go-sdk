@@ -97,24 +97,24 @@ func (txn *RawTransaction) SignedTransactionWithAuthenticator(auth *crypto.Accou
 
 //region RawTransaction bcs.Struct
 
-func (txn *RawTransaction) MarshalBCS(bcs *bcs.Serializer) {
-	txn.Sender.MarshalBCS(bcs)
-	bcs.U64(txn.SequenceNumber)
-	txn.Payload.MarshalBCS(bcs)
-	bcs.U64(txn.MaxGasAmount)
-	bcs.U64(txn.GasUnitPrice)
-	bcs.U64(txn.ExpirationTimestampSeconds)
-	bcs.U8(txn.ChainId)
+func (txn *RawTransaction) MarshalBCS(ser *bcs.Serializer) {
+	txn.Sender.MarshalBCS(ser)
+	ser.U64(txn.SequenceNumber)
+	txn.Payload.MarshalBCS(ser)
+	ser.U64(txn.MaxGasAmount)
+	ser.U64(txn.GasUnitPrice)
+	ser.U64(txn.ExpirationTimestampSeconds)
+	ser.U8(txn.ChainId)
 }
 
-func (txn *RawTransaction) UnmarshalBCS(bcs *bcs.Deserializer) {
-	txn.Sender.UnmarshalBCS(bcs)
-	txn.SequenceNumber = bcs.U64()
-	txn.Payload.UnmarshalBCS(bcs)
-	txn.MaxGasAmount = bcs.U64()
-	txn.GasUnitPrice = bcs.U64()
-	txn.ExpirationTimestampSeconds = bcs.U64()
-	txn.ChainId = bcs.U8()
+func (txn *RawTransaction) UnmarshalBCS(des *bcs.Deserializer) {
+	txn.Sender.UnmarshalBCS(des)
+	txn.SequenceNumber = des.U64()
+	txn.Payload.UnmarshalBCS(des)
+	txn.MaxGasAmount = des.U64()
+	txn.GasUnitPrice = des.U64()
+	txn.ExpirationTimestampSeconds = des.U64()
+	txn.ChainId = des.U8()
 }
 
 //endregion
@@ -264,22 +264,22 @@ func (txn *RawTransactionWithData) SigningMessage() (message []byte, err error) 
 
 //region RawTransactionWithData bcs.Struct
 
-func (txn *RawTransactionWithData) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(txn.Variant))
-	bcs.Struct(txn.Inner)
+func (txn *RawTransactionWithData) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(txn.Variant))
+	ser.Struct(txn.Inner)
 }
 
-func (txn *RawTransactionWithData) UnmarshalBCS(bcs *bcs.Deserializer) {
-	txn.Variant = RawTransactionWithDataVariant(bcs.Uleb128())
+func (txn *RawTransactionWithData) UnmarshalBCS(des *bcs.Deserializer) {
+	txn.Variant = RawTransactionWithDataVariant(des.Uleb128())
 	switch txn.Variant {
 	case MultiAgentRawTransactionWithDataVariant:
 		txn.Inner = &MultiAgentRawTransactionWithData{}
 	case MultiAgentWithFeePayerRawTransactionWithDataVariant:
 		txn.Inner = &MultiAgentWithFeePayerRawTransactionWithData{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown RawTransactionWithData variant %d", txn.Variant))
+		des.SetError(fmt.Errorf("unknown RawTransactionWithData variant %d", txn.Variant))
 	}
-	bcs.Struct(txn.Inner)
+	des.Struct(txn.Inner)
 }
 
 //endregion

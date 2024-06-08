@@ -24,16 +24,16 @@ func (s *Script) PayloadType() TransactionPayloadVariant {
 
 //region Script bcs.Struct
 
-func (s *Script) MarshalBCS(serializer *bcs.Serializer) {
-	serializer.WriteBytes(s.Code)
-	bcs.SerializeSequence(s.ArgTypes, serializer)
-	bcs.SerializeSequence(s.Args, serializer)
+func (s *Script) MarshalBCS(ser *bcs.Serializer) {
+	ser.WriteBytes(s.Code)
+	bcs.SerializeSequence(s.ArgTypes, ser)
+	bcs.SerializeSequence(s.Args, ser)
 }
 
-func (s *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	s.Code = deserializer.ReadBytes()
-	s.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
-	s.Args = bcs.DeserializeSequence[ScriptArgument](deserializer)
+func (s *Script) UnmarshalBCS(des *bcs.Deserializer) {
+	s.Code = des.ReadBytes()
+	s.ArgTypes = bcs.DeserializeSequence[TypeTag](des)
+	s.Args = bcs.DeserializeSequence[ScriptArgument](des)
 }
 
 //endregion
@@ -63,54 +63,54 @@ type ScriptArgument struct {
 
 //region ScriptArgument bcs.Struct
 
-func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(sa.Variant))
+func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(sa.Variant))
 	switch sa.Variant {
 	case ScriptArgumentU8:
-		bcs.U8(sa.Value.(uint8))
+		ser.U8(sa.Value.(uint8))
 	case ScriptArgumentU16:
-		bcs.U16(sa.Value.(uint16))
+		ser.U16(sa.Value.(uint16))
 	case ScriptArgumentU32:
-		bcs.U32(sa.Value.(uint32))
+		ser.U32(sa.Value.(uint32))
 	case ScriptArgumentU64:
-		bcs.U64(sa.Value.(uint64))
+		ser.U64(sa.Value.(uint64))
 	case ScriptArgumentU128:
-		bcs.U128(sa.Value.(big.Int))
+		ser.U128(sa.Value.(big.Int))
 	case ScriptArgumentU256:
-		bcs.U256(sa.Value.(big.Int))
+		ser.U256(sa.Value.(big.Int))
 	case ScriptArgumentAddress:
 		addr := sa.Value.(AccountAddress)
-		bcs.Struct(&addr)
+		ser.Struct(&addr)
 	case ScriptArgumentU8Vector:
-		bcs.WriteBytes(sa.Value.([]byte))
+		ser.WriteBytes(sa.Value.([]byte))
 	case ScriptArgumentBool:
-		bcs.Bool(sa.Value.(bool))
+		ser.Bool(sa.Value.(bool))
 	}
 }
 
-func (sa *ScriptArgument) UnmarshalBCS(bcs *bcs.Deserializer) {
-	sa.Variant = ScriptArgumentVariant(bcs.Uleb128())
+func (sa *ScriptArgument) UnmarshalBCS(des *bcs.Deserializer) {
+	sa.Variant = ScriptArgumentVariant(des.Uleb128())
 	switch sa.Variant {
 	case ScriptArgumentU8:
-		sa.Value = bcs.U8()
+		sa.Value = des.U8()
 	case ScriptArgumentU16:
-		sa.Value = bcs.U16()
+		sa.Value = des.U16()
 	case ScriptArgumentU32:
-		sa.Value = bcs.U32()
+		sa.Value = des.U32()
 	case ScriptArgumentU64:
-		sa.Value = bcs.U64()
+		sa.Value = des.U64()
 	case ScriptArgumentU128:
-		sa.Value = bcs.U128()
+		sa.Value = des.U128()
 	case ScriptArgumentU256:
-		sa.Value = bcs.U256()
+		sa.Value = des.U256()
 	case ScriptArgumentAddress:
 		aa := AccountAddress{}
-		aa.UnmarshalBCS(bcs)
+		aa.UnmarshalBCS(des)
 		sa.Value = aa
 	case ScriptArgumentU8Vector:
-		sa.Value = bcs.ReadBytes()
+		sa.Value = des.ReadBytes()
 	case ScriptArgumentBool:
-		sa.Value = bcs.Bool()
+		sa.Value = des.Bool()
 	}
 }
 

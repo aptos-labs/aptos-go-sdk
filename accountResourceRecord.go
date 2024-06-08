@@ -14,12 +14,12 @@ type AccountResourceRecord struct {
 	Data []byte
 }
 
-func (aar *AccountResourceRecord) MarshalBCS(bcs *bcs.Serializer) {
-	aar.Tag.MarshalBCS(bcs)
-	bcs.WriteBytes(aar.Data)
+func (aar *AccountResourceRecord) MarshalBCS(ser *bcs.Serializer) {
+	aar.Tag.MarshalBCS(ser)
+	ser.WriteBytes(aar.Data)
 }
 
-func (aar *AccountResourceRecord) UnmarshalBCS(bcs *bcs.Deserializer) {
-	aar.Tag.UnmarshalBCS(bcs)
-	aar.Data = bcs.ReadBytes()
+func (aar *AccountResourceRecord) UnmarshalBCS(des *bcs.Deserializer) {
+	aar.Tag.UnmarshalBCS(des)
+	aar.Data = des.ReadBytes()
 }

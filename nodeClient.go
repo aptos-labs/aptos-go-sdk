@@ -707,13 +707,13 @@ type ViewPayload struct {
 	Args     [][]byte
 }
 
-func (vp *ViewPayload) MarshalBCS(serializer *bcs.Serializer) {
-	vp.Module.MarshalBCS(serializer)
-	serializer.WriteString(vp.Function)
-	bcs.SerializeSequence(vp.ArgTypes, serializer)
-	serializer.Uleb128(uint32(len(vp.Args)))
+func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
+	vp.Module.MarshalBCS(ser)
+	ser.WriteString(vp.Function)
+	bcs.SerializeSequence(vp.ArgTypes, ser)
+	ser.Uleb128(uint32(len(vp.Args)))
 	for _, a := range vp.Args {
-		serializer.WriteBytes(a)
+		ser.WriteBytes(a)
 	}
 }
 

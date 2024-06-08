@@ -102,18 +102,18 @@ func (key *MultiEd25519PublicKey) FromHex(hexStr string) (err error) {
 
 //region MultiEd25519PublicKey bcs.Struct implementation
 
-func (key *MultiEd25519PublicKey) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.WriteBytes(key.Bytes())
+func (key *MultiEd25519PublicKey) MarshalBCS(ser *bcs.Serializer) {
+	ser.WriteBytes(key.Bytes())
 }
 
-func (key *MultiEd25519PublicKey) UnmarshalBCS(bcs *bcs.Deserializer) {
-	keyBytes := bcs.ReadBytes()
-	if bcs.Error() != nil {
+func (key *MultiEd25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
+	keyBytes := des.ReadBytes()
+	if des.Error() != nil {
 		return
 	}
 	err := key.FromBytes(keyBytes)
 	if err != nil {
-		bcs.SetError(err)
+		des.SetError(err)
 	}
 }
 
@@ -147,20 +147,20 @@ func (ea *MultiEd25519Authenticator) Verify(msg []byte) bool {
 
 // region MultiEd25519Authenticator bcs.Struct implementation
 
-func (ea *MultiEd25519Authenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Struct(ea.PublicKey())
-	bcs.Struct(ea.Signature())
+func (ea *MultiEd25519Authenticator) MarshalBCS(ser *bcs.Serializer) {
+	ser.Struct(ea.PublicKey())
+	ser.Struct(ea.Signature())
 }
 
-func (ea *MultiEd25519Authenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
+func (ea *MultiEd25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.PubKey = &MultiEd25519PublicKey{}
-	bcs.Struct(ea.PubKey)
-	err := bcs.Error()
+	des.Struct(ea.PubKey)
+	err := des.Error()
 	if err != nil {
 		return
 	}
 	ea.Sig = &MultiEd25519Signature{}
-	bcs.Struct(ea.Sig)
+	des.Struct(ea.Sig)
 }
 
 //endregion

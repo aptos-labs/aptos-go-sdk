@@ -58,14 +58,14 @@ func (ea *AccountAuthenticator) Verify(data []byte) bool {
 
 //region AccountAuthenticator bcs.Struct implementation
 
-func (ea *AccountAuthenticator) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.Uleb128(uint32(ea.Variant))
-	ea.Auth.MarshalBCS(bcs)
+func (ea *AccountAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(ea.Variant))
+	ea.Auth.MarshalBCS(ser)
 }
 
-func (ea *AccountAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
-	kindNum := bcs.Uleb128()
-	if bcs.Error() != nil {
+func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
+	kindNum := des.Uleb128()
+	if des.Error() != nil {
 		return
 	}
 	ea.Variant = AccountAuthenticatorType(kindNum)
@@ -79,10 +79,10 @@ func (ea *AccountAuthenticator) UnmarshalBCS(bcs *bcs.Deserializer) {
 	case AccountAuthenticatorMultiKey:
 		ea.Auth = &MultiKeyAuthenticator{}
 	default:
-		bcs.SetError(fmt.Errorf("unknown AccountAuthenticator kind: %d", kindNum))
+		des.SetError(fmt.Errorf("unknown AccountAuthenticator kind: %d", kindNum))
 		return
 	}
-	ea.Auth.UnmarshalBCS(bcs)
+	ea.Auth.UnmarshalBCS(des)
 }
 
 //endregion

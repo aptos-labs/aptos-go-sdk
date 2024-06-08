@@ -29,31 +29,31 @@ type TransactionPayload struct {
 
 //region TransactionPayload bcs.Struct
 
-func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
+func (txn *TransactionPayload) MarshalBCS(ser *bcs.Serializer) {
 	if txn == nil || txn.Payload == nil {
-		bcs.SetError(fmt.Errorf("nil transaction payload"))
+		ser.SetError(fmt.Errorf("nil transaction payload"))
 		return
 	}
-	bcs.Uleb128(uint32(txn.Payload.PayloadType()))
-	txn.Payload.MarshalBCS(bcs)
+	ser.Uleb128(uint32(txn.Payload.PayloadType()))
+	txn.Payload.MarshalBCS(ser)
 }
-func (txn *TransactionPayload) UnmarshalBCS(bcs *bcs.Deserializer) {
-	payloadType := TransactionPayloadVariant(bcs.Uleb128())
+func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
+	payloadType := TransactionPayloadVariant(des.Uleb128())
 	switch payloadType {
 	case TransactionPayloadVariantScript:
 		txn.Payload = &Script{}
 	case TransactionPayloadVariantModuleBundle:
 		// Deprecated, should never be in production
-		bcs.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
+		des.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
 	case TransactionPayloadVariantEntryFunction:
 		txn.Payload = &EntryFunction{}
 	case TransactionPayloadVariantMultisig:
 		txn.Payload = &Multisig{}
 	default:
-		bcs.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
+		des.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
 	}
 
-	txn.Payload.UnmarshalBCS(bcs)
+	txn.Payload.UnmarshalBCS(des)
 }
 
 //endregion
@@ -68,11 +68,11 @@ func (txn *ModuleBundle) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantModuleBundle
 }
 
-func (txn *ModuleBundle) MarshalBCS(bcs *bcs.Serializer) {
-	bcs.SetError(errors.New("ModuleBundle unimplemented"))
+func (txn *ModuleBundle) MarshalBCS(ser *bcs.Serializer) {
+	ser.SetError(errors.New("ModuleBundle unimplemented"))
 }
-func (txn *ModuleBundle) UnmarshalBCS(bcs *bcs.Deserializer) {
-	bcs.SetError(errors.New("ModuleBundle unimplemented"))
+func (txn *ModuleBundle) UnmarshalBCS(des *bcs.Deserializer) {
+	des.SetError(errors.New("ModuleBundle unimplemented"))
 }
 
 //endregion ModuleBundle
@@ -97,23 +97,23 @@ func (sf *EntryFunction) PayloadType() TransactionPayloadVariant {
 
 //region EntryFunction bcs.Struct
 
-func (sf *EntryFunction) MarshalBCS(serializer *bcs.Serializer) {
-	sf.Module.MarshalBCS(serializer)
-	serializer.WriteString(sf.Function)
-	bcs.SerializeSequence(sf.ArgTypes, serializer)
-	serializer.Uleb128(uint32(len(sf.Args)))
+func (sf *EntryFunction) MarshalBCS(ser *bcs.Serializer) {
+	sf.Module.MarshalBCS(ser)
+	ser.WriteString(sf.Function)
+	bcs.SerializeSequence(sf.ArgTypes, ser)
+	ser.Uleb128(uint32(len(sf.Args)))
 	for _, a := range sf.Args {
-		serializer.WriteBytes(a)
+		ser.WriteBytes(a)
 	}
 }
-func (sf *EntryFunction) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	sf.Module.UnmarshalBCS(deserializer)
-	sf.Function = deserializer.ReadString()
-	sf.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
-	alen := deserializer.Uleb128()
+func (sf *EntryFunction) UnmarshalBCS(des *bcs.Deserializer) {
+	sf.Module.UnmarshalBCS(des)
+	sf.Function = des.ReadString()
+	sf.ArgTypes = bcs.DeserializeSequence[TypeTag](des)
+	alen := des.Uleb128()
 	sf.Args = make([][]byte, alen)
 	for i := range alen {
-		sf.Args[i] = deserializer.ReadBytes()
+		sf.Args[i] = des.ReadBytes()
 	}
 }
 
@@ -138,20 +138,20 @@ func (sf *Multisig) PayloadType() TransactionPayloadVariant {
 
 //region Multisig bcs.Struct
 
-func (sf *Multisig) MarshalBCS(serializer *bcs.Serializer) {
-	serializer.Struct(&sf.MultisigAddress)
+func (sf *Multisig) MarshalBCS(ser *bcs.Serializer) {
+	ser.Struct(&sf.MultisigAddress)
 	if sf.Payload == nil {
-		serializer.Bool(false)
+		ser.Bool(false)
 	} else {
-		serializer.Bool(true)
-		serializer.Struct(sf.Payload)
+		ser.Bool(true)
+		ser.Struct(sf.Payload)
 	}
 }
-func (sf *Multisig) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	deserializer.Struct(&sf.MultisigAddress)
-	if deserializer.Bool() {
+func (sf *Multisig) UnmarshalBCS(des *bcs.Deserializer) {
+	des.Struct(&sf.MultisigAddress)
+	if des.Bool() {
 		sf.Payload = &MultisigTransactionPayload{}
-		deserializer.Struct(sf.Payload)
+		des.Struct(sf.Payload)
 	}
 }
 
@@ -180,19 +180,19 @@ type MultisigTransactionPayload struct {
 
 //region MultisigTransactionPayload bcs.Struct
 
-func (sf *MultisigTransactionPayload) MarshalBCS(serializer *bcs.Serializer) {
-	serializer.Uleb128(uint32(sf.Variant))
-	serializer.Struct(sf.Payload)
+func (sf *MultisigTransactionPayload) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(sf.Variant))
+	ser.Struct(sf.Payload)
 }
-func (sf *MultisigTransactionPayload) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	variant := MultisigTransactionPayloadVariant(deserializer.Uleb128())
+func (sf *MultisigTransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
+	variant := MultisigTransactionPayloadVariant(des.Uleb128())
 	switch variant {
 	case MultisigTransactionPayloadVariantEntryFunction:
 		sf.Payload = &EntryFunction{}
 	default:
-		deserializer.SetError(fmt.Errorf("bad variant %d for MultisigTransactionPayload", variant))
+		des.SetError(fmt.Errorf("bad variant %d for MultisigTransactionPayload", variant))
 	}
-	deserializer.Struct(sf.Payload)
+	des.Struct(sf.Payload)
 }
 
 //endregion
