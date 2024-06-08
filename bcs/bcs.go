@@ -15,16 +15,3 @@ type Struct interface {
 	Marshaler
 	Unmarshaler
 }
-
-// reverse is a helper function for serialization / deserialization
-func reverse(ub []byte) {
-	lo := 0
-	hi := len(ub) - 1
-	for hi > lo {
-		t := ub[lo]
-		ub[lo] = ub[hi]
-		ub[hi] = t
-		lo++
-		hi--
-	}
-}

@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"slices"
 )
 
 // Serializer is a holding type to serialize a set of items into one shared buffer
@@ -69,7 +70,7 @@ func (ser *Serializer) U64(v uint64) {
 func (ser *Serializer) U128(v big.Int) {
 	var ub [16]byte
 	v.FillBytes(ub[:])
-	reverse(ub[:])
+	slices.Reverse(ub[:])
 	ser.out.Write(ub[:])
 }
 
@@ -77,7 +78,7 @@ func (ser *Serializer) U128(v big.Int) {
 func (ser *Serializer) U256(v big.Int) {
 	var ub [32]byte
 	v.FillBytes(ub[:])
-	reverse(ub[:])
+	slices.Reverse(ub[:])
 	ser.out.Write(ub[:])
 }
 

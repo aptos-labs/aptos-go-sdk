@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"slices"
 )
 
 // Deserializer is a type to deserialize a known set of bytes.
@@ -121,7 +122,7 @@ func (des *Deserializer) U128() big.Int {
 	var bytesBigEndian [16]byte
 	copy(bytesBigEndian[:], des.source[des.pos:des.pos+16])
 	des.pos += 16
-	reverse(bytesBigEndian[:])
+	slices.Reverse(bytesBigEndian[:])
 	var out big.Int
 	out.SetBytes(bytesBigEndian[:])
 	return out
@@ -136,7 +137,7 @@ func (des *Deserializer) U256() big.Int {
 	var bytesBigEndian [32]byte
 	copy(bytesBigEndian[:], des.source[des.pos:des.pos+32])
 	des.pos += 32
-	reverse(bytesBigEndian[:])
+	slices.Reverse(bytesBigEndian[:])
 	var out big.Int
 	out.SetBytes(bytesBigEndian[:])
 	return out
