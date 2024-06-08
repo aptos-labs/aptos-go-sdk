@@ -5,6 +5,8 @@ import (
 	"math/big"
 )
 
+//region Script
+
 // Script A Move script as compiled code as a transaction
 type Script struct {
 	Code     []byte
@@ -12,27 +14,32 @@ type Script struct {
 	Args     []ScriptArgument
 }
 
-func (sf *Script) PayloadType() TransactionPayloadVariant {
+//region Script TransactionPayloadImpl
+
+func (s *Script) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantScript
 }
 
-func (sc *Script) MarshalBCS(serializer *bcs.Serializer) {
-	serializer.WriteBytes(sc.Code)
-	bcs.SerializeSequence(sc.ArgTypes, serializer)
-	bcs.SerializeSequence(sc.Args, serializer)
+//endregion
+
+//region Script bcs.Struct
+
+func (s *Script) MarshalBCS(serializer *bcs.Serializer) {
+	serializer.WriteBytes(s.Code)
+	bcs.SerializeSequence(s.ArgTypes, serializer)
+	bcs.SerializeSequence(s.Args, serializer)
 }
 
-func (sc *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
-	sc.Code = deserializer.ReadBytes()
-	sc.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
-	sc.Args = bcs.DeserializeSequence[ScriptArgument](deserializer)
+func (s *Script) UnmarshalBCS(deserializer *bcs.Deserializer) {
+	s.Code = deserializer.ReadBytes()
+	s.ArgTypes = bcs.DeserializeSequence[TypeTag](deserializer)
+	s.Args = bcs.DeserializeSequence[ScriptArgument](deserializer)
 }
 
-// ScriptArgument a Move script argument, which encodes its type with it
-type ScriptArgument struct {
-	Variant ScriptArgumentVariant
-	Value   any
-}
+//endregion
+//endregion
+
+//region ScriptArgument
 
 type ScriptArgumentVariant uint32
 
@@ -47,6 +54,14 @@ const (
 	ScriptArgumentU32      ScriptArgumentVariant = 7
 	ScriptArgumentU256     ScriptArgumentVariant = 8
 )
+
+// ScriptArgument a Move script argument, which encodes its type with it
+type ScriptArgument struct {
+	Variant ScriptArgumentVariant
+	Value   any // TODO: Do we add better typing, or stick with the any
+}
+
+//region ScriptArgument bcs.Struct
 
 func (sa *ScriptArgument) MarshalBCS(bcs *bcs.Serializer) {
 	bcs.Uleb128(uint32(sa.Variant))
@@ -98,3 +113,6 @@ func (sa *ScriptArgument) UnmarshalBCS(bcs *bcs.Deserializer) {
 		sa.Value = bcs.Bool()
 	}
 }
+
+//endregion
+//endregion
