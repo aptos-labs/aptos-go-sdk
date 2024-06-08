@@ -51,7 +51,7 @@ func init() {
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
 // deprecated, please use the EntryFunction APIs
 func APTTransferTransaction(client *Client, sender *Account, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
-	entryFunction, err := CoinTransferEntryFunction(nil, dest, amount)
+	entryFunction, err := CoinTransferPayload(nil, dest, amount)
 	if err != nil {
 		return nil, err
 	}

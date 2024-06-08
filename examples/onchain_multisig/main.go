@@ -211,7 +211,7 @@ func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddres
 }
 
 func createMultisigTransferTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, recipient aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.CoinTransferEntryFunction(nil, recipient, TransferAmount)
+	entryFunctionPayload, err := aptos.CoinTransferPayload(nil, recipient, TransferAmount)
 	if err != nil {
 		panic("Failed to create payload for multisig transfer: " + err.Error())
 	}
@@ -232,7 +232,7 @@ func createMultisigTransferTransaction(client *aptos.Client, sender *aptos.Accou
 }
 
 func createMultisigTransferTransactionWithHash(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, recipient aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.CoinTransferEntryFunction(nil, recipient, 1_000_000)
+	entryFunctionPayload, err := aptos.CoinTransferPayload(nil, recipient, 1_000_000)
 	if err != nil {
 		panic("Failed to create payload for multisig transfer: " + err.Error())
 	}
