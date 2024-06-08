@@ -100,10 +100,9 @@ func main() {
 
 	// Wait for the transaction
 	fmt.Printf("And we wait for the transaction %s to complete...\n", txnHash)
-	waitResponse, err := client.WaitForTransaction(txnHash)
+	userTxn, err := client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	userTxn, _ := waitResponse.UserTransaction()
 	fmt.Printf("The transaction completed with hash: %s and version %d\n", userTxn.Hash, userTxn.Version)
 }

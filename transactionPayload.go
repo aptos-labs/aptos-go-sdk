@@ -26,6 +26,10 @@ const (
 )
 
 func (txn *TransactionPayload) MarshalBCS(bcs *bcs.Serializer) {
+	if txn == nil || txn.Payload == nil {
+		bcs.SetError(fmt.Errorf("nil transaction payload"))
+		return
+	}
 	bcs.Uleb128(uint32(txn.Payload.PayloadType()))
 	txn.Payload.MarshalBCS(bcs)
 }
