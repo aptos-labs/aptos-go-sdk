@@ -76,6 +76,7 @@ func (ak *AuthenticationKey) UnmarshalBCS(des *bcs.Deserializer) {
 	length := des.Uleb128()
 	if length != AuthenticationKeyLength {
 		des.SetError(fmt.Errorf("authentication key has wrong length %d", length))
+		return
 	}
 	des.ReadFixedBytesInto(ak[:])
 }

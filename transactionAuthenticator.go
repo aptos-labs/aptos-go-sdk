@@ -66,6 +66,7 @@ func (ea *TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 		ea.Auth = &SingleSenderTransactionAuthenticator{}
 	default:
 		des.SetError(fmt.Errorf("unknown TransactionAuthenticator kind: %d", kindNum))
+		return
 	}
 	ea.Auth.UnmarshalBCS(des)
 }
