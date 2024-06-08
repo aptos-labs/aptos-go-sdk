@@ -56,7 +56,7 @@ func main() {
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
-	if *waitResponse.Success() == false {
+	if waitResponse.Success == false {
 		panic(fmt.Sprintf("Failed to publish transaction %s", util.PrettyJson(waitResponse)))
 	}
 

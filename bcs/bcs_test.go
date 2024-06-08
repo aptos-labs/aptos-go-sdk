@@ -216,8 +216,8 @@ func Test_DeserializeSequence(t *testing.T) {
 	deserialized := []TestStruct{{0, false}, {5, true}, {255, true}}
 	serialized := []byte{0x03, 0x00, 0x00, 0x05, 0x01, 0xFF, 0x01}
 
-	actualSerialized, err := SerializeSingle(deserialized, func(ser *Serializer, input []TestStruct) {
-		SerializeSequence(input, ser)
+	actualSerialized, err := SerializeSingle(func(ser *Serializer) {
+		SerializeSequence(deserialized, ser)
 	})
 	assert.NoError(t, err)
 	assert.Equal(t, serialized, actualSerialized)
