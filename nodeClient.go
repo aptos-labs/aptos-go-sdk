@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"io"
 	"log/slog"
@@ -15,8 +16,6 @@ import (
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
 // For Content-Type header when POST-ing a Transaction
