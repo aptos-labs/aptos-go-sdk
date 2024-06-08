@@ -246,34 +246,6 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	return out
 }
 
-// DeserializeMapToSlices returns two slices []K and []V of equal length that are equivalent to map[K]V but may represent types that are not valid Go map keys.
-func DeserializeMapToSlices[K, V any](des *Deserializer) (keys []K, values []V) {
-	count := des.Uleb128()
-	keys = make([]K, 0, count)
-	values = make([]V, 0, count)
-	for range count {
-		var nextK K
-		var nextV V
-		switch sv := any(&nextK).(type) {
-		case Unmarshaler:
-			sv.UnmarshalBCS(des)
-		case *string:
-			*sv = des.ReadString()
-		}
-		switch sv := any(&nextV).(type) {
-		case Unmarshaler:
-			sv.UnmarshalBCS(des)
-		case *string:
-			*sv = des.ReadString()
-		case *[]byte:
-			*sv = des.ReadBytes()
-		}
-		keys = append(keys, nextK)
-		values = append(values, nextV)
-	}
-	return
-}
-
 // setError sets the deserialization error
 func (des *Deserializer) setError(msg string, args ...any) {
 	if des.err != nil {
