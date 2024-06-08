@@ -3,11 +3,10 @@ package aptos
 import (
 	"bytes"
 	"context"
+	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"sync"
 	"testing"
-
-	"github.com/stretchr/testify/assert"
 )
 
 type levelCounts struct {
