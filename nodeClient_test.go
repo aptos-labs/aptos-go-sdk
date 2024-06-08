@@ -1,10 +1,9 @@
 package aptos
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestPollForTransaction(t *testing.T) {
