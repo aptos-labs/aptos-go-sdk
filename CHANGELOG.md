@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v0.2.0 (6/10/2024)
+
 - [`Breaking`] Some refactoring of names to be proper camel casing
 - [`Fix`] fixed bug with transactions listing
 - Refactored all pieces into new packages, this may break previous users
@@ -23,14 +25,14 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Fix localhost faucet endpoint
 - Re-export types from internal account file to external account file
 - Add more crypto support for MultiEd25519 and single sender
-- [`Breaking`] Change ledgerVersion arg to a uint64 to be more accurate to the possible inputs
+- [`Breaking`] Change ledgerVersion arg to an uint64 to be more accurate to the possible inputs
 - Add single serialize functions to simplify duplicated code
 - [`Breaking`] Several transaction authenticator and authenticator types were changed on transaction submission
 - Add TransactionSigner
 - Fix FungibleAssetClient
 - Add predetermined payloads
 - Add support for deploying code
-- Add support for on-chain multisig with an example
+- Add support for on-chain multi-sig with an example
 - Fix secp256k1 signing, and multikey signing
 
 # v0.1.0 (5/7/2024)

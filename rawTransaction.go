@@ -34,7 +34,7 @@ type RawTransactionImpl interface {
 	// Note that this should only be used externally if signing transactions outside the SDK.  Otherwise, use Sign.
 	SigningMessage() (message []byte, err error)
 
-	// Sign signs a transaction and returns the associated AccountAuthenticator, it will underlyingly sign the SigningMessage
+	// Sign signs a transaction and returns the associated AccountAuthenticator, it will underneath sign the SigningMessage
 	Sign(signer crypto.Signer) (*crypto.AccountAuthenticator, error)
 }
 

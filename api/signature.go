@@ -15,8 +15,6 @@ const (
 	SignatureVariantMultiAgent   SignatureVariant = "multi_agent_signature"
 	SignatureVariantFeePayer     SignatureVariant = "fee_payer_signature"
 	SignatureVariantSingleSender SignatureVariant = "single_sender"
-	SignatureVariantSingleKey    SignatureVariant = "single_key_signature"
-	SignatureVariantMultiKey     SignatureVariant = "multi_key_signature"
 )
 
 // Signature is an enum of all possible signatures on Aptos
@@ -58,8 +56,8 @@ type SignatureImpl interface{}
 // It's poorly named Ed25519Signature in the API spec
 type Ed25519Signature crypto.Ed25519Authenticator
 
-// TODO: apply directly to the upstream type?
 func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
+	// TODO: apply directly to the upstream type?
 	type inner struct {
 		PublicKey HexBytes `json:"public_key"`
 		Signature HexBytes `json:"signature"`
@@ -96,9 +94,9 @@ type MultiAgentSignature struct {
 	Sender                   *Signature              `json:"sender"`
 }
 
-// TODO: add the MultiEd25519 crypto type directly, and remove this extra redirection
-// Note that public keys and signatures should be the same length, unless the transaction failed
 type MultiEd25519Signature struct {
+	// TODO: add the MultiEd25519 crypto type directly, and remove this extra redirection
+	// Note that public keys and signatures should be the same length, unless the transaction failed
 	PublicKeys []*crypto.Ed25519PublicKey
 	Signatures []*crypto.Ed25519Signature
 	Threshold  uint8

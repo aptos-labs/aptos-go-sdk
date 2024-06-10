@@ -144,7 +144,7 @@ func fundAccounts(client *aptos.Client, accounts []*aptos.AccountAddress) {
 func setUpMultisig(client *aptos.Client, accounts []*aptos.Account) *aptos.AccountAddress {
 	println("Setting up a 2-of-3 multisig account...")
 
-	// Step 1: Setup a 2-of-3 multisig account
+	// Step 1: Set up a 2-of-3 multisig account
 	// ===========================================================================================
 	// Get the next multisig account address. This will be the same as the account address of the multisig account we'll
 	// be creating.

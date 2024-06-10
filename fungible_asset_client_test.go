@@ -1,6 +1,6 @@
 package aptos
 
-/* TODO: Reenable when running on localnet
+/* TODO: Re-enable when running on localnet
 func TestClient(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration test expects network connection to mainnet")

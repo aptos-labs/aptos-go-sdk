@@ -1,32 +1,65 @@
+[![Go Reference](https://pkg.go.dev/badge/github.com/aptos-labs/aptos-go-sdk.svg)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/aptos-labs/aptos-go-sdk)](https://goreportcard.com/report/github.com/aptos-labs/aptos-go-sdk)
+![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aptos-labs/aptos-go-sdk)
+![GitHub Tag](https://img.shields.io/github/v/tag/aptos-labs/aptos-go-sdk?label=Latest%20Version)
+
 # aptos-go-sdk
 
-Aptos Go SDK
+An SDK for the Aptos blockchain in Go. The SDK is currently in Beta.
 
-## How does it work?
+## Getting started
+
+Add go to your `go.mod` file
+
+```bash
+go get -u  github.com/aptos-labs/aptos-go-sdk
+```
+
+## Where can I see examples?
 
 Take a look at `examples/` for some examples of how to write clients.
 
-## TODO List
+## Where can I learn more?
 
-### Important
+You can read more about the Go SDK documentation on [aptos.dev](https://aptos.dev/sdks/go-sdk/)
 
-1. `DONE` Indexer support
-2. `DONE` Struct support for well known types like transactions e.g. TransactionByHash
-3. `DONE` general signer support (should be proven by ^)
-4. Basic documentation
-5. Additional examples
-6. `DONE` External signing by implementing a signer (example)
-7. Fee payer support, with example
-8. Multi-agent support? And an example?
-9. `DONE` On-chain Multi-sig support? and an example?
-10. Off-chain multi-sig support? and an example?
-11. Simulation
-12. Possibly more BCS handling / an easier way to create payloads
+## Feature support
 
-### Less important
+- [x] BCS encoding and decoding
+- [x] Structured API parsing
+- [x] Ed25519 Signer support
+- [x] Secp256k1 Signer support
+- [x] On-chain and off-chain multi-sig support
+- [x] Sponsored transaction and Multi-agent support
+- [x] Fungible Asset support
+- [x] Indexer support with limited queries
+- [x] Transaction submission and waiting
+- [x] External signer support e.g. HSMs or external services
+- [x] Move Package publishing support
+- [x] Move script support
+- [ ] Transaction Simulation
+- [ ] MultiEd25519 support
+- [ ] Predetermined Indexer queries for Fungible Assets and Digital Assets
+- [ ] Automated sequence number management for parallel transaction submission
 
-1. See if there's a better way to handle collection serialization, may need to wrap the collection with a function added
-2. Move remaining files into packages, they are partially moved now to keep some separation of code
-3. Additional test coverage and examples
-4. Parallel submission? Instead of just serially (sequence number handling etc.)
-5. Secp256k1 support -> Currently broken, signatures don't come out correctly
+## Examples
+
+- [x] Transaction signing
+- [x] Fungible asset usage
+- [x] External and alternative signing methods
+- [x] On-chain multi-sig
+- [x] Performance differences between transaction submission methods
+- [x] Move package publishing support
+- [ ] Multi-agent example
+- [ ] Script Example
+- [ ] Sponsored transaction example
+- [ ] Off-chain multi-sig example
+- [ ] Digital assets / NFTs example
+- [ ] Transaction parsing example (by blocks)
+
+## Other
+
+- [ ] Ensure blocks fetch all transactions associated
+- [ ] More testing around API parsing
+- [ ] TypeTag string parsing
+- [ ] Add examples into the documentation

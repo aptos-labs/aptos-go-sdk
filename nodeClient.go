@@ -260,7 +260,7 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transact
 		return
 	}
 
-	// Handle Errors TODO: Handle ratelimits, etc.
+	// Handle Errors TODO: Handle rate-limits, etc.
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -299,7 +299,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 		return
 	}
 
-	// Handle Errors TODO: Handle ratelimits, etc.
+	// Handle Errors TODO: Handle rate-limits, etc.
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return
@@ -796,7 +796,7 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64,
 	return util.StrToUint64(values[0].(string))
 }
 
-// deprecated, will need to rework accordingly, as this is only built for a single account, very useful for testing though
+// BuildSignAndSubmitTransaction deprecated, will need to rework accordingly, as this is only built for a single account, very useful for testing though
 func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.AccountAddress(), payload, options...)
 	if err != nil {

@@ -12,7 +12,6 @@ const (
 	testSecp256k1PublicKey      = "0x04acdd16651b839c24665b7e2033b55225f384554949fef46c397b5275f37f6ee95554d70fb5d9f93c5831ebf695c7206e7477ce708f03ae9bb2862dc6c9e033ea"
 	testSecp256k1Address        = "0x5792c985bc96f436270bd2a3c692210b09c7febb8889345ceefdbae4bacfe498"
 	testSecp256k1MessageEncoded = "0x68656c6c6f20776f726c64"
-	testSecp256k1Message        = "hello world"
 	testSecp256k1Signature      = "0xd0d634e843b61339473b028105930ace022980708b2855954b977da09df84a770c0b68c29c8ca1b5409a5085b0ec263be80e433c83fcf6debb82f3447e71edca"
 )
 
@@ -52,7 +51,7 @@ func TestSecp256k1Keys(t *testing.T) {
 
 	// Check public key
 	assert.Equal(t, testSecp256k1PublicKey, privateKey.VerifyingKey().ToHex())
-	// We have to wrap the publickey in AnyPublicKey, verify authenticator and key are the same
+	// We have to wrap the PublicKey in AnyPublicKey, verify authenticator and key are the same
 	publicKey := ToAnyPublicKey(privateKey.VerifyingKey())
 	assert.Equal(t, publicKey, authenticator.PubKey())
 

@@ -29,7 +29,7 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	o.BlockHash = Hash(data.BlockHash)
+	o.BlockHash = data.BlockHash
 	o.BlockHeight = data.BlockHeight.toUint64()
 	o.BlockTimestamp = data.BlockTimestamp.toUint64()
 	o.FirstVersion = data.FirstVersion.toUint64()
