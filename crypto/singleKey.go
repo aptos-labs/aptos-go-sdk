@@ -19,7 +19,7 @@ func NewSingleSigner(input MessageSigner) *SingleSigner {
 }
 
 // SignMessage similar, but doesn't implement MessageSigner so there's no circular usage
-func (key *SingleSigner) SignMessage(msg []byte) (*AnySignature, error) {
+func (key *SingleSigner) SignMessage(msg []byte) (Signature, error) {
 	signature, err := key.Signer.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -48,7 +48,7 @@ func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, 
 
 	auth := &SingleKeyAuthenticator{}
 	auth.PubKey = key.PubKey().(*AnyPublicKey)
-	auth.Sig = signature
+	auth.Sig = signature.(*AnySignature)
 	return &AccountAuthenticator{Variant: AccountAuthenticatorSingleSender, Auth: auth}, nil
 }
 

@@ -46,6 +46,17 @@ func (aa *AccountAddress) String() string {
 	}
 }
 
+// FromAuthKey converts AuthKey to AccountAddress
+func (aa *AccountAddress) FromAuthKey(authKey *crypto.AuthenticationKey) {
+	copy(aa[:], authKey[:])
+}
+
+func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
+	authKey := &crypto.AuthenticationKey{}
+	copy(authKey[:], aa[:])
+	return authKey
+}
+
 // StringLong Returns the long string representation of the AccountAddress
 func (aa *AccountAddress) StringLong() string {
 	return util.BytesToHex(aa[:])
@@ -95,12 +106,9 @@ func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAd
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
 func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
-	bytes := util.Sha3256Hash([][]byte{
-		aa[:],
-		seed[:],
-		{typeByte},
-	})
-	copy(accountAddress[:], bytes)
+	authKey := aa.AuthKey()
+	authKey.FromBytesAndScheme(append(authKey[:], seed[:]...), typeByte)
+	copy(accountAddress[:], authKey[:])
 	return
 }
 
@@ -133,15 +141,32 @@ func NewEd25519Account() (*Account, error) {
 	return NewAccountFromSigner(privateKey)
 }
 
+// NewEd25519SingleSignerAccount creates a legacy Ed25519 account
+func NewEd25519SingleSignerAccount() (*Account, error) {
+	privateKey, err := crypto.GenerateEd25519PrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	signer := &crypto.SingleSigner{Signer: privateKey}
+	return NewAccountFromSigner(signer)
+}
+
 func NewSecp256k1Account() (*Account, error) {
-	privateKey := crypto.GenerateSecp256k1Key()
-	signer := &crypto.SingleSigner{Signer: &privateKey}
+	privateKey, err := crypto.GenerateSecp256k1Key()
+	if err != nil {
+		return nil, err
+	}
+	signer := &crypto.SingleSigner{Signer: privateKey}
 	return NewAccountFromSigner(signer)
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
 func (account *Account) Sign(message []byte) (authenticator *crypto.AccountAuthenticator, err error) {
 	return account.Signer.Sign(message)
+}
+
+func (account *Account) SignMessage(message []byte) (signature crypto.Signature, err error) {
+	return account.Signer.SignMessage(message)
 }
 
 func (account *Account) PubKey() crypto.PublicKey {

@@ -1,40 +1,58 @@
 package crypto
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"github.com/decred/dcrd/dcrec/secp256k1/v4"
-	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
+	ethCrypto "github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 //region Secp256k1PrivateKey
 
+const Secp256k1PrivateKeyLength = 32
+
+// Secp256k1PublicKeyLength we use the uncompressed version
+const Secp256k1PublicKeyLength = 65
+
+// Secp256k1SignatureLength is the Secp256k1 signature without the recovery bit
+const Secp256k1SignatureLength = ethCrypto.SignatureLength - 1
+
 // Secp256k1PrivateKey is a private key that can be used with SingleSigner.  It cannot stand on its own.
 // Implements MessageSigner, CryptoMaterial
 type Secp256k1PrivateKey struct {
-	Inner *secp256k1.PrivateKey
+	Inner *ecdsa.PrivateKey
 }
 
-func GenerateSecp256k1Key() Secp256k1PrivateKey {
-	priv, _ := secp256k1.GeneratePrivateKey()
+func GenerateSecp256k1Key() (*Secp256k1PrivateKey, error) {
+	priv, err := ethCrypto.GenerateKey()
+	if err != nil {
+		return nil, err
+	}
 
-	return Secp256k1PrivateKey{priv}
+	return &Secp256k1PrivateKey{priv}, nil
 }
 
 //region Secp256k1PrivateKey MessageSigner
 
 func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
-	pubKey := key.Inner.PubKey()
 	return &Secp256k1PublicKey{
-		pubKey,
+		&key.Inner.PublicKey,
 	}
 }
 
 func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
-	signature := ecdsa.Sign(key.Inner, msg)
+	hash := util.Sha3256Hash([][]byte{msg})
+	// TODO: The eth library doesn't protect against malleability issues, so we need to handle those
+	signature, err := secp256k1.Sign(hash, key.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	// Strip the recovery bit
 	return &Secp256k1Signature{
-		signature,
+		signature[0:64],
 	}, nil
 }
 
@@ -43,15 +61,15 @@ func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err erro
 //region Secp256k1PrivateKey CryptoMaterial
 
 func (key *Secp256k1PrivateKey) Bytes() []byte {
-	return key.Inner.Serialize()
+	return ethCrypto.FromECDSA(key.Inner)
 }
 
 func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) (err error) {
-	if len(bytes) != secp256k1.PrivKeyBytesLen {
+	if len(bytes) != Secp256k1PrivateKeyLength {
 		return fmt.Errorf("invalid secp256k1 private key size %d", len(bytes))
 	}
-	key.Inner = secp256k1.PrivKeyFromBytes(bytes)
-	return nil
+	key.Inner, err = ethCrypto.ToECDSA(bytes)
+	return err
 }
 
 func (key *Secp256k1PrivateKey) ToHex() string {
@@ -76,7 +94,7 @@ func (key *Secp256k1PrivateKey) FromHex(hexStr string) (err error) {
 // Secp256k1PublicKey is the corresponding public key for Secp256k1PrivateKey, it cannot be used on its own
 // Implements VerifyingKey, CryptoMaterial, bcs.Struct
 type Secp256k1PublicKey struct {
-	Inner *secp256k1.PublicKey
+	Inner *ecdsa.PublicKey
 }
 
 //region Secp256k1PublicKey VerifyingKey
@@ -85,8 +103,10 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 	switch sig.(type) {
 	case *Secp256k1Signature:
 		typedSig := sig.(*Secp256k1Signature)
-		return typedSig.Inner.Verify(msg, key.Inner)
+
+		return secp256k1.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
 	default:
+		panic(fmt.Errorf("invalid signature type %T", sig))
 		return false
 	}
 }
@@ -96,11 +116,11 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 //region Secp256k1PublicKey CryptoMaterial
 
 func (key *Secp256k1PublicKey) Bytes() []byte {
-	return key.Inner.SerializeUncompressed()
+	return ethCrypto.FromECDSAPub(key.Inner)
 }
 
 func (key *Secp256k1PublicKey) FromBytes(bytes []byte) (err error) {
-	key.Inner, err = secp256k1.ParsePubKey(bytes)
+	key.Inner, err = ethCrypto.UnmarshalPubkey(bytes)
 	return err
 }
 
@@ -125,7 +145,7 @@ func (key *Secp256k1PublicKey) MarshalBCS(ser *bcs.Serializer) {
 }
 func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	kb := des.ReadBytes()
-	pubKey, err := secp256k1.ParsePubKey(kb)
+	pubKey, err := ethCrypto.UnmarshalPubkey(kb)
 	if err != nil {
 		des.SetError(err)
 		return
@@ -140,7 +160,6 @@ func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 
 // Secp256k1Authenticator is the authenticator for Secp256k1, but it cannot stand on its own and must be used with SingleKeyAuthenticator
 // Implements AccountAuthenticatorImpl, bcs.Struct
-// TODO: We might want a different interface for this one
 type Secp256k1Authenticator struct {
 	PubKey *Secp256k1PublicKey
 	Sig    *Secp256k1Signature
@@ -188,30 +207,20 @@ func (ea *Secp256k1Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 // Secp256k1Signature a wrapper for serialization of Secp256k1 signatures
 // Implements Signature, CryptoMaterial
 type Secp256k1Signature struct {
-	Inner *ecdsa.Signature
+	Inner []byte
 }
 
 //region Secp256k1Signature CryptoMaterial
 
 func (e *Secp256k1Signature) Bytes() []byte {
-	// TODO: This library doesn't seem to work properly with the Rust implementation, the signatures are the wrong bytes
-	r := e.Inner.R()
-	rBytes := r.Bytes()
-	s := e.Inner.S()
-	sBytes := s.Bytes()
-
-	out := make([]byte, 64)
-	copy(out[0:32], rBytes[:])
-	copy(out[32:64], sBytes[:])
-	return out
+	return e.Inner
 }
 
 func (e *Secp256k1Signature) FromBytes(bytes []byte) (err error) {
-	r := &secp256k1.ModNScalar{}
-	r.SetBytes((*[32]byte)(bytes[0:32]))
-	s := &secp256k1.ModNScalar{}
-	s.SetBytes((*[32]byte)(bytes[32:64]))
-	e.Inner = ecdsa.NewSignature(r, s)
+	if len(bytes) != Secp256k1SignatureLength {
+		return fmt.Errorf("invalid secp256k1 signature size %d, expected %d", len(bytes), Secp256k1SignatureLength)
+	}
+	e.Inner = bytes
 	return nil
 }
 

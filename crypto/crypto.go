@@ -7,6 +7,9 @@ type Signer interface {
 	// Sign signs a transaction and returns an associated authenticator
 	Sign(msg []byte) (authenticator *AccountAuthenticator, err error)
 
+	// SignMessage signs a message and returns the raw signature without a key
+	SignMessage(msg []byte) (signature Signature, err error)
+
 	// AuthKey gives the AuthenticationKey associated with the signer
 	AuthKey() *AuthenticationKey
 

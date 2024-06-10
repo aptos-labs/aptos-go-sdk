@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -12,6 +11,34 @@ const (
 	singleSignerScript = "a11ceb0b060000000701000402040a030e0c041a04051e20073e30086e2000000001010204010001000308000104030401000105050601000002010203060c0305010b0001080101080102060c03010b0001090002050b00010900000a6170746f735f636f696e04636f696e04436f696e094170746f73436f696e087769746864726177076465706f7369740000000000000000000000000000000000000000000000000000000000000001000001080b000b0138000c030b020b03380102"
 	fundAmount         = 100_000_000
 )
+
+var TestSigners map[string]func() (TransactionSigner, error)
+
+func init() {
+	TestSigners = make(map[string]func() (TransactionSigner, error))
+	TestSigners["Legacy Ed25519"] = func() (TransactionSigner, error) {
+		signer, err := NewEd25519Account()
+		return any(signer).(TransactionSigner), err
+	}
+	TestSigners["Single Sender Ed25519"] = func() (TransactionSigner, error) {
+		signer, err := NewEd25519SingleSenderAccount()
+		return any(signer).(TransactionSigner), err
+	}
+	TestSigners["Single Sender Secp256k1"] = func() (TransactionSigner, error) {
+		signer, err := NewSecp256k1Account()
+		return any(signer).(TransactionSigner), err
+	}
+	TestSigners["MultiKey"] = func() (TransactionSigner, error) {
+		signer, err := NewMultiKeyTestSigner(3, 2)
+		return any(signer).(TransactionSigner), err
+	}
+	/* TODO: MultiEd25519 is not supported ATM
+	TestSigners["MultiEd25519"] = func() (TransactionSigner, error) {
+		signer, err := NewMultiEd25519Signer(3, 2)
+		return any(signer).(TransactionSigner), err
+	}
+	*/
+}
 
 func TestNamedConfig(t *testing.T) {
 	names := []string{"mainnet", "devnet", "testnet", "localnet"}
@@ -26,24 +53,20 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
-	println("Legacy Ed25519")
-	testTransaction(t, NewEd25519Account, submitEntryFunction)
-	println("Single Sender Ed25519")
-	testTransaction(t, NewEd25519SingleSignerAccount, submitEntryFunction)
-	//println("Single Sender Secp256k1")
-	//testTransaction(t, types.NewSecp256k1Account, submitEntryFunction)
+	for name, signer := range TestSigners {
+		println("Entry function:", name)
+		testTransaction(t, signer, submitEntryFunction)
+	}
 }
 
 func Test_Ed25519_ScriptFlow(t *testing.T) {
-	println("Legacy Ed25519")
-	testTransaction(t, NewEd25519Account, submitScript)
-	println("Single Sender Ed25519")
-	testTransaction(t, NewEd25519SingleSignerAccount, submitScript)
-	//println("Single Sender Secp256k1")
-	//testTransaction(t, types.NewSecp256k1Account, submitScript)
+	for name, signer := range TestSigners {
+		println("Script:", name)
+		testTransaction(t, signer, submitScript)
+	}
 }
 
-func testTransaction(t *testing.T, createAccount func() (*Account, error), buildAndSignTransaction func(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error)) {
+func testTransaction(t *testing.T, createAccount func() (TransactionSigner, error), buildAndSignTransaction func(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error)) {
 	// All of these run against localnet
 	if testing.Short() {
 		t.Skip("integration test expects network connection to localnet")
@@ -70,7 +93,7 @@ func testTransaction(t *testing.T, createAccount func() (*Account, error), build
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
-	err = client.Fund(account.Address, fundAmount)
+	err = client.Fund(account.AccountAddress(), fundAmount)
 	assert.NoError(t, err)
 
 	// Build transaction
@@ -256,28 +279,18 @@ func TestClient_BlockByHeight(t *testing.T) {
 	_, err = client.BlockByHeight(1, true)
 }
 
-// TODO: Make this really supported / better naming
-func NewEd25519SingleSignerAccount() (*Account, error) {
-	key, err := crypto.GenerateEd25519PrivateKey()
-	if err != nil {
-		return nil, err
-	}
-	accountSigner := crypto.NewSingleSigner(key)
-	return NewAccountFromSigner(accountSigner)
-}
-
-func submitEntryFunction(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error) {
+func submitEntryFunction(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
 	return APTTransferTransaction(client, sender, AccountOne, 100)
 }
 
-func submitScript(t *testing.T, client *Client, sender *Account) (*SignedTransaction, error) {
+func submitScript(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
 	scriptBytes, err := ParseHex(singleSignerScript)
 	assert.NoError(t, err)
 
 	amount := uint64(1)
 	dest := AccountOne
 
-	rawTxn, err := client.BuildTransaction(sender.Address,
+	rawTxn, err := client.BuildTransaction(sender.AccountAddress(),
 		TransactionPayload{Payload: &Script{
 			Code:     scriptBytes,
 			ArgTypes: []TypeTag{},

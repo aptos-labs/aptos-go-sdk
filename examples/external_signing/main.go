@@ -31,19 +31,27 @@ func (signer *ExternalSigner) ToHex() string {
 }
 
 func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
-	sigBytes := ed25519.Sign(signer.privateKey, msg)
-	sig := &crypto.Ed25519Signature{}
-	copy(sig.Inner[:], sigBytes)
+	sig, err := signer.SignMessage(msg)
+	if err != nil {
+		return nil, err
+	}
 	pubKey := signer.PublicKey()
 	auth := &crypto.Ed25519Authenticator{
 		PubKey: pubKey,
-		Sig:    sig,
+		Sig:    sig.(*crypto.Ed25519Signature),
 	}
 	// TODO: maybe make convenience functions for this
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorEd25519,
 		Auth:    auth,
 	}, nil
+}
+
+func (signer *ExternalSigner) SignMessage(msg []byte) (signature crypto.Signature, err error) {
+	sigBytes := ed25519.Sign(signer.privateKey, msg)
+	sig := &crypto.Ed25519Signature{}
+	copy(sig.Inner[:], sigBytes)
+	return sig, nil
 }
 
 func (signer *ExternalSigner) AuthKey() *crypto.AuthenticationKey {

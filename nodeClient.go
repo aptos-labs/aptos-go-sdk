@@ -797,8 +797,8 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64,
 }
 
 // deprecated, will need to rework accordingly, as this is only built for a single account, very useful for testing though
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
-	rawTxn, err := rc.BuildTransaction(sender.Address, payload, options...)
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+	rawTxn, err := rc.BuildTransaction(sender.AccountAddress(), payload, options...)
 	if err != nil {
 		return nil, err
 	}
