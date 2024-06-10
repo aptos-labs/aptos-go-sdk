@@ -106,6 +106,9 @@ func MultisigCreateTransactionPayload(multisigAddress AccountAddress, payload *M
 	}
 	// Serialize and add the number of bytes in front
 	payloadBytes2, err := bcs.SerializeBytes(payloadBytes)
+	if err != nil {
+		return nil, err
+	}
 	return multisigTransactionCommon("create_transaction", multisigAddress, [][]byte{payloadBytes2}), nil
 }
 
@@ -122,6 +125,9 @@ func MultisigCreateTransactionPayloadWithHash(multisigAddress AccountAddress, pa
 
 	// Serialize and add the number of bytes in front
 	hashBytes, err := bcs.SerializeBytes(hash)
+	if err != nil {
+		return nil, err
+	}
 	return multisigTransactionCommon("create_transaction_with_hash", multisigAddress, [][]byte{hashBytes}), nil
 }
 
