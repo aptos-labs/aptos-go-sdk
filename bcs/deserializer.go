@@ -8,14 +8,23 @@ import (
 )
 
 // Deserializer is a type to deserialize a known set of bytes.
-// The reader must know the types, as the format is not self-describing
+// The reader must know the types, as the format is not self-describing.
+//
+// Use [NewDeserializer] to initialize the Deserializer
+//
+//	bytes := []byte{0x01}
+//	deserializer := NewDeserializer(bytes)
+//	num := deserializer.U8()
+//	if deserializer.Error() != nil {
+//		return deserializer.Error()
+//	}
 type Deserializer struct {
-	source []byte
-	pos    int
-	err    error
+	source []byte // Underlying data to parse
+	pos    int    // Current position in the buffer
+	err    error  // Any error that has happened so far
 }
 
-// NewDeserializer creates a new Deserializer from a byte array
+// NewDeserializer creates a new Deserializer from a byte array.
 func NewDeserializer(bytes []byte) *Deserializer {
 	return &Deserializer{
 		source: bytes,
@@ -24,7 +33,9 @@ func NewDeserializer(bytes []byte) *Deserializer {
 	}
 }
 
-// Deserialize deserializes a single item
+// Deserialize deserializes a single item from bytes
+//
+// This function will error if there are remaining bytes
 func Deserialize(dest Unmarshaler, bytes []byte) error {
 	des := Deserializer{
 		source: bytes,
@@ -32,7 +43,13 @@ func Deserialize(dest Unmarshaler, bytes []byte) error {
 		err:    nil,
 	}
 	dest.UnmarshalBCS(&des)
-	return des.err
+	if des.err != nil {
+		return des.err
+	}
+	if des.Remaining() > 0 {
+		return fmt.Errorf("deserialize failed: remaining %d byte(s)", des.Remaining())
+	}
+	return nil
 }
 
 // Error If there has been any error, return it
@@ -46,6 +63,11 @@ func (des *Deserializer) SetError(err error) {
 }
 
 // Remaining tells the remaining bytes, which can be useful if there were more bytes than expected
+//
+//	bytes := []byte{0x01, 0x02}
+//	deserializer := NewDeserializer(bytes)
+//	num := deserializer.U8()
+//	deserializer.Remaining == 1
 func (des *Deserializer) Remaining() int {
 	return len(des.source) - des.pos
 }
@@ -143,7 +165,7 @@ func (des *Deserializer) U256() big.Int {
 	return out
 }
 
-// Uleb128 deserializes a 32-bit integer from a variable length uleb128
+// Uleb128 deserializes a 32-bit integer from a variable length Uleb128
 func (des *Deserializer) Uleb128() uint32 {
 	var out uint32 = 0
 	shift := 0
@@ -216,7 +238,6 @@ func (des *Deserializer) Struct(v Unmarshaler) {
 }
 
 // DeserializeSequence deserializes an Unmarshaler implementation array
-// TODO: can T be of type Unmarshaler?
 func DeserializeSequence[T any](des *Deserializer) []T {
 	return DeserializeSequenceWithFunction(des, func(des *Deserializer, out *T) {
 		mv, ok := any(out).(Unmarshaler)
