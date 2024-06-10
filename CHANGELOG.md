@@ -31,6 +31,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add predetermined payloads
 - Add support for deploying code
 - Add support for on-chain multisig with an example
+- Fix secp256k1 signing, and multikey signing
 
 # v0.1.0 (5/7/2024)
 
