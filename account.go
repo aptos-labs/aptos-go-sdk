@@ -34,7 +34,17 @@ func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.Authentication
 	return types.NewAccountFromSigner(signer, authKey...)
 }
 
-// NewEd25519Account creates a legacy Ed25519 account
+// NewEd25519Account creates a legacy Ed25519 account, this is most commonly used in wallets
 func NewEd25519Account() (*Account, error) {
 	return types.NewEd25519Account()
+}
+
+// NewEd25519SingleSenderAccount creates a single signer Ed25519 account
+func NewEd25519SingleSenderAccount() (*Account, error) {
+	return types.NewEd25519SingleSignerAccount()
+}
+
+// NewSecp256k1Account creates a Secp256k1 account
+func NewSecp256k1Account() (*Account, error) {
+	return types.NewSecp256k1Account()
 }

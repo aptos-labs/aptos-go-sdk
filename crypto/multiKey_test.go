@@ -90,9 +90,9 @@ func createMultiKeySignature(t *testing.T, key1 *SingleSigner, key2 *SingleSigne
 	// TODO: This signature should be built easier, ergonomics to fix this late
 	return &MultiKeySignature{
 		Signatures: []*AnySignature{
-			sig1,
-			sig2,
+			sig1.(*AnySignature),
+			sig2.(*AnySignature),
 		},
-		Bitmap: []byte("c0000000"),
+		Bitmap: MultiKeyBitmap([]byte("c0000000")),
 	}
 }

@@ -30,11 +30,16 @@ type AuthenticationKey [AuthenticationKeyLength]byte
 
 // FromPublicKey for private / public key pairs, the authentication key is derived from the public key directly
 func (ak *AuthenticationKey) FromPublicKey(publicKey PublicKey) {
-	bytes := util.Sha3256Hash([][]byte{
-		publicKey.Bytes(),
-		{publicKey.Scheme()},
+	ak.FromBytesAndScheme(publicKey.Bytes(), publicKey.Scheme())
+}
+
+// FromBytesAndScheme derives the AuthenticationKey directly from the SHA3-256 hash of the combined array
+func (ak *AuthenticationKey) FromBytesAndScheme(bytes []byte, scheme DeriveScheme) {
+	authBytes := util.Sha3256Hash([][]byte{
+		bytes,
+		{scheme},
 	})
-	copy((*ak)[:], bytes)
+	copy((*ak)[:], authBytes)
 }
 
 //region AuthenticationKey CryptoMaterial

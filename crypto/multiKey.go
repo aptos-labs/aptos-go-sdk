@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
@@ -100,7 +101,7 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 // Implements Signature, CryptoMaterial, bcs.Struct
 type MultiKeySignature struct {
 	Signatures []*AnySignature
-	Bitmap     []byte
+	Bitmap     MultiKeyBitmap
 }
 
 //region MultiKeySignature CryptoMaterial implementation
@@ -132,7 +133,7 @@ func (e *MultiKeySignature) FromHex(hexStr string) (err error) {
 
 func (e *MultiKeySignature) MarshalBCS(ser *bcs.Serializer) {
 	bcs.SerializeSequence(e.Signatures, ser)
-	ser.WriteBytes(e.Bitmap)
+	e.Bitmap.MarshalBCS(ser)
 }
 
 func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
@@ -143,7 +144,8 @@ func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
 		e.Signatures[i] = &AnySignature{}
 		des.Struct(e.Signatures[i])
 	}
-	e.Bitmap = des.ReadBytes()
+
+	e.Bitmap.UnmarshalBCS(des)
 }
 
 //endregion
@@ -191,6 +193,56 @@ func (ea *MultiKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 	ea.Sig = &MultiKeySignature{}
 	des.Struct(ea.Sig)
+}
+
+//endregion
+//endregion
+
+//region MultiKeyBitmap
+
+// MultiKeyBitmapSize represents the 4 bytes needed to make a 32-bit bitmap
+const MultiKeyBitmapSize = uint32(4)
+
+// MultiKeyBitmap represents a bitmap of signatures in a MultiKey public key that signed the transaction
+// There are a maximum of 32 possible values in MultiKeyBitmapSize, starting from the leftmost bit representing
+// index 0 of the public key
+type MultiKeyBitmap [MultiKeyBitmapSize]byte
+
+// ContainsKey tells us if the current index is in the map
+func (bm *MultiKeyBitmap) ContainsKey(index uint8) bool {
+	numByte, numBit := KeyIndices(index)
+	return (bm[numByte] & (128 >> numBit)) == 1
+}
+
+// AddKey adds the value to the map, returning an error if it is already added
+func (bm *MultiKeyBitmap) AddKey(index uint8) error {
+	if bm.ContainsKey(index) {
+		return fmt.Errorf("index %d already in bitmap", index)
+	}
+	numByte, numBit := KeyIndices(index)
+	bm[numByte] = bm[numByte] | (128 >> numBit)
+	return nil
+}
+
+// KeyIndices determines the byte and bit set in the bitmap
+func KeyIndices(index uint8) (numByte uint8, numBit uint8) {
+	// Bytes and bits are counted from left
+	return index / 8, index % 8
+}
+
+//region MultiKeyBitmap bcs.Struct
+
+func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
+	ser.WriteBytes(bm[:])
+}
+
+func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
+	length := des.Uleb128()
+	if length != MultiKeyBitmapSize {
+		des.SetError(fmt.Errorf("MultiKeyBitmap must be %d bytes, got %d", MultiKeyBitmapSize, length))
+		return
+	}
+	des.ReadFixedBytesInto(bm[:])
 }
 
 //endregion
