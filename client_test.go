@@ -279,7 +279,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 	_, err = client.BlockByHeight(1, true)
 }
 
-func submitEntryFunction(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
+func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
 	return APTTransferTransaction(client, sender, AccountOne, 100)
 }
 

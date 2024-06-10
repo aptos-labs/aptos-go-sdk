@@ -188,7 +188,7 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Tr
 	return client.nodeClient.Transactions(start, limit)
 }
 
-// SubmitTransaction Submits an already sixgned transaction to the blockchain
+// SubmitTransaction Submits an already signed transaction to the blockchain
 func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
 }

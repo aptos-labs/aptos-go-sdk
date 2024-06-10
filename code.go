@@ -4,8 +4,8 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-// PublishPackagePayloadFromJsonFile publishes code created with the Aptos CLI to publish with it
-// you must run the command `aptos move build-publish-payload`
+// PublishPackagePayloadFromJsonFile publishes code created with the Aptos CLI to publish with it.
+// You must run the command `aptos move build-publish-payload` to generate it.
 func PublishPackagePayloadFromJsonFile(metadata []byte, bytecode [][]byte) (*TransactionPayload, error) {
 	metadataBytes, err := bcs.SerializeBytes(metadata)
 	if err != nil {
