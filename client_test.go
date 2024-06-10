@@ -120,6 +120,7 @@ func testTransaction(t *testing.T, createAccount func() (TransactionSigner, erro
 
 	// Load the transaction again
 	txnByVersion, err := client.TransactionByVersion(version)
+	assert.NoError(t, err)
 
 	// Assert that both are the same
 	assert.Equal(t, txn, txnByVersion)
@@ -277,6 +278,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 	assert.NoError(t, err)
 
 	_, err = client.BlockByHeight(1, true)
+	assert.NoError(t, err)
 }
 
 func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
