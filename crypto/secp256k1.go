@@ -106,7 +106,6 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 
 		return secp256k1.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
 	default:
-		panic(fmt.Errorf("invalid signature type %T", sig))
 		return false
 	}
 }
