@@ -9,7 +9,7 @@ import (
 //region SingleSigner
 
 // SingleSigner is a wrapper around different types of MessageSigners to allow for many types of keys
-// Implements Signer
+// Implements [Signer], [MessageSigner]
 type SingleSigner struct {
 	Signer MessageSigner
 }
@@ -87,7 +87,7 @@ const (
 )
 
 // AnyPublicKey is used by SingleSigner and MultiKey to allow for using different keys with the same structs
-// Implements VerifyingKey, PublicKey, bcs.Struct, CryptoMaterial
+// Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type AnyPublicKey struct {
 	Variant AnyPublicKeyVariant
 	PubKey  VerifyingKey
@@ -193,7 +193,7 @@ const (
 )
 
 // AnySignature is a wrapper around signatures signed with SingleSigner and verified with AnyPublicKey
-// Implements Signature, CryptoMaterial, bcs.Struct
+// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type AnySignature struct {
 	Variant   AnySignatureVariant
 	Signature Signature
@@ -251,7 +251,7 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 //region SingleKeyAuthenticator
 
 // SingleKeyAuthenticator is an authenticator for a SingleSigner
-// Implements AccountAuthenticatorImpl
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type SingleKeyAuthenticator struct {
 	PubKey *AnyPublicKey
 	Sig    *AnySignature

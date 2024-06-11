@@ -8,7 +8,7 @@ import (
 
 //region AuthenticationKey
 
-// DeriveScheme is the key type for deriving the AuthenticationKey
+// DeriveScheme is the key type for deriving the AuthenticationKey.  It is used in a SHA3-256 hash.
 type DeriveScheme = uint8
 
 // Seeds for deriving addresses from addresses
@@ -26,6 +26,7 @@ const (
 const AuthenticationKeyLength = 32
 
 // AuthenticationKey a hash representing the method for authorizing an account
+// Implements [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type AuthenticationKey [AuthenticationKeyLength]byte
 
 // FromPublicKey for private / public key pairs, the authentication key is derived from the public key directly

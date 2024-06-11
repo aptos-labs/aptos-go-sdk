@@ -20,7 +20,7 @@ const Secp256k1PublicKeyLength = 65
 const Secp256k1SignatureLength = ethCrypto.SignatureLength - 1
 
 // Secp256k1PrivateKey is a private key that can be used with SingleSigner.  It cannot stand on its own.
-// Implements MessageSigner, CryptoMaterial
+// Implements [MessageSigner], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Secp256k1PrivateKey struct {
 	Inner *ecdsa.PrivateKey
 }
@@ -91,8 +91,8 @@ func (key *Secp256k1PrivateKey) FromHex(hexStr string) (err error) {
 
 //region Secp256k1PublicKey
 
-// Secp256k1PublicKey is the corresponding public key for Secp256k1PrivateKey, it cannot be used on its own
-// Implements VerifyingKey, CryptoMaterial, bcs.Struct
+// Secp256k1PublicKey is the corresponding public key for [Secp256k1PrivateKey], it cannot be used on its own
+// Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Secp256k1PublicKey struct {
 	Inner *ecdsa.PublicKey
 }
@@ -158,7 +158,7 @@ func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region Secp256k1Authenticator
 
 // Secp256k1Authenticator is the authenticator for Secp256k1, but it cannot stand on its own and must be used with SingleKeyAuthenticator
-// Implements AccountAuthenticatorImpl, bcs.Struct
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Secp256k1Authenticator struct {
 	PubKey *Secp256k1PublicKey
 	Sig    *Secp256k1Signature
@@ -204,7 +204,7 @@ func (ea *Secp256k1Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 //region Secp256k1Signature
 
 // Secp256k1Signature a wrapper for serialization of Secp256k1 signatures
-// Implements Signature, CryptoMaterial
+// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Secp256k1Signature struct {
 	Inner []byte
 }

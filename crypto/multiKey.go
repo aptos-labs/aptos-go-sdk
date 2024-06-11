@@ -9,7 +9,7 @@ import (
 //region MultiKey
 
 // MultiKey is an off-chain multisig, where multiple different keys can be used together to create an account
-// Implements VerifyingKey, PublicKey, CryptoMaterial, bcs.Struct
+// Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiKey struct {
 	PubKeys            []*AnyPublicKey
 	SignaturesRequired uint8
@@ -98,7 +98,7 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region MultiKeySignature
 
 // MultiKeySignature is an off-chain multi-sig signature that can be verified by a MultiKey
-// Implements Signature, CryptoMaterial, bcs.Struct
+// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiKeySignature struct {
 	Signatures []*AnySignature
 	Bitmap     MultiKeyBitmap
@@ -155,7 +155,7 @@ func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
 //region MultiKeyAuthenticator
 
 // MultiKeyAuthenticator is an on-chain authenticator for a MultiKeySignature
-// Implements AccountAuthenticatorImpl, bcs.Struct
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiKeyAuthenticator struct {
 	PubKey *MultiKey
 	Sig    *MultiKeySignature
