@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - [`Fix`] Fix all unhandled errors using ineffassign to find them
+- [`Doc`] Add examples and documentation in Go doc comments
 
 # v0.2.0 (6/10/2024)
 
