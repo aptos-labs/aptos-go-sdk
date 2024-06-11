@@ -12,7 +12,7 @@ import (
 //region Ed25519PrivateKey
 
 // Ed25519PrivateKey represents an Ed25519Private key
-// Implements Signer, MessageSigner, CryptoMaterial
+// Implements [Signer], [MessageSigner], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Ed25519PrivateKey struct {
 	Inner ed25519.PrivateKey
 }
@@ -110,7 +110,7 @@ func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
 //region Ed25519PublicKey
 
 // Ed25519PublicKey is a Ed25519PublicKey which can be used to verify signatures
-// Implements VerifyingKey, PublicKey, CryptoMaterial, bcs.Struct
+// Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Ed25519PublicKey struct {
 	Inner ed25519.PublicKey
 }
@@ -190,7 +190,7 @@ func (key *Ed25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region Ed25519Authenticator
 
 // Ed25519Authenticator represents a verifiable signature with it's accompanied public key
-// Implements AccountAuthenticatorImpl
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Ed25519Authenticator struct {
 	PubKey *Ed25519PublicKey
 	Sig    *Ed25519Signature
@@ -236,7 +236,7 @@ func (ea *Ed25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 //region Ed25519Signature
 
 // Ed25519Signature a wrapper for serialization of Ed25519 signatures
-// Implements Signature, CryptoMaterial, bcs.Struct
+// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type Ed25519Signature struct {
 	Inner [ed25519.SignatureSize]byte
 }

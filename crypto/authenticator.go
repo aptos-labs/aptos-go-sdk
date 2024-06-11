@@ -34,7 +34,7 @@ const (
 )
 
 // AccountAuthenticator a generic authenticator type for a transaction
-// Implements AccountAuthenticatorImpl, bcs.Struct
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type AccountAuthenticator struct {
 	Variant AccountAuthenticatorType
 	Auth    AccountAuthenticatorImpl

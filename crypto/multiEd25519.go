@@ -10,7 +10,7 @@ import (
 //region MultiEd25519PublicKey
 
 // MultiEd25519PublicKey is the public key for off-chain multi-sig on Aptos with Ed25519 keys
-// Implements VerifyingKey, PublicKey, bcs.Struct, CryptoMaterial
+// Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiEd25519PublicKey struct {
 	// PubKeys is the list of all public keys associated with the off-chain multi-sig
 	PubKeys []*Ed25519PublicKey
@@ -123,7 +123,7 @@ func (key *MultiEd25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 //region MultiEd25519Authenticator
 
 // MultiEd25519Authenticator is an authenticator for a MultiEd25519Signature
-// Implements AccountAuthenticatorImpl, bcs.Struct
+// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiEd25519Authenticator struct {
 	PubKey *MultiEd25519PublicKey
 	Sig    *MultiEd25519Signature
@@ -172,7 +172,7 @@ func (ea *MultiEd25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 const MultiEd25519BitmapLen = 4
 
 // MultiEd25519Signature is a signature for off-chain multi-sig
-// Implements Signature, CryptoMaterial, bcs.Struct
+// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type MultiEd25519Signature struct {
 	Signatures []*Ed25519Signature
 	Bitmap     [MultiEd25519BitmapLen]byte
