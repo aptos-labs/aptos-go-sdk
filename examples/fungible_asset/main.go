@@ -40,8 +40,8 @@ func main() {
 	}
 
 	// Publish the package for FA
-	metadataBytes, err := util.ParseHex(metadata)
-	bytecodeBytes, err := util.ParseHex(bytecode)
+	metadataBytes, err := aptos.ParseHex(metadata)
+	bytecodeBytes, err := aptos.ParseHex(bytecode)
 	payload, err := aptos.PublishPackagePayloadFromJsonFile(metadataBytes, [][]byte{bytecodeBytes})
 	if err != nil {
 		panic("Failed to create publish payload:" + err.Error())

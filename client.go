@@ -364,7 +364,7 @@ func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload Tra
 //			Args:     [][]byte{address[:]},
 //		}
 //		vals, err := client.aptosClient.View(payload)
-//		balance := util.StrToU64(vals.(any[])[0].(string))
+//		balance := StrToU64(vals.(any[])[0].(string))
 func (client *Client) View(payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error) {
 	return client.nodeClient.View(payload, ledgerVersion...)
 }

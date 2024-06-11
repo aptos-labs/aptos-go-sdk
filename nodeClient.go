@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"io"
 	"log/slog"
 	"net/http"
@@ -793,7 +792,7 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64,
 	if err != nil {
 		return 0, err
 	}
-	return util.StrToUint64(values[0].(string))
+	return StrToUint64(values[0].(string))
 }
 
 func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
