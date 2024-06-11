@@ -11,7 +11,6 @@ type MoveBytecode struct {
 }
 
 // MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin
-// TODO: more typing
 type MoveComponentId = string
 
 // MoveModule describes the abilities and types associated with a specific module
@@ -23,6 +22,7 @@ type MoveModule struct {
 	Structs          []*MoveStruct         `json:"structs"`
 }
 
+// MoveScript is the representation of a compiled script.  The API may not fill in the ABI field
 type MoveScript struct {
 	Bytecode []byte        `json:"bytecode"`
 	Abi      *MoveFunction `json:"abi,omitempty"` // Optional

@@ -7,6 +7,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+// SignatureVariant is the JSON representation of the signature types
 type SignatureVariant string
 
 const (
@@ -50,6 +51,7 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, o.Inner)
 }
 
+// SignatureImpl is an interface for all signatures in their JSON formats
 type SignatureImpl interface{}
 
 // Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the authenticator.
@@ -80,6 +82,8 @@ func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
 // TODO: Implement single sender crypto properly, needs updates on the API side
 type SingleSenderSignature map[string]any
 
+// FeePayerSignature is a sponsored transaction, that is that the sender is not the payer of the transaction.
+// It can also be multi-agent like [MultiAgentSignature]
 type FeePayerSignature struct {
 	FeePayerAddress          *types.AccountAddress   `json:"fee_payer_address"`
 	FeePayerSigner           *Signature              `json:"fee_payer_signer"`
@@ -88,12 +92,14 @@ type FeePayerSignature struct {
 	Sender                   *Signature              `json:"sender"`
 }
 
+// MultiAgentSignature is a transaction with multiple unique signers, acting on behalf of multiple accounts
 type MultiAgentSignature struct {
 	SecondarySignerAddresses []*types.AccountAddress `json:"secondary_signer_addresses"`
 	SecondarySigners         []*Signature            `json:"secondary_signers"`
 	Sender                   *Signature              `json:"sender"`
 }
 
+// MultiEd25519Signature is off-chain multi-sig with only Ed25519 keys
 type MultiEd25519Signature struct {
 	// TODO: add the MultiEd25519 crypto type directly, and remove this extra redirection
 	// Note that public keys and signatures should be the same length, unless the transaction failed

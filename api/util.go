@@ -1,3 +1,5 @@
+// Package api represents all types associated with the Aptos REST API.  It handles JSON packing and un-packing, through
+// multiple inner types.
 package api
 
 import (
@@ -28,6 +30,7 @@ func (o *GUID) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// U64 is a type for handling JSON string representations of the uint64
 type U64 uint64
 
 func (u *U64) MarshalJSON() ([]byte, error) {
@@ -52,6 +55,7 @@ func (u *U64) toUint64() uint64 {
 	return uint64(*u)
 }
 
+// HexBytes is a type for handling Bytes encoded as hex in JSON
 type HexBytes []byte
 
 func (u *HexBytes) MarshalJSON() ([]byte, error) {
@@ -72,4 +76,5 @@ func (u *HexBytes) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// Hash is a representation of a hash as Hex in JSON
 type Hash = string // TODO: do we make this a 32 byte array? or byte array?
