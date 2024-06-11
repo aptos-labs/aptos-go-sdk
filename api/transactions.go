@@ -6,6 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+// TransactionVariant is the type of transaction, all transactions submitted by this SDK are [TransactionVariantUserTransaction]
 type TransactionVariant string
 
 const (
@@ -23,9 +24,13 @@ type Transaction struct {
 	Inner TransactionImpl
 }
 
+// Hash of the transaction for lookup on-chain
 func (o *Transaction) Hash() Hash {
 	return o.Inner.TxnHash()
 }
+
+// Success of the transaction.  Pending transactions, and genesis may not have a success field.
+// If this is the case, it will be nil
 func (o *Transaction) Success() *bool {
 	return o.Inner.TxnSuccess()
 }
@@ -59,6 +64,7 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, o.Inner)
 }
 
+// UserTransaction changes the transaction to a [UserTransaction]; however, it will fail if it's not one.
 func (o *Transaction) UserTransaction() (*UserTransaction, error) {
 	if o.Type == TransactionVariantUserTransaction {
 		return o.Inner.(*UserTransaction), nil
@@ -66,6 +72,7 @@ func (o *Transaction) UserTransaction() (*UserTransaction, error) {
 	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 }
 
+// PendingTransaction changes the transaction to a [PendingTransaction]; however, it will fail if it's not one.
 func (o *Transaction) PendingTransaction() (*PendingTransaction, error) {
 	if o.Type == TransactionVariantPendingTransaction {
 		return o.Inner.(*PendingTransaction), nil
@@ -73,6 +80,7 @@ func (o *Transaction) PendingTransaction() (*PendingTransaction, error) {
 	return nil, fmt.Errorf("transaction type is not pending: %s", o.Type)
 }
 
+// GenesisTransaction changes the transaction to a [GenesisTransaction]; however, it will fail if it's not one.
 func (o *Transaction) GenesisTransaction() (*GenesisTransaction, error) {
 	if o.Type == TransactionVariantGenesisTransaction {
 		return o.Inner.(*GenesisTransaction), nil
@@ -80,6 +88,7 @@ func (o *Transaction) GenesisTransaction() (*GenesisTransaction, error) {
 	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 }
 
+// BlockMetadataTransaction changes the transaction to a [BlockMetadataTransaction]; however, it will fail if it's not one.
 func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
 	if o.Type == TransactionVariantBlockMetadataTransaction {
 		return o.Inner.(*BlockMetadataTransaction), nil
@@ -87,6 +96,7 @@ func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, err
 	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
+// StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
 func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
 	if o.Type == TransactionVariantStateCheckpointTransaction {
 		return o.Inner.(*StateCheckpointTransaction), nil
@@ -94,6 +104,7 @@ func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction,
 	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
 }
 
+// ValidatorTransaction changes the transaction to a [ValidatorTransaction]; however, it will fail if it's not one.
 func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
 	if o.Type == TransactionVariantValidatorTransaction {
 		return o.Inner.(*ValidatorTransaction), nil
@@ -101,8 +112,12 @@ func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
 	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
 }
 
+// TransactionImpl is an interface for all transactions
 type TransactionImpl interface {
+	// TxnSuccess tells us if the transaction is a success.  It will be nil if it doesn't apply.
 	TxnSuccess() *bool
+
+	// TxnHash gives us the hash of the transaction, this should always apply.
 	TxnHash() Hash
 }
 
@@ -126,7 +141,7 @@ type UserTransaction struct {
 	Payload                 *TransactionPayload
 	Signature               *Signature
 	Timestamp               uint64 // TODO: native time?
-	StateCheckpointHash     Hash   //Optional
+	StateCheckpointHash     Hash   // Optional
 }
 
 func (o *UserTransaction) TxnHash() Hash {

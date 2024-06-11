@@ -6,6 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
+// TransactionPayloadVariant is the type of payload represented in JSON
 type TransactionPayloadVariant string
 
 const (
@@ -74,7 +75,8 @@ type TransactionPayloadMultisig struct {
 	TransactionPayload *TransactionPayloadEntryFunction `json:"transaction_payload,omitempty"` // Optional
 }
 
-// TransactionPayloadWriteSet  describes a write set transaction, such as genesis
+// TransactionPayloadWriteSet describes a write set transaction, such as genesis
 type TransactionPayloadWriteSet = DirectWriteSet
 
+// TransactionPayloadModuleBundle is a deprecated type that does not exist on mainnet
 type TransactionPayloadModuleBundle struct{}
