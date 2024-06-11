@@ -35,6 +35,11 @@ func (o *Transaction) Success() *bool {
 	return o.Inner.TxnSuccess()
 }
 
+// Version of the transaction on chain, will be nil if it is a PendingTransaction
+func (o *Transaction) Version() *uint64 {
+	return o.Inner.TxnVersion()
+}
+
 func (o *Transaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Type string `json:"type"`
@@ -119,6 +124,9 @@ type TransactionImpl interface {
 
 	// TxnHash gives us the hash of the transaction, this should always apply.
 	TxnHash() Hash
+
+	// TxnVersion gives us the ledger version of the transaction.
+	TxnVersion() *uint64
 }
 
 // UserTransaction is a user submitted transaction as an entry function or script
@@ -149,6 +157,9 @@ func (o *UserTransaction) TxnHash() Hash {
 }
 func (o *UserTransaction) TxnSuccess() *bool {
 	return &o.Success
+}
+func (o *UserTransaction) TxnVersion() *uint64 {
+	return &o.Version
 }
 
 func (o *UserTransaction) UnmarshalJSON(b []byte) error {
@@ -217,6 +228,9 @@ func (o *PendingTransaction) TxnHash() Hash {
 func (o *PendingTransaction) TxnSuccess() *bool {
 	return nil
 }
+func (o *PendingTransaction) TxnVersion() *uint64 {
+	return nil
+}
 
 func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -265,6 +279,9 @@ func (o *GenesisTransaction) TxnHash() Hash {
 }
 func (o *GenesisTransaction) TxnSuccess() *bool {
 	return &o.Success
+}
+func (o *GenesisTransaction) TxnVersion() *uint64 {
+	return &o.Version
 }
 
 func (o *GenesisTransaction) UnmarshalJSON(b []byte) error {
@@ -328,6 +345,9 @@ func (o *BlockMetadataTransaction) TxnHash() Hash {
 }
 func (o *BlockMetadataTransaction) TxnSuccess() *bool {
 	return &o.Success
+}
+func (o *BlockMetadataTransaction) TxnVersion() *uint64 {
+	return &o.Version
 }
 
 func (o *BlockMetadataTransaction) UnmarshalJSON(b []byte) error {
@@ -398,6 +418,9 @@ func (o *StateCheckpointTransaction) TxnHash() Hash {
 func (o *StateCheckpointTransaction) TxnSuccess() *bool {
 	return &o.Success
 }
+func (o *StateCheckpointTransaction) TxnVersion() *uint64 {
+	return &o.Version
+}
 
 func (o *StateCheckpointTransaction) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -453,6 +476,9 @@ func (o *ValidatorTransaction) TxnHash() Hash {
 }
 func (o *ValidatorTransaction) TxnSuccess() *bool {
 	return &o.Success
+}
+func (o *ValidatorTransaction) TxnVersion() *uint64 {
+	return &o.Version
 }
 
 func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {

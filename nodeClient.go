@@ -286,7 +286,7 @@ func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
-func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (data *api.Block, err error) {
+func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (block *api.Block, err error) {
 	params := url.Values{}
 	params.Set("with_transactions", strconv.FormatBool(withTransactions))
 	restUrl.RawQuery = params.Encode()
@@ -311,8 +311,30 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (d
 		return
 	}
 	_ = response.Body.Close() // We don't care about the error about closing the body
-	data = &api.Block{}
-	err = json.Unmarshal(blob, data)
+	block = &api.Block{}
+	err = json.Unmarshal(blob, block)
+
+	// Now, let's fill in any missing transactions in the block
+	numTransactions := block.LastVersion - block.FirstVersion + 1
+	retrievedTransactions := uint64(len(block.Transactions))
+
+	// Transaction is always not pending, so it will never be nil
+	cursor := block.Transactions[len(block.Transactions)-1].Version()
+
+	// TODO: I maybe should pull these concurrently, but not for now
+	for retrievedTransactions < numTransactions {
+		numToPull := numTransactions - retrievedTransactions
+		transactions, innerError := rc.Transactions(cursor, &numToPull)
+		if innerError != nil {
+			// We will still return the block, since we did so much work for it
+			return block, innerError
+		}
+
+		// Add transactions to the list
+		block.Transactions = append(block.Transactions, transactions...)
+		retrievedTransactions = uint64(len(block.Transactions))
+		cursor = block.Transactions[len(block.Transactions)-1].Version()
+	}
 	return
 }
 
