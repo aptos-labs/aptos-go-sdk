@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"errors"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"math/big"
 	"strconv"
 )
@@ -92,7 +91,7 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress) (balanc
 		return
 	}
 	balanceStr := val.(string)
-	return util.StrToUint64(balanceStr)
+	return StrToUint64(balanceStr)
 }
 
 func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress) (isFrozen bool, err error) {
@@ -309,5 +308,5 @@ func unwrapAggregator(val any) (num *big.Int, err error) {
 		return
 	}
 
-	return util.StrToBigInt(numStr)
+	return StrToBigInt(numStr)
 }

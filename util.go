@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"math/big"
 )
 
 // -- Note these are copied from internal/util/util.go to prevent package loops, but still allow devs to use it
@@ -15,4 +16,19 @@ func ParseHex(hexStr string) ([]byte, error) {
 // Sha3256Hash takes a hash of the given sets of bytes
 func Sha3256Hash(bytes [][]byte) (output []byte) {
 	return util.Sha3256Hash(bytes)
+}
+
+// BytesToHex converts bytes to a 0x prefixed hex string
+func BytesToHex(bytes []byte) string {
+	return util.BytesToHex(bytes)
+}
+
+// StrToUint64 converts a string to a uint64
+func StrToUint64(s string) (uint64, error) {
+	return util.StrToUint64(s)
+}
+
+// StrToBigInt converts a string to a big.Int
+func StrToBigInt(val string) (num *big.Int, err error) {
+	return util.StrToBigInt(val)
 }

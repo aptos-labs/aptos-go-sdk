@@ -201,7 +201,7 @@ func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddres
 
 	numSigsRequiredStr := resourceData["num_signatures_required"].(string)
 
-	numSigsRequired, err := util.StrToUint64(numSigsRequiredStr)
+	numSigsRequired, err := aptos.StrToUint64(numSigsRequiredStr)
 	if err != nil {
 		panic("Failed to convert string to u64: " + err.Error())
 	}

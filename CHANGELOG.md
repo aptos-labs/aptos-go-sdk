@@ -7,6 +7,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 - [`Fix`] Fix all unhandled errors using ineffassign to find them
 - [`Doc`] Add examples and documentation in Go doc comments
+- [`Breaking change`] Make SignedTransaction.Hash() output string to be consistent with other representations
+- Add more functions available from under util
 
 # v0.2.0 (6/10/2024)
 

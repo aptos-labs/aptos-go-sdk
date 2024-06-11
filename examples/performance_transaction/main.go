@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/examples"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"time"
 )
 
@@ -95,5 +95,5 @@ func main() {
 	println("Wait for transaction:", time.Since(before).Milliseconds(), "ms")
 
 	println("Total time:    ", time.Since(start).Milliseconds(), "ms")
-	println(examples.PrettyJson(txn))
+	println(util.PrettyJson(txn))
 }

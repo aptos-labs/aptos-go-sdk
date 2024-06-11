@@ -47,7 +47,7 @@ var TransactionPrefix *[]byte
 // Hash takes the hash of the SignedTransaction
 //
 // Note: At the moment, this assumes that the transaction is a UserTransaction
-func (txn *SignedTransaction) Hash() ([]byte, error) {
+func (txn *SignedTransaction) Hash() (string, error) {
 	if TransactionPrefix == nil {
 		hash := Sha3256Hash([][]byte{[]byte("APTOS::Transaction")})
 		TransactionPrefix = &hash
@@ -55,13 +55,14 @@ func (txn *SignedTransaction) Hash() ([]byte, error) {
 
 	txnBytes, err := bcs.Serialize(txn)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// Transaction signature is defined as, the domain separated prefix based on struct (Transaction)
 	// Then followed by the type of the transaction for the enum, UserTransaction is 0
 	// Then followed by BCS encoded bytes of the signed transaction
-	return Sha3256Hash([][]byte{*TransactionPrefix, {byte(UserTransactionVariant)}, txnBytes}), nil
+	hashBytes := Sha3256Hash([][]byte{*TransactionPrefix, {byte(UserTransactionVariant)}, txnBytes})
+	return BytesToHex(hashBytes), nil
 }
 
 //region SignedTransaction bcs.Struct
