@@ -9,6 +9,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Doc`] Add examples and documentation in Go doc comments
 - [`Breaking change`] Make SignedTransaction.Hash() output string to be consistent with other representations
 - Add more functions available from under util
+- Add CoinBatchTransferPayload for sending multiple amounts to multiple addresses
 
 # v0.2.0 (6/10/2024)
 
