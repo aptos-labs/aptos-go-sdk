@@ -5,7 +5,9 @@ import (
 )
 
 // PublishPackagePayloadFromJsonFile publishes code created with the Aptos CLI to publish with it.
-// You must run the command `aptos move build-publish-payload` to generate it.
+// The Aptos CLI can generate the associated file with the following CLI command:
+//
+//	aptos move build-publish-payload
 func PublishPackagePayloadFromJsonFile(metadata []byte, bytecode [][]byte) (*TransactionPayload, error) {
 	metadataBytes, err := bcs.SerializeBytes(metadata)
 	if err != nil {
