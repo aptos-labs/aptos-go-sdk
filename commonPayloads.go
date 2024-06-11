@@ -10,44 +10,6 @@ import (
  * because FeePayer, and Multi-sig transactions will use these payloads, in addition to SingleSigner transactions
  */
 
-// CoinTransferPayload builds an EntryFunction payload for transferring coins
-//
-// For coinType, if none is provided, it will transfer 0x1::aptos_coin:AptosCoin
-func CoinTransferPayload(coinType *TypeTag, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
-	amountBytes, err := bcs.SerializeU64(amount)
-	if err != nil {
-		return nil, err
-	}
-
-	if coinType == nil || *coinType == AptosCoinTypeTag {
-		return &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []TypeTag{},
-			Args: [][]byte{
-				dest[:],
-				amountBytes,
-			},
-		}, nil
-	} else {
-		return &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer_coins",
-			ArgTypes: []TypeTag{*coinType},
-			Args: [][]byte{
-				dest[:],
-				amountBytes,
-			},
-		}, nil
-	}
-}
-
 // FungibleAssetPrimaryStoreTransferPayload builds an EntryFunction payload to transfer between two primary stores
 // This is similar to CoinTransferPayload
 //
