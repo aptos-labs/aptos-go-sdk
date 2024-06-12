@@ -12,6 +12,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add CoinBatchTransferPayload for sending multiple amounts to multiple addresses
 - [`Fix`] Block APIs will now pull the rest of the transactions for the block automatically
 - [`Fix`] Fix bytecode JSON parsing in transaction parsing
+- Add ConcClient a concurrent client for many operations
 
 # v0.2.0 (6/10/2024)
 
