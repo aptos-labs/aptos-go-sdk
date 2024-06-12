@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
@@ -117,7 +118,7 @@ type WriteSetChangeDeleteResource struct {
 type WriteSetChangeWriteModule struct {
 	Type         string                `json:"type"`
 	Address      *types.AccountAddress `json:"address"`
-	StateKeyHash string                `json:"state_key_hash"`
+	StateKeyHash Hash                  `json:"state_key_hash"`
 	Data         *MoveBytecode         `json:"data"`
 }
 
