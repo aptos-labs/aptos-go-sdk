@@ -17,6 +17,12 @@ import (
 	"time"
 )
 
+const (
+	DefaultMaxGasAmount      = uint64(100_000) // Default to 0.001 APT max gas amount
+	DefaultGasUnitPrice      = uint64(100)     // Default to min gas price
+	DefaultExpirationSeconds = int64(300)      // Default to 5 minutes
+)
+
 // For Content-Type header when POST-ing a Transaction
 
 // ContentTypeAptosSignedTxnBcs header for sending BCS transaction payloads
@@ -114,16 +120,6 @@ func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...
 	return resources, err
 }
 
-func (rc *NodeClient) GetBCS(getUrl string) (*http.Response, error) {
-	req, err := http.NewRequest("GET", getUrl, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/x-bcs")
-	req.Header.Set(ClientHeader, ClientHeaderValue)
-	return rc.client.Do(req)
-}
-
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
@@ -132,21 +128,11 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
-	response, err := rc.GetBCS(au.String())
+	blob, err := rc.GetBCS(au.String())
 	if err != nil {
-		err = fmt.Errorf("GET %s, %w", au.String(), err)
-		return
+		return nil, err
 	}
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
-		return
-	}
-	blob, err := io.ReadAll(response.Body)
-	if err != nil {
-		err = fmt.Errorf("error getting response data, %w", err)
-		return
-	}
-	_ = response.Body.Close()
+
 	deserializer := bcs.NewDeserializer(blob)
 	// See resource_test.go TestMoveResourceBCS
 	resources = bcs.DeserializeSequence[AccountResourceRecord](deserializer)
@@ -454,13 +440,14 @@ type ChainIdOption uint8
 // Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
-	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
-	gasUnitPrice := uint64(100)     // Default to min gas price
-	expirationSeconds := int64(300) // Default to 5 minutes
+	maxGasAmount := DefaultMaxGasAmount
+	gasUnitPrice := uint64(0) //DefaultGasUnitPrice
+	expirationSeconds := DefaultExpirationSeconds
 	sequenceNumber := uint64(0)
 	haveSequenceNumber := false
 	chainId := uint8(0)
 	haveChainId := false
+	haveGasUnitPrice := false
 
 	for opti, option := range options {
 		switch ovalue := option.(type) {
@@ -468,6 +455,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 			maxGasAmount = uint64(ovalue)
 		case GasUnitPrice:
 			gasUnitPrice = uint64(ovalue)
+			haveGasUnitPrice = true
 		case ExpirationSeconds:
 			expirationSeconds = int64(ovalue)
 			if expirationSeconds < 0 {
@@ -486,21 +474,21 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 		}
 	}
 
-	return rc.buildTransactionInner(sender, payload, maxGasAmount, gasUnitPrice, expirationSeconds, sequenceNumber, haveSequenceNumber, chainId, haveChainId)
+	return rc.buildTransactionInner(sender, payload, maxGasAmount, gasUnitPrice, haveGasUnitPrice, expirationSeconds, sequenceNumber, haveSequenceNumber, chainId, haveChainId)
 }
 
 // BuildTransactionMultiAgent builds a raw transaction for signing with fee payer or multi-agent
 // Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
 
-	// TODO: Make these all constants somewhere
-	maxGasAmount := uint64(100_000) // Default to 0.001 APT max gas amount
-	gasUnitPrice := uint64(100)     // Default to min gas price
-	expirationSeconds := int64(300) // Default to 5 minutes
+	maxGasAmount := DefaultMaxGasAmount
+	gasUnitPrice := DefaultGasUnitPrice
+	expirationSeconds := DefaultExpirationSeconds
 	sequenceNumber := uint64(0)
 	haveSequenceNumber := false
 	chainId := uint8(0)
 	haveChainId := false
+	haveGasUnitPrice := false
 
 	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
@@ -511,6 +499,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			maxGasAmount = uint64(ovalue)
 		case GasUnitPrice:
 			gasUnitPrice = uint64(ovalue)
+			haveGasUnitPrice = true
 		case ExpirationSeconds:
 			expirationSeconds = int64(ovalue)
 			if expirationSeconds < 0 {
@@ -534,7 +523,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 	}
 
 	// Build the base raw transaction
-	rawTxn, err := rc.buildTransactionInner(sender, payload, maxGasAmount, gasUnitPrice, expirationSeconds, sequenceNumber, haveSequenceNumber, chainId, haveChainId)
+	rawTxn, err := rc.buildTransactionInner(sender, payload, maxGasAmount, gasUnitPrice, haveGasUnitPrice, expirationSeconds, sequenceNumber, haveSequenceNumber, chainId, haveChainId)
 	if err != nil {
 		return nil, err
 	}
@@ -565,6 +554,7 @@ func (rc *NodeClient) buildTransactionInner(
 	payload TransactionPayload,
 	maxGasAmount uint64,
 	gasUnitPrice uint64,
+	haveGasUnitPrice bool,
 	expirationSeconds int64,
 	sequenceNumber uint64,
 	haveSequenceNumber bool,
@@ -573,56 +563,82 @@ func (rc *NodeClient) buildTransactionInner(
 ) (rawTxn *RawTransaction, err error) {
 	// Fetch requirements concurrently, and then consume them
 
-	// Fetch ChainId which may be cached
-	chainIdChannel := make(chan ConcResponse[uint8], 1)
-	if !haveChainId {
-		go fetch[uint8](func() (uint8, error) {
-			return rc.GetChainId()
-		}, chainIdChannel)
+	// Fetch GasUnitPrice which may be cached
+	gasPriceErrChannel := make(chan error, 1)
+	if !haveGasUnitPrice {
+		go func() {
+			gasPriceEstimation, innerErr := rc.EstimateGasPrice()
+			if innerErr != nil {
+				gasPriceErrChannel <- innerErr
+			} else {
+				gasUnitPrice = gasPriceEstimation.GasEstimate
+				gasPriceErrChannel <- nil
+			}
+			close(gasPriceErrChannel)
+		}()
 	} else {
-		close(chainIdChannel)
+		gasPriceErrChannel <- nil
+		close(gasPriceErrChannel)
+	}
+
+	// Fetch ChainId which may be cached
+	chainIdErrChannel := make(chan error, 1)
+	if !haveChainId {
+		go func() {
+			chain, innerErr := rc.GetChainId()
+			if innerErr != nil {
+				chainIdErrChannel <- innerErr
+			} else {
+				chainId = chain
+				chainIdErrChannel <- nil
+			}
+			close(chainIdErrChannel)
+		}()
+	} else {
+		chainIdErrChannel <- nil
+		close(chainIdErrChannel)
 	}
 
 	// Fetch sequence number unless provided
-	accountChannel := make(chan ConcResponse[AccountInfo], 1)
+	accountErrChannel := make(chan error, 1)
 	if !haveSequenceNumber {
-		go fetch[AccountInfo](func() (AccountInfo, error) {
-			return rc.Account(sender)
-		}, accountChannel)
-	} else {
-		close(accountChannel)
-	}
-
-	// TODO: fetch gas price on-chain
-	// TODO: optionally simulate for max gas
-
-	// Consume concurrent requirements
-	if !haveChainId {
-		chainIdResponse := <-chainIdChannel
-		if chainIdResponse.Err != nil {
-			return nil, chainIdResponse.Err
-		} else {
-			chainId = chainIdResponse.Result
-		}
-	}
-
-	if !haveSequenceNumber {
-		accountResponse := <-accountChannel
-		if accountResponse.Err != nil {
-			return nil, accountResponse.Err
-		} else {
-			num, err := accountResponse.Result.SequenceNumber()
-			if err != nil {
-				return nil, err
+		go func() {
+			account, innerErr := rc.Account(sender)
+			if innerErr != nil {
+				accountErrChannel <- innerErr
+				close(accountErrChannel)
+				return
 			}
-			sequenceNumber = num
-		}
+			seqNo, innerErr := account.SequenceNumber()
+			if innerErr != nil {
+				accountErrChannel <- innerErr
+				close(accountErrChannel)
+				return
+			}
+			sequenceNumber = seqNo
+			accountErrChannel <- nil
+			close(accountErrChannel)
+		}()
+	} else {
+		accountErrChannel <- nil
+		close(accountErrChannel)
+	}
+
+	// TODO: optionally simulate for max gas
+	// Wait on the errors
+	chainIdErr, accountErr, gasPriceErr := <-chainIdErrChannel, <-accountErrChannel, <-gasPriceErrChannel
+	if chainIdErr != nil {
+		return nil, chainIdErr
+	} else if accountErr != nil {
+		return nil, accountErr
+	} else if gasPriceErr != nil {
+		return nil, gasPriceErr
 	}
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
 
 	// Base raw transaction used for all requests
-	return &RawTransaction{
+	rawTxn = &RawTransaction{
 		Sender:                     sender,
 		SequenceNumber:             sequenceNumber,
 		Payload:                    payload,
@@ -630,7 +646,8 @@ func (rc *NodeClient) buildTransactionInner(
 		GasUnitPrice:               gasUnitPrice,
 		ExpirationTimestampSeconds: expirationTimestampSeconds,
 		ChainId:                    chainId,
-	}, nil
+	}
+	return rawTxn, nil
 }
 
 type ViewPayload struct {
@@ -673,6 +690,7 @@ func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data 
 	return data, nil
 }
 
+// TODO: add caching for some period of time
 func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 	au := rc.baseUrl.JoinPath("estimate_gas_price")
 	info, err = Get[EstimateGasInfo](rc, au.String())
@@ -741,6 +759,31 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	return out, nil
 }
 
+func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
+	req, err := http.NewRequest("GET", getUrl, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Accept", "application/x-bcs")
+	req.Header.Set(ClientHeader, ClientHeaderValue)
+	response, err := rc.client.Do(req)
+	if err != nil {
+		err = fmt.Errorf("GET %s, %w", getUrl, err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return
+	}
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	_ = response.Body.Close()
+	return blob, nil
+}
+
 func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Reader) (data T, err error) {
 	if body == nil {
 		body = http.NoBody
@@ -785,5 +828,4 @@ func fetch[T any](inner func() (T, error), result chan ConcResponse[T]) {
 	} else {
 		result <- ConcResponse[T]{Result: response}
 	}
-	close(result)
 }
