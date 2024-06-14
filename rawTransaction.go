@@ -63,32 +63,10 @@ func (txn *RawTransaction) SignedTransaction(sender crypto.Signer) (*SignedTrans
 
 // SignedTransactionWithAuthenticator signs the sender only signed transaction
 func (txn *RawTransaction) SignedTransactionWithAuthenticator(auth *crypto.AccountAuthenticator) (*SignedTransaction, error) {
-	txnAuth := &TransactionAuthenticator{}
-	switch auth.Variant {
-	case crypto.AccountAuthenticatorEd25519:
-		txnAuth.Variant = TransactionAuthenticatorEd25519
-		txnAuth.Auth = &Ed25519TransactionAuthenticator{
-			Sender: auth,
-		}
-	case crypto.AccountAuthenticatorMultiEd25519:
-		txnAuth.Variant = TransactionAuthenticatorMultiEd25519
-		txnAuth.Auth = &MultiEd25519TransactionAuthenticator{
-			Sender: auth,
-		}
-	case crypto.AccountAuthenticatorSingleSender:
-		txnAuth.Variant = TransactionAuthenticatorSingleSender
-		txnAuth.Auth = &SingleSenderTransactionAuthenticator{
-			Sender: auth,
-		}
-	case crypto.AccountAuthenticatorMultiKey:
-		txnAuth.Variant = TransactionAuthenticatorSingleSender
-		txnAuth.Auth = &SingleSenderTransactionAuthenticator{
-			Sender: auth,
-		}
-	default:
-		return nil, fmt.Errorf("unknown authenticator type %d", auth.Variant)
+	txnAuth, err := NewTransactionAuthenticator(auth)
+	if err != nil {
+		return nil, err
 	}
-
 	return &SignedTransaction{
 		Transaction:   txn,
 		Authenticator: txnAuth,

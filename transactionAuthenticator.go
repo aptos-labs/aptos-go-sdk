@@ -32,6 +32,35 @@ type TransactionAuthenticator struct {
 	Auth    TransactionAuthenticatorImpl
 }
 
+func NewTransactionAuthenticator(auth *crypto.AccountAuthenticator) (*TransactionAuthenticator, error) {
+	txnAuth := &TransactionAuthenticator{}
+	switch auth.Variant {
+	case crypto.AccountAuthenticatorEd25519:
+		txnAuth.Variant = TransactionAuthenticatorEd25519
+		txnAuth.Auth = &Ed25519TransactionAuthenticator{
+			Sender: auth,
+		}
+	case crypto.AccountAuthenticatorMultiEd25519:
+		txnAuth.Variant = TransactionAuthenticatorMultiEd25519
+		txnAuth.Auth = &MultiEd25519TransactionAuthenticator{
+			Sender: auth,
+		}
+	case crypto.AccountAuthenticatorSingleSender:
+		txnAuth.Variant = TransactionAuthenticatorSingleSender
+		txnAuth.Auth = &SingleSenderTransactionAuthenticator{
+			Sender: auth,
+		}
+	case crypto.AccountAuthenticatorMultiKey:
+		txnAuth.Variant = TransactionAuthenticatorSingleSender
+		txnAuth.Auth = &SingleSenderTransactionAuthenticator{
+			Sender: auth,
+		}
+	default:
+		return nil, fmt.Errorf("unknown authenticator type %d", auth.Variant)
+	}
+	return txnAuth, nil
+}
+
 //region TransactionAuthenticator TransactionAuthenticatorImpl
 
 func (ea *TransactionAuthenticator) Verify(msg []byte) bool {

@@ -56,8 +56,7 @@ func APTTransferTransaction(client *Client, sender TransactionSigner, dest Accou
 		return nil, err
 	}
 
-	rawTxn, err := client.BuildTransaction(sender.AccountAddress(),
-		TransactionPayload{Payload: entryFunction}, options...)
+	rawTxn, err := client.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: entryFunction}, options...)
 	if err != nil {
 		return
 	}
