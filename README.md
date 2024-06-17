@@ -37,9 +37,10 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [x] External signer support e.g. HSMs or external services
 - [x] Move Package publishing support
 - [x] Move script support
+- [x] Transaction Simulation
 
 ### TODO
-- [ ] Transaction Simulation
+
 - [ ] MultiEd25519 support
 - [ ] Predetermined Indexer queries for Fungible Assets and Digital Assets
 - [ ] Automated sequence number management for parallel transaction submission
@@ -63,6 +64,7 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [ ] Transaction parsing example (by blocks)
 
 ## Other TODO
+
 - [ ] Ensure blocks fetch all transactions associated
 - [ ] More testing around API parsing
 - [ ] TypeTag string parsing
