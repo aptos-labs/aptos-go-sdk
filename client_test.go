@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
-
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -55,9 +55,17 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
+	completed := make(chan bool)
 	for name, signer := range TestSigners {
 		println("Entry function:", name)
-		testTransaction(t, signer, submitEntryFunction)
+		go func() {
+			testTransaction(t, signer, submitEntryFunction)
+			completed <- true
+		}()
+	}
+
+	for i := 0; i < len(TestSigners); i++ {
+		<-completed
 	}
 }
 
@@ -68,10 +76,18 @@ func Test_EntryFunctionSimulation(t *testing.T) {
 	}
 }
 
-func Test_Ed25519_ScriptFlow(t *testing.T) {
+func Test_ScriptFlow(t *testing.T) {
+	completed := make(chan bool)
 	for name, signer := range TestSigners {
 		println("Script:", name)
-		testTransaction(t, signer, submitScript)
+		go func() {
+			testTransaction(t, signer, submitScript)
+			completed <- true
+		}()
+	}
+
+	for i := 0; i < len(TestSigners); i++ {
+		<-completed
 	}
 }
 
@@ -268,22 +284,31 @@ func Test_Block(t *testing.T) {
 	numToCheck := uint64(10)
 	blockHeight := info.BlockHeight()
 
+	completed := make(chan bool, numToCheck)
+
 	for i := uint64(0); i < numToCheck; i++ {
-		blockNumber := blockHeight - i
-		println("BLOCK:", blockNumber)
-		blockByHeight, err := client.BlockByHeight(blockNumber, true)
-		assert.NoError(t, err)
+		go func() {
+			blockNumber := blockHeight - i
+			println("BLOCK:", blockNumber)
+			blockByHeight, err := client.BlockByHeight(blockNumber, true)
+			assert.NoError(t, err)
 
-		assert.Equal(t, blockNumber, blockByHeight.BlockHeight)
+			assert.Equal(t, blockNumber, blockByHeight.BlockHeight)
 
-		// Block should always be last - first + 1 (since they would be 1 if they're the same (inclusive)
-		assert.Equal(t, 1+blockByHeight.LastVersion-blockByHeight.FirstVersion, uint64(len(blockByHeight.Transactions)))
+			// Block should always be last - first + 1 (since they would be 1 if they're the same (inclusive)
+			assert.Equal(t, 1+blockByHeight.LastVersion-blockByHeight.FirstVersion, uint64(len(blockByHeight.Transactions)))
 
-		// Version should be the same
-		blockByVersion, err := client.BlockByVersion(blockByHeight.FirstVersion, true)
-		assert.NoError(t, err)
+			// Version should be the same
+			blockByVersion, err := client.BlockByVersion(blockByHeight.FirstVersion, true)
+			assert.NoError(t, err)
 
-		assert.Equal(t, blockByHeight, blockByVersion)
+			assert.Equal(t, blockByHeight, blockByVersion)
+			completed <- true
+		}()
+	}
+
+	for i := uint64(0); i < numToCheck; i++ {
+		<-completed
 	}
 }
 
@@ -347,6 +372,75 @@ func Test_AccountResources(t *testing.T) {
 	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resourcesBcs), 0)
+}
+
+func Test_Concurrent_Submission(t *testing.T) {
+	const numTxns = uint64(10)
+
+	client, err := NewClient(DevnetConfig)
+	assert.NoError(t, err)
+
+	account1, err := NewEd25519Account()
+	assert.NoError(t, err)
+	account2, err := NewEd25519Account()
+	assert.NoError(t, err)
+
+	err = client.Fund(account1.AccountAddress(), 100_000_000)
+	assert.NoError(t, err)
+	err = client.Fund(account2.AccountAddress(), 0)
+	assert.NoError(t, err)
+
+	// start submission goroutine
+	payloads := make(chan TransactionSubmissionPayload)
+	results := make(chan TransactionSubmissionResponse)
+	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results)
+
+	transferAmount, err := bcs.SerializeU64(100)
+
+	// Generate transactions
+	for i := uint64(0); i < numTxns; i++ {
+		payloads <- TransactionSubmissionPayload{
+			Id:   i,
+			Type: TransactionSubmissionTypeSingle, // TODO: not needed?
+			Inner: TransactionPayload{Payload: &EntryFunction{
+				Module:   ModuleId{Address: AccountOne, Name: "aptos_account"},
+				Function: "transfer",
+				ArgTypes: []TypeTag{},
+				Args:     [][]byte{AccountOne[:], transferAmount},
+			}},
+		}
+	}
+
+	// Start waiting on txns
+	// TODO: These final steps should be concurrent rather than serial like this
+	waitResults := make(chan ConcResponse[*api.UserTransaction], numTxns)
+
+	// It's interesting, this had to be wrapped in a goroutine to ensure blocking on results dont' block
+	go func() {
+		for response := range results {
+			assert.NoError(t, response.Err)
+
+			go fetch[*api.UserTransaction](func() (*api.UserTransaction, error) {
+				return client.WaitForTransaction(response.Response.Hash)
+			}, waitResults)
+		}
+	}()
+
+	// Wait on all the results, recording the succeeding ones
+	txnMap := make(map[uint64]bool)
+
+	// We could wait on a close, but I'm going to be a little pickier here
+	for i := uint64(0); i < numTxns; i++ {
+		response := <-waitResults
+		assert.NoError(t, response.Err)
+		assert.True(t, response.Result.Success)
+		txnMap[response.Result.SequenceNumber] = true
+	}
+
+	// Check all transactions were successful from [0-numTxns)
+	for i := uint64(0); i < numTxns; i++ {
+		assert.True(t, txnMap[i])
+	}
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
