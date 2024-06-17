@@ -37,9 +37,10 @@
 package aptos
 
 import (
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/hasura/go-graphql-client"
-	"time"
 )
 
 // NetworkConfig a configuration for the Client and which network to use.  Use one of the preconfigured [LocalnetConfig], [DevnetConfig], [TestnetConfig], or [MainnetConfig] unless you have your own full node.
@@ -293,6 +294,11 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Tr
 // SubmitTransaction Submits an already signed transaction to the blockchain
 func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
+}
+
+// SimulateTransaction Simulates a raw transaction without sending it to the blockchain
+func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data *[]api.UserTransaction, err error) {
+	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }
 
 // GetChainId Retrieves the ChainId of the network

@@ -50,16 +50,13 @@ func init() {
 //
 // options may be: MaxGasAmount, GasUnitPrice, ExpirationSeconds, ValidUntil, SequenceNumber, ChainIdOption
 // deprecated, please use the EntryFunction APIs
-func APTTransferTransaction(client *Client, sender TransactionSigner, dest AccountAddress, amount uint64, options ...any) (signedTxn *SignedTransaction, err error) {
+func APTTransferTransaction(client *Client, sender TransactionSigner, dest AccountAddress, amount uint64, options ...any) (rawTxn *RawTransaction, err error) {
 	entryFunction, err := CoinTransferPayload(nil, dest, amount)
 	if err != nil {
 		return nil, err
 	}
 
-	rawTxn, err := client.BuildTransaction(sender.AccountAddress(),
+	rawTxn, err = client.BuildTransaction(sender.AccountAddress(),
 		TransactionPayload{Payload: entryFunction}, options...)
-	if err != nil {
-		return
-	}
-	return rawTxn.SignedTransaction(sender)
+	return
 }

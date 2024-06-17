@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,6 +13,10 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -503,6 +505,95 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api
 	}
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions")
+	response, err := rc.Post(au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	if err != nil {
+		err = fmt.Errorf("POST %s, %w", au.String(), err)
+		return
+	}
+	if response.StatusCode >= 400 {
+		err = NewHttpError(response)
+		return nil, err
+	}
+	blob, err := io.ReadAll(response.Body)
+	if err != nil {
+		err = fmt.Errorf("error getting response data, %w", err)
+		return
+	}
+	_ = response.Body.Close()
+	//return blob, nil
+	err = json.Unmarshal(blob, &data)
+	return
+}
+
+type EstimateGasUnitPrice bool
+
+type EstimateMaxGasAmount bool
+
+type EstimatePrioritizedGasUnitPrice bool
+
+func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data *[]api.UserTransaction, err error) {
+	// build authenticator for simulation
+	var auth *crypto.AccountAuthenticator
+	derivationScheme := sender.PubKey().Scheme()
+	switch derivationScheme {
+	case crypto.Ed25519Scheme:
+		auth = &crypto.AccountAuthenticator{
+			Variant: crypto.AccountAuthenticatorEd25519,
+			Auth: &crypto.Ed25519Authenticator{
+				PubKey: sender.PubKey().(*crypto.Ed25519PublicKey),
+				Sig:    &crypto.Ed25519Signature{Inner: [64]byte(make([]byte, 64))},
+			},
+		}
+	case crypto.SingleKeyScheme:
+		mockSig := &crypto.AnySignature{}
+		_ = mockSig.FromBytes(make([]byte, 64))
+		auth = &crypto.AccountAuthenticator{
+			Variant: crypto.AccountAuthenticatorSingleSender,
+			Auth: &crypto.SingleKeyAuthenticator{
+				PubKey: sender.PubKey().(*crypto.AnyPublicKey),
+				Sig:    mockSig,
+			},
+		}
+	case crypto.MultiEd25519Scheme:
+	case crypto.MultiKeyScheme:
+		// todo: add support for multikey simulation
+		return nil, fmt.Errorf("currently unsupported sender derivation scheme %v", derivationScheme)
+	default:
+		return nil, fmt.Errorf("unexpected sender derivation scheme %v", derivationScheme)
+	}
+
+	// generate signed transaction for simulation (with zero signature)
+	signedTxn, err := rawTxn.SignedTransactionWithAuthenticator(auth)
+	if err != nil {
+		return nil, err
+	}
+
+	sblob, err := bcs.Serialize(signedTxn)
+	if err != nil {
+		return
+	}
+	bodyReader := bytes.NewReader(sblob)
+	au := rc.baseUrl.JoinPath("transactions/simulate")
+
+	// parse simulate tx options
+	params := url.Values{}
+	for i, arg := range options {
+		switch value := arg.(type) {
+		case EstimateGasUnitPrice:
+			params.Set("estimate_gas_unit_price", strconv.FormatBool(bool(value)))
+		case EstimateMaxGasAmount:
+			params.Set("estimate_max_gas_amount", strconv.FormatBool(bool(value)))
+		case EstimatePrioritizedGasUnitPrice:
+			params.Set("estimate_prioritized_gas_unit_price", strconv.FormatBool(bool(value)))
+		default:
+			err = fmt.Errorf("SimulateTransaction arg %d bad type %T", i+1, arg)
+			return
+		}
+	}
+	if len(params) != 0 {
+		au.RawQuery = params.Encode()
+	}
+
 	response, err := rc.Post(au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", au.String(), err)
