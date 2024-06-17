@@ -609,7 +609,6 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 		return
 	}
 	_ = response.Body.Close()
-	//return blob, nil
 	err = json.Unmarshal(blob, &data)
 	return
 }
