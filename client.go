@@ -297,7 +297,7 @@ func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (d
 }
 
 // SimulateTransaction Simulates a raw transaction without sending it to the blockchain
-func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data *[]api.UserTransaction, err error) {
+func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }
 

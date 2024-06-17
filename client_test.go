@@ -183,39 +183,40 @@ func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSi
 		return // skip rest of the tests
 	default:
 		assert.NoError(t, err)
-		assert.Equal(t, *(*simulatedTxn)[0].TxnSuccess(), true)
-		assert.Equal(t, (*simulatedTxn)[0].VmStatus, vmStatusSuccess)
-		assert.Greater(t, (*simulatedTxn)[0].GasUsed, uint64(0))
+		assert.Equal(t, true, simulatedTxn[0].Success)
+		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
 	}
 
-	// simulate transaction (esimate gas unit price)
+	// simulate transaction (estimate gas unit price)
 	rawTxnZeroGasUnitPrice, err := buildTransaction(t, client, account, GasUnitPrice(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
 	assert.NoError(t, err)
-	assert.Equal(t, *(*simulatedTxn)[0].TxnSuccess(), true)
-	assert.Equal(t, (*simulatedTxn)[0].VmStatus, vmStatusSuccess)
-	estimatedGasUnitPrice := (*simulatedTxn)[0].GasUnitPrice
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
 	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
 
-	// simulate transaction (esimate max gas amount)
+	// simulate transaction (estimate max gas amount)
 	rawTxnZeroMaxGasAmount, err := buildTransaction(t, client, account, MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
-	assert.Equal(t, *(*simulatedTxn)[0].TxnSuccess(), true)
-	assert.Equal(t, (*simulatedTxn)[0].VmStatus, vmStatusSuccess)
-	assert.Greater(t, (*simulatedTxn)[0].MaxGasAmount, uint64(0))
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
 
-	// simulate transaction (esimate prioritized gas unit price and max gas amount)
+	// simulate transaction (estimate prioritized gas unit price and max gas amount)
 	rawTxnZeroGasConfig, err := buildTransaction(t, client, account, GasUnitPrice(0), MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
-	assert.Equal(t, *(*simulatedTxn)[0].TxnSuccess(), true)
-	assert.Equal(t, (*simulatedTxn)[0].VmStatus, vmStatusSuccess)
-	assert.Greater(t, (*simulatedTxn)[0].GasUnitPrice, estimatedGasUnitPrice) // should be greater than previous estimate
-	assert.Greater(t, (*simulatedTxn)[0].MaxGasAmount, uint64(0))
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
+	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
 }
 
 func TestAPTTransferTransaction(t *testing.T) {

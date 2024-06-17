@@ -418,7 +418,7 @@ type EstimateMaxGasAmount bool
 
 type EstimatePrioritizedGasUnitPrice bool
 
-func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data *[]api.UserTransaction, err error) {
+func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
 	var auth *crypto.AccountAuthenticator
 	derivationScheme := sender.PubKey().Scheme()
@@ -481,23 +481,12 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 		au.RawQuery = params.Encode()
 	}
 
-	response, err := rc.Post(au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = Post[[]*api.UserTransaction](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
-		err = fmt.Errorf("POST %s, %w", au.String(), err)
-		return
+		return nil, fmt.Errorf("simulate transaction api err: %w", err)
 	}
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
-		return nil, err
-	}
-	blob, err := io.ReadAll(response.Body)
-	if err != nil {
-		err = fmt.Errorf("error getting response data, %w", err)
-		return
-	}
-	_ = response.Body.Close()
-	err = json.Unmarshal(blob, &data)
-	return
+
+	return data, nil
 }
 
 func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
