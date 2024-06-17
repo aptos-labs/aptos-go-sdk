@@ -6,7 +6,7 @@ import (
 
 // MoveBytecode describes a module, or script, and it's associated ABI
 type MoveBytecode struct {
-	Bytecode []byte      `json:"bytecode"`
+	Bytecode HexBytes    `json:"bytecode"`
 	Abi      *MoveModule `json:"abi,omitempty"` // Optional
 }
 
@@ -24,7 +24,7 @@ type MoveModule struct {
 
 // MoveScript is the representation of a compiled script.  The API may not fill in the ABI field
 type MoveScript struct {
-	Bytecode []byte        `json:"bytecode"`
+	Bytecode HexBytes      `json:"bytecode"`
 	Abi      *MoveFunction `json:"abi,omitempty"` // Optional
 }
 

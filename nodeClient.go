@@ -520,7 +520,7 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api
 		return
 	}
 	_ = response.Body.Close()
-	//return blob, nil
+
 	err = json.Unmarshal(blob, &data)
 	return
 }
@@ -671,7 +671,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 			chainId = uint8(ovalue)
 			haveChainId = true
 		default:
-			err = fmt.Errorf("APTTransferTransaction arg [%d] unknown option type %T", opti+4, option)
+			err = fmt.Errorf("BuildTransaction arg [%d] unknown option type %T", opti+4, option)
 			return nil, err
 		}
 	}
