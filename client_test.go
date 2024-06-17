@@ -1,16 +1,17 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"testing"
 
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	singleSignerScript = "a11ceb0b060000000701000402040a030e0c041a04051e20073e30086e2000000001010204010001000308000104030401000105050601000002010203060c0305010b0001080101080102060c03010b0001090002050b00010900000a6170746f735f636f696e04636f696e04436f696e094170746f73436f696e087769746864726177076465706f7369740000000000000000000000000000000000000000000000000000000000000001000001080b000b0138000c030b020b03380102"
 	fundAmount         = 100_000_000
+	vmStatusSuccess    = "Executed successfully"
 )
 
 var TestSigners map[string]func() (TransactionSigner, error)
@@ -68,6 +69,13 @@ func Test_EntryFunctionFlow(t *testing.T) {
 	}
 }
 
+func Test_EntryFunctionSimulation(t *testing.T) {
+	for name, signer := range TestSigners {
+		println("Entry function:", name)
+		testTransactionSimulation(t, signer, submitEntryFunction)
+	}
+}
+
 func Test_ScriptFlow(t *testing.T) {
 	completed := make(chan bool)
 	for name, signer := range TestSigners {
@@ -83,7 +91,14 @@ func Test_ScriptFlow(t *testing.T) {
 	}
 }
 
-func testTransaction(t *testing.T, createAccount func() (TransactionSigner, error), buildAndSignTransaction func(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error)) {
+func Test_Ed25519_ScriptSimulation(t *testing.T) {
+	for name, signer := range TestSigners {
+		println("Script:", name)
+		testTransactionSimulation(t, signer, submitScript)
+	}
+}
+
+func setupIntegrationTest(t *testing.T, createAccount func() (TransactionSigner, error)) (*Client, TransactionSigner) {
 	// All of these run against localnet
 	if testing.Short() {
 		t.Skip("integration test expects network connection to localnet")
@@ -113,8 +128,18 @@ func testTransaction(t *testing.T, createAccount func() (TransactionSigner, erro
 	err = client.Fund(account.AccountAddress(), fundAmount)
 	assert.NoError(t, err)
 
+	return client, account
+}
+
+func testTransaction(t *testing.T, createAccount func() (TransactionSigner, error), buildTransaction func(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)) {
+	client, account := setupIntegrationTest(t, createAccount)
+
 	// Build transaction
-	signedTxn, err := buildAndSignTransaction(t, client, account)
+	rawTxn, err := buildTransaction(t, client, account)
+	assert.NoError(t, err)
+
+	// Sign transaction
+	signedTxn, err := rawTxn.SignedTransaction(account)
 	assert.NoError(t, err)
 
 	// Send transaction
@@ -141,6 +166,57 @@ func testTransaction(t *testing.T, createAccount func() (TransactionSigner, erro
 
 	// Assert that both are the same
 	assert.Equal(t, txn, txnByVersion)
+}
+
+func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSigner, error), buildTransaction func(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)) {
+	client, account := setupIntegrationTest(t, createAccount)
+
+	// Simulate transaction (no options)
+	rawTxn, err := buildTransaction(t, client, account)
+	assert.NoError(t, err)
+	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
+	switch account.(type) {
+	case *MultiKeyTestSigner:
+		// multikey simulation currently not supported
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "currently unsupported sender derivation scheme")
+		return // skip rest of the tests
+	default:
+		assert.NoError(t, err)
+		assert.Equal(t, true, simulatedTxn[0].Success)
+		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
+	}
+
+	// simulate transaction (estimate gas unit price)
+	rawTxnZeroGasUnitPrice, err := buildTransaction(t, client, account, GasUnitPrice(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
+	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+
+	// simulate transaction (estimate max gas amount)
+	rawTxnZeroMaxGasAmount, err := buildTransaction(t, client, account, MaxGasAmount(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+
+	// simulate transaction (estimate prioritized gas unit price and max gas amount)
+	rawTxnZeroGasConfig, err := buildTransaction(t, client, account, GasUnitPrice(0), MaxGasAmount(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
+	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
@@ -376,11 +452,11 @@ func TestClient_BlockByHeight(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
-	return APTTransferTransaction(client, sender, AccountOne, 100)
+func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
+	return APTTransferTransaction(client, sender, AccountOne, 100, options...)
 }
 
-func submitScript(t *testing.T, client *Client, sender TransactionSigner) (*SignedTransaction, error) {
+func submitScript(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
 	scriptBytes, err := ParseHex(singleSignerScript)
 	assert.NoError(t, err)
 
@@ -398,10 +474,12 @@ func submitScript(t *testing.T, client *Client, sender TransactionSigner) (*Sign
 				Variant: ScriptArgumentAddress,
 				Value:   dest,
 			}},
-		}})
+		}},
+		options...,
+	)
 	if err != nil {
 		return nil, err
 	}
 
-	return rawTxn.SignedTransaction(sender)
+	return rawTxn, nil
 }
