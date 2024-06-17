@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
@@ -49,8 +50,14 @@ func main() {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 
+	// Build transaction
+	rawTxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, TransferAmount)
+	if err != nil {
+		panic("Failed to build transaction:" + err.Error())
+	}
+
 	// Sign transaction
-	signedTxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, TransferAmount)
+	signedTxn, err := rawTxn.SignedTransaction(alice)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}

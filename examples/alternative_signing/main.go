@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/ed25519"
@@ -92,8 +93,14 @@ func main() {
 	}
 	amount := uint64(100)
 
+	// Build transaction
+	rawTxn, err := aptos.APTTransferTransaction(client, sender, receiver, amount)
+	if err != nil {
+		panic("Failed to build transaction:" + err.Error())
+	}
+
 	// Sign transaction
-	signedTxn, err := aptos.APTTransferTransaction(client, sender, receiver, amount)
+	signedTxn, err := rawTxn.SignedTransaction(sender)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}
