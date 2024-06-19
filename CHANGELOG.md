@@ -5,6 +5,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v0.4.1 (6/18/2024)
+- [`Fix`] Make examples more portable / not rely on internal packages
+
 # v0.4.0 (6/17/2024)
 
 - [`Fix`] Fix all unhandled errors using ineffassign to find them
