@@ -14,6 +14,35 @@ type Block struct {
 	Transactions   []*Transaction
 }
 
+func (o *Block) MarshalJSON() ([]byte, error) {
+	type inner struct {
+		BlockHash      Hash              `json:"block_hash"`
+		BlockHeight    U64               `json:"block_height"`
+		BlockTimestamp U64               `json:"block_timestamp"`
+		FirstVersion   U64               `json:"first_version"`
+		LastVersion    U64               `json:"last_version"`
+		Transactions   []json.RawMessage `json:"transactions"`
+	}
+
+	transactions := make([]json.RawMessage, len(o.Transactions))
+	for i, tx := range o.Transactions {
+		txn, err := json.Marshal(tx)
+		if err != nil {
+			return nil, err
+		}
+		transactions[i] = json.RawMessage(txn)
+	}
+	data := &inner{
+		BlockHash:      o.BlockHash,
+		BlockHeight:    U64(o.BlockHeight),
+		BlockTimestamp: U64(o.BlockTimestamp),
+		FirstVersion:   U64(o.FirstVersion),
+		LastVersion:    U64(o.LastVersion),
+		Transactions:   transactions,
+	}
+	return json.Marshal(data)
+}
+
 func (o *Block) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		BlockHash      Hash              `json:"block_hash"`

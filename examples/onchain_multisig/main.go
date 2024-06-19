@@ -1,18 +1,18 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"time"
 )
 
 const TransferAmount = uint64(1_000_000)
 
 func main() {
-	client, err := aptos.NewClient(aptos.LocalnetConfig)
+	client, err := aptos.NewClient(aptos.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client " + err.Error())
 	}
@@ -317,7 +317,7 @@ func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.Tr
 	// TODO: make this a function on the user transaction
 	for _, event := range txn.Events {
 		if event.Type == "0x1::multisig_account::TransactionExecutionFailed" {
-			eventStr := util.PrettyJson(event)
+			eventStr, _ := json.Marshal(event)
 			panic(fmt.Sprintf("Multisig transaction failed. details: %s", eventStr))
 		}
 	}

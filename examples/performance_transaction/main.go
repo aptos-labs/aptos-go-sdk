@@ -1,9 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"time"
 )
 
@@ -14,7 +14,7 @@ func main() {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.LocalnetConfig)
+	client, err := aptos.NewClient(aptos.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -95,5 +95,6 @@ func main() {
 	println("Wait for transaction:", time.Since(before).Milliseconds(), "ms")
 
 	println("Total time:    ", time.Since(start).Milliseconds(), "ms")
-	println(util.PrettyJson(txn))
+	txnStr, _ := json.Marshal(txn)
+	println(string(txnStr))
 }
