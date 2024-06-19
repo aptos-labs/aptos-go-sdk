@@ -1,11 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 const testEd25519PrivateKey = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
@@ -17,7 +17,7 @@ const bytecode = "0xa11ceb0b060000000c01000e020e30033e850104c3010605c901980107e1
 // main This example shows how to create and transfer fungible assets
 func main() {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.LocalnetConfig)
+	client, err := aptos.NewClient(aptos.DevnetConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -55,7 +55,8 @@ func main() {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
 	if waitResponse.Success == false {
-		panic(fmt.Sprintf("Failed to publish transaction %s", util.PrettyJson(waitResponse)))
+		responseStr, _ := json.Marshal(response)
+		panic(fmt.Sprintf("Failed to publish transaction %s", responseStr))
 	}
 
 	// Get the fungible asset address by view function
