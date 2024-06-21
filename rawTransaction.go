@@ -137,8 +137,8 @@ const rawTransactionWithDataPrehashStr = "APTOS::RawTransactionWithData"
 // Do not write to the []byte returned
 func RawTransactionWithDataPrehash() []byte {
 	// Cache the prehash
-	if rawTransactionPrehash == nil {
-		b32 := sha3.Sum256([]byte(rawTransactionPrehashStr))
+	if rawTransactionWithDataPrehash == nil {
+		b32 := sha3.Sum256([]byte(rawTransactionWithDataPrehashStr))
 		out := make([]byte, len(b32))
 		copy(out, b32[:])
 		rawTransactionPrehash = out
@@ -165,6 +165,18 @@ type RawTransactionWithData struct {
 	Inner   RawTransactionWithDataImpl
 }
 
+func (txn *RawTransactionWithData) SetFeePayer(
+	feePayer AccountAddress,
+) bool {
+	if txn.Variant == MultiAgentWithFeePayerRawTransactionWithDataVariant {
+		inner := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
+		inner.FeePayer = &feePayer
+		return true
+	} else {
+		return false
+	}
+}
+
 func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(
 	sender *crypto.AccountAuthenticator,
 	additionalSigners []crypto.AccountAuthenticator,
@@ -175,7 +187,7 @@ func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(
 	multiAgent := txn.Inner.(*MultiAgentRawTransactionWithData)
 
 	return &SignedTransaction{
-		Transaction: txn,
+		Transaction: multiAgent.RawTxn,
 		Authenticator: &TransactionAuthenticator{
 			Variant: TransactionAuthenticatorMultiAgent,
 			Auth: &MultiAgentTransactionAuthenticator{
@@ -189,23 +201,22 @@ func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(
 
 func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 	sender *crypto.AccountAuthenticator,
-	feePayer *AccountAddress,
 	feePayerAuthenticator *crypto.AccountAuthenticator,
 	additionalSigners []crypto.AccountAuthenticator,
-	additionalAddresses []AccountAddress,
 ) (*SignedTransaction, bool) {
 	if txn.Variant != MultiAgentWithFeePayerRawTransactionWithDataVariant {
 		return nil, false
 	}
+	feePayerTxn := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
 	return &SignedTransaction{
-		Transaction: txn,
+		Transaction: feePayerTxn.RawTxn,
 		Authenticator: &TransactionAuthenticator{
 			Variant: TransactionAuthenticatorFeePayer,
 			Auth: &FeePayerTransactionAuthenticator{
 				Sender:                   sender,
-				SecondarySignerAddresses: additionalAddresses,
+				SecondarySignerAddresses: feePayerTxn.SecondarySigners,
 				SecondarySigners:         additionalSigners,
-				FeePayer:                 feePayer,
+				FeePayer:                 feePayerTxn.FeePayer,
 				FeePayerAuthenticator:    feePayerAuthenticator,
 			},
 		},
