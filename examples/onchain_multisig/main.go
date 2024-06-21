@@ -11,8 +11,8 @@ import (
 
 const TransferAmount = uint64(1_000_000)
 
-func main() {
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+func example(networkConfig aptos.NetworkConfig) {
+	client, err := aptos.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client " + err.Error())
 	}
@@ -323,4 +323,8 @@ func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.Tr
 	}
 
 	return txn
+}
+
+func main() {
+	example(aptos.DevnetConfig)
 }

@@ -7,14 +7,14 @@ import (
 	"time"
 )
 
-// main This example shows you how to improve performance of the transaction submission
+// example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func main() {
+func example(networkConfig aptos.NetworkConfig) {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -97,4 +97,8 @@ func main() {
 	println("Total time:    ", time.Since(start).Milliseconds(), "ms")
 	txnStr, _ := json.Marshal(txn)
 	println(string(txnStr))
+}
+
+func main() {
+	example(aptos.DevnetConfig)
 }

@@ -10,17 +10,10 @@ import (
 const FundAmount = 100_000_000
 const TransferAmount = 1_000
 
-// main This example shows you how to make an APT transfer transaction in the simplest possible way
-func main() {
+// example This example shows you how to make an APT transfer transaction in the simplest possible way
+func example(networkConfig aptos.NetworkConfig) {
 	// Create a client for Aptos
-	netConfig := aptos.NetworkConfig{
-		Name:       "Local",
-		ChainId:    4,
-		NodeUrl:    "http://localhost:8080/v1",
-		IndexerUrl: "",
-		FaucetUrl:  "http://localhost:8081/",
-	}
-	client, err := aptos.NewClient(netConfig)
+	client, err := aptos.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -207,4 +200,8 @@ func main() {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob: %d\n", bobBalance)
 	fmt.Printf("Sponsor: %d\n", sponsorBalance)
+}
+
+func main() {
+	example(aptos.DevnetConfig)
 }

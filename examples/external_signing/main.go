@@ -61,10 +61,9 @@ func (signer *ExternalSigner) AuthKey() *crypto.AuthenticationKey {
 	return authKey
 }
 
-// main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
-func main() {
+func example(networkConfig aptos.NetworkConfig) {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+	client, err := aptos.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -97,10 +96,8 @@ func main() {
 
 	// Sign transaction
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
-	rawTxn := &aptos.RawTransaction{
-		Sender:         sender.Address,
-		SequenceNumber: 0,
-		Payload: aptos.TransactionPayload{Payload: &aptos.EntryFunction{
+	rawTxn, err := client.BuildTransaction(sender.Address,
+		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
 				Address: aptos.AccountOne,
 				Name:    "aptos_account",
@@ -112,11 +109,13 @@ func main() {
 				amountBytes[:],
 			},
 		}},
-		MaxGasAmount:               1000,
-		GasUnitPrice:               2000,
-		ExpirationTimestampSeconds: 1714158778,
-		ChainId:                    4,
+	)
+	if err != nil {
+		panic("Failed to build raw transaction:" + err.Error())
 	}
+
+	// Send it to our external signer
+
 	fmt.Printf("Sign the message %s\n", receiver.String())
 	// Build a signing message
 	signingMessage, err := rawTxn.SigningMessage()
@@ -130,16 +129,12 @@ func main() {
 		panic("Failed to sign message:" + err.Error())
 	}
 
-	txnAuth := &aptos.TransactionAuthenticator{
-		Variant: aptos.TransactionAuthenticatorEd25519,
-		Auth:    auth,
+	// Build a signed transaction
+	signedTxn, err := rawTxn.SignedTransactionWithAuthenticator(auth)
+	if err != nil {
+		panic("Failed to convert transaction authenticator:" + err.Error())
 	}
 
-	// Build a signed transaction
-	signedTxn := &aptos.SignedTransaction{
-		Transaction:   rawTxn,
-		Authenticator: txnAuth,
-	}
 	// TODO: Show how to send over a wire with an encoding
 
 	// Submit and wait for it to complete
@@ -157,4 +152,9 @@ func main() {
 	}
 
 	fmt.Printf("The transaction completed with hash: %s and version %d\n", userTxn.Hash, userTxn.Version)
+}
+
+// main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
+func main() {
+	example(aptos.DevnetConfig)
 }
