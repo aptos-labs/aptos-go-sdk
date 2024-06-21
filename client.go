@@ -446,3 +446,8 @@ func (client *Client) GetProcessorStatus(processorName string) (uint64, error) {
 func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
 	return client.indexerClient.GetCoinBalances(address)
 }
+
+// NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
+func (client *Client) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	return client.nodeClient.NodeHealthCheck(durationSecs...)
+}

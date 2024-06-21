@@ -810,6 +810,16 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 	return rc.SubmitTransaction(signedTxn)
 }
 
+func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	au := rc.baseUrl.JoinPath("-/healthy")
+	if len(durationSecs) > 0 {
+		params := url.Values{}
+		params.Set("duration_secs", strconv.FormatUint(durationSecs[0], 10))
+		au.RawQuery = params.Encode()
+	}
+	return Get[api.HealthCheckResponse](rc, au.String())
+}
+
 func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
