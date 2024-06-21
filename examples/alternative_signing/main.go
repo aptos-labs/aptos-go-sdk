@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/ed25519"
@@ -61,10 +60,8 @@ func (signer *AlternativeSigner) AuthKey() *crypto.AuthenticationKey {
 	return authKey
 }
 
-// main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
-func main() {
-	// Create a client for Aptos
-	client, err := aptos.NewClient(aptos.DevnetConfig)
+func example(network aptos.NetworkConfig) {
+	client, err := aptos.NewClient(network)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -120,4 +117,9 @@ func main() {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 	fmt.Printf("The transaction completed with hash: %s and version %d\n", userTxn.Hash, userTxn.Version)
+}
+
+// main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
+func main() {
+	example(aptos.DevnetConfig)
 }
