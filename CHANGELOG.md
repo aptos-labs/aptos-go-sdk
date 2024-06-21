@@ -5,6 +5,11 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v0.5.0 (6/21/2024)
+- [`Fix`] Fix sponsored transactions, and add example for sponsored transactions
+- Add examples to CI
+- Add node health check API to client
+
 # v0.4.1 (6/18/2024)
 - [`Fix`] Make examples more portable / not rely on internal packages
 
