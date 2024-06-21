@@ -156,7 +156,7 @@ func NewSecp256k1Account() (*Account, error) {
 	if err != nil {
 		return nil, err
 	}
-	signer := &crypto.SingleSigner{Signer: privateKey}
+	signer := crypto.NewSingleSigner(privateKey)
 	return NewAccountFromSigner(signer)
 }
 

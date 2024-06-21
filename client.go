@@ -334,6 +334,28 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 	return client.nodeClient.BuildTransaction(sender, payload, options...)
 }
 
+// BuildTransactionMultiAgent Builds a raw transaction for MultiAgent or FeePayer from the payload and fetches any necessary information from on-chain
+//
+//	sender := NewEd25519Account()
+//	txnPayload := TransactionPayload{
+//		Payload: &EntryFunction{
+//			Module: ModuleId{
+//				Address: AccountOne,
+//				Name: "aptos_account",
+//			},
+//			Function: "transfer",
+//			ArgTypes: []TypeTag{},
+//			Args: [][]byte{
+//				dest[:],
+//				amountBytes,
+//			},
+//		}
+//	}
+//	rawTxn, err := client.BuildTransactionMultiAgent(sender.AccountAddress(), txnPayload, FeePayer(AccountZero))
+func (client *Client) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransactionWithData, err error) {
+	return client.nodeClient.BuildTransactionMultiAgent(sender, payload, options...)
+}
+
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
 // for more configuration, please use them separately
 //
