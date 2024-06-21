@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -450,6 +451,23 @@ func TestClient_BlockByHeight(t *testing.T) {
 
 	_, err = client.BlockByHeight(1, true)
 	assert.NoError(t, err)
+}
+
+func TestClient_NodeAPIHealthCheck(t *testing.T) {
+	client, err := createTestClient()
+	assert.NoError(t, err)
+	response, err := client.NodeAPIHealthCheck()
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+
+	// Now, check node API health check with a time that should never fail
+	response, err = client.NodeAPIHealthCheck(10000)
+	assert.NoError(t, err)
+	assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+
+	// Now, check node API health check with a time that should probably fail
+	response, err = client.NodeAPIHealthCheck(0)
+	assert.Error(t, err)
 }
 
 func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
