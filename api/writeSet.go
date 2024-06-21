@@ -2,16 +2,15 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
-
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
 type WriteSetVariant string
 
 const (
-	WriteSetVariantDirect WriteSetVariant = "direct_write_set"
-	WriteSetVariantScript WriteSetVariant = "script_write_set"
+	WriteSetVariantDirect  WriteSetVariant = "direct_write_set"
+	WriteSetVariantScript  WriteSetVariant = "script_write_set"
+	WriteSetVariantUnknown WriteSetVariant = "unknown"
 )
 
 type WriteSet struct {
@@ -34,13 +33,22 @@ func (o *WriteSet) UnmarshalJSON(b []byte) error {
 		o.Inner = &DirectWriteSet{}
 	case WriteSetVariantScript:
 		o.Inner = &ScriptWriteSet{}
+	case WriteSetVariantUnknown:
+		o.Inner = &ScriptWriteSet{}
 	default:
-		return fmt.Errorf("unknown writeset type: %s", o.Type)
+		o.Inner = &UnknownWriteSet{Type: string(o.Type)}
+		o.Type = WriteSetVariantUnknown
+		return json.Unmarshal(b, &o.Inner.(*UnknownWriteSet).Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 type WriteSetImpl interface {
+}
+
+type UnknownWriteSet struct {
+	Type    string         `json:"type"`
+	Payload map[string]any `json:"payload"`
 }
 
 type DirectWriteSet struct {
@@ -62,6 +70,7 @@ const (
 	WriteSetChangeVariantDeleteModule    WriteSetChangeVariant = "delete_module"
 	WriteSetChangeVariantWriteTableItem  WriteSetChangeVariant = "write_table_item"
 	WriteSetChangeVariantDeleteTableItem WriteSetChangeVariant = "delete_table_item"
+	WriteSetChangeVariantUnknown         WriteSetChangeVariant = "unknown"
 )
 
 type WriteSetChange struct {
@@ -93,12 +102,19 @@ func (o *WriteSetChange) UnmarshalJSON(b []byte) error {
 	case WriteSetChangeVariantDeleteTableItem:
 		o.Inner = &WriteSetChangeDeleteTableItem{}
 	default:
-		return fmt.Errorf("unknown writeset change type: %s", o.Type)
+		o.Inner = &WriteSetChangeUnknown{Type: string(o.Type)}
+		o.Type = WriteSetChangeVariantUnknown
+		return json.Unmarshal(b, &o.Inner.(*WriteSetChangeUnknown).Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 type WriteSetChangeImpl interface {
+}
+
+type WriteSetChangeUnknown struct {
+	Type    string         `json:"type"`
+	Payload map[string]any `json:"payload"`
 }
 
 type WriteSetChangeWriteResource struct {

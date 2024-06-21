@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
@@ -16,6 +15,7 @@ const (
 	SignatureVariantMultiAgent   SignatureVariant = "multi_agent_signature"
 	SignatureVariantFeePayer     SignatureVariant = "fee_payer_signature"
 	SignatureVariantSingleSender SignatureVariant = "single_sender"
+	SignatureVariantUnknown      SignatureVariant = "unknown"
 )
 
 // Signature is an enum of all possible signatures on Aptos
@@ -46,13 +46,20 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 	case SignatureVariantMultiEd25519:
 		o.Inner = &MultiEd25519Signature{}
 	default:
-		return fmt.Errorf("unknown signature type: %s", o.Type)
+		o.Inner = &UnknownSignature{Type: string(o.Type)}
+		o.Type = SignatureVariantUnknown
+		return json.Unmarshal(b, &o.Inner.(*UnknownSignature).Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 // SignatureImpl is an interface for all signatures in their JSON formats
 type SignatureImpl interface{}
+
+type UnknownSignature struct {
+	Type    string
+	Payload map[string]any
+}
 
 // Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the authenticator.
 // It's poorly named Ed25519Signature in the API spec

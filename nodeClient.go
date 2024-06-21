@@ -264,9 +264,9 @@ func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.User
 		time.Sleep(period)
 		txn, err := rc.TransactionByHash(hash)
 		if err == nil {
-			if txn.Type == api.TransactionVariantPendingTransaction {
+			if txn.Type == api.TransactionVariantPending {
 				// not done yet!
-			} else if txn.Type == api.TransactionVariantUserTransaction {
+			} else if txn.Type == api.TransactionVariantUser {
 				// done!
 				slog.Debug("txn done", "hash", hash)
 				return txn.UserTransaction()
@@ -300,9 +300,9 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			}
 			txn, err := rc.TransactionByHash(hash)
 			if err == nil {
-				if txn.Type == api.TransactionVariantPendingTransaction {
+				if txn.Type == api.TransactionVariantPending {
 					// not done yet!
-				} else if txn.Type == api.TransactionVariantUserTransaction {
+				} else if txn.Type == api.TransactionVariantUser {
 					// done!
 					delete(hashSet, hash)
 					slog.Debug("txn done", "hash", hash)
