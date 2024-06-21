@@ -398,6 +398,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results)
 
 	transferAmount, err := bcs.SerializeU64(100)
+	assert.NoError(t, err)
 
 	// Generate transactions
 	for i := uint64(0); i < numTxns; i++ {
