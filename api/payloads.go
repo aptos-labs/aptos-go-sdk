@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
@@ -10,11 +9,12 @@ import (
 type TransactionPayloadVariant string
 
 const (
-	TransactionPayloadVariantEntryFunction       TransactionPayloadVariant = "entry_function_payload"
-	TransactionPayloadVariantScript              TransactionPayloadVariant = "script_payload"
-	TransactionPayloadVariantMultisig            TransactionPayloadVariant = "multisig_payload"
-	TransactionPayloadVariantWriteSet            TransactionPayloadVariant = "write_set_payload"
-	TransactionPayloadVariantModuleBundlePayload TransactionPayloadVariant = "module_bundle_payload" // Deprecated
+	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = "entry_function_payload"
+	TransactionPayloadVariantScript        TransactionPayloadVariant = "script_payload"
+	TransactionPayloadVariantMultisig      TransactionPayloadVariant = "multisig_payload"
+	TransactionPayloadVariantWriteSet      TransactionPayloadVariant = "write_set_payload"
+	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = "module_bundle_payload" // Deprecated
+	TransactionPayloadVariantUnknown       TransactionPayloadVariant = "unknown"
 )
 
 // TransactionPayload is an enum of all possible transaction payloads
@@ -43,16 +43,25 @@ func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 		o.Inner = &TransactionPayloadMultisig{}
 	case TransactionPayloadVariantWriteSet:
 		o.Inner = &TransactionPayloadWriteSet{}
-	case TransactionPayloadVariantModuleBundlePayload:
+	case TransactionPayloadVariantModuleBundle:
 		o.Inner = &TransactionPayloadModuleBundle{}
 	default:
-		return fmt.Errorf("unknown transaction payload type: %s", o.Type)
+		// Make sure it doesn't crash with new types
+		o.Inner = &TransactionPayloadUnknown{Type: string(o.Type)}
+		o.Type = TransactionPayloadVariantUnknown
+		return json.Unmarshal(b, &o.Inner.(*TransactionPayloadUnknown).Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 // TransactionPayloadImpl is all the interfaces required for all transaction payloads
 type TransactionPayloadImpl interface {
+}
+
+// TransactionPayloadUnknown is to handle new types gracefully
+type TransactionPayloadUnknown struct {
+	Type    string         `json:"type"`
+	Payload map[string]any `json:"payload"`
 }
 
 // TransactionPayloadEntryFunction describes an entry function call by a transaction
