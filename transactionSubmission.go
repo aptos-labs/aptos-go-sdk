@@ -29,6 +29,11 @@ type TransactionBuildResponse struct {
 	Err      error
 }
 
+type TransactionSubmissionRequest struct {
+	Id        uint64
+	SignedTxn *SignedTransaction
+}
+
 type TransactionSubmissionResponse struct {
 	Id       uint64
 	Response *api.SubmitTransactionResponse
@@ -116,20 +121,20 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 }
 
 // SubmitTransactions starts up a worker for sending signed transactions to on-chain
-func (rc *NodeClient) SubmitTransactions(signedTxns chan *SignedTransaction, responses chan TransactionSubmissionResponse) {
+func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	for {
 		select {
-		case signedTxn, ok := <-signedTxns:
+		case request, ok := <-requests:
 			if !ok {
 				close(responses)
 				return
 			}
 
-			response, err := rc.SubmitTransaction(signedTxn)
+			response, err := rc.SubmitTransaction(request.SignedTxn)
 			if err != nil {
-				responses <- TransactionSubmissionResponse{Err: err}
+				responses <- TransactionSubmissionResponse{Id: request.Id, Err: err}
 			} else {
-				responses <- TransactionSubmissionResponse{Response: response}
+				responses <- TransactionSubmissionResponse{Id: request.Id, Response: response}
 			}
 		}
 	}
@@ -161,7 +166,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	}
 
 	rc.BuildSignAndSubmitTransactionsWithSignFunction(
-		sender.AccountAddress(),
+		sender,
 		payloads,
 		responses,
 		singleSigner,
@@ -213,7 +218,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 //
 //	}
 func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
-	sender AccountAddress,
+	sender TransactionSigner,
 	payloads chan TransactionSubmissionPayload,
 	responses chan TransactionSubmissionResponse,
 	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
@@ -223,10 +228,10 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	// Set up the channel handling building transactions
 	buildResponses := make(chan TransactionBuildResponse, 20)
 	setSequenceNumber := make(chan uint64)
-	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber)
+	go rc.BuildTransactions(sender.AccountAddress(), payloads, buildResponses, setSequenceNumber)
 
-	signedTxns := make(chan *SignedTransaction, 20)
-	go rc.SubmitTransactions(signedTxns, responses)
+	requests := make(chan TransactionSubmissionRequest, 20)
+	go rc.SubmitTransactions(requests, responses)
 
 	for {
 		select {
@@ -242,7 +247,10 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 					if err != nil {
 						responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
 					} else {
-						signedTxns <- signedTxn
+						requests <- TransactionSubmissionRequest{
+							Id:        buildResponse.Id,
+							SignedTxn: signedTxn,
+						}
 					}
 				}()
 			}

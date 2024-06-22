@@ -2,10 +2,12 @@ package aptos
 
 import (
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -56,47 +58,45 @@ func TestAptosClientHeaderValue(t *testing.T) {
 }
 
 func Test_EntryFunctionFlow(t *testing.T) {
-	completed := make(chan bool)
-	for name, signer := range TestSigners {
-		println("Entry function:", name)
-		go func() {
-			testTransaction(t, signer, submitEntryFunction)
-			completed <- true
-		}()
-	}
-
-	for i := 0; i < len(TestSigners); i++ {
-		<-completed
-	}
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Entry function: " + name)
+		testTransaction(t, createSigner, submitEntryFunction)
+	})
 }
 
 func Test_EntryFunctionSimulation(t *testing.T) {
-	for name, signer := range TestSigners {
-		println("Entry function:", name)
-		testTransactionSimulation(t, signer, submitEntryFunction)
-	}
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Entry Function simulation: " + name)
+		testTransactionSimulation(t, createSigner, submitEntryFunction)
+	})
 }
 
 func Test_ScriptFlow(t *testing.T) {
-	completed := make(chan bool)
-	for name, signer := range TestSigners {
-		println("Script:", name)
-		go func() {
-			testTransaction(t, signer, submitScript)
-			completed <- true
-		}()
-	}
-
-	for i := 0; i < len(TestSigners); i++ {
-		<-completed
-	}
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Script: " + name)
+		testTransaction(t, createSigner, submitScript)
+	})
 }
 
-func Test_Ed25519_ScriptSimulation(t *testing.T) {
-	for name, signer := range TestSigners {
-		println("Script:", name)
-		testTransactionSimulation(t, signer, submitScript)
-	}
+func Test_ScriptSimulation(t *testing.T) {
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Script simulation: " + name)
+		testTransactionSimulation(t, createSigner, submitScript)
+	})
+}
+
+func Test_FeePayerFlow_EntryFunction(t *testing.T) {
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Entry function fee payer: " + name)
+		testFeePayerTransaction(t, createSigner, submitEntryFunctionFeePayer)
+	})
+}
+
+func Test_FeePayerFlow_Script(t *testing.T) {
+	testAllSigners(t, func(t *testing.T, name string, createSigner func() (TransactionSigner, error)) {
+		println("Script fee payer: " + name)
+		testFeePayerTransaction(t, createSigner, submitScriptFeePayer)
+	})
 }
 
 func setupIntegrationTest(t *testing.T, createAccount func() (TransactionSigner, error)) (*Client, TransactionSigner) {
@@ -142,6 +142,64 @@ func testTransaction(t *testing.T, createAccount func() (TransactionSigner, erro
 	// Sign transaction
 	signedTxn, err := rawTxn.SignedTransaction(account)
 	assert.NoError(t, err)
+
+	// Send transaction
+	result, err := client.SubmitTransaction(signedTxn)
+	assert.NoError(t, err)
+
+	hash := result.Hash
+
+	// Wait for the transaction
+	_, err = client.WaitForTransaction(hash)
+	assert.NoError(t, err)
+
+	// Read transaction by hash
+	txn, err := client.TransactionByHash(hash)
+	assert.NoError(t, err)
+
+	// Read transaction by version
+	userTxn, _ := txn.Inner.(*api.UserTransaction)
+	version := userTxn.Version
+
+	// Load the transaction again
+	txnByVersion, err := client.TransactionByVersion(version)
+	assert.NoError(t, err)
+
+	// Assert that both are the same
+	assert.Equal(t, txn, txnByVersion)
+}
+
+func testFeePayerTransaction(t *testing.T, createAccount func() (TransactionSigner, error), buildTransaction func(t *testing.T, client *Client, sender TransactionSigner) (*RawTransactionWithData, error)) {
+	client, account := setupIntegrationTest(t, createAccount)
+
+	// Create sponsor
+	sponsor, err := createAccount()
+	assert.NoError(t, err)
+
+	// Fund sponsor
+	err = client.Fund(sponsor.AccountAddress(), fundAmount)
+	assert.NoError(t, err)
+
+	// Build transaction
+	rawTxn, err := buildTransaction(t, client, account)
+	assert.NoError(t, err)
+
+	// Sign as user
+	userAuth, err := rawTxn.Sign(account)
+	assert.NoError(t, err)
+
+	// Sign as sponsor
+	rawTxn.SetFeePayer(sponsor.AccountAddress())
+	sponsorAuth, err := rawTxn.Sign(sponsor)
+	assert.NoError(t, err)
+
+	// Sign transaction
+	signedTxn, ok := rawTxn.ToFeePayerSignedTransaction(
+		userAuth,
+		sponsorAuth,
+		[]crypto.AccountAuthenticator{},
+	)
+	assert.True(t, ok)
 
 	// Send transaction
 	result, err := client.SubmitTransaction(signedTxn)
@@ -286,7 +344,8 @@ func Test_Block(t *testing.T) {
 	numToCheck := uint64(10)
 	blockHeight := info.BlockHeight()
 
-	completed := make(chan bool, numToCheck)
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(int(numToCheck))
 
 	for i := uint64(0); i < numToCheck; i++ {
 		go func() {
@@ -305,13 +364,11 @@ func Test_Block(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, blockByHeight, blockByVersion)
-			completed <- true
+			waitGroup.Done()
 		}()
 	}
 
-	for i := uint64(0); i < numToCheck; i++ {
-		<-completed
-	}
+	waitGroup.Wait()
 }
 
 func Test_Account(t *testing.T) {
@@ -379,17 +436,13 @@ func Test_AccountResources(t *testing.T) {
 func Test_Concurrent_Submission(t *testing.T) {
 	const numTxns = uint64(10)
 
-	client, err := NewClient(DevnetConfig)
+	client, err := NewClient(LocalnetConfig)
 	assert.NoError(t, err)
 
 	account1, err := NewEd25519Account()
 	assert.NoError(t, err)
-	account2, err := NewEd25519Account()
-	assert.NoError(t, err)
 
 	err = client.Fund(account1.AccountAddress(), 100_000_000)
-	assert.NoError(t, err)
-	err = client.Fund(account2.AccountAddress(), 0)
 	assert.NoError(t, err)
 
 	// start submission goroutine
@@ -418,7 +471,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// TODO: These final steps should be concurrent rather than serial like this
 	waitResults := make(chan ConcResponse[*api.UserTransaction], numTxns)
 
-	// It's interesting, this had to be wrapped in a goroutine to ensure blocking on results dont' block
+	// It's interesting, this had to be wrapped in a goroutine to ensure blocking on results don't block
 	go func() {
 		for response := range results {
 			assert.NoError(t, response.Err)
@@ -501,4 +554,53 @@ func submitScript(t *testing.T, client *Client, sender TransactionSigner, option
 	}
 
 	return rawTxn, nil
+}
+
+func submitEntryFunctionFeePayer(_ *testing.T, client *Client, sender TransactionSigner) (*RawTransactionWithData, error) {
+	payload, err := CoinTransferPayload(&AptosCoinTypeTag, AccountOne, 100)
+	if err != nil {
+		return nil, err
+	}
+	return client.BuildTransactionMultiAgent(sender.AccountAddress(),
+		TransactionPayload{
+			Payload: payload,
+		},
+		FeePayer(&AccountZero))
+}
+
+func submitScriptFeePayer(t *testing.T, client *Client, sender TransactionSigner) (*RawTransactionWithData, error) {
+	scriptBytes, err := ParseHex(singleSignerScript)
+	assert.NoError(t, err)
+
+	amount := uint64(1)
+	dest := AccountOne
+
+	return client.BuildTransactionMultiAgent(sender.AccountAddress(),
+		TransactionPayload{
+			Payload: &Script{
+				Code:     scriptBytes,
+				ArgTypes: []TypeTag{},
+				Args: []ScriptArgument{{
+					Variant: ScriptArgumentU64,
+					Value:   amount,
+				}, {
+					Variant: ScriptArgumentAddress,
+					Value:   dest,
+				}},
+			},
+		},
+		FeePayer(&AccountZero))
+}
+
+func testAllSigners(t *testing.T, runOne func(t *testing.T, name string, createSigner func() (TransactionSigner, error))) {
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(len(TestSigners))
+	for name, createSigner := range TestSigners {
+		go func() {
+			runOne(t, name, createSigner)
+			waitGroup.Done()
+		}()
+	}
+
+	waitGroup.Wait()
 }
