@@ -149,7 +149,7 @@ func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress) (
 }
 
 func (client *FungibleAssetClient) Supply() (supply *big.Int, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "maximum")
+	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "supply")
 	if err != nil {
 		return
 	}
