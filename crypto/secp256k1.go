@@ -3,7 +3,6 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"fmt"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -104,6 +103,8 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 	case *Secp256k1Signature:
 		typedSig := sig.(*Secp256k1Signature)
 
+		// Verification requires to pass the SHA-256 hash of the message
+		msg = util.Sha3256Hash([][]byte{msg})
 		return ethCrypto.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
 	default:
 		return false
