@@ -61,9 +61,8 @@ func TestSecp256k1Keys(t *testing.T) {
 	assert.Equal(t, testSecp256k1Signature, actualSignature.Signature.(*Secp256k1Signature).ToHex())
 
 	// Verify signature with the key and the authenticator directly
-	// FIXME verification not working, but transaction submission is
-	//assert.True(t, authenticator.Verify(message))
-	//assert.True(t, publicKey.Verify(message, actualSignature))
+	assert.True(t, authenticator.Verify(message))
+	assert.True(t, publicKey.Verify(message, actualSignature))
 
 	// Verify serialization of public key
 	publicKeyBytes, err := bcs.Serialize(publicKey)
