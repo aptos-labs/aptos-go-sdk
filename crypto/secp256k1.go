@@ -44,7 +44,7 @@ func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
 
 func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
 	hash := util.Sha3256Hash([][]byte{msg})
-	// TODO: The eth library doesn't protect against malleability issues, so we need to handle those
+	// TODO: The eth library doesn't protect against malleability issues, so we need to handle those.
 	signature, err := ethCrypto.Sign(hash, key.Inner)
 	if err != nil {
 		return nil, err
