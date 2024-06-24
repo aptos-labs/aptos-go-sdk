@@ -57,47 +57,20 @@ func TestAptosClientHeaderValue(t *testing.T) {
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
-func Test_EntryFunctionFlow(t *testing.T) {
-	completed := make(chan bool)
+func Test_SingleSignerFlows(t *testing.T) {
 	for name, signer := range TestSigners {
-		println("Entry function:", name)
-		go func() {
+		t.Run("Entry function "+name, func(t *testing.T) {
 			testTransaction(t, signer, submitEntryFunction)
-			completed <- true
-		}()
-	}
-
-	for i := 0; i < len(TestSigners); i++ {
-		<-completed
-	}
-}
-
-func Test_EntryFunctionSimulation(t *testing.T) {
-	for name, signer := range TestSigners {
-		println("Entry function:", name)
-		testTransactionSimulation(t, signer, submitEntryFunction)
-	}
-}
-
-func Test_ScriptFlow(t *testing.T) {
-	completed := make(chan bool)
-	for name, signer := range TestSigners {
-		println("Script:", name)
-		go func() {
+		})
+		t.Run("Entry function simulation"+name, func(t *testing.T) {
+			testTransactionSimulation(t, signer, submitEntryFunction)
+		})
+		t.Run("Script"+name, func(t *testing.T) {
 			testTransaction(t, signer, submitScript)
-			completed <- true
-		}()
-	}
-
-	for i := 0; i < len(TestSigners); i++ {
-		<-completed
-	}
-}
-
-func Test_Ed25519_ScriptSimulation(t *testing.T) {
-	for name, signer := range TestSigners {
-		println("Script:", name)
-		testTransactionSimulation(t, signer, submitScript)
+		})
+		t.Run("Script simulation"+name, func(t *testing.T) {
+			testTransactionSimulation(t, signer, submitScript)
+		})
 	}
 }
 
@@ -565,4 +538,12 @@ func submitScript(t *testing.T, client *Client, sender TransactionSigner, option
 	}
 
 	return rawTxn, nil
+}
+
+func testAllSigners(t *testing.T, name string, run func()) {
+	for name, signer := range TestSigners {
+		t.Run(name, func(t *testing.T) {
+			testTransaction(t, signer, submitEntryFunction)
+		})
+	}
 }
