@@ -17,11 +17,22 @@ const (
 	vmStatusSuccess    = "Executed successfully"
 )
 
-var TestSigners map[string]func() (TransactionSigner, error)
+type CreateSigner func() (TransactionSigner, error)
+
+var TestSigners map[string]CreateSigner
+
+type CreateSingleSignerPayload func(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)
+
+var TestSingleSignerPayloads map[string]CreateSingleSignerPayload
 
 func init() {
-	TestSigners = make(map[string]func() (TransactionSigner, error))
-	TestSigners["Legacy Ed25519"] = func() (TransactionSigner, error) {
+	initSigners()
+	initSingleSignerPayloads()
+}
+
+func initSigners() {
+	TestSigners = make(map[string]CreateSigner)
+	TestSigners["Standard Ed25519"] = func() (TransactionSigner, error) {
 		signer, err := NewEd25519Account()
 		return any(signer).(TransactionSigner), err
 	}
@@ -33,7 +44,7 @@ func init() {
 		signer, err := NewSecp256k1Account()
 		return any(signer).(TransactionSigner), err
 	}
-	TestSigners["MultiKey"] = func() (TransactionSigner, error) {
+	TestSigners["2-of-3 MultiKey"] = func() (TransactionSigner, error) {
 		signer, err := NewMultiKeyTestSigner(3, 2)
 		return any(signer).(TransactionSigner), err
 	}
@@ -43,6 +54,12 @@ func init() {
 		return any(signer).(TransactionSigner), err
 	}
 	*/
+}
+
+func initSingleSignerPayloads() {
+	TestSingleSignerPayloads = make(map[string]CreateSingleSignerPayload)
+	TestSingleSignerPayloads["Entry Function"] = buildSingleSignerEntryFunction
+	TestSingleSignerPayloads["Script"] = buildSingleSignerScript
 }
 
 func TestNamedConfig(t *testing.T) {
@@ -59,22 +76,20 @@ func TestAptosClientHeaderValue(t *testing.T) {
 
 func Test_SingleSignerFlows(t *testing.T) {
 	for name, signer := range TestSigners {
-		t.Run("Entry function "+name, func(t *testing.T) {
-			testTransaction(t, signer, submitEntryFunction)
-		})
-		t.Run("Entry function simulation"+name, func(t *testing.T) {
-			testTransactionSimulation(t, signer, submitEntryFunction)
-		})
-		t.Run("Script"+name, func(t *testing.T) {
-			testTransaction(t, signer, submitScript)
-		})
-		t.Run("Script simulation"+name, func(t *testing.T) {
-			testTransactionSimulation(t, signer, submitScript)
-		})
+		for payloadName, buildSingleSignerPayload := range TestSingleSignerPayloads {
+			t.Run(name+" "+payloadName, func(t *testing.T) {
+				t.Parallel()
+				testTransaction(t, signer, buildSingleSignerPayload)
+			})
+			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
+				t.Parallel()
+				testTransactionSimulation(t, signer, buildSingleSignerPayload)
+			})
+		}
 	}
 }
 
-func setupIntegrationTest(t *testing.T, createAccount func() (TransactionSigner, error)) (*Client, TransactionSigner) {
+func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, TransactionSigner) {
 	// All of these run against localnet
 	if testing.Short() {
 		t.Skip("integration test expects network connection to localnet")
@@ -107,11 +122,11 @@ func setupIntegrationTest(t *testing.T, createAccount func() (TransactionSigner,
 	return client, account
 }
 
-func testTransaction(t *testing.T, createAccount func() (TransactionSigner, error), buildTransaction func(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)) {
+func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Build transaction
-	rawTxn, err := buildTransaction(t, client, account)
+	rawTxn, err := buildTransaction(client, account)
 	assert.NoError(t, err)
 
 	// Sign transaction
@@ -144,11 +159,11 @@ func testTransaction(t *testing.T, createAccount func() (TransactionSigner, erro
 	assert.Equal(t, txn, txnByVersion)
 }
 
-func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSigner, error), buildTransaction func(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)) {
+func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Simulate transaction (no options)
-	rawTxn, err := buildTransaction(t, client, account)
+	rawTxn, err := buildTransaction(client, account)
 	assert.NoError(t, err)
 	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
 	switch account.(type) {
@@ -165,7 +180,7 @@ func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSi
 	}
 
 	// simulate transaction (estimate gas unit price)
-	rawTxnZeroGasUnitPrice, err := buildTransaction(t, client, account, GasUnitPrice(0))
+	rawTxnZeroGasUnitPrice, err := buildTransaction(client, account, GasUnitPrice(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
 	assert.NoError(t, err)
@@ -175,7 +190,7 @@ func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSi
 	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
 
 	// simulate transaction (estimate max gas amount)
-	rawTxnZeroMaxGasAmount, err := buildTransaction(t, client, account, MaxGasAmount(0))
+	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
@@ -184,7 +199,7 @@ func testTransactionSimulation(t *testing.T, createAccount func() (TransactionSi
 	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
 
 	// simulate transaction (estimate prioritized gas unit price and max gas amount)
-	rawTxnZeroGasConfig, err := buildTransaction(t, client, account, GasUnitPrice(0), MaxGasAmount(0))
+	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
@@ -261,7 +276,8 @@ func Test_Block(t *testing.T) {
 	numToCheck := uint64(10)
 	blockHeight := info.BlockHeight()
 
-	completed := make(chan bool, numToCheck)
+	waitGroup := &sync.WaitGroup{}
+	waitGroup.Add(int(numToCheck))
 
 	for i := uint64(0); i < numToCheck; i++ {
 		go func() {
@@ -280,13 +296,11 @@ func Test_Block(t *testing.T) {
 			assert.NoError(t, err)
 
 			assert.Equal(t, blockByHeight, blockByVersion)
-			completed <- true
+			waitGroup.Done()
 		}()
 	}
 
-	for i := uint64(0); i < numToCheck; i++ {
-		<-completed
-	}
+	waitGroup.Wait()
 }
 
 func Test_Account(t *testing.T) {
@@ -494,27 +508,40 @@ func TestClient_BlockByHeight(t *testing.T) {
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
-	response, err := client.NodeAPIHealthCheck()
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
 
-	// Now, check node API health check with a time that should never fail
-	response, err = client.NodeAPIHealthCheck(10000)
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+	t.Run("Node API health check default", func(t *testing.T) {
+		t.Parallel()
+		response, err := client.NodeAPIHealthCheck()
+		assert.NoError(t, err)
+		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+	})
 
-	// Now, check node API health check with a time that should probably fail
-	response, err = client.NodeAPIHealthCheck(0)
-	assert.Error(t, err)
+	// Now, check node API health check with a future time that should never fail
+	t.Run("Node API health checkd far future", func(t *testing.T) {
+		t.Parallel()
+		response, err := client.NodeAPIHealthCheck(10000)
+		assert.NoError(t, err)
+		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+	})
+
+	// Now, check node API health check with 0
+	t.Run("Node API health check fail", func(t *testing.T) {
+		t.Parallel()
+		// Now, check node API health check with a time that should probably fail
+		_, err := client.NodeAPIHealthCheck(0)
+		assert.Error(t, err)
+	})
 }
 
-func submitEntryFunction(_ *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
+func buildSingleSignerEntryFunction(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
 	return APTTransferTransaction(client, sender, AccountOne, 100, options...)
 }
 
-func submitScript(t *testing.T, client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
+func buildSingleSignerScript(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
 	scriptBytes, err := ParseHex(singleSignerScript)
-	assert.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 
 	amount := uint64(1)
 	dest := AccountOne
@@ -538,12 +565,4 @@ func submitScript(t *testing.T, client *Client, sender TransactionSigner, option
 	}
 
 	return rawTxn, nil
-}
-
-func testAllSigners(t *testing.T, name string, run func()) {
-	for name, signer := range TestSigners {
-		t.Run(name, func(t *testing.T) {
-			testTransaction(t, signer, submitEntryFunction)
-		})
-	}
 }
