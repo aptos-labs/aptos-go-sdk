@@ -3,10 +3,10 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
 
 //region Secp256k1PrivateKey
@@ -45,7 +45,7 @@ func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
 func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
 	hash := util.Sha3256Hash([][]byte{msg})
 	// TODO: The eth library doesn't protect against malleability issues, so we need to handle those
-	signature, err := secp256k1.Sign(hash, key.Bytes())
+	signature, err := ethCrypto.Sign(hash, key.Inner)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +104,7 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 	case *Secp256k1Signature:
 		typedSig := sig.(*Secp256k1Signature)
 
-		return secp256k1.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
+		return ethCrypto.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
 	default:
 		return false
 	}
