@@ -18,7 +18,7 @@ const (
 	TransactionSubmissionTypeMultiAgent TransactionSubmissionType = iota
 )
 
-type TransactionSubmissionPayload struct {
+type TransactionBuildPayload struct {
 	Id      uint64
 	Type    TransactionSubmissionType
 	Inner   TransactionPayload // The actual transaction payload
@@ -29,6 +29,10 @@ type TransactionBuildResponse struct {
 	Id       uint64
 	Response RawTransactionImpl
 	Err      error
+}
+type TransactionSubmissionRequest struct {
+	Id        uint64
+	SignedTxn *SignedTransaction
 }
 
 type TransactionSubmissionResponse struct {
@@ -57,7 +61,7 @@ func (snt *SequenceNumberTracker) Update(next uint64) uint64 {
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
-func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionSubmissionPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
+func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	// Initialize state
 	account, err := rc.Account(sender)
 	if err != nil {
@@ -116,14 +120,14 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 
 // SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
 // closes output chan `responses` when input chan `signedTxns` is closed.
-func (rc *NodeClient) SubmitTransactions(signedTxns chan *SignedTransaction, responses chan TransactionSubmissionResponse) {
+func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
-	for signedTxn := range signedTxns {
-		response, err := rc.SubmitTransaction(signedTxn)
+	for request := range requests {
+		response, err := rc.SubmitTransaction(request.SignedTxn)
 		if err != nil {
-			responses <- TransactionSubmissionResponse{Err: err}
+			responses <- TransactionSubmissionResponse{Id: request.Id, Err: err}
 		} else {
-			responses <- TransactionSubmissionResponse{Response: response}
+			responses <- TransactionSubmissionResponse{Id: request.Id, Response: response}
 		}
 	}
 }
@@ -132,7 +136,7 @@ func (rc *NodeClient) SubmitTransactions(signedTxns chan *SignedTransaction, res
 // Closes output chan `responses` on completion of input chan `payloads`.
 func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	sender TransactionSigner,
-	payloads chan TransactionSubmissionPayload,
+	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
 	buildOptions ...any,
 ) {
@@ -176,7 +180,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 //		sender := NewEd25519Account()
 //		feePayer := NewEd25519Account()
 //
-//		payloads := make(chan TransactionSubmissionPayload)
+//		payloads := make(chan TransactionBuildPayload)
 //		responses := make(chan TransactionSubmissionResponse)
 //
 //		signingFunc := func(rawTxn RawTransactionImpl) (*SignedTransaction, error) {
@@ -212,7 +216,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 //	}
 func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	sender AccountAddress,
-	payloads chan TransactionSubmissionPayload,
+	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
 	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
 	buildOptions ...any,
@@ -224,8 +228,8 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	setSequenceNumber := make(chan uint64)
 	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
-	signedTxns := make(chan *SignedTransaction, 20)
-	go rc.SubmitTransactions(signedTxns, responses)
+	submissionRequests := make(chan TransactionSubmissionRequest, 20)
+	go rc.SubmitTransactions(submissionRequests, responses)
 
 	var wg sync.WaitGroup
 
@@ -241,12 +245,15 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 				if err != nil {
 					responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
 				} else {
-					signedTxns <- signedTxn
+					submissionRequests <- TransactionSubmissionRequest{
+						Id:        buildResponse.Id,
+						SignedTxn: signedTxn,
+					}
 				}
 			}()
 		}
 	}
 
 	wg.Wait()
-	close(signedTxns)
+	close(submissionRequests)
 }

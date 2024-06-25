@@ -400,9 +400,8 @@ func concurrentTxnWaiter(
 func Test_Concurrent_Submission(t *testing.T) {
 	const numTxns = uint64(100)
 	const numWaiters = 4
-	netConfig := LocalnetConfig
 
-	client, err := NewClient(netConfig)
+	client, err := createTestClient()
 	assert.NoError(t, err)
 
 	account1, err := NewEd25519Account()
@@ -416,7 +415,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	assert.NoError(t, err)
 
 	// start submission goroutine
-	payloads := make(chan TransactionSubmissionPayload, 50)
+	payloads := make(chan TransactionBuildPayload, 50)
 	results := make(chan TransactionSubmissionResponse, 50)
 	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
@@ -425,7 +424,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 	// Generate transactions
 	for i := uint64(0); i < numTxns; i++ {
-		payloads <- TransactionSubmissionPayload{
+		payloads <- TransactionBuildPayload{
 			Id:   i,
 			Type: TransactionSubmissionTypeSingle, // TODO: not needed?
 			Inner: TransactionPayload{Payload: &EntryFunction{
