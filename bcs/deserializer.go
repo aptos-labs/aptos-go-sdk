@@ -37,6 +37,9 @@ func NewDeserializer(bytes []byte) *Deserializer {
 //
 // This function will error if there are remaining bytes
 func Deserialize(dest Unmarshaler, bytes []byte) error {
+	if dest == nil {
+		return fmt.Errorf("cannot deserialize into nil")
+	}
 	des := Deserializer{
 		source: bytes,
 		pos:    0,
@@ -234,6 +237,10 @@ func (des *Deserializer) ReadFixedBytesInto(dest []byte) {
 
 // Struct reads an Unmarshaler implementation from bcs bytes
 func (des *Deserializer) Struct(v Unmarshaler) {
+	if v == nil {
+		des.setError("cannot deserialize into nil")
+		return
+	}
 	v.UnmarshalBCS(des)
 }
 

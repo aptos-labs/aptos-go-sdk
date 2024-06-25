@@ -45,13 +45,16 @@ func TestMultiEd25519KeySerialization(t *testing.T) {
 	assert.Equal(t, signature, signatureDeserialized)
 
 	// Test serialization / deserialization authenticator
-	auth := &MultiEd25519Authenticator{
-		PubKey: publicKey,
-		Sig:    signature,
+	auth := &AccountAuthenticator{
+		Variant: AccountAuthenticatorMultiEd25519,
+		Auth: &MultiEd25519Authenticator{
+			PubKey: publicKey,
+			Sig:    signature,
+		},
 	}
 	authBytes, err := bcs.Serialize(auth)
 	assert.NoError(t, err)
-	authDeserialized := &MultiEd25519Authenticator{}
+	authDeserialized := &AccountAuthenticator{}
 	err = bcs.Deserialize(authDeserialized, authBytes)
 	assert.NoError(t, err)
 	assert.Equal(t, auth, authDeserialized)

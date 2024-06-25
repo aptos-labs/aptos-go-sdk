@@ -128,6 +128,10 @@ func (ser *Serializer) FixedBytes(v []byte) {
 
 // Struct uses custom serialization for a [Marshaler] implementation.
 func (ser *Serializer) Struct(v Marshaler) {
+	if v == nil {
+		ser.SetError(fmt.Errorf("cannot marshal nil"))
+		return
+	}
 	v.MarshalBCS(ser)
 }
 
