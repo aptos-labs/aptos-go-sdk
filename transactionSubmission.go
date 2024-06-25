@@ -2,8 +2,9 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/api"
 	"sync"
+
+	"github.com/aptos-labs/aptos-go-sdk/api"
 )
 
 // TransactionSubmissionType is the counter for an enum
@@ -74,18 +75,22 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 		return
 	}
 	snt := &SequenceNumberTracker{SequenceNumber: sequenceNumber}
+	var wg sync.WaitGroup
 
 	for {
 		select {
 		case payload, ok := <-payloads:
 			// End if it's not closed
 			if !ok {
+				wg.Wait()
 				close(responses)
 				return
 			}
 			switch payload.Type {
 			case TransactionSubmissionTypeSingle:
+				wg.Add(1)
 				go func() {
+					defer wg.Done()
 					curSequenceNumber := snt.Increment()
 					txnResponse, err := rc.BuildTransaction(sender, payload.Inner, SequenceNumber(curSequenceNumber))
 					if err != nil {
@@ -95,7 +100,9 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 					responses <- TransactionBuildResponse{Response: txnResponse}
 				}()
 			case TransactionSubmissionTypeMultiAgent:
+				wg.Add(1)
 				go func() {
+					defer wg.Done()
 					curSequenceNumber := snt.Increment()
 					txnResponse, err := rc.BuildTransactionMultiAgent(sender, payload.Inner, SequenceNumber(curSequenceNumber))
 					if err != nil {
@@ -115,27 +122,22 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 	}
 }
 
-// SubmitTransactions starts up a worker for sending signed transactions to on-chain
+// SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
+// closes output chan `responses` when input chan `signedTxns` is closed.
 func (rc *NodeClient) SubmitTransactions(signedTxns chan *SignedTransaction, responses chan TransactionSubmissionResponse) {
-	for {
-		select {
-		case signedTxn, ok := <-signedTxns:
-			if !ok {
-				close(responses)
-				return
-			}
-
-			response, err := rc.SubmitTransaction(signedTxn)
-			if err != nil {
-				responses <- TransactionSubmissionResponse{Err: err}
-			} else {
-				responses <- TransactionSubmissionResponse{Response: response}
-			}
+	defer close(responses)
+	for signedTxn := range signedTxns {
+		response, err := rc.SubmitTransaction(signedTxn)
+		if err != nil {
+			responses <- TransactionSubmissionResponse{Err: err}
+		} else {
+			responses <- TransactionSubmissionResponse{Response: response}
 		}
 	}
 }
 
 // BuildSignAndSubmitTransactions starts up a goroutine to process transactions for a single [TransactionSender]
+// Closes output chan `responses` on completion of input chan `payloads`.
 func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	sender TransactionSigner,
 	payloads chan TransactionSubmissionPayload,
@@ -169,6 +171,8 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 }
 
 // BuildSignAndSubmitTransactionsWithSignFunction allows for signing with a custom function
+//
+// Closes output chan `responses` on completion of input chan `payloads`.
 //
 // This enables the ability to do fee payer, and other approaches while staying concurrent
 //
@@ -228,24 +232,26 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	signedTxns := make(chan *SignedTransaction, 20)
 	go rc.SubmitTransactions(signedTxns, responses)
 
-	for {
-		select {
-		case buildResponse, ok := <-buildResponses:
-			// Input closed, close output
-			if !ok {
-				close(responses)
-			} else if buildResponse.Err != nil {
-				responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: buildResponse.Err}
-			} else {
-				go func() {
-					signedTxn, err := sign(buildResponse.Response)
-					if err != nil {
-						responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
-					} else {
-						signedTxns <- signedTxn
-					}
-				}()
-			}
+	var wg sync.WaitGroup
+
+	for buildResponse := range buildResponses {
+		if buildResponse.Err != nil {
+			responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: buildResponse.Err}
+		} else {
+			// TODO: replace this with a fixed number (configurable) of sign() workers
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				signedTxn, err := sign(buildResponse.Response)
+				if err != nil {
+					responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
+				} else {
+					signedTxns <- signedTxn
+				}
+			}()
 		}
 	}
+
+	wg.Wait()
+	close(signedTxns)
 }

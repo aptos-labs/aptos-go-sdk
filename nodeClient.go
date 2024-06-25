@@ -250,6 +250,9 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 	return
 }
 
+// PollForTransaction waits up to 10 seconds for a transaction to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+// Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
 func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
 	if err != nil {
@@ -259,7 +262,7 @@ func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.User
 	deadline := start.Add(timeout)
 	for {
 		if time.Now().After(deadline) {
-			return nil, errors.New("timeout waiting for faucet transactions")
+			return nil, errors.New("PollForTransaction timeout")
 		}
 		time.Sleep(period)
 		txn, err := rc.TransactionByHash(hash)
@@ -290,7 +293,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 	deadline := start.Add(timeout)
 	for len(hashSet) > 0 {
 		if time.Now().After(deadline) {
-			return errors.New("timeout waiting for faucet transactions")
+			return errors.New("PollForTransactions timeout")
 		}
 		time.Sleep(period)
 		for _, hash := range txnHashes {

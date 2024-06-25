@@ -2,7 +2,9 @@ package aptos
 
 import (
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -376,10 +378,37 @@ func Test_AccountResources(t *testing.T) {
 	assert.Greater(t, len(resourcesBcs), 0)
 }
 
-func Test_Concurrent_Submission(t *testing.T) {
-	const numTxns = uint64(10)
+// A worker thread that reads from a chan of transactions that have been submitted and waits on their completion status
+func concurrentTxnWaiter(
+	results chan TransactionSubmissionResponse,
+	waitResults chan ConcResponse[*api.UserTransaction],
+	netConfig NetworkConfig,
+	t *testing.T,
+	wg *sync.WaitGroup,
+) {
+	if wg != nil {
+		defer wg.Done()
+	}
+	client, err := NewClient(netConfig)
+	assert.NoError(t, err)
+	for response := range results {
+		assert.NoError(t, response.Err)
 
-	client, err := NewClient(DevnetConfig)
+		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(20*time.Second))
+		waitResults <- ConcResponse[*api.UserTransaction]{Result: waitResponse, Err: err}
+	}
+	t.Log("concurrentTxnWaiter done")
+	// signal completion
+	// (do not close the output as there may be other workers writing to it)
+	waitResults <- ConcResponse[*api.UserTransaction]{Result: nil, Err: nil}
+}
+
+func Test_Concurrent_Submission(t *testing.T) {
+	const numTxns = uint64(100)
+	const numWaiters = 4
+	netConfig := LocalnetConfig
+
+	client, err := NewClient(netConfig)
 	assert.NoError(t, err)
 
 	account1, err := NewEd25519Account()
@@ -393,8 +422,8 @@ func Test_Concurrent_Submission(t *testing.T) {
 	assert.NoError(t, err)
 
 	// start submission goroutine
-	payloads := make(chan TransactionSubmissionPayload)
-	results := make(chan TransactionSubmissionResponse)
+	payloads := make(chan TransactionSubmissionPayload, 50)
+	results := make(chan TransactionSubmissionResponse, 50)
 	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results)
 
 	transferAmount, err := bcs.SerializeU64(100)
@@ -413,34 +442,59 @@ func Test_Concurrent_Submission(t *testing.T) {
 			}},
 		}
 	}
+	close(payloads)
+	t.Log("done submitting txns")
 
 	// Start waiting on txns
-	// TODO: These final steps should be concurrent rather than serial like this
-	waitResults := make(chan ConcResponse[*api.UserTransaction], numTxns)
+	waitResults := make(chan ConcResponse[*api.UserTransaction], numWaiters*10)
 
-	// It's interesting, this had to be wrapped in a goroutine to ensure blocking on results dont' block
-	go func() {
-		for response := range results {
-			assert.NoError(t, response.Err)
-
-			go fetch[*api.UserTransaction](func() (*api.UserTransaction, error) {
-				return client.WaitForTransaction(response.Response.Hash)
-			}, waitResults)
-		}
-	}()
+	var wg sync.WaitGroup
+	wg.Add(numWaiters)
+	for _ = range numWaiters {
+		go concurrentTxnWaiter(results, waitResults, netConfig, t, &wg)
+	}
 
 	// Wait on all the results, recording the succeeding ones
 	txnMap := make(map[uint64]bool)
 
+	waitersRunning := numWaiters
+
 	// We could wait on a close, but I'm going to be a little pickier here
-	for i := uint64(0); i < numTxns; i++ {
+	i := uint64(0)
+	txnGoodEvents := 0
+	for {
 		response := <-waitResults
+		if response.Err == nil && response.Result == nil {
+			t.Log("txn waiter signaled done")
+			waitersRunning--
+			if waitersRunning == 0 {
+				close(results)
+				t.Log("last txn waiter done")
+				break
+			}
+			continue
+		}
 		assert.NoError(t, response.Err)
-		assert.True(t, response.Result.Success)
-		txnMap[response.Result.SequenceNumber] = true
+		assert.True(t, (response.Result != nil) && response.Result.Success)
+		if response.Result != nil {
+			t.Logf("[%d] %d ok", i, response.Result.SequenceNumber)
+			txnMap[response.Result.SequenceNumber] = true
+			txnGoodEvents++
+		} else {
+			t.Logf("[%d] err %d resu %#v", i, response.Err, response.Result)
+		}
+		i++
+		if i >= numTxns {
+			t.Logf("waited on %d txns, done", i)
+			break
+		}
 	}
+	t.Log("done waiting for txns, waiting for txn waiter threads")
+
+	wg.Wait()
 
 	// Check all transactions were successful from [0-numTxns)
+	t.Logf("got %d(%d) successful txns of %d attempted", len(txnMap), txnGoodEvents, numTxns)
 	for i := uint64(0); i < numTxns; i++ {
 		assert.True(t, txnMap[i])
 	}
