@@ -477,11 +477,8 @@ func Test_Concurrent_Submission(t *testing.T) {
 		assert.NoError(t, response.Err)
 		assert.True(t, (response.Result != nil) && response.Result.Success)
 		if response.Result != nil {
-			t.Logf("[%d] %d ok", i, response.Result.SequenceNumber)
 			txnMap[response.Result.SequenceNumber] = true
 			txnGoodEvents++
-		} else {
-			t.Logf("[%d] err %d resu %#v", i, response.Err, response.Result)
 		}
 		i++
 		if i >= numTxns {
@@ -494,10 +491,16 @@ func Test_Concurrent_Submission(t *testing.T) {
 	wg.Wait()
 
 	// Check all transactions were successful from [0-numTxns)
-	t.Logf("got %d(%d) successful txns of %d attempted", len(txnMap), txnGoodEvents, numTxns)
+	t.Logf("got %d(%d) successful txns of %d attempted, error submission indexes:", len(txnMap), txnGoodEvents, numTxns)
+	allTrue := true
 	for i := uint64(0); i < numTxns; i++ {
-		assert.True(t, txnMap[i])
+		allTrue = allTrue && txnMap[i]
+		if !txnMap[i] {
+			t.Logf("%d", i)
+		}
 	}
+	assert.True(t, allTrue, "all txns successful")
+	assert.Equal(t, len(txnMap), numTxns, "num txns successful == num txns sent")
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
