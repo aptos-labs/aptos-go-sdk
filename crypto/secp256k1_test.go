@@ -107,3 +107,15 @@ func TestSecp256k1Keys(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, authBytes, authBytes2)
 }
+
+func TestGenerateSecp256k1Key(t *testing.T) {
+	privateKey, err := GenerateSecp256k1Key()
+	assert.NoError(t, err)
+
+	// Sign a message
+	msg := []byte("test message")
+	sig, err := privateKey.SignMessage(msg)
+	assert.NoError(t, err)
+
+	assert.True(t, privateKey.VerifyingKey().Verify(msg, sig))
+}

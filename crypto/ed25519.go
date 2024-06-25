@@ -34,10 +34,8 @@ func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey
 //region Ed25519PrivateKey Signer Implementation
 
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
-	signature, err := key.SignMessage(msg)
-	if err != nil {
-		return nil, err
-	}
+	// Can't error
+	signature, _ := key.SignMessage(msg)
 	publicKeyBytes := key.PubKey().Bytes()
 
 	return &AccountAuthenticator{
