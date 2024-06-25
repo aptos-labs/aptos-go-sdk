@@ -3,6 +3,7 @@ package aptos
 import (
 	"fmt"
 	"sync"
+	"sync/atomic"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 )
@@ -37,30 +38,26 @@ type TransactionSubmissionResponse struct {
 }
 
 type SequenceNumberTracker struct {
-	SequenceNumber uint64
-	Mutex          sync.Mutex
+	SequenceNumber atomic.Uint64
 }
 
 func (snt *SequenceNumberTracker) Increment() uint64 {
-	snt.Mutex.Lock()
-	seqNumber := snt.SequenceNumber
-	snt.SequenceNumber = snt.SequenceNumber + 1
-	snt.Mutex.Unlock()
-	return seqNumber
+	for {
+		seqNumber := snt.SequenceNumber.Load()
+		next := seqNumber + 1
+		ok := snt.SequenceNumber.CompareAndSwap(seqNumber, next)
+		if ok {
+			return seqNumber
+		}
+	}
 }
 
-func (snt *SequenceNumberTracker) Update(new uint64) uint64 {
-	snt.Mutex.Lock()
-	seqNumber := snt.SequenceNumber
-	snt.SequenceNumber = new
-	snt.Mutex.Unlock()
-	return seqNumber
+func (snt *SequenceNumberTracker) Update(next uint64) uint64 {
+	return snt.SequenceNumber.Swap(next)
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
-//
-// TODO: add optional arguments for configuring transactions as a whole?
-func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionSubmissionPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64) {
+func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionSubmissionPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	// Initialize state
 	account, err := rc.Account(sender)
 	if err != nil {
@@ -74,43 +71,38 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 		close(responses)
 		return
 	}
-	snt := &SequenceNumberTracker{SequenceNumber: sequenceNumber}
-	var wg sync.WaitGroup
+	snt := &SequenceNumberTracker{}
+	snt.SequenceNumber.Store(sequenceNumber)
+	optionsLast := len(options)
+	options = append(options, SequenceNumber(0))
 
 	for {
 		select {
 		case payload, ok := <-payloads:
 			// End if it's not closed
 			if !ok {
-				wg.Wait()
 				close(responses)
 				return
 			}
 			switch payload.Type {
 			case TransactionSubmissionTypeSingle:
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					curSequenceNumber := snt.Increment()
-					txnResponse, err := rc.BuildTransaction(sender, payload.Inner, SequenceNumber(curSequenceNumber))
-					if err != nil {
-						responses <- TransactionBuildResponse{Err: err}
-						return
-					}
+				curSequenceNumber := snt.Increment()
+				options[optionsLast] = SequenceNumber(curSequenceNumber)
+				txnResponse, err := rc.BuildTransaction(sender, payload.Inner, options...)
+				if err != nil {
+					responses <- TransactionBuildResponse{Err: err}
+				} else {
 					responses <- TransactionBuildResponse{Response: txnResponse}
-				}()
+				}
 			case TransactionSubmissionTypeMultiAgent:
-				wg.Add(1)
-				go func() {
-					defer wg.Done()
-					curSequenceNumber := snt.Increment()
-					txnResponse, err := rc.BuildTransactionMultiAgent(sender, payload.Inner, SequenceNumber(curSequenceNumber))
-					if err != nil {
-						responses <- TransactionBuildResponse{Err: err}
-						return
-					}
+				curSequenceNumber := snt.Increment()
+				options[optionsLast] = SequenceNumber(curSequenceNumber)
+				txnResponse, err := rc.BuildTransactionMultiAgent(sender, payload.Inner, options...)
+				if err != nil {
+					responses <- TransactionBuildResponse{Err: err}
+				} else {
 					responses <- TransactionBuildResponse{Response: txnResponse}
-				}()
+				}
 			default:
 				// Skip the payload
 			}
@@ -142,6 +134,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	sender TransactionSigner,
 	payloads chan TransactionSubmissionPayload,
 	responses chan TransactionSubmissionResponse,
+	buildOptions ...any,
 ) {
 	singleSigner := func(rawTxn RawTransactionImpl) (*SignedTransaction, error) {
 		switch rawTxn.(type) {
@@ -167,6 +160,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 		payloads,
 		responses,
 		singleSigner,
+		buildOptions...,
 	)
 }
 
@@ -221,13 +215,14 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	payloads chan TransactionSubmissionPayload,
 	responses chan TransactionSubmissionResponse,
 	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
+	buildOptions ...any,
 ) {
 	// TODO: Make internal buffer size configurable with an optional parameter
 
 	// Set up the channel handling building transactions
 	buildResponses := make(chan TransactionBuildResponse, 20)
 	setSequenceNumber := make(chan uint64)
-	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber)
+	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
 	signedTxns := make(chan *SignedTransaction, 20)
 	go rc.SubmitTransactions(signedTxns, responses)

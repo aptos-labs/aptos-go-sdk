@@ -646,8 +646,9 @@ func (rc *NodeClient) buildTransactionInner(
 	// Fetch requirements concurrently, and then consume them
 
 	// Fetch GasUnitPrice which may be cached
-	gasPriceErrChannel := make(chan error, 1)
+	var gasPriceErrChannel chan error
 	if !haveGasUnitPrice {
+		gasPriceErrChannel = make(chan error, 1)
 		go func() {
 			gasPriceEstimation, innerErr := rc.EstimateGasPrice()
 			if innerErr != nil {
@@ -658,32 +659,32 @@ func (rc *NodeClient) buildTransactionInner(
 			}
 			close(gasPriceErrChannel)
 		}()
-	} else {
-		gasPriceErrChannel <- nil
-		close(gasPriceErrChannel)
 	}
 
 	// Fetch ChainId which may be cached
-	chainIdErrChannel := make(chan error, 1)
+	var chainIdErrChannel chan error
 	if !haveChainId {
-		go func() {
-			chain, innerErr := rc.GetChainId()
-			if innerErr != nil {
-				chainIdErrChannel <- innerErr
-			} else {
-				chainId = chain
-				chainIdErrChannel <- nil
-			}
-			close(chainIdErrChannel)
-		}()
-	} else {
-		chainIdErrChannel <- nil
-		close(chainIdErrChannel)
+		if rc.chainId == 0 {
+			chainIdErrChannel = make(chan error, 1)
+			go func() {
+				chain, innerErr := rc.GetChainId()
+				if innerErr != nil {
+					chainIdErrChannel <- innerErr
+				} else {
+					chainId = chain
+					chainIdErrChannel <- nil
+				}
+				close(chainIdErrChannel)
+			}()
+		} else {
+			chainId = rc.chainId
+		}
 	}
 
 	// Fetch sequence number unless provided
-	accountErrChannel := make(chan error, 1)
+	var accountErrChannel chan error
 	if !haveSequenceNumber {
+		accountErrChannel = make(chan error, 1)
 		go func() {
 			account, innerErr := rc.Account(sender)
 			if innerErr != nil {
@@ -701,20 +702,27 @@ func (rc *NodeClient) buildTransactionInner(
 			accountErrChannel <- nil
 			close(accountErrChannel)
 		}()
-	} else {
-		accountErrChannel <- nil
-		close(accountErrChannel)
 	}
 
 	// TODO: optionally simulate for max gas
 	// Wait on the errors
-	chainIdErr, accountErr, gasPriceErr := <-chainIdErrChannel, <-accountErrChannel, <-gasPriceErrChannel
-	if chainIdErr != nil {
-		return nil, chainIdErr
-	} else if accountErr != nil {
-		return nil, accountErr
-	} else if gasPriceErr != nil {
-		return nil, gasPriceErr
+	if chainIdErrChannel != nil {
+		chainIdErr := <-chainIdErrChannel
+		if chainIdErr != nil {
+			return nil, chainIdErr
+		}
+	}
+	if accountErrChannel != nil {
+		accountErr := <-accountErrChannel
+		if accountErr != nil {
+			return nil, accountErr
+		}
+	}
+	if gasPriceErrChannel != nil {
+		gasPriceErr := <-gasPriceErrChannel
+		if gasPriceErr != nil {
+			return nil, gasPriceErr
+		}
 	}
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)

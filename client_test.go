@@ -394,7 +394,7 @@ func concurrentTxnWaiter(
 		responseCount++
 		assert.NoError(t, response.Err)
 
-		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(20*time.Second))
+		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(21*time.Second))
 		if err != nil {
 			t.Logf("%s err %s", response.Response.Hash, err)
 		} else if waitResponse == nil {
@@ -431,7 +431,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// start submission goroutine
 	payloads := make(chan TransactionSubmissionPayload, 50)
 	results := make(chan TransactionSubmissionResponse, 50)
-	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results)
+	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
 	transferAmount, err := bcs.SerializeU64(100)
 	assert.NoError(t, err)
@@ -507,7 +507,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 		}
 	}
 	assert.True(t, allTrue, "all txns successful")
-	assert.Equal(t, len(txnMap), numTxns, "num txns successful == num txns sent")
+	assert.Equal(t, len(txnMap), int(numTxns), "num txns successful == num txns sent")
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
