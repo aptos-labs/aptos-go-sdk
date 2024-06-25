@@ -382,22 +382,29 @@ func Test_AccountResources(t *testing.T) {
 func concurrentTxnWaiter(
 	results chan TransactionSubmissionResponse,
 	waitResults chan ConcResponse[*api.UserTransaction],
-	netConfig NetworkConfig,
+	client *Client,
 	t *testing.T,
 	wg *sync.WaitGroup,
 ) {
 	if wg != nil {
 		defer wg.Done()
 	}
-	client, err := NewClient(netConfig)
-	assert.NoError(t, err)
+	responseCount := 0
 	for response := range results {
+		responseCount++
 		assert.NoError(t, response.Err)
 
 		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(20*time.Second))
+		if err != nil {
+			t.Logf("%s err %s", response.Response.Hash, err)
+		} else if waitResponse == nil {
+			t.Logf("%s nil response", response.Response.Hash)
+		} else if !waitResponse.Success {
+			t.Logf("%s !Success", response.Response.Hash)
+		}
 		waitResults <- ConcResponse[*api.UserTransaction]{Result: waitResponse, Err: err}
 	}
-	t.Log("concurrentTxnWaiter done")
+	t.Logf("concurrentTxnWaiter done, %d responses", responseCount)
 	// signal completion
 	// (do not close the output as there may be other workers writing to it)
 	waitResults <- ConcResponse[*api.UserTransaction]{Result: nil, Err: nil}
@@ -451,7 +458,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
 	for _ = range numWaiters {
-		go concurrentTxnWaiter(results, waitResults, netConfig, t, &wg)
+		go concurrentTxnWaiter(results, waitResults, client, t, &wg)
 	}
 
 	// Wait on all the results, recording the succeeding ones
