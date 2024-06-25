@@ -277,8 +277,8 @@ func (client *Client) PollForTransactions(txnHashes []string, options ...any) er
 }
 
 // WaitForTransaction Do a long-GET for one transaction and wait for it to complete
-func (client *Client) WaitForTransaction(txnHash string) (data *api.UserTransaction, err error) {
-	return client.nodeClient.WaitForTransaction(txnHash)
+func (client *Client) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
+	return client.nodeClient.WaitForTransaction(txnHash, options...)
 }
 
 // Transactions Get recent transactions.

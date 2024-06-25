@@ -250,6 +250,9 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 	return
 }
 
+// PollForTransaction waits up to 10 seconds for a transaction to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+// Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
 func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
 	if err != nil {
@@ -259,7 +262,7 @@ func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.User
 	deadline := start.Add(timeout)
 	for {
 		if time.Now().After(deadline) {
-			return nil, errors.New("timeout waiting for faucet transactions")
+			return nil, errors.New("PollForTransaction timeout")
 		}
 		time.Sleep(period)
 		txn, err := rc.TransactionByHash(hash)
@@ -290,7 +293,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 	deadline := start.Add(timeout)
 	for len(hashSet) > 0 {
 		if time.Now().After(deadline) {
-			return errors.New("timeout waiting for faucet transactions")
+			return errors.New("PollForTransactions timeout")
 		}
 		time.Sleep(period)
 		for _, hash := range txnHashes {
@@ -643,8 +646,9 @@ func (rc *NodeClient) buildTransactionInner(
 	// Fetch requirements concurrently, and then consume them
 
 	// Fetch GasUnitPrice which may be cached
-	gasPriceErrChannel := make(chan error, 1)
+	var gasPriceErrChannel chan error
 	if !haveGasUnitPrice {
+		gasPriceErrChannel = make(chan error, 1)
 		go func() {
 			gasPriceEstimation, innerErr := rc.EstimateGasPrice()
 			if innerErr != nil {
@@ -655,32 +659,32 @@ func (rc *NodeClient) buildTransactionInner(
 			}
 			close(gasPriceErrChannel)
 		}()
-	} else {
-		gasPriceErrChannel <- nil
-		close(gasPriceErrChannel)
 	}
 
 	// Fetch ChainId which may be cached
-	chainIdErrChannel := make(chan error, 1)
+	var chainIdErrChannel chan error
 	if !haveChainId {
-		go func() {
-			chain, innerErr := rc.GetChainId()
-			if innerErr != nil {
-				chainIdErrChannel <- innerErr
-			} else {
-				chainId = chain
-				chainIdErrChannel <- nil
-			}
-			close(chainIdErrChannel)
-		}()
-	} else {
-		chainIdErrChannel <- nil
-		close(chainIdErrChannel)
+		if rc.chainId == 0 {
+			chainIdErrChannel = make(chan error, 1)
+			go func() {
+				chain, innerErr := rc.GetChainId()
+				if innerErr != nil {
+					chainIdErrChannel <- innerErr
+				} else {
+					chainId = chain
+					chainIdErrChannel <- nil
+				}
+				close(chainIdErrChannel)
+			}()
+		} else {
+			chainId = rc.chainId
+		}
 	}
 
 	// Fetch sequence number unless provided
-	accountErrChannel := make(chan error, 1)
+	var accountErrChannel chan error
 	if !haveSequenceNumber {
+		accountErrChannel = make(chan error, 1)
 		go func() {
 			account, innerErr := rc.Account(sender)
 			if innerErr != nil {
@@ -698,20 +702,27 @@ func (rc *NodeClient) buildTransactionInner(
 			accountErrChannel <- nil
 			close(accountErrChannel)
 		}()
-	} else {
-		accountErrChannel <- nil
-		close(accountErrChannel)
 	}
 
 	// TODO: optionally simulate for max gas
 	// Wait on the errors
-	chainIdErr, accountErr, gasPriceErr := <-chainIdErrChannel, <-accountErrChannel, <-gasPriceErrChannel
-	if chainIdErr != nil {
-		return nil, chainIdErr
-	} else if accountErr != nil {
-		return nil, accountErr
-	} else if gasPriceErr != nil {
-		return nil, gasPriceErr
+	if chainIdErrChannel != nil {
+		chainIdErr := <-chainIdErrChannel
+		if chainIdErr != nil {
+			return nil, chainIdErr
+		}
+	}
+	if accountErrChannel != nil {
+		accountErr := <-accountErrChannel
+		if accountErr != nil {
+			return nil, accountErr
+		}
+	}
+	if gasPriceErrChannel != nil {
+		gasPriceErr := <-gasPriceErrChannel
+		if gasPriceErr != nil {
+			return nil, gasPriceErr
+		}
 	}
 
 	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
