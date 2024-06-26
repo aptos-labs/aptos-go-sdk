@@ -11,12 +11,12 @@ import (
 // Example:
 //
 //	{
-//		"block_hash": "0x1234123412341234123412341234123412341234123412341234123412341234",
-//		"block_height": "20",
-//		"block_timestamp": "12345234343",
-//		"first_version": "22",
-//		"last_version": "25",
-//		"transactions": []
+//		"block_height": "1",
+//		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",
+//		"block_timestamp": "1665609760857472",
+//		"first_version": "1",
+//		"last_version": "1",
+//		"transactions": null
 //	}
 type Block struct {
 	BlockHash      Hash           // BlockHash of the block, a 32-byte hash in hexadecimal format
@@ -28,35 +28,6 @@ type Block struct {
 }
 
 //region Block JSON
-
-func (o *Block) MarshalJSON() ([]byte, error) {
-	type inner struct {
-		BlockHash      Hash              `json:"block_hash"`
-		BlockHeight    U64               `json:"block_height"`
-		BlockTimestamp U64               `json:"block_timestamp"`
-		FirstVersion   U64               `json:"first_version"`
-		LastVersion    U64               `json:"last_version"`
-		Transactions   []json.RawMessage `json:"transactions"`
-	}
-
-	transactions := make([]json.RawMessage, len(o.Transactions))
-	for i, tx := range o.Transactions {
-		txn, err := json.Marshal(tx)
-		if err != nil {
-			return nil, err
-		}
-		transactions[i] = json.RawMessage(txn)
-	}
-	data := &inner{
-		BlockHash:      o.BlockHash,
-		BlockHeight:    U64(o.BlockHeight),
-		BlockTimestamp: U64(o.BlockTimestamp),
-		FirstVersion:   U64(o.FirstVersion),
-		LastVersion:    U64(o.LastVersion),
-		Transactions:   transactions,
-	}
-	return json.Marshal(data)
-}
 
 func (o *Block) UnmarshalJSON(b []byte) error {
 	type inner struct {

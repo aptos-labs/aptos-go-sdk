@@ -47,22 +47,6 @@ type Event struct {
 
 //region Event JSON
 
-func (o *Event) MarshalJSON() ([]byte, error) {
-	type inner struct {
-		Type           string         `json:"type"`
-		Guid           *GUID          `json:"guid"`
-		SequenceNumber U64            `json:"sequence_number"`
-		Data           map[string]any `json:"data"`
-	}
-	data := &inner{
-		Type:           o.Type,
-		Guid:           o.Guid,
-		SequenceNumber: U64(o.SequenceNumber),
-		Data:           o.Data,
-	}
-	return json.Marshal(&data)
-}
-
 func (o *Event) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Type           string         `json:"type"`

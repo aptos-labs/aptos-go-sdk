@@ -9,18 +9,18 @@ import (
 type TransactionPayloadVariant string
 
 const (
-	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = "entry_function_payload"
-	TransactionPayloadVariantScript        TransactionPayloadVariant = "script_payload"
-	TransactionPayloadVariantMultisig      TransactionPayloadVariant = "multisig_payload"
-	TransactionPayloadVariantWriteSet      TransactionPayloadVariant = "write_set_payload"
-	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = "module_bundle_payload" // Deprecated
-	TransactionPayloadVariantUnknown       TransactionPayloadVariant = "unknown"
+	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = "entry_function_payload" // TransactionPayloadVariantEntryFunction maps to TransactionPayloadEntryFunction
+	TransactionPayloadVariantScript        TransactionPayloadVariant = "script_payload"         // TransactionPayloadVariantScript maps to TransactionPayloadScript
+	TransactionPayloadVariantMultisig      TransactionPayloadVariant = "multisig_payload"       // TransactionPayloadVariantMultisig maps to TransactionPayloadMultisig
+	TransactionPayloadVariantWriteSet      TransactionPayloadVariant = "write_set_payload"      // TransactionPayloadVariantWriteSet maps to TransactionPayloadWriteSet
+	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = "module_bundle_payload"  // TransactionPayloadVariantModuleBundle maps to TransactionPayloadModuleBundle and is deprecated
+	TransactionPayloadVariantUnknown       TransactionPayloadVariant = "unknown"                // TransactionPayloadVariantUnknown maps to TransactionPayloadUnknown for unknown types
 )
 
 // TransactionPayload is an enum of all possible transaction payloads
 type TransactionPayload struct {
-	Type  TransactionPayloadVariant
-	Inner TransactionPayloadImpl
+	Type  TransactionPayloadVariant // Type of the payload, if the payload isn't recognized, it will be TransactionPayloadVariantUnknown
+	Inner TransactionPayloadImpl    // Inner is the actual payload
 }
 
 func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
