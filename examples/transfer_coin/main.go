@@ -1,3 +1,4 @@
+// transfer_coin is an example of how to make a coin transfer transaction in the simplest possible way
 package main
 
 import (

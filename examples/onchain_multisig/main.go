@@ -1,3 +1,4 @@
+// onchain_multisig is an example of how to create a multisig account and perform transactions with it.
 package main
 
 import (

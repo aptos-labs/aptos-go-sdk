@@ -1,3 +1,4 @@
+// performance_transaction shows how to improve performance of the transaction submission of a single transaction
 package main
 
 import (
