@@ -4,7 +4,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
-// MoveBytecode describes a module, or script, and it's associated ABI
+// MoveBytecode describes a module, or script, and it's associated ABI as a [MoveModule]
 //
 // Example 0x1::coin:
 //
@@ -67,16 +67,16 @@ type MoveBytecode struct {
 // MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin
 type MoveComponentId = string
 
-// MoveModule describes the abilities and types associated with a specific module
+// MoveModule describes the abilities and types associated with a specific module.
 type MoveModule struct {
 	Address          *types.AccountAddress `json:"address"`           // Address is the address of the module e.g. 0x1
 	Name             string                `json:"name"`              // Name is the name of the module e.g. coin
-	Friends          []MoveComponentId     `json:"friends"`           // Friends are other modules that can access this module in the same package
-	ExposedFunctions []*MoveFunction       `json:"exposed_functions"` // ExposedFunctions are the functions that can be called from outside the module
-	Structs          []*MoveStruct         `json:"structs"`           // Structs are the structs defined in the module
+	Friends          []MoveComponentId     `json:"friends"`           // Friends are other modules that can access this module in the same package.
+	ExposedFunctions []*MoveFunction       `json:"exposed_functions"` // ExposedFunctions are the functions that can be called from outside the module.
+	Structs          []*MoveStruct         `json:"structs"`           // Structs are the structs defined in the module.
 }
 
-// MoveScript is the representation of a compiled script.  The API may not fill in the ABI field
+// MoveScript is the representation of a compiled script.  The API may not fill in the ABI field.
 //
 // Example:
 //
@@ -132,8 +132,8 @@ type MoveModule struct {
 //		}
 //	}
 type MoveScript struct {
-	Bytecode HexBytes      `json:"bytecode"`      // Bytecode is the hex encoded version of the compiled script
-	Abi      *MoveFunction `json:"abi,omitempty"` // Abi is the ABI for the module, and is optional
+	Bytecode HexBytes      `json:"bytecode"`      // Bytecode is the hex encoded version of the compiled script.
+	Abi      *MoveFunction `json:"abi,omitempty"` // Abi is the ABI for the module, and is optional.
 }
 
 // MoveFunction describes a move function and its associated properties
@@ -168,7 +168,7 @@ type MoveFunction struct {
 }
 
 // GenericTypeParam is a set of requirements for a generic.  These can be applied via different
-// MoveAbility constraints required on the type
+// [MoveAbility] constraints required on the type.
 //
 // Example:
 //
@@ -178,28 +178,36 @@ type MoveFunction struct {
 //		]
 //	}
 type GenericTypeParam struct {
-	Constraints []MoveAbility `json:"constraints"` // Constraints are the constraints required for the generic type e.g. copy
+	Constraints []MoveAbility `json:"constraints"` // Constraints are the constraints required for the generic type e.g. copy.
 }
 
 // MoveAbility are the types of abilities applied to structs, the possible types are listed
-// as MoveAbilityStore and others
+// as [MoveAbilityStore] and others.
+//
+// See more at the [Move Ability Documentation].
+//
+// [Move Ability Documentation]: https://aptos.dev/en/build/smart-contracts/book/abilities
 type MoveAbility string
 
 const (
-	MoveAbilityStore MoveAbility = "store"
-	MoveAbilityDrop  MoveAbility = "drop"
-	MoveAbilityKey   MoveAbility = "key"
-	MoveAbilityCopy  MoveAbility = "copy"
+	MoveAbilityStore MoveAbility = "store" // MoveAbilityStore is the ability to store the type
+	MoveAbilityDrop  MoveAbility = "drop"  // MoveAbilityDrop is the ability to drop the type
+	MoveAbilityKey   MoveAbility = "key"   // MoveAbilityKey is the ability to use the type as a key in global storage
+	MoveAbilityCopy  MoveAbility = "copy"  // MoveAbilityCopy is the ability to copy the type
 )
 
 // MoveVisibility is the visibility of a function or struct, the possible types are listed
-// as MoveVisibilityPublic and others
+// as [MoveVisibilityPublic] and others
+//
+// See more at the [Move Visibility Documentation].
+//
+// [Move Visibility Documentation]: https://aptos.dev/en/build/smart-contracts/book/functions#visibility
 type MoveVisibility string
 
 const (
-	MoveVisibilityPublic  MoveVisibility = "public"
-	MoveVisibilityPrivate MoveVisibility = "private"
-	MoveVisibilityFriend  MoveVisibility = "friend"
+	MoveVisibilityPublic  MoveVisibility = "public"  // MoveVisibilityPublic is a function that is accessible anywhere
+	MoveVisibilityPrivate MoveVisibility = "private" // MoveVisibilityPrivate is a function that is only accessible within the module
+	MoveVisibilityFriend  MoveVisibility = "friend"  // MoveVisibilityFriend is a function that is only accessible to friends of the module
 )
 
 // MoveStruct describes the layout for a struct, and its constraints
@@ -232,7 +240,7 @@ type MoveStruct struct {
 	Fields            []*MoveStructField  `json:"fields"`              // Fields are the fields in the struct
 }
 
-// MoveStructField represents a single field in a struct, and it's associated type
+// MoveStructField represents a single field in a struct, and it's associated type.
 //
 // Example:
 //

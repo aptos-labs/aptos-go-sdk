@@ -29,6 +29,9 @@ type Block struct {
 
 //region Block JSON
 
+// UnmarshalJSON deserializes a JSON data blob into a [Block]
+//
+// It will fail if not all fields are present, or a transaction is unparsable.
 func (o *Block) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		BlockHash      Hash              `json:"block_hash"`
@@ -45,10 +48,10 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 	}
 
 	o.BlockHash = data.BlockHash
-	o.BlockHeight = data.BlockHeight.toUint64()
-	o.BlockTimestamp = data.BlockTimestamp.toUint64()
-	o.FirstVersion = data.FirstVersion.toUint64()
-	o.LastVersion = data.LastVersion.toUint64()
+	o.BlockHeight = data.BlockHeight.ToUint64()
+	o.BlockTimestamp = data.BlockTimestamp.ToUint64()
+	o.FirstVersion = data.FirstVersion.ToUint64()
+	o.LastVersion = data.LastVersion.ToUint64()
 	o.Transactions = make([]*Transaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
 		err = json.Unmarshal(tx, &o.Transactions[i])

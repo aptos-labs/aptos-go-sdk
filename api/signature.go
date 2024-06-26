@@ -10,20 +10,23 @@ import (
 type SignatureVariant string
 
 const (
-	SignatureVariantEd25519      SignatureVariant = "ed25519_signature"
-	SignatureVariantMultiEd25519 SignatureVariant = "multi_ed25519_signature"
-	SignatureVariantMultiAgent   SignatureVariant = "multi_agent_signature"
-	SignatureVariantFeePayer     SignatureVariant = "fee_payer_signature"
-	SignatureVariantSingleSender SignatureVariant = "single_sender"
-	SignatureVariantUnknown      SignatureVariant = "unknown"
+	SignatureVariantEd25519      SignatureVariant = "ed25519_signature"       // SignatureVariantEd25519 maps to Ed25519Signature
+	SignatureVariantMultiEd25519 SignatureVariant = "multi_ed25519_signature" // SignatureVariantMultiEd25519 maps to MultiEd25519Signature
+	SignatureVariantMultiAgent   SignatureVariant = "multi_agent_signature"   // SignatureVariantMultiAgent maps to MultiAgentSignature
+	SignatureVariantFeePayer     SignatureVariant = "fee_payer_signature"     // SignatureVariantFeePayer maps to FeePayerSignature
+	SignatureVariantSingleSender SignatureVariant = "single_sender"           // SignatureVariantSingleSender maps to SingleSenderSignature
+	SignatureVariantUnknown      SignatureVariant = "unknown"                 // SignatureVariantUnknown maps to UnknownSignature for unknown types
 )
 
 // Signature is an enum of all possible signatures on Aptos
+//
+// Unknown types will have the Type set to [SignatureVariantUnknown] and the Inner set to [UnknownSignature]
 type Signature struct {
-	Type  SignatureVariant
-	Inner SignatureImpl
+	Type  SignatureVariant // Type of the signature, if the signature isn't recognized, it will be [SignatureVariantUnknown]
+	Inner SignatureImpl    // Inner is the actual signature
 }
 
+// UnmarshalJSON unmarshals the [Signature] from JSON handling conversion between types
 func (o *Signature) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		Type string `json:"type"`
@@ -56,15 +59,19 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 // SignatureImpl is an interface for all signatures in their JSON formats
 type SignatureImpl interface{}
 
+// UnknownSignature is a signature type that is not recognized by the SDK
+//
+// This is a fallback type for unknown signatures.
 type UnknownSignature struct {
-	Type    string
-	Payload map[string]any
+	Type    string         // Type is the type of the unknown signature
+	Payload map[string]any // Payload is the raw JSON payload
 }
 
-// Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the authenticator.
+// Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the [crypto.AccountAuthenticator].
 // It's poorly named Ed25519Signature in the API spec
 type Ed25519Signature crypto.Ed25519Authenticator
 
+// UnmarshalJSON deserializes a JSON data blob into an [Ed25519Signature]
 func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
 	// TODO: apply directly to the upstream type?
 	type inner struct {
@@ -89,7 +96,7 @@ func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
 // TODO: Implement single sender crypto properly, needs updates on the API side
 type SingleSenderSignature map[string]any
 
-// FeePayerSignature is a sponsored transaction, that is that the sender is not the payer of the transaction.
+// FeePayerSignature is a sponsored transaction, the sender can be different from the fee payer of the transaction.
 // It can also be multi-agent like [MultiAgentSignature]
 type FeePayerSignature struct {
 	FeePayerAddress          *types.AccountAddress   `json:"fee_payer_address"`
@@ -116,6 +123,7 @@ type MultiEd25519Signature struct {
 	Bitmap     []byte
 }
 
+// UnmarshalJSON deserializes a JSON data blob into a [MultiEd25519Signature]
 func (o *MultiEd25519Signature) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		PublicKeys []HexBytes `json:"public_keys"`

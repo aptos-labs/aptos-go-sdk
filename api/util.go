@@ -8,14 +8,16 @@ import (
 
 // GUID describes a GUID associated with things like V1 events
 type GUID struct {
-	Id GUIDId `json:"id"`
+	Id GUIDId `json:"id"` // An internal type for the GUID as represented on-chain
 }
 
+// GUIDId is the internal representation of a [GUID] on-chain, which is listed as "id" in JSON
 type GUIDId struct {
 	CreationNumber uint64                // CreationNumber is the number of the GUID
 	AccountAddress *types.AccountAddress // AccountAddress is the account address of the creator of the GUID
 }
 
+// UnmarshalJSON deserializes a JSON data blob into a [GUIDId]
 func (o *GUIDId) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		AccountAddress string `json:"account_address"`
@@ -32,13 +34,14 @@ func (o *GUIDId) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.CreationNumber = data.CreationNumber.toUint64()
+	o.CreationNumber = data.CreationNumber.ToUint64()
 	return nil
 }
 
 // U64 is a type for handling JSON string representations of the uint64
 type U64 uint64
 
+// UnmarshalJSON deserializes a JSON data blob into a [U64]
 func (u *U64) UnmarshalJSON(b []byte) error {
 	var str string
 	err := json.Unmarshal(b, &str)
@@ -53,13 +56,21 @@ func (u *U64) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-func (u *U64) toUint64() uint64 {
+// ToUint64 converts a [U64] to an uint64
+//
+// We can guarantee that it's safe to convert a [U64] to an uint64 because we've already validated the input on JSON parsing.
+func (u *U64) ToUint64() uint64 {
 	return uint64(*u)
 }
 
 // HexBytes is a type for handling Bytes encoded as hex in JSON
 type HexBytes []byte
 
+// UnmarshalJSON deserializes a JSON data blob into a [HexBytes]
+//
+// Example:
+//
+//	"0x123456" -> []byte{0x12, 0x34, 0x56}
 func (u *HexBytes) UnmarshalJSON(b []byte) error {
 	var str string
 	err := json.Unmarshal(b, &str)
@@ -75,4 +86,10 @@ func (u *HexBytes) UnmarshalJSON(b []byte) error {
 }
 
 // Hash is a representation of a hash as Hex in JSON
+//
+// # This is always represented as a 32-byte hash in hexadecimal format
+//
+// Example:
+//
+//	0xf4d07fdb8b5151971886a910e516d418a790dd5f6e068b0588066518a395a600
 type Hash = string // TODO: do we make this a 32 byte array? or byte array?
