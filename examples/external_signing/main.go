@@ -1,3 +1,4 @@
+// external_signing is an example of how to create an external signer for the SDK, if you have something like cold storage signing
 package main
 
 import (

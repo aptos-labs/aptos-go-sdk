@@ -1,3 +1,4 @@
+// sponsored_transaction is an example of how to make a sponsored transaction in Aptos.
 package main
 
 import (

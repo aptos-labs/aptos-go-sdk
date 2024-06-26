@@ -1,3 +1,4 @@
+// fungible_asset is an example of how to create and transfer fungible assets
 package main
 
 import (

@@ -1,3 +1,4 @@
+// alternative_signing is an example of how to create an alternative signer for the SDK, if you prefer a different library
 package main
 
 import (
