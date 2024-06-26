@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// SHA3256Hash hashes the input bytes using SHA3-256
 func Sha3256Hash(bytes [][]byte) (output []byte) {
 	hasher := sha3.New256()
 	for _, b := range bytes {
@@ -26,14 +27,17 @@ func ParseHex(hexStr string) ([]byte, error) {
 	return hex.DecodeString(hexStr)
 }
 
+// BytesToHex converts a byte slice to a hex string with a leading 0x
 func BytesToHex(bytes []byte) string {
 	return "0x" + hex.EncodeToString(bytes)
 }
 
+// StrToUint64 converts a string to a uint64
 func StrToUint64(s string) (uint64, error) {
 	return strconv.ParseUint(s, 10, 64)
 }
 
+// StrToBigInt converts a string to a big.Int for u128 and u256 values
 func StrToBigInt(val string) (num *big.Int, err error) {
 	num = &big.Int{}
 	_, ok := num.SetString(val, 10)

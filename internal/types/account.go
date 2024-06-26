@@ -1,3 +1,6 @@
+// Package types is an internal package that contains the types used in the Aptos Go SDK.
+//
+// It was purposely built because of circular dependencies between packages, and it is re-exported directly in the aptos-go-sdk package.
 package types
 
 import (
@@ -12,12 +15,27 @@ import (
 )
 
 // AccountAddress a 32-byte representation of an on-chain address
+//
+// Implements:
+//   - [bcs.Marshaler]
+//   - [bcs.Unmarshaler]
+//   - [json.Marshaler]
+//   - [json.Unmarshaler]
 type AccountAddress [32]byte
 
+// AccountZero is [AccountAddress] 0x0
 var AccountZero = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+
+// AccountOne is [AccountAddress] 0x1
 var AccountOne = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1}
+
+// AccountTwo is [AccountAddress] 0x2
 var AccountTwo = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2}
+
+// AccountThree is [AccountAddress] 0x3
 var AccountThree = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3}
+
+// AccountFour is [AccountAddress] 0x4
 var AccountFour = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4}
 
 // IsSpecial Returns whether the address is a "special" address. Addresses are considered
@@ -37,7 +55,9 @@ func (aa *AccountAddress) IsSpecial() bool {
 	return aa[31] < 0x10
 }
 
-// String Returns the canonical string representation of the AccountAddress
+// String Returns the canonical string representation of the [AccountAddress]
+//
+// Please use [AccountAddress.StringLong] for all indexer queries.
 func (aa *AccountAddress) String() string {
 	if aa.IsSpecial() {
 		return fmt.Sprintf("0x%x", aa[31])
@@ -46,11 +66,12 @@ func (aa *AccountAddress) String() string {
 	}
 }
 
-// FromAuthKey converts AuthKey to AccountAddress
+// FromAuthKey converts [crypto.AuthenticationKey] to [AccountAddress]
 func (aa *AccountAddress) FromAuthKey(authKey *crypto.AuthenticationKey) {
 	copy(aa[:], authKey[:])
 }
 
+// AuthKey converts [AccountAddress] to [crypto.AuthenticationKey]
 func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
 	authKey := &crypto.AuthenticationKey{}
 	copy(authKey[:], aa[:])
@@ -58,6 +79,8 @@ func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
 }
 
 // StringLong Returns the long string representation of the AccountAddress
+//
+// This is most commonly used for all indexer queries.
 func (aa *AccountAddress) StringLong() string {
 	return util.BytesToHex(aa[:])
 }
@@ -72,10 +95,12 @@ func (aa *AccountAddress) UnmarshalBCS(des *bcs.Deserializer) {
 	des.ReadFixedBytesInto((*aa)[:])
 }
 
+// MarshalJSON converts the AccountAddress to JSON
 func (aa *AccountAddress) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aa.String())
 }
 
+// UnmarshalJSON converts the AccountAddress from JSON
 func (aa *AccountAddress) UnmarshalJSON(b []byte) error {
 	var str string
 	err := json.Unmarshal(b, &str)
@@ -112,12 +137,16 @@ func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAd
 	return
 }
 
-// Account represents an on-chain account, with an associated signer, which may be a MessageSigner
+// Account represents an on-chain account, with an associated signer, which must be a [crypto.Signer]
+//
+// Implements:
+//   - [crypto.Signer]
 type Account struct {
 	Address AccountAddress
 	Signer  crypto.Signer
 }
 
+// NewAccountFromSigner creates an account from a [crypto.Signer] with an optional [crypto.AuthenticationKey]
 func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.AuthenticationKey) (*Account, error) {
 	out := &Account{}
 	if len(authKey) == 1 {
@@ -141,7 +170,7 @@ func NewEd25519Account() (*Account, error) {
 	return NewAccountFromSigner(privateKey)
 }
 
-// NewEd25519SingleSignerAccount creates a legacy Ed25519 account
+// NewEd25519SingleSignerAccount creates a new random Ed25519 account
 func NewEd25519SingleSignerAccount() (*Account, error) {
 	privateKey, err := crypto.GenerateEd25519PrivateKey()
 	if err != nil {
@@ -151,6 +180,7 @@ func NewEd25519SingleSignerAccount() (*Account, error) {
 	return NewAccountFromSigner(signer)
 }
 
+// NewSecp256k1Account creates an account with a new random Secp256k1 private key
 func NewSecp256k1Account() (*Account, error) {
 	privateKey, err := crypto.GenerateSecp256k1Key()
 	if err != nil {
@@ -165,21 +195,30 @@ func (account *Account) Sign(message []byte) (authenticator *crypto.AccountAuthe
 	return account.Signer.Sign(message)
 }
 
+// SignMessage signs a message and returns the raw signature without a public key for verification
 func (account *Account) SignMessage(message []byte) (signature crypto.Signature, err error) {
 	return account.Signer.SignMessage(message)
 }
 
+// PubKey retrieves the public key for signature verification
 func (account *Account) PubKey() crypto.PublicKey {
 	return account.Signer.PubKey()
 }
+
+// AuthKey retrieves the authentication key associated with the signer
 func (account *Account) AuthKey() *crypto.AuthenticationKey {
 	return account.Signer.AuthKey()
 }
+
+// AccountAddress retrieves the account address
 func (account *Account) AccountAddress() AccountAddress {
 	return account.Address
 }
 
+// ErrAddressTooShort is returned when an AccountAddress is too short
 var ErrAddressTooShort = errors.New("AccountAddress too short")
+
+// ErrAddressTooLong is returned when an AccountAddress is too long
 var ErrAddressTooLong = errors.New("AccountAddress too long")
 
 // ParseStringRelaxed parses a string into an AccountAddress
