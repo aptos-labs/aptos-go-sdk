@@ -4,36 +4,40 @@ import (
 	"encoding/json"
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"strconv"
 )
 
 // GUID describes a GUID associated with things like V1 events
 type GUID struct {
-	CreationNumber uint64
-	AccountAddress *types.AccountAddress
+	Id GUIDId `json:"id"`
 }
 
-func (o *GUID) UnmarshalJSON(b []byte) error {
+type GUIDId struct {
+	CreationNumber uint64                // CreationNumber is the number of the GUID
+	AccountAddress *types.AccountAddress // AccountAddress is the account address of the creator of the GUID
+}
+
+func (o *GUIDId) UnmarshalJSON(b []byte) error {
 	type inner struct {
-		CreationNumber U64                   `json:"creation_number"`
-		AccountAddress *types.AccountAddress `json:"account_address"`
+		AccountAddress string `json:"account_address"`
+		CreationNumber U64    `json:"creation_number"`
 	}
+
 	data := &inner{}
 	err := json.Unmarshal(b, &data)
 	if err != nil {
 		return err
 	}
+	o.AccountAddress = &types.AccountAddress{}
+	err = o.AccountAddress.ParseStringRelaxed(data.AccountAddress)
+	if err != nil {
+		return err
+	}
 	o.CreationNumber = data.CreationNumber.toUint64()
-	o.AccountAddress = data.AccountAddress
 	return nil
 }
 
 // U64 is a type for handling JSON string representations of the uint64
 type U64 uint64
-
-func (u *U64) MarshalJSON() ([]byte, error) {
-	return json.Marshal(strconv.FormatUint(u.toUint64(), 10))
-}
 
 func (u *U64) UnmarshalJSON(b []byte) error {
 	var str string
@@ -55,10 +59,6 @@ func (u *U64) toUint64() uint64 {
 
 // HexBytes is a type for handling Bytes encoded as hex in JSON
 type HexBytes []byte
-
-func (u *HexBytes) MarshalJSON() ([]byte, error) {
-	return json.Marshal(util.BytesToHex(*u))
-}
 
 func (u *HexBytes) UnmarshalJSON(b []byte) error {
 	var str string
