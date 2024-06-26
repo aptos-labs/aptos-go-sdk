@@ -4,15 +4,30 @@ import (
 	"encoding/json"
 )
 
+//region Block
+
 // Block describes a block properties and may have attached transactions
+//
+// Example:
+//
+//	{
+//		"block_hash": "0x1234123412341234123412341234123412341234123412341234123412341234",
+//		"block_height": "20",
+//		"block_timestamp": "12345234343",
+//		"first_version": "22",
+//		"last_version": "25",
+//		"transactions": []
+//	}
 type Block struct {
-	BlockHash      Hash
-	BlockHeight    uint64
-	BlockTimestamp uint64
-	FirstVersion   uint64
-	LastVersion    uint64
-	Transactions   []*Transaction
+	BlockHash      Hash           // BlockHash of the block, a 32-byte hash in hexadecimal format
+	BlockHeight    uint64         // BlockHeight of the block, starts at 0
+	BlockTimestamp uint64         // BlockTimestamp is the Unix timestamp of the block, in milliseconds, may not be set for block 0
+	FirstVersion   uint64         // FirstVersion of the block
+	LastVersion    uint64         // LastVersion of the block inclusive, may be the same value as FirstVersion
+	Transactions   []*Transaction // Transactions in the block if requested, otherwise it is empty
 }
+
+//region Block JSON
 
 func (o *Block) MarshalJSON() ([]byte, error) {
 	type inner struct {
@@ -72,3 +87,6 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 	}
 	return nil
 }
+
+//endregion
+//endregion
