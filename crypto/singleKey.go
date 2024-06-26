@@ -9,16 +9,20 @@ import (
 //region SingleSigner
 
 // SingleSigner is a wrapper around different types of MessageSigners to allow for many types of keys
-// Implements [Signer], [MessageSigner]
+//
+// Implements:
+//   - [Signer]
+//   - [MessageSigner]
 type SingleSigner struct {
-	Signer MessageSigner
+	Signer MessageSigner // Signer is the actual signer or private key
 }
 
+// NewSingleSigner creates a new [SingleSigner] with the given [MessageSigner]
 func NewSingleSigner(input MessageSigner) *SingleSigner {
 	return &SingleSigner{Signer: input}
 }
 
-// SignMessage similar, but doesn't implement MessageSigner so there's no circular usage
+// SignMessage similar, but doesn't implement [MessageSigner] so there's no circular usage
 func (key *SingleSigner) SignMessage(msg []byte) (Signature, error) {
 	signature, err := key.Signer.SignMessage(msg)
 	if err != nil {
@@ -40,6 +44,10 @@ func (key *SingleSigner) SignMessage(msg []byte) (Signature, error) {
 
 // region SingleSigner Signer implementation
 
+// Sign signs a transaction and returns an associated [AccountAuthenticator]
+//
+// Implements:
+//   - [Signer]
 func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
 	signature, err := key.SignMessage(msg)
 	if err != nil {
@@ -52,12 +60,20 @@ func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, 
 	return &AccountAuthenticator{Variant: AccountAuthenticatorSingleSender, Auth: auth}, nil
 }
 
+// AuthKey gives the [AuthenticationKey] associated with the [Signer]
+//
+// Implements:
+//   - [Signer]
 func (key *SingleSigner) AuthKey() *AuthenticationKey {
 	out := &AuthenticationKey{}
 	out.FromPublicKey(key.PubKey())
 	return out
 }
 
+// PubKey Retrieve the [PublicKey] for [Signature] verification
+//
+// Implements:
+//   - [Signer]
 func (key *SingleSigner) PubKey() PublicKey {
 	innerPubKey := key.Signer.VerifyingKey()
 	keyType := AnyPublicKeyVariantEd25519
@@ -82,31 +98,38 @@ func (key *SingleSigner) PubKey() PublicKey {
 type AnyPublicKeyVariant uint32
 
 const (
-	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0
-	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1
+	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0 // AnyPublicKeyVariantEd25519 is the variant for [Ed25519PublicKey]
+	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1 // AnyPublicKeyVariantSecp256k1 is the variant for [Secp256k1PublicKey]
 )
 
 // AnyPublicKey is used by SingleSigner and MultiKey to allow for using different keys with the same structs
 // Implements [VerifyingKey], [PublicKey], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
 type AnyPublicKey struct {
-	Variant AnyPublicKeyVariant
-	PubKey  VerifyingKey
+	Variant AnyPublicKeyVariant // Variant is the type of public key
+	PubKey  VerifyingKey        // PubKey is the actual public key
 }
 
-func ToAnyPublicKey(key VerifyingKey) *AnyPublicKey {
+// ToAnyPublicKey converts a [VerifyingKey] to an [AnyPublicKey]
+func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 	out := &AnyPublicKey{}
 	switch key.(type) {
 	case *Ed25519PublicKey:
 		out.Variant = AnyPublicKeyVariantEd25519
 	case *Secp256k1PublicKey:
 		out.Variant = AnyPublicKeyVariantSecp256k1
+	default:
+		return nil, fmt.Errorf("unknown public key type: %T", key)
 	}
 	out.PubKey = key
-	return out
+	return out, nil
 }
 
 //region AnyPublicKey VerifyingKey implementation
 
+// Verify verifies the signature against the message
+//
+// Implements:
+//   - [VerifyingKey]
 func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 	switch sig.(type) {
 	case *AnySignature:
@@ -121,12 +144,20 @@ func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 
 //region AnyPublicKey PublicKey implementation
 
+// AuthKey converts the public key to an authentication key
+//
+// Implements:
+//   - [PublicKey]
 func (key *AnyPublicKey) AuthKey() *AuthenticationKey {
 	out := &AuthenticationKey{}
 	out.FromPublicKey(key)
 	return out
 }
 
+// Scheme returns the scheme for the public key
+//
+// Implements:
+//   - [PublicKey]
 func (key *AnyPublicKey) Scheme() uint8 {
 	return SingleKeyScheme
 }
@@ -135,19 +166,35 @@ func (key *AnyPublicKey) Scheme() uint8 {
 
 //region AnyPublicKey CryptoMaterial implementation
 
+// Bytes returns the raw bytes of the [AnyPublicKey]
+//
+// Implements:
+//   - [CryptoMaterial]
 func (key *AnyPublicKey) Bytes() []byte {
 	val, _ := bcs.Serialize(key)
 	return val
 }
 
+// FromBytes sets the [AnyPublicKey] to the given bytes
+//
+// Implements:
+//   - [CryptoMaterial]
 func (key *AnyPublicKey) FromBytes(bytes []byte) (err error) {
 	return bcs.Deserialize(key, bytes)
 }
 
+// ToHex returns the hex string representation of the [AnyPublicKey], with a leading 0x
+//
+// Implements:
+//   - [CryptoMaterial]
 func (key *AnyPublicKey) ToHex() string {
 	return util.BytesToHex(key.Bytes())
 }
 
+// FromHex sets the [AnyPublicKey] to the bytes represented by the hex string, with or without a leading 0x
+//
+// Implements:
+//   - [CryptoMaterial]
 func (key *AnyPublicKey) FromHex(hexStr string) (err error) {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
@@ -160,11 +207,19 @@ func (key *AnyPublicKey) FromHex(hexStr string) (err error) {
 
 //region AnyPublicKey bcs.Struct implementation
 
+// MarshalBCS serializes the [AnyPublicKey] to bytes
+//
+// Implements:
+//   - [bcs.Marshaler]
 func (key *AnyPublicKey) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(key.Variant))
 	ser.Struct(key.PubKey)
 }
 
+// UnmarshalBCS deserializes the [AnyPublicKey] from bytes
+//
+// Implements:
+//   - [bcs.Unmarshaler]
 func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	key.Variant = AnyPublicKeyVariant(des.Uleb128())
 	switch key.Variant {
@@ -188,12 +243,18 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 type AnySignatureVariant uint32
 
 const (
-	AnySignatureVariantEd25519   AnySignatureVariant = 0
-	AnySignatureVariantSecp256k1 AnySignatureVariant = 1
+	AnySignatureVariantEd25519   AnySignatureVariant = 0 // AnySignatureVariantEd25519 is the variant for [Ed25519Signature]
+	AnySignatureVariantSecp256k1 AnySignatureVariant = 1 // AnySignatureVariantSecp256k1 is the variant for [Secp256k1Signature]
 )
 
 // AnySignature is a wrapper around signatures signed with SingleSigner and verified with AnyPublicKey
-// Implements [Signature], [CryptoMaterial], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
+//
+// Implements:
+//   - [Signature]
+//   - [CryptoMaterial]
+//   - [bcs.Marshaler]
+//   - [bcs.Unmarshaler]
+//   - [bcs.Struct]
 type AnySignature struct {
 	Variant   AnySignatureVariant
 	Signature Signature
@@ -201,19 +262,35 @@ type AnySignature struct {
 
 // region AnySignature CryptoMaterial implementation
 
+// Bytes returns the raw bytes of the [AnySignature]
+//
+// Implements:
+//   - [CryptoMaterial]
 func (e *AnySignature) Bytes() []byte {
 	val, _ := bcs.Serialize(e)
 	return val
 }
 
+// FromBytes sets the [AnySignature] to the given bytes
+//
+// Implements:
+//   - [CryptoMaterial]
 func (e *AnySignature) FromBytes(bytes []byte) (err error) {
 	return bcs.Deserialize(e, bytes)
 }
 
+// ToHex returns the hex string representation of the [AnySignature], with a leading 0x
+//
+// Implements:
+//   - [CryptoMaterial]
 func (e *AnySignature) ToHex() string {
 	return util.BytesToHex(e.Bytes())
 }
 
+// FromHex sets the [AnySignature] to the bytes represented by the hex string, with or without a leading 0x
+//
+// Implements:
+//   - [CryptoMaterial]
 func (e *AnySignature) FromHex(hexStr string) (err error) {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
@@ -226,11 +303,19 @@ func (e *AnySignature) FromHex(hexStr string) (err error) {
 
 //region AnySignature bcs.Struct implementation
 
+// MarshalBCS serializes the [AnySignature] to bytes
+//
+// Implements:
+//   - [bcs.Marshaler]
 func (e *AnySignature) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(e.Variant))
 	ser.Struct(e.Signature)
 }
 
+// UnmarshalBCS deserializes the [AnySignature] from bytes
+//
+// Implements:
+//   - [bcs.Unmarshaler]
 func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 	e.Variant = AnySignatureVariant(des.Uleb128())
 	switch e.Variant {
@@ -250,8 +335,13 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region SingleKeyAuthenticator
 
-// SingleKeyAuthenticator is an authenticator for a SingleSigner
-// Implements [AccountAuthenticatorImpl], [bcs.Marshaler], [bcs.Unmarshaler], [bcs.Struct]
+// SingleKeyAuthenticator is an authenticator for a [SingleSigner]
+//
+// Implements:
+//   - [AccountAuthenticatorImpl]
+//   - [bcs.Marshaler]
+//   - [bcs.Unmarshaler]
+//   - [bcs.Struct]
 type SingleKeyAuthenticator struct {
 	PubKey *AnyPublicKey
 	Sig    *AnySignature
@@ -259,14 +349,26 @@ type SingleKeyAuthenticator struct {
 
 //region SingleKeyAuthenticator AccountAuthenticatorImpl implementation
 
+// PublicKey returns the public key of the authenticator
+//
+// Implements:
+//   - [AccountAuthenticatorImpl]
 func (ea *SingleKeyAuthenticator) PublicKey() PublicKey {
 	return ea.PubKey
 }
 
+// Signature returns the signature of the authenticator
+//
+// Implements:
+//   - [AccountAuthenticatorImpl]
 func (ea *SingleKeyAuthenticator) Signature() Signature {
 	return ea.Sig
 }
 
+// Verify verifies the signature against the message
+//
+// Implements:
+//   - [AccountAuthenticatorImpl]
 func (ea *SingleKeyAuthenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
@@ -275,11 +377,19 @@ func (ea *SingleKeyAuthenticator) Verify(msg []byte) bool {
 
 //region SingleKeyAuthenticator bcs.Struct implementation
 
+// MarshalBCS serializes the authenticator to bytes
+//
+// Implements:
+//   - [bcs.Marshaler]
 func (ea *SingleKeyAuthenticator) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(ea.PublicKey())
 	ser.Struct(ea.Signature())
 }
 
+// UnmarshalBCS deserializes the authenticator from bytes
+//
+// Implements:
+//   - [bcs.Unmarshaler]
 func (ea *SingleKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.PubKey = &AnyPublicKey{}
 	des.Struct(ea.PubKey)

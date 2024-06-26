@@ -6,26 +6,27 @@ import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
 // Signer a generic interface for any kind of signing
 type Signer interface {
-	// Sign signs a transaction and returns an associated authenticator
+	// Sign signs a transaction and returns an associated [AccountAuthenticator]
 	Sign(msg []byte) (authenticator *AccountAuthenticator, err error)
 
-	// SignMessage signs a message and returns the raw signature without a key
+	// SignMessage signs a message and returns the raw [Signature] without a [PublicKey] for verification
 	SignMessage(msg []byte) (signature Signature, err error)
 
-	// AuthKey gives the AuthenticationKey associated with the signer
+	// AuthKey gives the [AuthenticationKey] associated with the [Signer]
 	AuthKey() *AuthenticationKey
 
-	// PubKey Retrieve the public key for signature verification
+	// PubKey Retrieve the [PublicKey] for [Signature] verification
 	PubKey() PublicKey
 }
 
 // MessageSigner a generic interface for a signing private key, a private key isn't always a signer, see SingleSender
-// This is not BCS serializable, because this doesn't go on-chain
+//
+// This is not BCS serializable, because this doesn't go on-chain.  An example is [Secp256k1PrivateKey]
 type MessageSigner interface {
-	// SignMessage signs a message and returns the raw signature without a key
+	// SignMessage signs a message and returns the raw [Signature] without a [VerifyingKey]
 	SignMessage(msg []byte) (signature Signature, err error)
 
-	// VerifyingKey Retrieve the public key for signature verification
+	// VerifyingKey Retrieve the [VerifyingKey] for signature verification.
 	VerifyingKey() VerifyingKey
 }
 
@@ -33,15 +34,16 @@ type MessageSigner interface {
 type PublicKey interface {
 	VerifyingKey
 
-	// AuthKey gives the AuthenticationKey associated with the public key
+	// AuthKey gives the [AuthenticationKey] associated with the [PublicKey]
 	AuthKey() *AuthenticationKey
 
-	// Scheme The scheme used for address derivation
+	// Scheme The [DeriveScheme] used for address derivation
 	Scheme() DeriveScheme
 }
 
 // VerifyingKey a generic interface for a public key associated with the private key, but it cannot necessarily stand on
-// its own as a public key for authentication on Aptos
+// its own as a [PublicKey] for authentication on Aptos.  An example is [Secp256k1PublicKey].  All [PublicKey]s are also
+// VerifyingKeys.
 type VerifyingKey interface {
 	bcs.Struct
 	CryptoMaterial
@@ -50,7 +52,7 @@ type VerifyingKey interface {
 	Verify(msg []byte, sig Signature) bool
 }
 
-// Signature is an identifier for a serializable Signature for on-chain representation
+// Signature is an identifier for a serializable [Signature] for on-chain representation
 type Signature interface {
 	bcs.Struct
 	CryptoMaterial
@@ -59,15 +61,15 @@ type Signature interface {
 // CryptoMaterial is a set of functions for serializing and deserializing a key to and from bytes and hex
 // This mirrors the trait in Rust
 type CryptoMaterial interface {
-	// Bytes outputs the raw byte representation of the CryptoMaterial
+	// Bytes outputs the raw byte representation of the [CryptoMaterial]
 	Bytes() []byte
 
-	// FromBytes loads the CryptoMaterial from the raw bytes
+	// FromBytes loads the [CryptoMaterial] from the raw bytes
 	FromBytes([]byte) error
 
-	// ToHex outputs the hex representation of the CryptoMaterial with a leading `0x`
+	// ToHex outputs the hex representation of the [CryptoMaterial] with a leading `0x`
 	ToHex() string
 
-	// FromHex parses the hex representation of the CryptoMaterial with or without a leading `0x`
+	// FromHex parses the hex representation of the [CryptoMaterial] with or without a leading `0x`
 	FromHex(string) error
 }
