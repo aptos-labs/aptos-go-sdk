@@ -33,9 +33,9 @@ func NewDeserializer(bytes []byte) *Deserializer {
 	}
 }
 
-// Deserialize deserializes a single item from bytes
+// Deserialize deserializes a single item from bytes.
 //
-// This function will error if there are remaining bytes
+// This function will error if there are remaining bytes.
 func Deserialize(dest Unmarshaler, bytes []byte) error {
 	if dest == nil {
 		return fmt.Errorf("cannot deserialize into nil")
@@ -168,7 +168,9 @@ func (des *Deserializer) U256() big.Int {
 	return out
 }
 
-// Uleb128 deserializes a 32-bit integer from a variable length Uleb128
+// Uleb128 deserializes a 32-bit integer from a variable length [Unsigned LEB128]
+//
+// [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
 	var out uint32 = 0
 	shift := 0
@@ -236,6 +238,8 @@ func (des *Deserializer) ReadFixedBytesInto(dest []byte) {
 }
 
 // Struct reads an Unmarshaler implementation from bcs bytes
+//
+// This is used for handling types outside the provided primitives
 func (des *Deserializer) Struct(v Unmarshaler) {
 	if v == nil {
 		des.setError("cannot deserialize into nil")
@@ -245,6 +249,9 @@ func (des *Deserializer) Struct(v Unmarshaler) {
 }
 
 // DeserializeSequence deserializes an Unmarshaler implementation array
+//
+// This lets you deserialize a whole sequence of [Unmarshaler], and will fail if any member fails.
+// All sequences are prefixed with an Uleb128 length.
 func DeserializeSequence[T any](des *Deserializer) []T {
 	return DeserializeSequenceWithFunction(des, func(des *Deserializer, out *T) {
 		mv, ok := any(out).(Unmarshaler)
@@ -258,6 +265,9 @@ func DeserializeSequence[T any](des *Deserializer) []T {
 }
 
 // DeserializeSequenceWithFunction deserializes any array with the given function
+//
+// This lets you deserialize a whole sequence of any type, and will fail if any member fails.
+// All sequences are prefixed with an Uleb128 length.
 func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(des *Deserializer, out *T)) []T {
 	length := des.Uleb128()
 	if des.Error() != nil {
