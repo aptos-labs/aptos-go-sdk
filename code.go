@@ -8,6 +8,9 @@ import (
 // The Aptos CLI can generate the associated file with the following CLI command:
 //
 //	aptos move build-publish-payload
+//
+// metadata must be the BCS encoded metadata from the compiler, and bytecode must be the BCS encoded bytecode from the compiler.
+// bytecode must be ordered in the same order out of the compiler, or it will fail on publishing.
 func PublishPackagePayloadFromJsonFile(metadata []byte, bytecode [][]byte) (*TransactionPayload, error) {
 	metadataBytes, err := bcs.SerializeBytes(metadata)
 	if err != nil {

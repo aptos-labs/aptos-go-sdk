@@ -33,12 +33,14 @@ const ContentTypeAptosSignedTxnBcs = "application/x.aptos.signed_transaction+bcs
 // ContentTypeAptosViewFunctionBcs header for sending BCS view function payloads
 const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
+// NodeClient is a client for interacting with an Aptos node API
 type NodeClient struct {
-	client  *http.Client
-	baseUrl *url.URL
-	chainId uint8
+	client  *http.Client // HTTP client to use for requests
+	baseUrl *url.URL     // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
+	chainId uint8        // Chain ID of the network e.g. 2 for Testnet
 }
 
+// NewNodeClient creates a new client for interacting with an Aptos node API
 func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 	// Set cookie jar so cookie stickiness applies to connections
 	// TODO Add appropriate suffix list
@@ -54,6 +56,7 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
 }
 
+// NewNodeClientWithHttpClient creates a new client for interacting with an Aptos node API with a custom http.Client
 func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
 	baseUrl, err := url.Parse(rpcUrl)
 	if err != nil {
@@ -66,6 +69,7 @@ func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Clie
 	}, nil
 }
 
+// Info gets general information about the blockchain
 func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	info, err = Get[NodeInfo](rc, rc.baseUrl.String())
 	if err != nil {
@@ -77,6 +81,9 @@ func (rc *NodeClient) Info() (info NodeInfo, err error) {
 	return info, err
 }
 
+// Account gets information about an account for a given address
+//
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
 func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledgerVersion) > 0 {
@@ -91,6 +98,10 @@ func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...uint64) (
 	return info, nil
 }
 
+// AccountResource fetches a resource for an account into a JSON-like map[string]any.
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
+//
+// For fetching raw Move structs as BCS, See #AccountResourceBCS
 func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
@@ -107,6 +118,7 @@ func (rc *NodeClient) AccountResource(address AccountAddress, resourceType strin
 }
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
 func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
@@ -123,6 +135,7 @@ func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
 func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledgerVersion) > 0 {
@@ -142,7 +155,8 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 }
 
 // TransactionByHash gets info on a transaction
-// The transaction may be pending or recently committed.
+// The transaction may be pending or recently committed.  If the transaction is a [api.PendingTransaction], then it is
+// still in the mempool.  If the transaction is any other type, it has been committed.
 //
 //	data, err := c.TransactionByHash("0xabcd")
 //	if err != nil {
@@ -158,16 +172,6 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 //	}
 func (rc *NodeClient) TransactionByHash(txnHash string) (data *api.Transaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/by_hash", txnHash)
-	return rc.getTransactionCommon(restUrl)
-}
-
-func (rc *NodeClient) TransactionByVersion(version uint64) (data *api.Transaction, err error) {
-	restUrl := rc.baseUrl.JoinPath("transactions/by_version", strconv.FormatUint(version, 10))
-	return rc.getTransactionCommon(restUrl)
-}
-
-func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transaction, err error) {
-	// Fetch transaction
 	data, err = Get[*api.Transaction](rc, restUrl.String())
 	if err != nil {
 		return data, fmt.Errorf("get transaction api err: %w", err)
@@ -175,16 +179,38 @@ func (rc *NodeClient) getTransactionCommon(restUrl *url.URL) (data *api.Transact
 	return data, nil
 }
 
+// TransactionByVersion gets info on a transaction by version number
+// The transaction will have been committed.  The response will not be of the type [api.PendingTransaction].
+func (rc *NodeClient) TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error) {
+	restUrl := rc.baseUrl.JoinPath("transactions/by_version", strconv.FormatUint(version, 10))
+	data, err = Get[*api.CommittedTransaction](rc, restUrl.String())
+	if err != nil {
+		return data, fmt.Errorf("get transaction api err: %w", err)
+	}
+	return data, nil
+}
+
+// BlockByVersion gets a block by a transaction's version number
+//
+// Note that this is not the same as a block's height.
+//
+// The function will fetch all transactions in the block if withTransactions is true.
 func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
+// BlockByHeight gets a block by block height
+//
+// The function will fetch all transactions in the block if withTransactions is true.
 func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
 	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
+// getBlockCommon is a helper function for fetching a block by version or height
+//
+// It will fetch all the transactions associated with the block if withTransactions is true.
 func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (block *api.Block, err error) {
 	params := url.Values{}
 	params.Set("with_transactions", strconv.FormatBool(withTransactions))
@@ -206,7 +232,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 	// TODO: I maybe should pull these concurrently, but not for now
 	for retrievedTransactions < numTransactions {
 		numToPull := numTransactions - retrievedTransactions
-		transactions, innerError := rc.Transactions(cursor, &numToPull)
+		transactions, innerError := rc.Transactions(&cursor, &numToPull)
 		if innerError != nil {
 			// We will still return the block, since we did so much work for it
 			return block, innerError
@@ -222,7 +248,10 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
 // Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
-// Accept option arguments PollPeriod and PollTimeout like PollForTransactions.
+//
+// Optional arguments:
+//   - PollPeriod: time.Duration, how often to poll for the transaction. Default 100ms.
+//   - PollTimeout: time.Duration, how long to wait for the transaction. Default 10s.
 func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
 	return rc.PollForTransaction(txnHash, options...)
 }
@@ -317,9 +346,11 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 }
 
 // Transactions Get recent transactions.
-// Start is a version number. Nil for most recent transactions.
-// Limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.Transaction, err error) {
+//
+// Arguments:
+//   - start is a version number. Nil for most recent transactions.
+//   - limit is a number of transactions to return. 'about a hundred' by default.
+func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	// Can only pull everything in parallel if a start and a limit is handled
 	if start != nil && limit != nil {
 		return rc.transactionsConcurrent(*start, *limit)
@@ -329,12 +360,12 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.Tr
 	}
 }
 
-func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data []*api.Transaction, err error) {
+func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data []*api.CommittedTransaction, err error) {
 	const transactionsPageSize = 100
 	// If we know both, we can fetch all concurrently
 	type Pair struct {
-		start uint64
-		end   uint64
+		start uint64 // inclusive
+		end   uint64 // exclusive
 	}
 
 	// If the limit is  greater than the page size, we need to fetch concurrently, otherwise not
@@ -343,17 +374,20 @@ func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data [
 		if limit%transactionsPageSize > 0 {
 			numChannels++
 		}
-		channels := make([]chan ConcResponse[[]*api.Transaction], numChannels)
+
+		// Concurrently fetch all the transactions by the page size
+		channels := make([]chan ConcResponse[[]*api.CommittedTransaction], numChannels)
 		for i := uint64(0); i*transactionsPageSize < limit; i += 1 {
-			channels[i] = make(chan ConcResponse[[]*api.Transaction], 1)
-			st := start + i*100
+			channels[i] = make(chan ConcResponse[[]*api.CommittedTransaction], 1)
+			st := start + i*100 // TODO: allow page size to be configured
 			li := min(transactionsPageSize, limit-i*transactionsPageSize)
-			go fetch(func() ([]*api.Transaction, error) {
+			go fetch(func() ([]*api.CommittedTransaction, error) {
 				return rc.transactionsConcurrent(st, li)
 			}, channels[i])
 		}
 
-		responses := make([]*api.Transaction, limit)
+		// Collect all the responses
+		responses := make([]*api.CommittedTransaction, limit)
 		cursor := 0
 		for i, ch := range channels {
 			response := <-ch
@@ -369,7 +403,7 @@ func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data [
 
 		// Sort to keep ordering
 		sort.Slice(responses, func(i, j int) bool {
-			return *responses[i].Version() < *responses[j].Version()
+			return responses[i].Version() < responses[j].Version()
 		})
 		return responses, nil
 	} else {
@@ -382,7 +416,8 @@ func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data [
 	}
 }
 
-func (rc *NodeClient) transactionsInner(start *uint64, limit *uint64) (data []*api.Transaction, err error) {
+// transactionsInner fetches the transactions from the node in a single request
+func (rc *NodeClient) transactionsInner(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	au := rc.baseUrl.JoinPath("transactions")
 	params := url.Values{}
 	if start != nil {
@@ -394,13 +429,14 @@ func (rc *NodeClient) transactionsInner(start *uint64, limit *uint64) (data []*a
 	if len(params) != 0 {
 		au.RawQuery = params.Encode()
 	}
-	data, err = Get[[]*api.Transaction](rc, au.String())
+	data, err = Get[[]*api.CommittedTransaction](rc, au.String())
 	if err != nil {
 		return data, fmt.Errorf("get transactions api err: %w", err)
 	}
 	return data, nil
 }
 
+// SubmitTransaction submits a signed transaction to the network
 func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
@@ -415,12 +451,19 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api
 	return data, nil
 }
 
+// EstimateGasUnitPrice estimates the gas unit price for a transaction
 type EstimateGasUnitPrice bool
 
+// EstimateMaxGasAmount estimates the max gas amount for a transaction
 type EstimateMaxGasAmount bool
 
+// EstimatePrioritizedGasUnitPrice estimates the prioritized gas unit price for a transaction
 type EstimatePrioritizedGasUnitPrice bool
 
+// SimulateTransaction simulates a transaction
+//
+// TODO: This needs to support RawTransactionWithData
+// TODO: Support multikey simulation
 func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
 	var auth *crypto.AccountAuthenticator
@@ -492,9 +535,10 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	return data, nil
 }
 
+// GetChainId gets the chain ID of the network
 func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	if rc.chainId == 0 {
-		// Calling Info will cache the chain Id
+		// Calling Info will cache the ChainId
 		info, err := rc.Info()
 		if err != nil {
 			return 0, err
@@ -504,26 +548,44 @@ func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	return rc.chainId, nil
 }
 
+// MaxGasAmount will set the max gas amount in gas units for a transaction
 type MaxGasAmount uint64
 
+// GasUnitPrice will set the gas unit price in octas (1/10^8 APT) for a transaction
 type GasUnitPrice uint64
 
+// ExpirationSeconds will set the number of seconds from the current time to expire a transaction
 type ExpirationSeconds int64
 
+// FeePayer will set the fee payer for a transaction
 type FeePayer *AccountAddress
 
+// AdditionalSigners will set the additional signers for a transaction
 type AdditionalSigners []AccountAddress
 
+// SequenceNumber will set the sequence number for a transaction
 type SequenceNumber uint64
 
+// ChainIdOption will set the chain ID for a transaction
+// TODO: This one may want to be removed / renamed?
 type ChainIdOption uint8
 
-// BuildTransaction builds a raw transaction for signing
-// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
+// BuildTransaction builds a raw transaction for signing for a single signer
+//
+// For MultiAgent and FeePayer transactions use [NodeClient.BuildTransactionMultiAgent]
+//
+// Accepts options:
+//   - [MaxGasAmount]
+//   - [GasUnitPrice]
+//   - [ExpirationSeconds]
+//   - [SequenceNumber]
+//   - [ChainIdOption]
+//   - [FeePayer]
+//   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := DefaultMaxGasAmount
-	gasUnitPrice := uint64(0) //DefaultGasUnitPrice
+	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
 	sequenceNumber := uint64(0)
 	haveSequenceNumber := false
@@ -560,7 +622,17 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 }
 
 // BuildTransactionMultiAgent builds a raw transaction for signing with fee payer or multi-agent
-// Accepts options: MaxGasAmount, GasUnitPrice, ExpirationSeconds, SequenceNumber, ChainIdOption, FeePayer, AdditionalSigners
+//
+// For single signer transactions use [NodeClient.BuildTransaction]
+//
+// Accepts options:
+//   - [MaxGasAmount]
+//   - [GasUnitPrice]
+//   - [ExpirationSeconds]
+//   - [SequenceNumber]
+//   - [ChainIdOption]
+//   - [FeePayer]
+//   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
 
 	maxGasAmount := DefaultMaxGasAmount
@@ -740,11 +812,12 @@ func (rc *NodeClient) buildTransactionInner(
 	return rawTxn, nil
 }
 
+// ViewPayload is a payload for a view function
 type ViewPayload struct {
-	Module   ModuleId
-	Function string
-	ArgTypes []TypeTag
-	Args     [][]byte
+	Module   ModuleId  // ModuleId of the View function e.g. 0x1::coin
+	Function string    // Name of the View function e.g. balance
+	ArgTypes []TypeTag // TypeTags of the type arguments
+	Args     [][]byte  // Arguments to the function encoded in BCS
 }
 
 func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
@@ -757,6 +830,7 @@ func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
 	}
 }
 
+// View calls a view function on the blockchain and returns the return value of the function
 func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
 	serializer := bcs.Serializer{}
 	payload.MarshalBCS(&serializer)
@@ -780,6 +854,7 @@ func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data 
 	return data, nil
 }
 
+// EstimateGasPrice estimates the gas price given on-chain data
 // TODO: add caching for some period of time
 func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 	au := rc.baseUrl.JoinPath("estimate_gas_price")
@@ -790,6 +865,7 @@ func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 	return info, nil
 }
 
+// AccountAPTBalance fetches the balance of an account of APT.  Response is in octas or 1/10^8 APT.
 func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64, err error) {
 	accountBytes, err := bcs.Serialize(&account)
 	if err != nil {
@@ -809,6 +885,7 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64,
 	return StrToUint64(values[0].(string))
 }
 
+// BuildSignAndSubmitTransaction builds, signs, and submits a transaction to the network
 func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
 	rawTxn, err := rc.BuildTransaction(sender.AccountAddress(), payload, options...)
 	if err != nil {
@@ -821,6 +898,9 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 	return rc.SubmitTransaction(signedTxn)
 }
 
+// NodeHealthCheck performs a health check on the node
+//
+// Returns a HealthCheckResponse if successful, returns error if not.
 func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	au := rc.baseUrl.JoinPath("-/healthy")
 	if len(durationSecs) > 0 {
@@ -831,6 +911,7 @@ func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckRe
 	return Get[api.HealthCheckResponse](rc, au.String())
 }
 
+// Get makes a GET request to the endpoint and parses the response into the given type with JSON
 func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
@@ -859,6 +940,7 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	return out, nil
 }
 
+// GetBCS makes a GET request to the endpoint and parses the response into the given type with BCS
 func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
@@ -884,6 +966,7 @@ func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
 	return blob, nil
 }
 
+// Post makes a POST request to the endpoint with the given body and parses the response into the given type with JSON
 func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Reader) (data T, err error) {
 	if body == nil {
 		body = http.NoBody
@@ -920,6 +1003,7 @@ type ConcResponse[T any] struct {
 	Err    error
 }
 
+// fetch is a helper function to fetch data concurrently with a channel and support error and value together
 // TODO: Support multiple output channels?
 func fetch[T any](inner func() (T, error), result chan ConcResponse[T]) {
 	response, err := inner()

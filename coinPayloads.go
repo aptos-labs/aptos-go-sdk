@@ -4,7 +4,10 @@ import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
 // CoinTransferPayload builds an EntryFunction payload for transferring coins
 //
-// For coinType, if none is provided, it will transfer 0x1::aptos_coin:AptosCoin
+// Args:
+//   - coinType is the type of coin to transfer. If none is provided, it will transfer 0x1::aptos_coin:AptosCoin
+//   - dest is the destination [AccountAddress]
+//   - amount is the amount of coins to transfer
 func CoinTransferPayload(coinType *TypeTag, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	amountBytes, err := bcs.SerializeU64(amount)
 	if err != nil {
@@ -42,7 +45,10 @@ func CoinTransferPayload(coinType *TypeTag, dest AccountAddress, amount uint64) 
 
 // CoinBatchTransferPayload builds an EntryFunction payload for transferring coins to multiple receivers
 //
-// For coinType, if none is provided, it will transfer 0x1::aptos_coin:AptosCoin
+// Args:
+//   - coinType is the type of coin to transfer. If none is provided, it will transfer 0x1::aptos_coin:AptosCoin
+//   - dests are the destination [AccountAddress]s
+//   - amounts are the amount of coins to transfer per destination
 func CoinBatchTransferPayload(coinType *TypeTag, dests []AccountAddress, amounts []uint64) (payload *EntryFunction, err error) {
 	destBytes, err := bcs.SerializeSequenceOnly(dests)
 	if err != nil {

@@ -156,7 +156,11 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 	assert.NoError(t, err)
 
 	// Assert that both are the same
-	assert.Equal(t, txn, txnByVersion)
+	expectedTxn, err := txn.UserTransaction()
+	assert.NoError(t, err)
+	actualTxn, err := txnByVersion.UserTransaction()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTxn, actualTxn)
 }
 
 func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {

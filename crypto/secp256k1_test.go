@@ -52,7 +52,8 @@ func TestSecp256k1Keys(t *testing.T) {
 	// Check public key
 	assert.Equal(t, testSecp256k1PublicKey, privateKey.VerifyingKey().ToHex())
 	// We have to wrap the PublicKey in AnyPublicKey, verify authenticator and key are the same
-	publicKey := ToAnyPublicKey(privateKey.VerifyingKey())
+	publicKey, err := ToAnyPublicKey(privateKey.VerifyingKey())
+	assert.NoError(t, err)
 	assert.Equal(t, publicKey, authenticator.PubKey())
 
 	// Check signature (without a recovery bit)
@@ -83,11 +84,13 @@ func TestSecp256k1Keys(t *testing.T) {
 	publicKey3Inner := &Secp256k1PublicKey{}
 	err = publicKey3Inner.FromHex(testSecp256k1PublicKey)
 	assert.NoError(t, err)
-	publicKey3 := ToAnyPublicKey(publicKey3Inner)
+	publicKey3, err := ToAnyPublicKey(publicKey3Inner)
+	assert.NoError(t, err)
 	publicKey4Inner := &Secp256k1PublicKey{}
 	err = publicKey4Inner.FromBytes(expectedPublicKeyBytes)
 	assert.NoError(t, err)
-	publicKey4 := ToAnyPublicKey(publicKey4Inner)
+	publicKey4, err := ToAnyPublicKey(publicKey4Inner)
+	assert.NoError(t, err)
 
 	assert.Equal(t, publicKey.ToHex(), publicKey3.ToHex())
 	assert.Equal(t, publicKey.ToHex(), publicKey4.ToHex())

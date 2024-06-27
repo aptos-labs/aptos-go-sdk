@@ -20,6 +20,101 @@ const (
 	TransactionVariantUnknown         TransactionVariant = "unknown"                      // TransactionVariantUnknown maps to UnknownTransaction for unknown types
 )
 
+// CommittedTransaction is an enum type for all possible committed transactions on the blockchain
+// This is the same as [Transaction] but with the Success and Version functions always confirmed.
+type CommittedTransaction struct {
+	Type  TransactionVariant // Type of the transaction
+	Inner TransactionImpl    // Inner is the actual transaction
+}
+
+// Hash of the transaction for lookup on-chain
+func (o *CommittedTransaction) Hash() Hash {
+	return o.Inner.TxnHash()
+}
+
+// Success of the transaction.  Pending transactions, and genesis may not have a success field.
+// If this is the case, it will be nil
+func (o *CommittedTransaction) Success() bool {
+	return *o.Inner.TxnSuccess()
+}
+
+// Version of the transaction on chain, will be nil if it is a PendingTransaction
+func (o *CommittedTransaction) Version() uint64 {
+	return *o.Inner.TxnVersion()
+}
+
+// UnmarshalJSON unmarshals the [Transaction] from JSON handling conversion between types
+func (o *CommittedTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Type string `json:"type"`
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+	o.Type = TransactionVariant(data.Type)
+	switch o.Type {
+	case TransactionVariantPending:
+		return fmt.Errorf("transaction type is not committed: %s, this is unexpected for the API to return", o.Type)
+	case TransactionVariantUser:
+		o.Inner = &UserTransaction{}
+	case TransactionVariantGenesis:
+		o.Inner = &GenesisTransaction{}
+	case TransactionVariantBlockMetadata:
+		o.Inner = &BlockMetadataTransaction{}
+	case TransactionVariantStateCheckpoint:
+		o.Inner = &StateCheckpointTransaction{}
+	case TransactionVariantValidator:
+		o.Inner = &ValidatorTransaction{}
+	default:
+		o.Inner = &UnknownTransaction{Type: string(o.Type)}
+		o.Type = TransactionVariantUnknown
+		return json.Unmarshal(b, &o.Inner.(*UnknownTransaction).Payload)
+	}
+	return json.Unmarshal(b, o.Inner)
+}
+
+// UserTransaction changes the transaction to a [UserTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) UserTransaction() (*UserTransaction, error) {
+	if o.Type == TransactionVariantUser {
+		return o.Inner.(*UserTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
+}
+
+// GenesisTransaction changes the transaction to a [GenesisTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) GenesisTransaction() (*GenesisTransaction, error) {
+	if o.Type == TransactionVariantGenesis {
+		return o.Inner.(*GenesisTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
+}
+
+// BlockMetadataTransaction changes the transaction to a [BlockMetadataTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
+	if o.Type == TransactionVariantBlockMetadata {
+		return o.Inner.(*BlockMetadataTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
+}
+
+// StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
+	if o.Type == TransactionVariantStateCheckpoint {
+		return o.Inner.(*StateCheckpointTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
+}
+
+// ValidatorTransaction changes the transaction to a [ValidatorTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) ValidatorTransaction() (*ValidatorTransaction, error) {
+	if o.Type == TransactionVariantValidator {
+		return o.Inner.(*ValidatorTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
+}
+
 // Transaction is an enum type for all possible transactions on the blockchain
 type Transaction struct {
 	Type  TransactionVariant // Type of the transaction

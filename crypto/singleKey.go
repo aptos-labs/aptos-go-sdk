@@ -117,6 +117,9 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 		out.Variant = AnyPublicKeyVariantEd25519
 	case *Secp256k1PublicKey:
 		out.Variant = AnyPublicKeyVariantSecp256k1
+	case *AnyPublicKey:
+		// Passthrough for conversion
+		return key.(*AnyPublicKey), nil
 	default:
 		return nil, fmt.Errorf("unknown public key type: %T", key)
 	}

@@ -8,32 +8,36 @@ import (
 
 //region TypeTag
 
+// TypeTagVariant is an enum representing the different types of TypeTag
 type TypeTagVariant uint32
 
 const (
-	TypeTagBool    TypeTagVariant = 0
-	TypeTagU8      TypeTagVariant = 1
-	TypeTagU64     TypeTagVariant = 2
-	TypeTagU128    TypeTagVariant = 3
-	TypeTagAddress TypeTagVariant = 4
-	TypeTagSigner  TypeTagVariant = 5
-	TypeTagVector  TypeTagVariant = 6
-	TypeTagStruct  TypeTagVariant = 7
-	TypeTagU16     TypeTagVariant = 8
-	TypeTagU32     TypeTagVariant = 9
-	TypeTagU256    TypeTagVariant = 10
+	TypeTagBool    TypeTagVariant = 0  // Represents the bool type in Move BoolTag
+	TypeTagU8      TypeTagVariant = 1  // Represents the u8 type in Move U8Tag
+	TypeTagU64     TypeTagVariant = 2  // Represents the u64 type in Move U64Tag
+	TypeTagU128    TypeTagVariant = 3  // Represents the u128 type in Move U128Tag
+	TypeTagAddress TypeTagVariant = 4  // Represents the address type in Move AddressTag
+	TypeTagSigner  TypeTagVariant = 5  // Represents the signer type in Move SignerTag
+	TypeTagVector  TypeTagVariant = 6  // Represents the vector type in Move VectorTag
+	TypeTagStruct  TypeTagVariant = 7  // Represents the struct type in Move StructTag
+	TypeTagU16     TypeTagVariant = 8  // Represents the u16 type in Move U16Tag
+	TypeTagU32     TypeTagVariant = 9  // Represents the u32 type in Move U32Tag
+	TypeTagU256    TypeTagVariant = 10 // Represents the u256 type in Move U256Tag
 )
 
-// TypeTagImpl is an interface describing all the different types of TypeTag.  Unfortunately because of how serialization
+// TypeTagImpl is an interface describing all the different types of [TypeTag].  Unfortunately because of how serialization
 // works, a wrapper TypeTag struct is needed to handle the differentiation between types
 type TypeTagImpl interface {
 	bcs.Struct
+	// GetType returns the TypeTagVariant for this [TypeTag]
 	GetType() TypeTagVariant
+	// String returns the canonical Move string representation of this [TypeTag]
 	String() string
 }
 
-// TypeTag is a wrapper around a TypeTagImpl e.g. BoolTag or U8Tag for the purpose of serialization and deserialization
-// Implements bcs.Struct
+// TypeTag is a wrapper around a [TypeTagImpl] e.g. [BoolTag] or [U8Tag] for the purpose of serialization and deserialization
+// Implements:
+//   - [bcs.Struct]
 type TypeTag struct {
 	Value TypeTagImpl
 }
@@ -45,6 +49,10 @@ func (tt *TypeTag) String() string {
 
 //region TypeTag bcs.Struct
 
+// MarshalBCS serializes the TypeTag to bytes
+//
+// Implements:
+//   - [bcs.Marshaler]
 func (tt *TypeTag) MarshalBCS(ser *bcs.Serializer) {
 	if tt.Value == nil {
 		ser.SetError(fmt.Errorf("nil TypeTag"))
@@ -54,6 +62,10 @@ func (tt *TypeTag) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(tt.Value)
 }
 
+// UnmarshalBCS deserializes the TypeTag from bytes
+//
+// Implements:
+//   - [bcs.Unmarshaler]
 func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
 	variant := TypeTagVariant(des.Uleb128())
 	switch variant {
@@ -91,6 +103,7 @@ func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region SignerTag
 
+// SignerTag represents the signer type in Move
 type SignerTag struct{}
 
 //region SignerTag TypeTagImpl
@@ -115,6 +128,7 @@ func (xt *SignerTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region AddressTag
 
+// AddressTag represents the address type in Move
 type AddressTag struct{}
 
 //region AddressTag TypeTagImpl
@@ -139,6 +153,7 @@ func (xt *AddressTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region BoolTag
 
+// BoolTag represents the bool type in Move
 type BoolTag struct{}
 
 //region BoolTag TypeTagImpl
@@ -163,6 +178,7 @@ func (xt *BoolTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U8Tag
 
+// U8Tag represents the u8 type in Move
 type U8Tag struct{}
 
 //region U8Tag TypeTagImpl
@@ -187,6 +203,7 @@ func (xt *U8Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U16Tag
 
+// U16Tag represents the u16 type in Move
 type U16Tag struct{}
 
 //region U16Tag TypeTagImpl
@@ -211,6 +228,7 @@ func (xt *U16Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U32Tag
 
+// U32Tag represents the u32 type in Move
 type U32Tag struct{}
 
 //region U32Tag TypeTagImpl
@@ -235,6 +253,7 @@ func (xt *U32Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U64Tag
 
+// U64Tag represents the u64 type in Move
 type U64Tag struct{}
 
 //region U64Tag TypeTagImpl
@@ -259,6 +278,7 @@ func (xt *U64Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U128Tag
 
+// U128Tag represents the u128 type in Move
 type U128Tag struct{}
 
 //region U128Tag TypeTagImpl
@@ -283,6 +303,7 @@ func (xt *U128Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region U256Tag
 
+// U256Tag represents the u256 type in Move
 type U256Tag struct{}
 
 //region U256Tag TypeTagImpl
@@ -307,9 +328,9 @@ func (xt *U256Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 //region VectorTag
 
-// VectorTag represents the vector<T> type in Move, where T is another TypeTag
+// VectorTag represents the vector<T> type in Move, where T is another [TypeTag]
 type VectorTag struct {
-	TypeParam TypeTag
+	TypeParam TypeTag // TypeParam is the type of the elements in the vector
 }
 
 //region VectorTag TypeTagImpl
@@ -345,12 +366,12 @@ func (xt *VectorTag) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region StructTag
 
-// StructTag represents an on-chain struct of the form address::module::name<T1,T2,...>
+// StructTag represents an on-chain struct of the form address::module::name<T1,T2,...> and each T is a [TypeTag]
 type StructTag struct {
-	Address    AccountAddress
-	Module     string
-	Name       string
-	TypeParams []TypeTag
+	Address    AccountAddress // Address is the address of the module
+	Module     string         // Module is the name of the module
+	Name       string         // Name is the name of the struct
+	TypeParams []TypeTag      // TypeParams are the TypeTags of the type parameters
 }
 
 //region StructTag TypeTagImpl

@@ -9,9 +9,9 @@ import (
 
 // Script A Move script as compiled code as a transaction
 type Script struct {
-	Code     []byte
-	ArgTypes []TypeTag
-	Args     []ScriptArgument
+	Code     []byte           // The compiled script bytes
+	ArgTypes []TypeTag        // The types of the arguments
+	Args     []ScriptArgument // The arguments
 }
 
 //region Script TransactionPayloadImpl
@@ -41,24 +41,27 @@ func (s *Script) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region ScriptArgument
 
+// ScriptArgumentVariant the type of the script argument.  If there isn't a value here, it is not supported.
+//
+// Note that the only vector supported is vector<u8>
 type ScriptArgumentVariant uint32
 
 const (
-	ScriptArgumentU8       ScriptArgumentVariant = 0
-	ScriptArgumentU64      ScriptArgumentVariant = 1
-	ScriptArgumentU128     ScriptArgumentVariant = 2
-	ScriptArgumentAddress  ScriptArgumentVariant = 3
-	ScriptArgumentU8Vector ScriptArgumentVariant = 4
-	ScriptArgumentBool     ScriptArgumentVariant = 5
-	ScriptArgumentU16      ScriptArgumentVariant = 6
-	ScriptArgumentU32      ScriptArgumentVariant = 7
-	ScriptArgumentU256     ScriptArgumentVariant = 8
+	ScriptArgumentU8       ScriptArgumentVariant = 0 // u8 type argument
+	ScriptArgumentU64      ScriptArgumentVariant = 1 // u64 type argument
+	ScriptArgumentU128     ScriptArgumentVariant = 2 // u128 type argument
+	ScriptArgumentAddress  ScriptArgumentVariant = 3 // address type argument
+	ScriptArgumentU8Vector ScriptArgumentVariant = 4 // vector<u8> type argument
+	ScriptArgumentBool     ScriptArgumentVariant = 5 // bool type argument
+	ScriptArgumentU16      ScriptArgumentVariant = 6 // u16 type argument
+	ScriptArgumentU32      ScriptArgumentVariant = 7 //	u32 type argument
+	ScriptArgumentU256     ScriptArgumentVariant = 8 //	u256 type argument
 )
 
 // ScriptArgument a Move script argument, which encodes its type with it
 type ScriptArgument struct {
-	Variant ScriptArgumentVariant
-	Value   any // TODO: Do we add better typing, or stick with the any
+	Variant ScriptArgumentVariant // The type of the argument
+	Value   any                   // The value of the argument
 }
 
 //region ScriptArgument bcs.Struct

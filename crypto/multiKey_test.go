@@ -71,17 +71,20 @@ func createMultiKey(t *testing.T) (
 	// TODO: Add secp256k1 as well
 	key1, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
-	pubkey1 := ToAnyPublicKey(key1.PubKey())
-	key2, err := GenerateEd25519PrivateKey()
+	pubkey1, err := ToAnyPublicKey(key1.PubKey())
 	assert.NoError(t, err)
-	pubkey2 := ToAnyPublicKey(key2.PubKey())
+	key2, err := GenerateSecp256k1Key()
+	assert.NoError(t, err)
+	signer2 := NewSingleSigner(key2)
+	pubkey2, err := ToAnyPublicKey(signer2.PubKey())
+	assert.NoError(t, err)
 
 	publicKey := &MultiKey{
 		PubKeys:            []*AnyPublicKey{pubkey1, pubkey2},
 		SignaturesRequired: 2,
 	}
 
-	return &SingleSigner{key1}, &SingleSigner{key2}, ToAnyPublicKey(pubkey1), ToAnyPublicKey(pubkey2), publicKey
+	return &SingleSigner{key1}, &SingleSigner{key2}, pubkey1, pubkey2, publicKey
 }
 
 func createMultiKeySignature(t *testing.T, key1 *SingleSigner, key2 *SingleSigner, message []byte) *MultiKeySignature {
