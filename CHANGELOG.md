@@ -12,6 +12,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add Go doc for most functions and types in the codebase
 - Add tons more testing
 - [`Breaking`] Change ToAnyPublicKey to have an error in the output
+- [`Fix`] Properly parse DeleteResourse write sets
 
 
 # v0.5.0 (6/21/2024)
