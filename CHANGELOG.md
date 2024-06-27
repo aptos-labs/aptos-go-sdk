@@ -4,6 +4,15 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+- [`Breaking`] Change type from Transaction to CommittedTransaction for cases that it's known they're committed
+- [`Fix`] Fix secp256k1 signing and verification to be correctly used
+- [`Fix`] Fix supply view function for FungibleAssetClient
+- [`Breaking`] Rearrange Concurrency and add new types to carry between steps
+- [`Fix`] Fix some of the API types that didn't match on-chain representations
+- Add Go doc for most functions and types in the codebase
+- Add tons more testing
+- [`Breaking`] Change ToAnyPublicKey to have an error in the output
+
 
 # v0.5.0 (6/21/2024)
 - [`Fix`] Fix sponsored transactions, and add example for sponsored transactions
