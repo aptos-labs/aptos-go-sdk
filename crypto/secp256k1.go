@@ -148,13 +148,11 @@ type Secp256k1PublicKey struct {
 // Implements:
 //   - [VerifyingKey]
 func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
-	switch sig.(type) {
+	switch sig := sig.(type) {
 	case *Secp256k1Signature:
-		typedSig := sig.(*Secp256k1Signature)
-
 		// Verification requires to pass the SHA-256 hash of the message
 		msg = util.Sha3256Hash([][]byte{msg})
-		return ethCrypto.VerifySignature(key.Bytes(), msg, typedSig.Bytes())
+		return ethCrypto.VerifySignature(key.Bytes(), msg, sig.Bytes())
 	default:
 		return false
 	}

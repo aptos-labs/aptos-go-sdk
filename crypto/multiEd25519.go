@@ -34,9 +34,8 @@ type MultiEd25519PublicKey struct {
 // Implements:
 //   - [VerifyingKey]
 func (key *MultiEd25519PublicKey) Verify(msg []byte, signature Signature) bool {
-	switch signature.(type) {
+	switch sig := signature.(type) {
 	case *MultiEd25519Signature:
-		sig := signature.(*MultiEd25519Signature)
 		verified := uint8(0)
 		// TODO: Verify with bitmap, and check that this works properly
 		for i, pubKey := range key.PubKeys {

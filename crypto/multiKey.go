@@ -30,9 +30,8 @@ type MultiKey struct {
 // Implements:
 //   - [VerifyingKey]
 func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
-	switch signature.(type) {
+	switch sig := signature.(type) {
 	case *MultiKeySignature:
-		sig := signature.(*MultiKeySignature)
 		verified := uint8(0)
 		for i, pub := range key.PubKeys {
 			if pub.Verify(msg, sig.Signatures[i]) {

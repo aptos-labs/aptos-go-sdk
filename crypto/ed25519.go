@@ -184,7 +184,7 @@ type Ed25519PublicKey struct {
 // Implements:
 //   - [VerifyingKey]
 func (key *Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
-	switch sig.(type) {
+	switch sig := sig.(type) {
 	case *Ed25519Signature:
 		return ed25519.Verify(key.Inner, msg, sig.Bytes())
 	default:

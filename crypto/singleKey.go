@@ -134,10 +134,9 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 // Implements:
 //   - [VerifyingKey]
 func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
-	switch sig.(type) {
+	switch sig := sig.(type) {
 	case *AnySignature:
-		anySig := sig.(*AnySignature)
-		return key.PubKey.Verify(msg, anySig.Signature)
+		return key.PubKey.Verify(msg, sig.Signature)
 	default:
 		return false
 	}

@@ -141,12 +141,11 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	buildOptions ...any,
 ) {
 	singleSigner := func(rawTxn RawTransactionImpl) (*SignedTransaction, error) {
-		switch rawTxn.(type) {
+		switch rawTxn := rawTxn.(type) {
 		case *RawTransaction:
-			return rawTxn.(*RawTransaction).SignedTransaction(sender)
+			return rawTxn.SignedTransaction(sender)
 		case *RawTransactionWithData:
-			rawTxnWithData := rawTxn.(*RawTransactionWithData)
-			switch rawTxnWithData.Variant {
+			switch rawTxn.Variant {
 			case MultiAgentRawTransactionWithDataVariant:
 				return nil, fmt.Errorf("multi agent not supported, please provide a signer function")
 			case MultiAgentWithFeePayerRawTransactionWithDataVariant:
