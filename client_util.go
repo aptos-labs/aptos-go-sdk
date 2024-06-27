@@ -6,10 +6,13 @@ import (
 	"runtime/debug"
 )
 
+// ClientHeader is the header key for the SDK version
 const ClientHeader = "x-aptos-client"
 
+// ClientHeaderValue is the header value for the SDK version
 var ClientHeaderValue = "aptos-go-sdk/unk"
 
+// Sets up the ClientHeaderValue with the SDK version
 func init() {
 	vcsRevision := "unk"
 	vcsMod := ""

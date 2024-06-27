@@ -8,11 +8,12 @@ import (
 
 // FungibleAssetClient This is an example client around a single fungible asset
 type FungibleAssetClient struct {
-	aptosClient     *Client
-	metadataAddress *AccountAddress
+	aptosClient     *Client         // Aptos client
+	metadataAddress *AccountAddress // Metadata address of the fungible asset
 }
 
-// NewFungibleAssetClient verifies the address exists when creating the client
+// NewFungibleAssetClient verifies the [AccountAddress] of the metadata exists when creating the client
+//
 // TODO: Add lookup of other metadata information such as symbol, supply, etc
 func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (faClient *FungibleAssetClient, err error) {
 	// Retrieve the Metadata resource to ensure the fungible asset actually exists
@@ -31,6 +32,7 @@ func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (fa
 
 // -- Entry functions -- //
 
+// Transfer sends amount of the fungible asset from senderStore to receiverStore
 func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	payload, err := FungibleAssetTransferPayload(client.metadataAddress, senderStore, receiverStore, amount)
 	if err != nil {
@@ -48,6 +50,7 @@ func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStor
 	return rawTxn.SignedTransaction(sender)
 }
 
+// TransferPrimaryStore sends amount of the fungible asset from the primary store of the sender to receiverAddress
 func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Build transaction
 	payload, err := FungibleAssetPrimaryStoreTransferPayload(client.metadataAddress, receiverAddress, amount)
@@ -65,6 +68,9 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner
 
 // -- View functions -- //
 
+// PrimaryStoreAddress returns the [AccountAddress] of the primary store for the owner
+//
+// Note that the primary store may not exist at the address. Use [FungibleAssetClient.PrimaryStoreExists] to check.
 func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (address *AccountAddress, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
 	if err != nil {
@@ -75,6 +81,7 @@ func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (a
 	return
 }
 
+// PrimaryStoreExists returns true if the primary store for the owner exists
 func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (exists bool, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
 	if err != nil {
@@ -85,6 +92,7 @@ func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (ex
 	return
 }
 
+// PrimaryBalance returns the balance of the primary store for the owner
 func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress) (balance uint64, err error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "balance")
 	if err != nil {
@@ -94,6 +102,7 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress) (balanc
 	return StrToUint64(balanceStr)
 }
 
+// PrimaryIsFrozen returns true if the primary store for the owner is frozen
 func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress) (isFrozen bool, err error) {
 	val, err := client.viewPrimaryStore([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen")
 	if err != nil {
@@ -103,6 +112,7 @@ func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress) (isFro
 	return
 }
 
+// Balance returns the balance of the store
 func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress) (balance uint64, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "balance")
 	if err != nil {
@@ -111,6 +121,8 @@ func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress) (balanc
 	balanceStr := val.(string)
 	return strconv.ParseUint(balanceStr, 10, 64)
 }
+
+// IsFrozen returns true if the store is frozen
 func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress) (isFrozen bool, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "is_frozen")
 	if err != nil {
@@ -120,6 +132,7 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress) (isFro
 	return
 }
 
+// StoreExists returns true if the store exists
 func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress) (exists bool, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
@@ -140,6 +153,7 @@ func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress) (ex
 	return
 }
 
+// StoreMetadata returns the [AccountAddress] of the metadata for the store
 func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress) (metadataAddress *AccountAddress, err error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_metadata")
 	if err != nil {
@@ -148,6 +162,7 @@ func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress) (
 	return unwrapObject(val)
 }
 
+// Supply returns the total supply of the fungible asset
 func (client *FungibleAssetClient) Supply() (supply *big.Int, err error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "supply")
 	if err != nil {
@@ -156,6 +171,7 @@ func (client *FungibleAssetClient) Supply() (supply *big.Int, err error) {
 	return unwrapAggregator(val)
 }
 
+// Maximum returns the maximum possible supply of the fungible asset
 func (client *FungibleAssetClient) Maximum() (maximum *big.Int, err error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "maximum")
 	if err != nil {
@@ -165,6 +181,7 @@ func (client *FungibleAssetClient) Maximum() (maximum *big.Int, err error) {
 
 }
 
+// Name returns the name of the fungible asset
 func (client *FungibleAssetClient) Name() (name string, err error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "name")
 	if err != nil {
@@ -174,6 +191,7 @@ func (client *FungibleAssetClient) Name() (name string, err error) {
 	return
 }
 
+// Symbol returns the symbol of the fungible asset
 func (client *FungibleAssetClient) Symbol() (symbol string, err error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "symbol")
 	if err != nil {
@@ -183,6 +201,7 @@ func (client *FungibleAssetClient) Symbol() (symbol string, err error) {
 	return
 }
 
+// Decimals returns the number of decimal places for the fungible asset
 func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "decimals")
 	if err != nil {
@@ -192,6 +211,7 @@ func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 	return
 }
 
+// viewMetadata calls a view function on the fungible asset metadata
 func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName string) (result any, err error) {
 	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
 	typeTag := TypeTag{Value: structTag}
@@ -213,6 +233,7 @@ func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName stri
 	return vals[0], nil
 }
 
+// viewStore calls a view function on the fungible asset store
 func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string) (result any, err error) {
 	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
@@ -234,6 +255,7 @@ func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string)
 	return vals[0], nil
 }
 
+// viewPrimaryStore calls a view function on the primary fungible asset store
 func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName string) (result any, err error) {
 	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
 	typeTag := TypeTag{Value: structTag}
@@ -255,6 +277,7 @@ func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName 
 	return vals[0], nil
 }
 
+// viewPrimaryStoreMetadata calls a view function on the primary fungible asset store metadata
 func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, functionName string) (result any, err error) {
 	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
 	typeTag := TypeTag{Value: structTag}

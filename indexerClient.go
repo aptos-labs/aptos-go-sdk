@@ -15,6 +15,7 @@ type IndexerClient struct {
 	inner *graphql.Client
 }
 
+// NewIndexerClient creates a new client specifically for requesting data from the indexer
 func NewIndexerClient(httpClient *http.Client, url string) *IndexerClient {
 	// Reuse the HTTP client in the node client
 	client := graphql.NewClient(url, httpClient)

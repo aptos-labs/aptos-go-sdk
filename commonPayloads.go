@@ -10,10 +10,15 @@ import (
  * because FeePayer, and Multi-sig transactions will use these payloads, in addition to SingleSigner transactions
  */
 
-// FungibleAssetPrimaryStoreTransferPayload builds an EntryFunction payload to transfer between two primary stores
-// This is similar to CoinTransferPayload
+// FungibleAssetPrimaryStoreTransferPayload builds an [EntryFunction] payload to transfer between two primary stores.
+// This is similar to [CoinTransferPayload].
 //
-// For now, if metadata is nil, then it will fail to build, but in the future, APT will be the default
+// Args:
+//   - faMetadataAddress is the [AccountAddress] of the metadata for the fungible asset
+//   - dest is the destination [AccountAddress]
+//   - amount is the amount of coins to transfer
+//
+// Note: for now, if metadata is nil, then it will fail to build. But in the future, APT will be the default.
 func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")
@@ -44,7 +49,13 @@ func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress,
 
 // FungibleAssetTransferPayload builds an EntryFunction payload to transfer between two fungible asset stores
 //
-// For now, if metadata is nil, then it will fail to build, but in the future, APT will be the default
+// Args:
+//   - faMetadataAddress is the [AccountAddress] of the metadata for the fungible asset
+//   - source is the store [AccountAddress] to transfer from
+//   - dest is the destination [AccountAddress]
+//   - amount is the amount of coins to transfer
+//
+// Note: for now, if metadata is nil, then it will fail to build. But in the future, APT will be the default
 func FungibleAssetTransferPayload(faMetadataAddress *AccountAddress, source AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")

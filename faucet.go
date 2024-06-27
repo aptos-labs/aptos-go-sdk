@@ -11,8 +11,8 @@ import (
 // FaucetClient uses the underlying NodeClient to request for APT for gas on a network.
 // This can only be used in a test network (e.g. Localnet, Devnet, Testnet)
 type FaucetClient struct {
-	nodeClient *NodeClient
-	url        *url.URL
+	nodeClient *NodeClient // NodeClient to use for requesting funds
+	url        *url.URL    // URL of the faucet e.g. https://testnet.faucet.aptoslabs.com
 }
 
 // NewFaucetClient creates a new client specifically for requesting faucet funds

@@ -19,12 +19,12 @@ import (
 //		"transactions": null
 //	}
 type Block struct {
-	BlockHash      Hash           // BlockHash of the block, a 32-byte hash in hexadecimal format
-	BlockHeight    uint64         // BlockHeight of the block, starts at 0
-	BlockTimestamp uint64         // BlockTimestamp is the Unix timestamp of the block, in milliseconds, may not be set for block 0
-	FirstVersion   uint64         // FirstVersion of the block
-	LastVersion    uint64         // LastVersion of the block inclusive, may be the same value as FirstVersion
-	Transactions   []*Transaction // Transactions in the block if requested, otherwise it is empty
+	BlockHash      Hash                    // BlockHash of the block, a 32-byte hash in hexadecimal format
+	BlockHeight    uint64                  // BlockHeight of the block, starts at 0
+	BlockTimestamp uint64                  // BlockTimestamp is the Unix timestamp of the block, in milliseconds, may not be set for block 0
+	FirstVersion   uint64                  // FirstVersion of the block
+	LastVersion    uint64                  // LastVersion of the block inclusive, may be the same value as FirstVersion
+	Transactions   []*CommittedTransaction // Transactions in the block if requested, otherwise it is empty
 }
 
 //region Block JSON
@@ -52,7 +52,7 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 	o.BlockTimestamp = data.BlockTimestamp.ToUint64()
 	o.FirstVersion = data.FirstVersion.ToUint64()
 	o.LastVersion = data.LastVersion.ToUint64()
-	o.Transactions = make([]*Transaction, len(data.Transactions))
+	o.Transactions = make([]*CommittedTransaction, len(data.Transactions))
 	for i, tx := range data.Transactions {
 		err = json.Unmarshal(tx, &o.Transactions[i])
 		if err != nil {

@@ -6,6 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
+// SignedTransactionVariant is the variant for a signed transaction
 type SignedTransactionVariant uint8
 
 // TransactionSigner is a generic interface for a way to sign transactions.  The default implementation is Account
@@ -21,12 +22,14 @@ type TransactionSigner interface {
 
 //region SignedTransaction
 
+// UserTransactionVariant is the variant for a transaction submitted by a user.  For now, we don't support any others,
+// because they can't be submitted.
 const UserTransactionVariant SignedTransactionVariant = 0
 
 // SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
-	Transaction   RawTransactionImpl
-	Authenticator *TransactionAuthenticator
+	Transaction   RawTransactionImpl        // The transaction either [RawTransaction] or [RawTransactionWithData]
+	Authenticator *TransactionAuthenticator // The authenticator for a transaction (can't be be a standalone [crypto.AccountAuthenticator])
 }
 
 // Verify checks a signed transaction's signature

@@ -7,15 +7,15 @@ import (
 
 // NodeInfo information retrieved about the current state of the blockchain on API requests
 type NodeInfo struct {
-	ChainId                uint8  `json:"chain_id"`
-	EpochStr               string `json:"epoch"`
-	LedgerTimestampStr     string `json:"ledger_timestamp"`
-	LedgerVersionStr       string `json:"ledger_version"`
-	OldestLedgerVersionStr string `json:"oldest_ledger_version"`
-	NodeRole               string `json:"node_role"`
-	BlockHeightStr         string `json:"block_height"`
-	OldestBlockHeightStr   string `json:"oldest_block_height"`
-	GitHash                string `json:"git_hash"`
+	ChainId                uint8  `json:"chain_id"`              // ChainId is the chain ID of the network
+	EpochStr               string `json:"epoch"`                 // EpochStr is the current epoch of the network.  On Mainnet, this is usually every 2 hours.
+	LedgerTimestampStr     string `json:"ledger_timestamp"`      // LedgerTimestampStr is the timestamp the block was committed
+	LedgerVersionStr       string `json:"ledger_version"`        // LedgerVersionStr is the newest transaction available on the full node
+	OldestLedgerVersionStr string `json:"oldest_ledger_version"` // OldestLedgerVersionStr is the oldest ledger version not pruned on the full node
+	NodeRole               string `json:"node_role"`             // NodeRole is the role of the node in the network
+	BlockHeightStr         string `json:"block_height"`          // BlockHeightStr is the newest block available on the full node (by the time you call this there's already a new one!)
+	OldestBlockHeightStr   string `json:"oldest_block_height"`   // OldestBlockHeightStr is the oldest block note pruned on the full node
+	GitHash                string `json:"git_hash"`              // GitHash is the git hash of the node
 }
 
 // Epoch the current epoch of the network.  On Mainnet, this is usually every 2 hours.

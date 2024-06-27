@@ -1,5 +1,12 @@
 // Package aptos is a Go interface into the Aptos blockchain.
 //
+// The Aptos Go SDK provides a way to read on-chain data, submit transactions, and generally interact with the blockchain.
+//
+// Quick links:
+//
+//   - [Aptos Dev Docs] for learning more about Aptos and how to use it.
+//   - [Examples] are standalone runnable examples of how to use the SDK.
+//
 // You can create a client and send a transfer transaction with the below example:
 //
 //	// Create a Client
@@ -34,6 +41,9 @@
 //	if err != nil {
 //	  panic(fmt.Sprintf("Failed to wait for transaction %w", err))
 //	}
+//
+// [Aptos Dev Docs]: https://aptos.dev
+// [Examples]: https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk/examples
 package aptos
 
 import (
@@ -258,7 +268,7 @@ func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, 
 //			}
 //		}
 //	}
-func (client *Client) TransactionByVersion(version uint64) (data *api.Transaction, err error) {
+func (client *Client) TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error) {
 	return client.nodeClient.TransactionByVersion(version)
 }
 
@@ -287,7 +297,7 @@ func (client *Client) WaitForTransaction(txnHash string, options ...any) (data *
 //
 //	client.Transactions(0, 2)   // Returns 2 transactions
 //	client.Transactions(1, 100) // Returns 100 transactions
-func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Transaction, err error) {
+func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	return client.nodeClient.Transactions(start, limit)
 }
 
