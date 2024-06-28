@@ -705,6 +705,20 @@ type SubmitTransactionResponse struct {
 	Signature               *Signature            // Signature is the AccountAuthenticator of the sender.
 }
 
+// BatchSubmitTransactionResponse is the response from submitting a batch of transactions to the blockchain
+type BatchSubmitTransactionResponse struct {
+	// TransactionFailures is the list of transactions that failed to submit, if it is empty, all were successful
+	TransactionFailures []BatchSubmitTransactionFailure `json:"transaction_failures"`
+}
+
+// BatchSubmitTransactionFailure is a failure of a transaction in a batch submission,
+type BatchSubmitTransactionFailure struct {
+	// Error is the error that occurred when submitting the transaction
+	Error Error
+	//TransactionIndex is the index of submitted transactions that failed
+	TransactionIndex uint32 `json:"transaction_index"`
+}
+
 // UnmarshalJSON unmarshals the [SubmitTransactionResponse] from JSON handling conversion between types
 func (o *SubmitTransactionResponse) UnmarshalJSON(b []byte) error {
 	type inner struct {

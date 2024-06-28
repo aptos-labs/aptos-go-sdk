@@ -61,6 +61,11 @@ func (snt *SequenceNumberTracker) Update(next uint64) uint64 {
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
+func (client *Client) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) (*RawTransaction, error) {
+	return client.BuildTransactions(sender, payloads, responses, setSequenceNumber, options...)
+}
+
+// BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
 func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	// Initialize state
 	account, err := rc.Account(sender)
@@ -120,6 +125,12 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 
 // SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
 // closes output chan `responses` when input chan `signedTxns` is closed.
+func (client *Client) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
+	client.nodeClient.SubmitTransactions(requests, responses)
+}
+
+// SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
+// closes output chan `responses` when input chan `signedTxns` is closed.
 func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
 	for request := range requests {
@@ -130,6 +141,66 @@ func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequ
 			responses <- TransactionSubmissionResponse{Id: request.Id, Response: response}
 		}
 	}
+}
+
+// BatchSubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
+// closes output chan `responses` when input chan `signedTxns` is closed.
+func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
+	defer close(responses)
+
+	inputs := make([]*SignedTransaction, 20)
+	ids := make([]uint64, 20)
+	i := uint32(0)
+
+	for request := range requests {
+		// Collect 20 inputs before submitting
+		// TODO: Handle a timeout or something associated for it
+		inputs[i] = request.SignedTxn
+		ids[i] = request.Id
+
+		if i >= 19 {
+			i = 0
+			response, err := rc.BatchSubmitTransaction(inputs)
+
+			// Process the responses
+			if err != nil {
+				// Error, means all failed
+				for j := uint32(0); j < i; j++ {
+					responses <- TransactionSubmissionResponse{Id: ids[j], Err: err}
+				}
+			} else {
+				// Partial failure, means we need to send errors for those that failed
+				// and responses for those that succeeded
+
+				for j := uint32(0); j < i; j++ {
+					failed := -1
+					for k := 0; k < len(response.TransactionFailures); k++ {
+						if response.TransactionFailures[k].TransactionIndex == j {
+							failed = k
+							break
+						}
+					}
+					if failed >= 0 {
+						responses <- TransactionSubmissionResponse{Id: ids[j], Response: nil}
+					} else {
+						responses <- TransactionSubmissionResponse{Id: ids[j], Err: fmt.Errorf("transaction failed: %s", response.TransactionFailures[failed].Error.Message)}
+					}
+				}
+			}
+		}
+		i++
+	}
+}
+
+// BuildSignAndSubmitTransactions starts up a goroutine to process transactions for a single [TransactionSender]
+// Closes output chan `responses` on completion of input chan `payloads`.
+func (client *Client) BuildSignAndSubmitTransactions(
+	sender TransactionSigner,
+	payloads chan TransactionBuildPayload,
+	responses chan TransactionSubmissionResponse,
+	buildOptions ...any,
+) {
+	client.nodeClient.BuildSignAndSubmitTransactions(sender, payloads, responses, buildOptions...)
 }
 
 // BuildSignAndSubmitTransactions starts up a goroutine to process transactions for a single [TransactionSender]
@@ -213,6 +284,68 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 //		// Here add payloads, and wiating on resposnes
 //
 //	}
+func (client *Client) BuildSignAndSubmitTransactionsWithSignFunction(
+	sender AccountAddress,
+	payloads chan TransactionBuildPayload,
+	responses chan TransactionSubmissionResponse,
+	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
+	buildOptions ...any,
+) {
+	client.nodeClient.BuildSignAndSubmitTransactionsWithSignFunction(
+		sender,
+		payloads,
+		responses,
+		sign,
+		buildOptions...,
+	)
+}
+
+// BuildSignAndSubmitTransactionsWithSignFunction allows for signing with a custom function
+//
+// Closes output chan `responses` on completion of input chan `payloads`.
+//
+// This enables the ability to do fee payer, and other approaches while staying concurrent
+//
+//	func Example() {
+//		client := NewNodeClient()
+//
+//		sender := NewEd25519Account()
+//		feePayer := NewEd25519Account()
+//
+//		payloads := make(chan TransactionBuildPayload)
+//		responses := make(chan TransactionSubmissionResponse)
+//
+//		signingFunc := func(rawTxn RawTransactionImpl) (*SignedTransaction, error) {
+//			switch rawTxn.(type) {
+//			case *RawTransaction:
+//				return nil, fmt.Errorf("only fee payer supported")
+//			case *RawTransactionWithData:
+//				rawTxnWithData := rawTxn.(*RawTransactionWithData)
+//				switch rawTxnWithData.Variant {
+//				case MultiAgentRawTransactionWithDataVariant:
+//					return nil, fmt.Errorf("multi agent not supported, please provide a fee payer function")
+//				case MultiAgentWithFeePayerRawTransactionWithDataVariant:
+//					rawTxnWithData.Sign(sender)
+//					txn, ok := rawTxnWithData.ToFeePayerTransaction()
+//				default:
+//					return nil, fmt.Errorf("unsupported rawTransactionWithData type")
+//				}
+//			default:
+//				return nil, fmt.Errorf("unsupported rawTransactionImpl type")
+//			}
+//		}
+//
+//		// startup worker
+//		go client.BuildSignAndSubmitTransactionsWithSignFunction(
+//			sender,
+//			payloads,
+//			responses,
+//			signingFunc
+//		)
+//
+//		// Here add payloads, and wiating on resposnes
+//
+//	}
 func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	sender AccountAddress,
 	payloads chan TransactionBuildPayload,
@@ -228,6 +361,8 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
 	submissionRequests := make(chan TransactionSubmissionRequest, 20)
+	// Note that, I change this to BatchSubmitTransactions, and it caused no change in performance.  The non-batched
+	// version is more flexible and gives actual responses.  It is may be that with large payloads that batch more performant.
 	go rc.SubmitTransactions(submissionRequests, responses)
 
 	var wg sync.WaitGroup

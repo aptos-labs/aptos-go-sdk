@@ -421,7 +421,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// start submission goroutine
 	payloads := make(chan TransactionBuildPayload, 50)
 	results := make(chan TransactionSubmissionResponse, 50)
-	go client.nodeClient.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
+	go client.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
 	transferAmount, err := bcs.SerializeU64(100)
 	assert.NoError(t, err)

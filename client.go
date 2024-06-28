@@ -171,7 +171,21 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 //
 //	client.SetTimeout(5 * time.Millisecond)
 func (client *Client) SetTimeout(timeout time.Duration) {
-	client.nodeClient.client.Timeout = timeout
+	client.nodeClient.SetTimeout(timeout)
+}
+
+// SetHeader sets the header for all future requests
+//
+//	client.SetHeader("Authorization", "Bearer abcde")
+func (client *Client) SetHeader(key string, value string) {
+	client.nodeClient.SetHeader(key, value)
+}
+
+// RemoveHeader removes the header from being automatically set all future requests.
+//
+//	client.RemoveHeader("Authorization")
+func (client *Client) RemoveHeader(key string) {
+	client.nodeClient.RemoveHeader(key)
 }
 
 // Info Retrieves the node info about the network and it's current state
@@ -304,6 +318,14 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Co
 // SubmitTransaction Submits an already signed transaction to the blockchain
 func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
+}
+
+// BatchSubmitTransaction submits a collection of signed transactions to the network in a single request
+//
+// It will return the responses in the same order as the input transactions that failed.  If the response is empty, then
+// all transactions succeeded.
+func (client *Client) BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
+	return client.nodeClient.BatchSubmitTransaction(signedTxns)
 }
 
 // SimulateTransaction Simulates a raw transaction without sending it to the blockchain
