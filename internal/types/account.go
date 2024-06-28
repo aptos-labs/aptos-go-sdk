@@ -197,6 +197,11 @@ func (account *Account) SignMessage(message []byte) (signature crypto.Signature,
 	return account.Signer.SignMessage(message)
 }
 
+// SimulationAuthenticator creates a new authenticator for simulation purposes
+func (account *Account) SimulationAuthenticator() *crypto.AccountAuthenticator {
+	return account.Signer.SimulationAuthenticator()
+}
+
 // PubKey retrieves the public key for signature verification
 func (account *Account) PubKey() crypto.PublicKey {
 	return account.Signer.PubKey()

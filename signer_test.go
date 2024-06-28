@@ -155,6 +155,16 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 	return totalSignature, nil
 }
 
+func (s *MultiKeyTestSigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
+	return &crypto.AccountAuthenticator{
+		Variant: crypto.AccountAuthenticatorMultiKey,
+		Auth: &crypto.MultiKeyAuthenticator{
+			PubKey: s.PubKey().(*crypto.MultiKey),
+			Sig:    &crypto.MultiKeySignature{},
+		},
+	}
+}
+
 func (s *MultiKeyTestSigner) AuthKey() *crypto.AuthenticationKey {
 	return s.PubKey().AuthKey()
 }

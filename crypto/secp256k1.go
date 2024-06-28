@@ -53,6 +53,14 @@ func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
 	}
 }
 
+// EmptySignature creates an empty signature for use in simulation
+//
+// Implements:
+//   - [MessageSigner]
+func (key *Secp256k1PrivateKey) EmptySignature() Signature {
+	return &Secp256k1Signature{}
+}
+
 // SignMessage signs a message and returns the raw [Signature] without a [PublicKey] for verification
 //
 // Implements:
@@ -66,9 +74,9 @@ func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err erro
 	}
 
 	// Strip the recovery bit
-	return &Secp256k1Signature{
-		signature[0:64],
-	}, nil
+	secpSig := &Secp256k1Signature{}
+	copy(secpSig.Inner[:], signature[:Secp256k1SignatureLength])
+	return secpSig, nil
 }
 
 //endregion
@@ -310,7 +318,7 @@ func (ea *Secp256k1Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 //   - [bcs.Unmarshaler]
 //   - [bcs.Struct]
 type Secp256k1Signature struct {
-	Inner []byte // Inner is the actual signature
+	Inner [Secp256k1SignatureLength]byte // Inner is the actual signature
 }
 
 //region Secp256k1Signature CryptoMaterial
@@ -320,7 +328,7 @@ type Secp256k1Signature struct {
 // Implements:
 //   - [CryptoMaterial]
 func (e *Secp256k1Signature) Bytes() []byte {
-	return e.Inner
+	return e.Inner[:]
 }
 
 // FromBytes sets the [Secp256k1Signature] to the given bytes
@@ -333,7 +341,7 @@ func (e *Secp256k1Signature) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != Secp256k1SignatureLength {
 		return fmt.Errorf("invalid secp256k1 signature size %d, expected %d", len(bytes), Secp256k1SignatureLength)
 	}
-	e.Inner = bytes
+	copy(e.Inner[:], bytes)
 	return nil
 }
 

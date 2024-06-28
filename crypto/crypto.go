@@ -10,6 +10,9 @@ type Signer interface {
 	// SignMessage signs a message and returns the raw [Signature] without a [PublicKey] for verification
 	SignMessage(msg []byte) (signature Signature, err error)
 
+	// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+	SimulationAuthenticator() *AccountAuthenticator
+
 	// AuthKey gives the [AuthenticationKey] associated with the [Signer]
 	AuthKey() *AuthenticationKey
 
@@ -23,6 +26,9 @@ type Signer interface {
 type MessageSigner interface {
 	// SignMessage signs a message and returns the raw [Signature] without a [VerifyingKey]
 	SignMessage(msg []byte) (signature Signature, err error)
+
+	// EmptySignature creates an empty signature for use in simulation
+	EmptySignature() Signature
 
 	// VerifyingKey Retrieve the [VerifyingKey] for signature verification.
 	VerifyingKey() VerifyingKey
