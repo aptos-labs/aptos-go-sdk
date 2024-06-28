@@ -1,4 +1,4 @@
-// performance_transaction shows how to improve performance of the transaction submission of a single transaction
+// sending_concurrent_transactions shows how to submit transactions serially or concurrently on a single account
 package main
 
 import (
@@ -102,14 +102,16 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTran
 	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
 
 	// Submit transactions to goroutine
-	for i := uint64(0); i < numTransactions; i++ {
-		payloads <- aptos.TransactionBuildPayload{
-			Id:    i,
-			Type:  aptos.TransactionSubmissionTypeSingle,
-			Inner: payload,
+	go func() {
+		for i := uint64(0); i < numTransactions; i++ {
+			payloads <- aptos.TransactionBuildPayload{
+				Id:    i,
+				Type:  aptos.TransactionSubmissionTypeSingle,
+				Inner: payload,
+			}
 		}
-	}
-	close(payloads)
+		close(payloads)
+	}()
 
 	// Wait for all transactions to be processed
 	for result := range results {
