@@ -1,5 +1,3 @@
-// Package crypto handles all cryptographic types and operations associated with Aptos.  It mainly handles signing,
-// verification, parsing, and key generation.
 package crypto
 
 import "github.com/aptos-labs/aptos-go-sdk/bcs"
