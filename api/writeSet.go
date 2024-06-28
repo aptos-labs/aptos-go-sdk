@@ -142,7 +142,7 @@ type WriteSetChangeWriteResource struct {
 type WriteSetChangeDeleteResource struct {
 	Address      *types.AccountAddress `json:"address"`        // Address is the address the resource is deleted
 	StateKeyHash Hash                  `json:"state_key_hash"` // StateKeyHash is the hash of the state key
-	Resource     *MoveResource         `json:"resource"`       // Resource is the resource data matching the on-chain struct data
+	Resource     string                `json:"resource"`       // Resource is the struct name of the resource deleted
 }
 
 // WriteSetChangeWriteModule is a change that writes a module to an account
