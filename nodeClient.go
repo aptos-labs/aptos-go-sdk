@@ -507,34 +507,14 @@ type EstimatePrioritizedGasUnitPrice bool
 // TODO: Support multikey simulation
 func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
-	var auth *crypto.AccountAuthenticator
 	derivationScheme := sender.PubKey().Scheme()
 	switch derivationScheme {
-	case crypto.Ed25519Scheme:
-		auth = &crypto.AccountAuthenticator{
-			Variant: crypto.AccountAuthenticatorEd25519,
-			Auth: &crypto.Ed25519Authenticator{
-				PubKey: sender.PubKey().(*crypto.Ed25519PublicKey),
-				Sig:    &crypto.Ed25519Signature{Inner: [64]byte(make([]byte, 64))},
-			},
-		}
-	case crypto.SingleKeyScheme:
-		mockSig := &crypto.AnySignature{}
-		_ = mockSig.FromBytes(make([]byte, 64))
-		auth = &crypto.AccountAuthenticator{
-			Variant: crypto.AccountAuthenticatorSingleSender,
-			Auth: &crypto.SingleKeyAuthenticator{
-				PubKey: sender.PubKey().(*crypto.AnyPublicKey),
-				Sig:    mockSig,
-			},
-		}
 	case crypto.MultiEd25519Scheme:
 	case crypto.MultiKeyScheme:
-		// todo: add support for multikey simulation
+		// todo: add support for multikey simulation on the node
 		return nil, fmt.Errorf("currently unsupported sender derivation scheme %v", derivationScheme)
-	default:
-		return nil, fmt.Errorf("unexpected sender derivation scheme %v", derivationScheme)
 	}
+	auth := sender.SimulationAuthenticator()
 
 	// generate signed transaction for simulation (with zero signature)
 	signedTxn, err := rawTxn.SignedTransactionWithAuthenticator(auth)

@@ -64,6 +64,20 @@ func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthentica
 	}, nil
 }
 
+// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+//
+// Implements:
+//   - [Signer]
+func (key *Ed25519PrivateKey) SimulationAuthenticator() *AccountAuthenticator {
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorEd25519,
+		Auth: &Ed25519Authenticator{
+			PubKey: key.PubKey().(*Ed25519PublicKey),
+			Sig:    &Ed25519Signature{},
+		},
+	}
+}
+
 // PubKey returns the [Ed25519PublicKey] associated with the [Ed25519PrivateKey]
 //
 // Implements:
@@ -98,6 +112,14 @@ func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
 func (key *Ed25519PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
 	sigBytes := ed25519.Sign(key.Inner, msg)
 	return &Ed25519Signature{Inner: [64]byte(sigBytes)}, nil
+}
+
+// EmptySignature creates an empty signature for use in simulation
+//
+// Implements:
+//   - [MessageSigner]
+func (key *Ed25519PrivateKey) EmptySignature() Signature {
+	return &Ed25519Signature{}
 }
 
 // VerifyingKey returns the [Ed25519PublicKey] associated with the [Ed25519PrivateKey]

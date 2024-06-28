@@ -28,6 +28,14 @@ func (key *SingleSigner) SignMessage(msg []byte) (Signature, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	return &AnySignature{
+		Variant:   key.SignatureVariant(),
+		Signature: signature,
+	}, nil
+}
+
+func (key *SingleSigner) SignatureVariant() AnySignatureVariant {
 	sigType := AnySignatureVariantEd25519
 	switch key.Signer.(type) {
 	case *Ed25519PrivateKey:
@@ -35,11 +43,14 @@ func (key *SingleSigner) SignMessage(msg []byte) (Signature, error) {
 	case *Secp256k1PrivateKey:
 		sigType = AnySignatureVariantSecp256k1
 	}
+	return sigType
+}
 
+func (key *SingleSigner) EmptySignature() *AnySignature {
 	return &AnySignature{
-		Variant:   sigType,
-		Signature: signature,
-	}, nil
+		Variant:   key.SignatureVariant(),
+		Signature: key.Signer.EmptySignature(),
+	}
 }
 
 // region SingleSigner Signer implementation
@@ -58,6 +69,20 @@ func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, 
 	auth.PubKey = key.PubKey().(*AnyPublicKey)
 	auth.Sig = signature.(*AnySignature)
 	return &AccountAuthenticator{Variant: AccountAuthenticatorSingleSender, Auth: auth}, nil
+}
+
+// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+//
+// Implements:
+//   - [Signer]
+func (key *SingleSigner) SimulationAuthenticator() *AccountAuthenticator {
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorSingleSender,
+		Auth: &SingleKeyAuthenticator{
+			PubKey: key.PubKey().(*AnyPublicKey),
+			Sig:    key.EmptySignature(),
+		},
+	}
 }
 
 // AuthKey gives the [AuthenticationKey] associated with the [Signer]

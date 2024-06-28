@@ -54,6 +54,16 @@ func (signer *AlternativeSigner) SignMessage(msg []byte) (crypto.Signature, erro
 	return sig, nil
 }
 
+func (signer *AlternativeSigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
+	return &crypto.AccountAuthenticator{
+		Variant: crypto.AccountAuthenticatorEd25519,
+		Auth: &crypto.Ed25519Authenticator{
+			PubKey: signer.PublicKey(),
+			Sig:    &crypto.Ed25519Signature{},
+		},
+	}
+}
+
 func (signer *AlternativeSigner) AuthKey() *crypto.AuthenticationKey {
 	authKey := &crypto.AuthenticationKey{}
 	pubKey := signer.PublicKey()
