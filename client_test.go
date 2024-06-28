@@ -460,7 +460,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
-	for _ = range numWaiters {
+	for range numWaiters {
 		go concurrentTxnWaiter(results, waitResults, client, t, &wg)
 	}
 

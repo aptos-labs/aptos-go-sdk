@@ -1,7 +1,7 @@
 [![Go Reference](https://pkg.go.dev/badge/github.com/aptos-labs/aptos-go-sdk.svg)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
 [![Go Report Card](https://goreportcard.com/badge/github.com/aptos-labs/aptos-go-sdk)](https://goreportcard.com/report/github.com/aptos-labs/aptos-go-sdk)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aptos-labs/aptos-go-sdk)
-![GitHub Tag](https://img.shields.io/github/v/tag/aptos-labs/aptos-go-sdk?label=Latest%20Version)
+[![GitHub Tag](https://img.shields.io/github/v/tag/aptos-labs/aptos-go-sdk?label=Latest%20Version)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
 
 # aptos-go-sdk
 
@@ -28,6 +28,7 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [x] BCS encoding and decoding
 - [x] Structured API parsing
 - [x] Ed25519 Signer support
+- [x] MultiEd25519 support
 - [x] Secp256k1 Signer support
 - [x] On-chain and off-chain multi-sig support
 - [x] Sponsored transaction and Multi-agent support
@@ -38,12 +39,11 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [x] Move Package publishing support
 - [x] Move script support
 - [x] Transaction Simulation
+- [x] Automated sequence number management for parallel transaction submission
 
 ### TODO
 
-- [x] MultiEd25519 support
 - [ ] Predetermined Indexer queries for Fungible Assets and Digital Assets
-- [x] Automated sequence number management for parallel transaction submission
 
 ## Examples
 
@@ -53,13 +53,13 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [x] On-chain multi-sig
 - [x] Performance differences between transaction submission methods
 - [x] Move package publishing support
+- [x] Sponsored transaction example
+- [x] Off-chain multi-sig example
 
 ### TODO
 
 - [ ] Multi-agent example
 - [ ] Script Example
-- [x] Sponsored transaction example
-- [x] Off-chain multi-sig example
 - [ ] Digital assets / NFTs example
 - [ ] Transaction parsing example (by blocks)
 
@@ -68,4 +68,4 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [x] Ensure blocks fetch all transactions associated
 - [ ] More testing around API parsing
 - [ ] TypeTag string parsing
-- [ ] Add examples into the documentation
+- [x] Add examples into the documentation
