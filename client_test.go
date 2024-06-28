@@ -270,6 +270,19 @@ func Test_Indexer(t *testing.T) {
 	assert.GreaterOrEqual(t, status, uint64(0))
 }
 
+func Test_Genesis(t *testing.T) {
+	client, err := createTestClient()
+	assert.NoError(t, err)
+
+	genesis, err := client.BlockByHeight(0, true)
+	assert.NoError(t, err)
+
+	txn, err := genesis.Transactions[0].GenesisTransaction()
+	assert.NoError(t, err)
+
+	assert.Equal(t, uint64(0), *txn.TxnVersion())
+}
+
 func Test_Block(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)

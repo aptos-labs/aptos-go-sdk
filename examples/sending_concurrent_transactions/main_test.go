@@ -7,5 +7,5 @@ import (
 
 func Test_Main(t *testing.T) {
 	t.Parallel()
-	example(aptos.LocalnetConfig)
+	example(aptos.LocalnetConfig, 100)
 }

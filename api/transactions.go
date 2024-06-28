@@ -15,6 +15,7 @@ const (
 	TransactionVariantUser            TransactionVariant = "user_transaction"             // TransactionVariantUser maps to UserTransaction
 	TransactionVariantGenesis         TransactionVariant = "genesis_transaction"          // TransactionVariantGenesis maps to GenesisTransaction
 	TransactionVariantBlockMetadata   TransactionVariant = "block_metadata_transaction"   // TransactionVariantBlockMetadata maps to BlockMetadataTransaction
+	TransactionVariantBlockEpilogue   TransactionVariant = "block_epilogue_transaction"   // TransactionVariantBlockEpilogue maps to BlockEpilogueTransaction
 	TransactionVariantStateCheckpoint TransactionVariant = "state_checkpoint_transaction" // TransactionVariantStateCheckpoint maps to StateCheckpointTransaction
 	TransactionVariantValidator       TransactionVariant = "validator_transaction"        // TransactionVariantValidator maps to ValidatorTransaction
 	TransactionVariantUnknown         TransactionVariant = "unknown"                      // TransactionVariantUnknown maps to UnknownTransaction for unknown types
@@ -63,6 +64,8 @@ func (o *CommittedTransaction) UnmarshalJSON(b []byte) error {
 		o.Inner = &GenesisTransaction{}
 	case TransactionVariantBlockMetadata:
 		o.Inner = &BlockMetadataTransaction{}
+	case TransactionVariantBlockEpilogue:
+		o.Inner = &BlockEpilogueTransaction{}
 	case TransactionVariantStateCheckpoint:
 		o.Inner = &StateCheckpointTransaction{}
 	case TransactionVariantValidator:
@@ -99,6 +102,14 @@ func (o *CommittedTransaction) BlockMetadataTransaction() (*BlockMetadataTransac
 	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
+// BlockEpilogueTransaction changes the transaction to a [BlockEpilogueTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) BlockEpilogueTransaction() (*BlockEpilogueTransaction, error) {
+	if o.Type == TransactionVariantBlockEpilogue {
+		return o.Inner.(*BlockEpilogueTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not block epilogue: %s", o.Type)
+}
+
 // StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
 	if o.Type == TransactionVariantStateCheckpoint {
@@ -113,6 +124,14 @@ func (o *CommittedTransaction) ValidatorTransaction() (*ValidatorTransaction, er
 		return o.Inner.(*ValidatorTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
+}
+
+// UnknownTransaction changes the transaction to a [UnknownTransaction]; however, it will fail if it's not one.
+func (o *CommittedTransaction) UnknownTransaction() (*UnknownTransaction, error) {
+	if o.Type == TransactionVariantUnknown {
+		return o.Inner.(*UnknownTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 }
 
 // Transaction is an enum type for all possible transactions on the blockchain
@@ -157,6 +176,8 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 		o.Inner = &GenesisTransaction{}
 	case TransactionVariantBlockMetadata:
 		o.Inner = &BlockMetadataTransaction{}
+	case TransactionVariantBlockEpilogue:
+		o.Inner = &BlockEpilogueTransaction{}
 	case TransactionVariantStateCheckpoint:
 		o.Inner = &StateCheckpointTransaction{}
 	case TransactionVariantValidator:
@@ -201,6 +222,14 @@ func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, err
 	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
+// BlockEpilogueTransaction changes the transaction to a [BlockEpilogueTransaction]; however, it will fail if it's not one.
+func (o *Transaction) BlockEpilogueTransaction() (*BlockEpilogueTransaction, error) {
+	if o.Type == TransactionVariantBlockEpilogue {
+		return o.Inner.(*BlockEpilogueTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not block epilogue: %s", o.Type)
+}
+
 // StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
 func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
 	if o.Type == TransactionVariantStateCheckpoint {
@@ -215,6 +244,14 @@ func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
 		return o.Inner.(*ValidatorTransaction), nil
 	}
 	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
+}
+
+// UnknownTransaction changes the transaction to a [UnknownTransaction]; however, it will fail if it's not one.
+func (o *Transaction) UnknownTransaction() (*UnknownTransaction, error) {
+	if o.Type == TransactionVariantUnknown {
+		return o.Inner.(*UnknownTransaction), nil
+	}
+	return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 }
 
 // TransactionImpl is an interface for all transactions
@@ -476,7 +513,7 @@ func (o *GenesisTransaction) UnmarshalJSON(b []byte) error {
 
 // BlockMetadataTransaction is a transaction that is metadata about a block.
 type BlockMetadataTransaction struct {
-	Id                       string                // Id of the block, starts at 0 and increments per block.
+	Id                       string                // Id of the block, is the Hash of the block.
 	Epoch                    uint64                // Epoch of the block, starts at 0 and increments per epoch.  Epoch is roughly 2 hours, and subject to change.
 	Round                    uint64                // Round of the block, starts at 0 and increments per round in the epoch.
 	PreviousBlockVotesBitvec []uint8               // PreviousBlockVotesBitvec of the block, this is a bit vector of the votes of the previous block.
@@ -556,6 +593,75 @@ func (o *BlockMetadataTransaction) UnmarshalJSON(b []byte) error {
 	o.Changes = data.Changes
 	o.Events = data.Events
 	o.Timestamp = data.Timestamp.ToUint64()
+	o.StateCheckpointHash = data.StateCheckpointHash
+	return nil
+}
+
+// BlockEpilogueTransaction is a transaction at the end of the block.  It is not necessarily at the end of a block prior to being enabled as a feature.
+type BlockEpilogueTransaction struct {
+	Version             uint64            // Version of the transaction, starts at 0 and increments per transaction.
+	Hash                Hash              // Hash of the transaction, it is a SHA3-256 hash in hexadecimal format with a leading 0x.
+	AccumulatorRootHash Hash              // AccumulatorRootHash of the transaction.
+	StateChangeHash     Hash              // StateChangeHash of the transaction.
+	EventRootHash       Hash              // EventRootHash of the transaction.
+	GasUsed             uint64            // GasUsed by the transaction, will be in gas units.  It should be 0.
+	Success             bool              // Success of the transaction.
+	VmStatus            string            // VmStatus of the transaction, this will contain the error if any.
+	Changes             []*WriteSetChange // Changes to the ledger from the transaction, should never be empty.
+	Events              []*Event          // Events emitted by the transaction, may be empty.
+	Timestamp           uint64            // Timestamp is the Unix timestamp in microseconds when the block of the transaction was committed.
+	BlockEndInfo        *BlockEndInfo     // BlockEndInfo of the transaction, this will contain information about block gas.
+	StateCheckpointHash Hash              // StateCheckpointHash of the transaction. Optional, and will be "" if not set.
+}
+
+// TxnHash gives us the hash of the transaction.
+func (o *BlockEpilogueTransaction) TxnHash() Hash {
+	return o.Hash
+}
+
+// TxnSuccess tells us if the transaction is a success.  It will never be nil.
+func (o *BlockEpilogueTransaction) TxnSuccess() *bool {
+	return &o.Success
+}
+
+// TxnVersion gives us the ledger version of the transaction. It will never be nil.
+func (o *BlockEpilogueTransaction) TxnVersion() *uint64 {
+	return &o.Version
+}
+
+// UnmarshalJSON unmarshals the [BlockEpilogueTransaction] from JSON handling conversion between types
+func (o *BlockEpilogueTransaction) UnmarshalJSON(b []byte) error {
+	type inner struct {
+		Version             U64               `json:"version"`
+		Hash                Hash              `json:"hash"`
+		AccumulatorRootHash Hash              `json:"accumulator_root_hash"`
+		StateChangeHash     Hash              `json:"state_change_hash"`
+		EventRootHash       Hash              `json:"event_root_hash"`
+		GasUsed             U64               `json:"gas_used"`
+		Success             bool              `json:"success"`
+		VmStatus            string            `json:"vm_status"`
+		Changes             []*WriteSetChange `json:"changes"`
+		Timestamp           U64               `json:"timestamp"`
+		BlockEndInfo        *BlockEndInfo     `json:"block_end_info"`
+		StateCheckpointHash Hash              `json:"state_checkpoint_hash"` // Optional
+	}
+	data := &inner{}
+	err := json.Unmarshal(b, &data)
+	if err != nil {
+		return err
+	}
+
+	o.Version = data.Version.ToUint64()
+	o.Hash = data.Hash
+	o.AccumulatorRootHash = data.AccumulatorRootHash
+	o.StateChangeHash = data.StateChangeHash
+	o.EventRootHash = data.EventRootHash
+	o.GasUsed = data.GasUsed.ToUint64()
+	o.Success = data.Success
+	o.VmStatus = data.VmStatus
+	o.Changes = data.Changes
+	o.Timestamp = data.Timestamp.ToUint64()
+	o.BlockEndInfo = data.BlockEndInfo
 	o.StateCheckpointHash = data.StateCheckpointHash
 	return nil
 }
@@ -745,4 +851,12 @@ func (o *SubmitTransactionResponse) UnmarshalJSON(b []byte) error {
 	o.Payload = data.Payload
 	o.Signature = data.Signature
 	return nil
+}
+
+// BlockEndInfo is the information about the block gas
+type BlockEndInfo struct {
+	BlockGasLimitReached        bool   `json:"block_gas_limit_reached"`         // BlockGasLimitReached is true if the block gas limit was reached.
+	BlockOutputLimitReached     bool   `json:"block_output_limit_reached"`      // BlockOutputLimitReached is true if the block output limit was reached.
+	BlockEffectiveBlockGasUnits uint64 `json:"block_effective_block_gas_units"` // BlockEffectiveBlockGasUnits is the effective gas units used in the block.
+	BlockApproxOutputSize       uint64 `json:"block_approx_output_size"`        // BlockApproxOutputSize is the approximate output size of the block.
 }
