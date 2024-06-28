@@ -8,8 +8,6 @@ import (
 	"time"
 )
 
-const NumTransactions = uint64(30)
-
 func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {
 	client, err := aptos.NewClient(networkConfig)
 	if err != nil {
@@ -57,15 +55,15 @@ func payload() aptos.TransactionPayload {
 	}}
 }
 
-func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig) {
+func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransactions uint64) {
 	client, sender := setup(networkConfig)
 
-	responses := make([]*api.SubmitTransactionResponse, NumTransactions)
+	responses := make([]*api.SubmitTransactionResponse, numTransactions)
 	payload := payload()
 
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
-	for i := uint64(0); i < NumTransactions; i++ {
+	for i := uint64(0); i < numTransactions; i++ {
 		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
@@ -85,7 +83,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Wait on last transaction
-	response, err := client.WaitForTransaction(responses[NumTransactions-1].Hash)
+	response, err := client.WaitForTransaction(responses[numTransactions-1].Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -94,7 +92,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig) {
 	}
 }
 
-func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig) {
+func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTransactions uint64) {
 	client, sender := setup(networkConfig)
 	payload := payload()
 
@@ -104,7 +102,7 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig) {
 	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
 
 	// Submit transactions to goroutine
-	for i := uint64(0); i < NumTransactions; i++ {
+	for i := uint64(0); i < numTransactions; i++ {
 		payloads <- aptos.TransactionBuildPayload{
 			Id:    i,
 			Type:  aptos.TransactionSubmissionTypeSingle,
@@ -124,16 +122,16 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig) {
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig aptos.NetworkConfig) {
-	println("Sending", NumTransactions, "transactions Serially")
+func example(networkConfig aptos.NetworkConfig, numTransactions uint64) {
+	println("Sending", numTransactions, "transactions Serially")
 	startSerial := time.Now()
-	sendManyTransactionsSerially(networkConfig)
+	sendManyTransactionsSerially(networkConfig, numTransactions)
 	endSerial := time.Now()
 	println("Serial:", time.Duration.Milliseconds(endSerial.Sub(startSerial)), "ms")
 
-	println("Sending", NumTransactions, "transactions Concurrently")
+	println("Sending", numTransactions, "transactions Concurrently")
 	startConcurrent := time.Now()
-	sendManyTransactionsConcurrently(networkConfig)
+	sendManyTransactionsConcurrently(networkConfig, numTransactions)
 	endConcurrent := time.Now()
 	println("Concurrent:", time.Duration.Milliseconds(endConcurrent.Sub(startConcurrent)), "ms")
 
@@ -141,5 +139,5 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(aptos.DevnetConfig, 100)
 }

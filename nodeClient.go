@@ -35,9 +35,10 @@ const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
 // NodeClient is a client for interacting with an Aptos node API
 type NodeClient struct {
-	client  *http.Client // HTTP client to use for requests
-	baseUrl *url.URL     // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
-	chainId uint8        // Chain ID of the network e.g. 2 for Testnet
+	client  *http.Client      // HTTP client to use for requests
+	baseUrl *url.URL          // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
+	chainId uint8             // Chain ID of the network e.g. 2 for Testnet
+	headers map[string]string // Headers to be added to every transaction
 }
 
 // NewNodeClient creates a new client for interacting with an Aptos node API
@@ -66,7 +67,29 @@ func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Clie
 		client:  client,
 		baseUrl: baseUrl,
 		chainId: chainId,
+		headers: make(map[string]string),
 	}, nil
+}
+
+// SetTimeout adjusts the HTTP client timeout
+//
+//	client.SetTimeout(5 * time.Millisecond)
+func (rc *NodeClient) SetTimeout(timeout time.Duration) {
+	rc.client.Timeout = timeout
+}
+
+// SetHeader sets the header for all future requests
+//
+//	client.SetHeader("Authorization", "Bearer abcde")
+func (rc *NodeClient) SetHeader(key string, value string) {
+	rc.headers[key] = value
+}
+
+// RemoveHeader removes the header from being automatically set all future requests.
+//
+//	client.RemoveHeader("Authorization")
+func (rc *NodeClient) RemoveHeader(key string) {
+	delete(rc.headers, key)
 }
 
 // Info gets general information about the blockchain
@@ -449,6 +472,24 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api
 		return nil, fmt.Errorf("submit transaction api err: %w", err)
 	}
 	return data, nil
+}
+
+// BatchSubmitTransaction submits a collection of signed transactions to the network in a single request
+//
+// It will return the responses in the same order as the input transactions that failed.  If the response is empty, then
+// all transactions succeeded.
+func (rc *NodeClient) BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
+	sblob, err := bcs.SerializeSequenceOnly(signedTxns)
+	if err != nil {
+		return
+	}
+	bodyReader := bytes.NewReader(sblob)
+	au := rc.baseUrl.JoinPath("transactions/batch")
+	response, err = Post[*api.BatchSubmitTransactionResponse](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("submit transaction api err: %w", err)
+	}
+	return response, nil
 }
 
 // EstimateGasUnitPrice estimates the gas unit price for a transaction
@@ -918,6 +959,12 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 		return out, err
 	}
 	req.Header.Set(ClientHeader, ClientHeaderValue)
+
+	// Set all preset headers
+	for key, value := range rc.headers {
+		req.Header.Set(key, value)
+	}
+
 	response, err := rc.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", getUrl, err)
@@ -948,6 +995,12 @@ func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
 	}
 	req.Header.Set("Accept", "application/x-bcs")
 	req.Header.Set(ClientHeader, ClientHeaderValue)
+
+	// Set all preset headers
+	for key, value := range rc.headers {
+		req.Header.Set(key, value)
+	}
+
 	response, err := rc.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", getUrl, err)
@@ -977,6 +1030,12 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 	}
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set(ClientHeader, ClientHeaderValue)
+
+	// Set all preset headers
+	for key, value := range rc.headers {
+		req.Header.Set(key, value)
+	}
+
 	response, err := rc.client.Do(req)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", postUrl, err)
