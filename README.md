@@ -41,9 +41,9 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 
 ### TODO
 
-- [ ] MultiEd25519 support
+- [x] MultiEd25519 support
 - [ ] Predetermined Indexer queries for Fungible Assets and Digital Assets
-- [ ] Automated sequence number management for parallel transaction submission
+- [x] Automated sequence number management for parallel transaction submission
 
 ## Examples
 
@@ -58,14 +58,14 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 
 - [ ] Multi-agent example
 - [ ] Script Example
-- [ ] Sponsored transaction example
-- [ ] Off-chain multi-sig example
+- [x] Sponsored transaction example
+- [x] Off-chain multi-sig example
 - [ ] Digital assets / NFTs example
 - [ ] Transaction parsing example (by blocks)
 
 ## Other TODO
 
-- [ ] Ensure blocks fetch all transactions associated
+- [x] Ensure blocks fetch all transactions associated
 - [ ] More testing around API parsing
 - [ ] TypeTag string parsing
 - [ ] Add examples into the documentation
