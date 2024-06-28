@@ -34,7 +34,6 @@ func Test_ErrorWithVm(t *testing.T) {
 		"error_code": "%s",
 		"vm_error_code": %d
 	}`, errorMessage, errorCode, vmErrorCode)
-	println(testJson)
 	data := &Error{}
 	err := json.Unmarshal([]byte(testJson), &data)
 	assert.NoError(t, err)

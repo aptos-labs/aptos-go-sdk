@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 /* This is a collection of test signers, that don't make sense in the real world, but are used for testing */
@@ -79,7 +78,6 @@ func (s *MultiEd25519TestSigner) PubKey() crypto.PublicKey {
 		PubKeys:            pubKeys,
 		SignaturesRequired: s.SignaturesRequired,
 	}
-	println(util.PrettyJson(key))
 	return key
 }
 
