@@ -27,6 +27,7 @@ type Ed25519PrivateKey struct {
 // GenerateEd25519PrivateKey generates a random [Ed25519PrivateKey]
 //
 // An [io.Reader] can be provided for randomness, otherwise the default randomness source is from [ed25519.GenerateKey].
+// The [io.Reader] must provide 32 bytes of input.
 //
 // Returns an error if the key generation fails.
 func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey, err error) {
