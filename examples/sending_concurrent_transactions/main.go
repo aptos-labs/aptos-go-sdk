@@ -1,0 +1,145 @@
+// performance_transaction shows how to improve performance of the transaction submission of a single transaction
+package main
+
+import (
+	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"time"
+)
+
+const NumTransactions = uint64(30)
+
+func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {
+	client, err := aptos.NewClient(networkConfig)
+	if err != nil {
+		panic("Failed to create client:" + err.Error())
+	}
+
+	sender, err := aptos.NewEd25519Account()
+	if err != nil {
+		panic("Failed to create sender:" + err.Error())
+	}
+
+	err = client.Fund(sender.Address, 100_000_000)
+	if err != nil {
+		panic("Failed to fund sender:" + err.Error())
+	}
+
+	return client, sender
+}
+
+func args() [][]byte {
+	receiver := aptos.AccountAddress{}
+	err := receiver.ParseStringRelaxed("0xBEEF")
+	if err != nil {
+		panic("Failed to parse address:" + err.Error())
+	}
+	amount := uint64(100)
+
+	receiverArg, err := bcs.Serialize(&receiver)
+	amountArg, err := bcs.SerializeU64(amount)
+	if err != nil {
+		panic("Failed to serialize arguments:" + err.Error())
+	}
+	return [][]byte{receiverArg, amountArg}
+}
+
+func payload() aptos.TransactionPayload {
+	return aptos.TransactionPayload{Payload: &aptos.EntryFunction{
+		Module: aptos.ModuleId{
+			Address: aptos.AccountOne,
+			Name:    "aptos_account",
+		},
+		Function: "transfer",
+		ArgTypes: []aptos.TypeTag{},
+		Args:     args(),
+	}}
+}
+
+func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig) {
+	client, sender := setup(networkConfig)
+
+	responses := make([]*api.SubmitTransactionResponse, NumTransactions)
+	payload := payload()
+
+	senderAddress := sender.AccountAddress()
+	sequenceNumber := uint64(0)
+	for i := uint64(0); i < NumTransactions; i++ {
+		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
+		if err != nil {
+			panic("Failed to build transaction:" + err.Error())
+		}
+
+		signedTxn, err := rawTxn.SignedTransaction(sender)
+		if err != nil {
+			panic("Failed to sign transaction:" + err.Error())
+		}
+
+		submitResult, err := client.SubmitTransaction(signedTxn)
+		if err != nil {
+			panic("Failed to submit transaction:" + err.Error())
+		}
+		responses[i] = submitResult
+		sequenceNumber++
+	}
+
+	// Wait on last transaction
+	response, err := client.WaitForTransaction(responses[NumTransactions-1].Hash)
+	if err != nil {
+		panic("Failed to wait for transaction:" + err.Error())
+	}
+	if response.Success == false {
+		panic("Transaction failed due to " + response.VmStatus)
+	}
+}
+
+func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig) {
+	client, sender := setup(networkConfig)
+	payload := payload()
+
+	// start submission goroutine
+	payloads := make(chan aptos.TransactionBuildPayload, 50)
+	results := make(chan aptos.TransactionSubmissionResponse, 50)
+	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
+
+	// Submit transactions to goroutine
+	for i := uint64(0); i < NumTransactions; i++ {
+		payloads <- aptos.TransactionBuildPayload{
+			Id:    i,
+			Type:  aptos.TransactionSubmissionTypeSingle,
+			Inner: payload,
+		}
+	}
+	close(payloads)
+
+	// Wait for all transactions to be processed
+	for result := range results {
+		if result.Err != nil {
+			panic("Failed to submit and wait for transaction:" + result.Err.Error())
+		}
+	}
+}
+
+// example This example shows you how to improve performance of the transaction submission
+//
+// Speed can be improved by locally handling the sequence number, gas price, and other factors
+func example(networkConfig aptos.NetworkConfig) {
+	println("Sending", NumTransactions, "transactions Serially")
+	startSerial := time.Now()
+	sendManyTransactionsSerially(networkConfig)
+	endSerial := time.Now()
+	println("Serial:", time.Duration.Milliseconds(endSerial.Sub(startSerial)), "ms")
+
+	println("Sending", NumTransactions, "transactions Concurrently")
+	startConcurrent := time.Now()
+	sendManyTransactionsConcurrently(networkConfig)
+	endConcurrent := time.Now()
+	println("Concurrent:", time.Duration.Milliseconds(endConcurrent.Sub(startConcurrent)), "ms")
+
+	println("Concurrent is", time.Duration.Milliseconds(endSerial.Sub(startSerial)-endConcurrent.Sub(startConcurrent)), "ms faster than Serial")
+}
+
+func main() {
+	example(aptos.DevnetConfig)
+}
