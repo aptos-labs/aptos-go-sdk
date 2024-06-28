@@ -4,6 +4,8 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+
+# v0.6.0 (6/28/2024)
 - [`Breaking`] Change type from Transaction to CommittedTransaction for cases that it's known they're committed
 - [`Fix`] Fix secp256k1 signing and verification to be correctly used
 - [`Fix`] Fix supply view function for FungibleAssetClient
@@ -13,7 +15,13 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Add tons more testing
 - [`Breaking`] Change ToAnyPublicKey to have an error in the output
 - [`Fix`] Properly parse DeleteResourse write sets
-
+- Add batch transaction submit API
+- Add ability to set an API bearer key and other arbitrary headers
+- Upgrade concurrent APIs to top level
+- Add example for comparing concurrent and non-concurrent APIs
+- Add BlockEpilogueTransaction support
+- [`Breaking`] Make Secp256k1Signature fixed length
+- Change signers to have simulation authenticators by default
 
 # v0.5.0 (6/21/2024)
 - [`Fix`] Fix sponsored transactions, and add example for sponsored transactions
