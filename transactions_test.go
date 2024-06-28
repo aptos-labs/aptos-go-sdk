@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"encoding/binary"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -17,24 +16,14 @@ func TestRawTransactionSign(t *testing.T) {
 
 	sn := uint64(1)
 	amount := uint64(10_000)
-	var amountBytes [8]byte
-	binary.LittleEndian.PutUint64(amountBytes[:], amount)
+
+	payload, err := CoinTransferPayload(nil, dest, amount)
+	assert.NoError(t, err)
 
 	txn := RawTransaction{
-		Sender:         sender.Address,
-		SequenceNumber: sn + 1,
-		Payload: TransactionPayload{Payload: &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []TypeTag{},
-			Args: [][]byte{
-				dest[:],
-				amountBytes[:],
-			},
-		}},
+		Sender:                     sender.Address,
+		SequenceNumber:             sn + 1,
+		Payload:                    TransactionPayload{Payload: payload},
 		MaxGasAmount:               1000,
 		GasUnitPrice:               2000,
 		ExpirationTimestampSeconds: 1714158778,

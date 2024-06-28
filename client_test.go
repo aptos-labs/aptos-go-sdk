@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -436,7 +435,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	results := make(chan TransactionSubmissionResponse, 50)
 	go client.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
-	transferAmount, err := bcs.SerializeU64(100)
+	transferPayload, err := CoinTransferPayload(nil, AccountOne, 100)
 	assert.NoError(t, err)
 
 	// Generate transactions
@@ -444,12 +443,9 @@ func Test_Concurrent_Submission(t *testing.T) {
 		payloads <- TransactionBuildPayload{
 			Id:   i,
 			Type: TransactionSubmissionTypeSingle, // TODO: not needed?
-			Inner: TransactionPayload{Payload: &EntryFunction{
-				Module:   ModuleId{Address: AccountOne, Name: "aptos_account"},
-				Function: "transfer",
-				ArgTypes: []TypeTag{},
-				Args:     [][]byte{AccountOne[:], transferAmount},
-			}},
+			Inner: TransactionPayload{
+				Payload: transferPayload,
+			},
 		}
 	}
 	close(payloads)
@@ -511,6 +507,23 @@ func Test_Concurrent_Submission(t *testing.T) {
 	}
 	assert.True(t, allTrue, "all txns successful")
 	assert.Equal(t, len(txnMap), int(numTxns), "num txns successful == num txns sent")
+}
+
+func TestClient_View(t *testing.T) {
+	client, err := createTestClient()
+	assert.NoError(t, err)
+
+	payload := &ViewPayload{
+		Module:   ModuleId{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+		ArgTypes: []TypeTag{AptosCoinTypeTag},
+		Args:     [][]byte{AccountOne[:]},
+	}
+	vals, err := client.View(payload)
+	assert.NoError(t, err)
+	assert.Len(t, vals, 1)
+	_, err = StrToUint64(vals[0].(string))
+	assert.NoError(t, err)
 }
 
 func TestClient_BlockByHeight(t *testing.T) {

@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
@@ -102,24 +101,15 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to parse address:" + err.Error())
 	}
 	amount := uint64(100)
-	var amountBytes [8]byte
-	binary.LittleEndian.PutUint64(amountBytes[:], amount)
+	payload, err := aptos.CoinTransferPayload(nil, receiver, amount)
+	if err != nil {
+		panic("Failed to build payload:" + err.Error())
+	}
 
 	// Sign transaction
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
 	rawTxn, err := client.BuildTransaction(sender.Address,
-		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
-			Args: [][]byte{
-				receiver[:],
-				amountBytes[:],
-			},
-		}},
+		aptos.TransactionPayload{Payload: payload},
 	)
 	if err != nil {
 		panic("Failed to build raw transaction:" + err.Error())
