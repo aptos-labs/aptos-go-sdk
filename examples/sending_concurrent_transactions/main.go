@@ -4,7 +4,6 @@ package main
 import (
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"time"
 )
 
@@ -27,32 +26,18 @@ func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionS
 	return client, sender
 }
 
-func args() [][]byte {
+func payload() aptos.TransactionPayload {
 	receiver := aptos.AccountAddress{}
 	err := receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
 	}
 	amount := uint64(100)
-
-	receiverArg, err := bcs.Serialize(&receiver)
-	amountArg, err := bcs.SerializeU64(amount)
+	p, err := aptos.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
-	return [][]byte{receiverArg, amountArg}
-}
-
-func payload() aptos.TransactionPayload {
-	return aptos.TransactionPayload{Payload: &aptos.EntryFunction{
-		Module: aptos.ModuleId{
-			Address: aptos.AccountOne,
-			Name:    "aptos_account",
-		},
-		Function: "transfer",
-		ArgTypes: []aptos.TypeTag{},
-		Args:     args(),
-	}}
+	return aptos.TransactionPayload{Payload: p}
 }
 
 func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransactions uint64) {

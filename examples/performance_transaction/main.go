@@ -4,7 +4,6 @@ package main
 import (
 	"encoding/json"
 	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"time"
 )
 
@@ -47,22 +46,13 @@ func example(networkConfig aptos.NetworkConfig) {
 	amount := uint64(100)
 
 	// Serialize arguments
-	receiverArg, err := bcs.Serialize(&receiver)
-	amountArg, err := bcs.SerializeU64(amount)
+	payload, err := aptos.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
-		aptos.TransactionPayload{Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
-			Args:     [][]byte{receiverArg, amountArg},
-		}}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
+		aptos.TransactionPayload{Payload: payload}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
