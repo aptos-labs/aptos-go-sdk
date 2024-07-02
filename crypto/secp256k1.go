@@ -101,8 +101,12 @@ func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != Secp256k1PrivateKeyLength {
 		return fmt.Errorf("invalid secp256k1 private key size %d", len(bytes))
 	}
-	key.Inner, err = ethCrypto.ToECDSA(bytes)
-	return err
+	newKey, err := ethCrypto.ToECDSA(bytes)
+	if err != nil {
+		return err
+	}
+	key.Inner = newKey
+	return nil
 }
 
 // ToHex serializes the private key to a hex string
@@ -183,8 +187,12 @@ func (key *Secp256k1PublicKey) Bytes() []byte {
 // Implements:
 //   - [CryptoMaterial]
 func (key *Secp256k1PublicKey) FromBytes(bytes []byte) (err error) {
-	key.Inner, err = ethCrypto.UnmarshalPubkey(bytes)
-	return err
+	newKey, err := ethCrypto.UnmarshalPubkey(bytes)
+	if err != nil {
+		return err
+	}
+	key.Inner = newKey
+	return nil
 }
 
 // ToHex returns the hex string representation of the [Secp256k1PublicKey], with a leading 0x
