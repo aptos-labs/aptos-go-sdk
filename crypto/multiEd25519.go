@@ -102,18 +102,21 @@ func (key *MultiEd25519PublicKey) Bytes() []byte {
 func (key *MultiEd25519PublicKey) FromBytes(bytes []byte) (err error) {
 	keyBytesLength := len(bytes)
 	numKeys := keyBytesLength / ed25519.PublicKeySize
-	key.SignaturesRequired = bytes[keyBytesLength-1]
+	signaturesRequired := bytes[keyBytesLength-1]
 
-	key.PubKeys = make([]*Ed25519PublicKey, numKeys)
+	pubKeys := make([]*Ed25519PublicKey, numKeys)
 	for i := 0; i < numKeys; i++ {
 		start := i * ed25519.PublicKeySize
 		end := start + ed25519.PublicKeySize
-		key.PubKeys[i] = &Ed25519PublicKey{}
-		err := key.PubKeys[i].FromBytes(bytes[start:end])
+		pubKeys[i] = &Ed25519PublicKey{}
+		err := pubKeys[i].FromBytes(bytes[start:end])
 		if err != nil {
 			return fmt.Errorf("failed to deserialize multi ed25519 public key sub key %d: %w", i, err)
 		}
 	}
+
+	key.SignaturesRequired = signaturesRequired
+	key.PubKeys = pubKeys
 	return nil
 }
 
@@ -287,18 +290,18 @@ func (e *MultiEd25519Signature) Bytes() []byte {
 // Implements:
 //   - [CryptoMaterial]
 func (e *MultiEd25519Signature) FromBytes(bytes []byte) (err error) {
-	copy(e.Bitmap[:], bytes[len(bytes)-MultiEd25519BitmapLen:])
-
-	e.Signatures = make([]*Ed25519Signature, len(bytes)/ed25519.SignatureSize)
+	signatures := make([]*Ed25519Signature, len(bytes)/ed25519.SignatureSize)
 	for i := 0; (i+1)*ed25519.SignatureSize < len(bytes); i++ {
 		start := i * ed25519.SignatureSize
 		end := start + ed25519.SignatureSize
-		e.Signatures[i] = &Ed25519Signature{}
-		err := e.Signatures[i].FromBytes(bytes[start:end])
+		signatures[i] = &Ed25519Signature{}
+		err := signatures[i].FromBytes(bytes[start:end])
 		if err != nil {
 			return fmt.Errorf("failed to deserialize multi ed25519 signature sub signature %d: %w", i, err)
 		}
 	}
+	copy(e.Bitmap[:], bytes[len(bytes)-MultiEd25519BitmapLen:])
+	e.Signatures = signatures
 	return nil
 }
 
