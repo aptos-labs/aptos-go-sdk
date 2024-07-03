@@ -105,7 +105,9 @@ type TransactionPayloadMultisig struct {
 // TransactionPayloadWriteSet describes a write set transaction, such as genesis.
 //
 // These should only be done at Genesis or in the event of a recovery from a catastrophic failure.
-type TransactionPayloadWriteSet = DirectWriteSet
+type TransactionPayloadWriteSet struct {
+	WriteSet *WriteSet `json:"write_set"` // WriteSet is the write set for the transaction
+}
 
 // TransactionPayloadModuleBundle is a deprecated type that does not exist on mainnet.
 type TransactionPayloadModuleBundle struct{}

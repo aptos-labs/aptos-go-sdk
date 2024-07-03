@@ -4,6 +4,7 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+- [`Fix`] Parse GenesisTransaction properly
 
 # v0.6.0 (6/28/2024)
 - [`Breaking`] Change type from Transaction to CommittedTransaction for cases that it's known they're committed
