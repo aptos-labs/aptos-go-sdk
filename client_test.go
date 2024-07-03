@@ -81,7 +81,6 @@ func Test_SingleSignerFlows(t *testing.T) {
 				testTransaction(t, signer, buildSingleSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
-				t.Parallel()
 				testTransactionSimulation(t, signer, buildSingleSignerPayload)
 			})
 		}
@@ -546,7 +545,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	})
 
 	// Now, check node API health check with a future time that should never fail
-	t.Run("Node API health checkd far future", func(t *testing.T) {
+	t.Run("Node API health check far future", func(t *testing.T) {
 		t.Parallel()
 		response, err := client.NodeAPIHealthCheck(10000)
 		assert.NoError(t, err)
