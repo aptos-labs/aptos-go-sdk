@@ -799,17 +799,9 @@ func (o *ValidatorTransaction) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// SubmitTransactionResponse is the response from submitting a transaction to the blockchain
-type SubmitTransactionResponse struct {
-	Hash                    Hash                  // Hash of the transaction, it is a SHA3-256 hash in hexadecimal format with a leading 0x.
-	Sender                  *types.AccountAddress // Sender of the transaction, will never be nil.
-	SequenceNumber          uint64                // SequenceNumber of the transaction, starts at 0 and increments per transaction submitted by the sender.
-	MaxGasAmount            uint64                // MaxGasAmount of the transaction, this is the max amount of gas units that the user is willing to pay.
-	GasUnitPrice            uint64                // GasUnitPrice of the transaction, this is the multiplier per unit of gas to tokens.
-	ExpirationTimestampSecs uint64                // ExpirationTimestampSecs of the transaction, this is the Unix timestamp in seconds when the transaction expires.
-	Payload                 *TransactionPayload   // Payload of the transaction, this is the actual transaction data.
-	Signature               *Signature            // Signature is the AccountAuthenticator of the sender.
-}
+// SubmitTransactionResponse is the response from submitting a transaction to the blockchain, it is the same
+// as a [PendingTransaction]
+type SubmitTransactionResponse = PendingTransaction
 
 // BatchSubmitTransactionResponse is the response from submitting a batch of transactions to the blockchain
 type BatchSubmitTransactionResponse struct {
@@ -823,34 +815,6 @@ type BatchSubmitTransactionFailure struct {
 	Error Error
 	//TransactionIndex is the index of submitted transactions that failed
 	TransactionIndex uint32 `json:"transaction_index"`
-}
-
-// UnmarshalJSON unmarshals the [SubmitTransactionResponse] from JSON handling conversion between types
-func (o *SubmitTransactionResponse) UnmarshalJSON(b []byte) error {
-	type inner struct {
-		Hash                    Hash                  `json:"hash"`
-		Sender                  *types.AccountAddress `json:"sender"`
-		SequenceNumber          U64                   `json:"sequence_number"`
-		MaxGasAmount            U64                   `json:"max_gas_amount"`
-		GasUnitPrice            U64                   `json:"gas_unit_price"`
-		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
-		Payload                 *TransactionPayload   `json:"payload"`
-		Signature               *Signature            `json:"signature"`
-	}
-	data := &inner{}
-	err := json.Unmarshal(b, &data)
-	if err != nil {
-		return err
-	}
-	o.Hash = data.Hash
-	o.Sender = data.Sender
-	o.SequenceNumber = data.SequenceNumber.ToUint64()
-	o.MaxGasAmount = data.MaxGasAmount.ToUint64()
-	o.GasUnitPrice = data.GasUnitPrice.ToUint64()
-	o.ExpirationTimestampSecs = data.ExpirationTimestampSecs.ToUint64()
-	o.Payload = data.Payload
-	o.Signature = data.Signature
-	return nil
 }
 
 // BlockEndInfo is the information about the block gas
