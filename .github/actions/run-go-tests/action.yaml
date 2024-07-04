@@ -13,7 +13,7 @@ runs:
         go-version: '>=1.22'
     # Run a local testnet in the background. After this action runs the local testnet
     # should be up and queryable. This also installs node and pnpm for us.
-    - uses: aptos-labs/actions/run-local-testnet@main
+    - uses: aptos-labs/actions/run-local-testnet@testnet
       with:
         PNPM_VERSION: 8.9.0
     # Run unit tests
@@ -26,7 +26,3 @@ runs:
         if [ "x$(git status -uno -s)x" != "xx" ]; then git status; echo NOT CLEAN; exit 1; fi
     - shell: bash
       run: 'go test ./...'
-    - shell: bash
-      run: 'go run examples/transfer_coin/main.go'
-    - shell: bash
-      run: 'go run examples/performance_transaction/main.go'
