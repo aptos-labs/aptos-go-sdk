@@ -200,7 +200,7 @@ func (des *Deserializer) ReadBytes() []byte {
 	if des.err != nil {
 		return nil
 	}
-	if des.pos+int(length)-1 >= len(des.source) {
+	if des.pos+int(length) > len(des.source) {
 		des.setError("not enough bytes remaining to deserialize bytes")
 		return nil
 	}
@@ -217,10 +217,6 @@ func (des *Deserializer) ReadString() string {
 
 // ReadFixedBytes reads bytes not-prefixed with a length
 func (des *Deserializer) ReadFixedBytes(length int) []byte {
-	if des.pos+length-1 >= len(des.source) {
-		des.setError("not enough bytes remaining to deserialize fixedBytes")
-		return nil
-	}
 	out := make([]byte, length)
 	des.ReadFixedBytesInto(out)
 	return out
@@ -229,7 +225,7 @@ func (des *Deserializer) ReadFixedBytes(length int) []byte {
 // ReadFixedBytesInto reads bytes not-prefixed with a length into a byte array
 func (des *Deserializer) ReadFixedBytesInto(dest []byte) {
 	length := len(dest)
-	if des.pos+length-1 >= len(des.source) {
+	if des.pos+length > len(des.source) {
 		des.setError("not enough bytes remaining to deserialize fixedBytes")
 		return
 	}
