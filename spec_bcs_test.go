@@ -1,0 +1,812 @@
+package aptos
+
+import (
+	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/stretchr/testify/assert"
+	"math/big"
+	"slices"
+	"testing"
+)
+
+type testStruct struct {
+	bool    bool
+	u8      uint8
+	u16     uint16
+	u32     uint32
+	u64     uint64
+	u128    big.Int
+	u256    big.Int
+	address *AccountAddress
+	bytes   []byte
+}
+
+func (st *testStruct) MarshalBCS(ser *bcs.Serializer) {
+	ser.Bool(st.bool)
+	ser.U8(st.u8)
+	ser.U16(st.u16)
+	ser.U32(st.u32)
+	ser.U64(st.u64)
+	ser.U128(st.u128)
+	ser.U256(st.u256)
+	ser.Struct(st.address)
+	ser.WriteBytes(st.bytes)
+}
+
+func (st *testStruct) UnmarshalBCS(des *bcs.Deserializer) {
+	st.bool = des.Bool()
+	st.u8 = des.U8()
+	st.u16 = des.U16()
+	st.u32 = des.U32()
+	st.u64 = des.U64()
+	st.u128 = des.U128()
+	st.u256 = des.U256()
+	st.address = &AccountAddress{}
+	des.Struct(st.address)
+	st.bytes = des.ReadBytes()
+	// Custom error
+	if len(st.bytes) == 0 {
+		des.SetError(fmt.Errorf("invalid bytes length, must be at least 1"))
+	}
+}
+
+// Test_Spec_BCS_Bool tests BCS encoding and decoding of unsigned 8-bit integers
+//
+//   - It must be able to serialize a boolean
+//   - It must be able to deserialize a boolean
+//   - It must not succeed if there are not enough bytes to deserialize a boolean
+//   - It must not succeed if it is in an invalid byte for a boolean
+func Test_Spec_BCS_Bool(t *testing.T) {
+	expectedBytes := [][]uint8{{0x00}, {0x01}}
+	vals := []bool{false, true}
+	// It must be able to serialize an unsigned 8-bit integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %t", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeBool(val)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 8-bit integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %t", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.Bool()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 8-bit integer
+	t.Run(fmt.Sprintf("Deserialize not enough bytes"), func(t *testing.T) {
+		des := bcs.NewDeserializer([]uint8{})
+		des.Bool()
+		assert.Error(t, des.Error())
+
+		invalidBytes := [][]uint8{{0x02, 0xFF}}
+		for _, bytes := range invalidBytes {
+			des := bcs.NewDeserializer(bytes)
+			des.Bool()
+			assert.Error(t, des.Error())
+		}
+	})
+}
+
+// Test_Spec_BCS_U8 tests BCS encoding and decoding of unsigned 8-bit integers
+//
+//   - It must be able to serialize an unsigned 8-bit integer
+//   - It must be able to deserialize an unsigned 8-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 8-bit integer
+func Test_Spec_BCS_U8(t *testing.T) {
+	expectedBytes := [][]uint8{{0x00}, {0x01}, {0x02}, {0x42}, {0xFF}}
+	vals := []uint8{0x00, 0x01, 0x02, 0x42, 0xFF}
+	// It must be able to serialize an unsigned 8-bit integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU8(val)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 8-bit integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U8()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 8-bit integer
+	des := bcs.NewDeserializer([]uint8{})
+	des.U8()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_U16 tests BCS encoding and decoding of unsigned 16-bit integers
+//
+//   - It must be able to serialize an unsigned 16-bit integer
+//   - It must be able to deserialize an unsigned 16-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 16-bit integer
+func Test_Spec_BCS_U16(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00, 0x00},
+		{0x01, 0x00},
+		{0xFF, 0x00},
+		{0x00, 0x01},
+		{0xFF, 0xFF},
+	}
+	vals := []uint16{
+		0x00,
+		0x01,
+		0xFF,
+		0x0100,
+		0xFFFF,
+	}
+	// It must be able to serialize an unsigned 16-bit integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU16(val)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 16-bit integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U16()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 16-bit integer
+	des := bcs.NewDeserializer([]uint8{0x00})
+	des.U16()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_U32 tests BCS encoding and decoding of unsigned 32-bit integers
+//
+//   - It must be able to serialize an unsigned 32-bit integer
+//   - It must be able to deserialize an unsigned 32-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 32-bit integer
+func Test_Spec_BCS_U32(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00, 0x00, 0x00, 0x00},
+		{0x01, 0x00, 0x00, 0x00},
+		{0xFF, 0x00, 0x00, 0x00},
+		{0x00, 0x01, 0x00, 0x00},
+		{0xFF, 0xFF, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF},
+	}
+	vals := []uint32{
+		0x00,
+		0x01,
+		0xFF,
+		0x0100,
+		0xFFFF,
+		0xFFFFFF,
+		0xFFFFFFFF,
+	}
+	// It must be able to serialize an unsigned 32-bit integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU32(val)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 32-bit integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U32()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 32-bit integer
+	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00})
+	des.U32()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_U64 tests BCS encoding and decoding of unsigned 64-bit integers
+//
+//   - It must be able to serialize an unsigned 64-bit integer
+//   - It must be able to deserialize an unsigned 64-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 64-bit integer
+func Test_Spec_BCS_U64(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+	}
+	vals := []uint64{
+		0x00,
+		0x01,
+		0xFF,
+		0x0100,
+		0xFFFF,
+		0xFFFFFF,
+		0xFFFFFFFF,
+		0xFFFFFFFFFF,
+		0xFFFFFFFFFFFF,
+		0xFFFFFFFFFFFFFF,
+		0xFFFFFFFFFFFFFFFF,
+	}
+	// It must be able to serialize an unsigned 64-bit integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU64(val)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 64-bit integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U64()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 64-bit integer
+	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	des.U64()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_U128 tests BCS encoding and decoding of unsigned 128-bit integers
+//
+//   - It must be able to serialize an unsigned 128-bit integer
+//   - It must be able to deserialize an unsigned 128-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 128-bit integer
+func Test_Spec_BCS_U128(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+	}
+
+	// It must be able to serialize an unsigned 128-bit integer
+	for _, expected := range expectedBytes {
+		val := bytesToBigInt(expected, 128)
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU128(*val)
+			assert.NoError(t, err)
+			assert.Equal(t, expected, encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 128-bit integer
+	for _, bytes := range expectedBytes {
+		expected := bytesToBigInt(bytes, 128)
+		t.Run(fmt.Sprintf("Deserialize %x", expected), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U128()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, *expected, val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an 128-bit integer
+	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	des.U128()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_U256 tests BCS encoding and decoding of unsigned 256-bit integers
+//
+//   - It must be able to serialize an unsigned 256-bit integer
+//   - It must be able to deserialize an unsigned 256-bit integer
+//   - It must not succeed if there are not enough bytes to deserialize an 256-bit integer
+func Test_Spec_BCS_U256(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+		// TODO: I cut this short because I had already tested a lot of them
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00},
+	}
+
+	// It must be able to serialize an unsigned 256-bit integer
+	for _, expected := range expectedBytes {
+		val := bytesToBigInt(expected, 256)
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeU256(*val)
+			assert.NoError(t, err)
+			assert.Equal(t, expected, encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned 256-bit integer
+	for _, bytes := range expectedBytes {
+		expected := bytesToBigInt(bytes, 256)
+		t.Run(fmt.Sprintf("Deserialize %x", expected), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.U256()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, *expected, val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an unsigned 256-bit integer
+	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	des.U256()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_Uleb128 tests BCS encoding and decoding of unsigned leb-128 integers
+//
+//   - It must be able to serialize an unsigned leb-128 integer
+//   - It must be able to deserialize an unsigned leb-128 integer
+//   - It must not succeed if there are not enough bytes to deserialize an unsigned leb-128 integer
+//   - It must not accept invalid values to deserialize for an unsigned leb-128 integer
+func Test_Spec_BCS_Uleb128(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00},
+		{0x01},
+		{0x7F},
+		{0xF0, 0x01},
+		{0xFF, 0x7F},
+		{0xFF, 0xFF, 0x03},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xF},
+	}
+	vals := []uint32{
+		0x00,
+		0x01,
+		0x7F,
+		0xF0,
+		0x3FFF,
+		0xFFFF,
+		0xFFFFFFFF,
+	}
+	// It must be able to serialize an unsigned leb-128 integer
+	for i, val := range vals {
+		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
+			encoded, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+				ser.Uleb128(val)
+			})
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], encoded)
+		})
+	}
+
+	// It must be able to deserialize an unsigned leb-128 integer
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			val := des.Uleb128()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, vals[i], val)
+			assert.Equal(t, 0, des.Remaining())
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize an unsigned leb-128 integer
+	des := bcs.NewDeserializer([]uint8{})
+	des.Uleb128()
+	assert.Error(t, des.Error())
+
+	// It must not accept invalid values to deserialize for an unsigned leb-128 integer
+	invalidValues := [][]uint8{
+		{0xFF},
+		{0xFF, 0xFF},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xF1},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+	}
+
+	for _, invalidVal := range invalidValues {
+		des := bcs.NewDeserializer(invalidVal)
+		des.Uleb128()
+		assert.Error(t, des.Error())
+	}
+}
+
+// Test_Spec_BCS_FixedBytes
+//
+//   - It must be able to serialize fixed bytes
+//   - It must be able to deserialize fixed bytes
+//   - It must not succeed if there are not enough bytes to deserialize the fixed bytes
+//   - It must succeed on zero length fixed bytes
+func Test_Spec_BCS_FixedBytes(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00},
+		{0x01},
+		{0x7F},
+		{0xF0, 0x01},
+		{0xFF, 0x7F},
+		{0xFF, 0xFF, 0x03},
+		{0xFF, 0xFF, 0xFF, 0xFF, 0xF},
+	}
+
+	// It must be able to serialize fixed bytes
+	for _, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Serialize %x", bytes), func(t *testing.T) {
+			serialized, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+				ser.FixedBytes(bytes)
+			})
+			assert.NoError(t, err)
+			assert.Equal(t, bytes, serialized)
+		})
+	}
+
+	// It must be able to deserialize fixed bytes
+	for _, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", bytes), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			deserialized := des.ReadFixedBytes(len(bytes))
+			assert.NoError(t, des.Error())
+			assert.Equal(t, 0, des.Remaining())
+			assert.Equal(t, bytes, deserialized)
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize the fixed bytes
+	des := bcs.NewDeserializer([]uint8{})
+	des.ReadFixedBytes(1)
+	assert.Error(t, des.Error())
+
+	// It must succeed on zero length fixed bytes
+	des = bcs.NewDeserializer([]uint8{})
+	out := des.ReadFixedBytes(0)
+	assert.NoError(t, des.Error())
+	assert.Empty(t, out)
+}
+
+// Test_Spec_BCS_Bytes
+//
+//   - It must be able to serialize bytes
+//   - It must be able to deserialize bytes
+//   - It must not succeed if there are not enough bytes to deserialize the number header
+//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
+func Test_Spec_BCS_Bytes(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00},
+		{0x01, 0x00},
+		{0x01, 0x7F},
+		{0x02, 0x01, 0x02},
+	}
+	inputBytes := [][]uint8{
+		{},
+		{0x00},
+		{0x7F},
+		{0x01, 0x02},
+	}
+
+	// It must be able to serialize fixed bytes
+	for i, bytes := range inputBytes {
+		t.Run(fmt.Sprintf("Serialize %x", bytes), func(t *testing.T) {
+			serialized, err := bcs.SerializeBytes(bytes)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], serialized)
+		})
+	}
+
+	// It must be able to deserialize fixed bytes
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", inputBytes[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			deserialized := des.ReadBytes()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, 0, des.Remaining())
+			assert.Equal(t, inputBytes[i], deserialized)
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize the number header
+	des := bcs.NewDeserializer([]uint8{})
+	des.ReadBytes()
+	assert.Error(t, des.Error())
+
+	// It must not succeed if there are not enough bytes to deserialize the number of bytes
+	des = bcs.NewDeserializer([]uint8{0x01})
+	des.ReadBytes()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_String
+//
+//   - It must be able to serialize UTF-8 strings
+//   - It must be able to deserialize UTF-8 strings
+//   - It must not succeed if there are not enough bytes to deserialize the number header
+//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
+//   - TODO It must not succeed in deserializing invalid UTF-8 characters
+func Test_Spec_BCS_String(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x01, 0x41},
+		{0x08, 0x31, 0x32, 0x33, 0x34, 0x61, 0x62, 0x63, 0x64},
+		{0x04, 0xf0, 0x9f, 0x98, 0x80},
+	}
+	inputs := []string{
+		"A",
+		"1234abcd",
+		"😀",
+	}
+
+	// It must be able to serialize UTF-8 strings
+	for i, input := range inputs {
+		t.Run(fmt.Sprintf("Serialize %s", input), func(t *testing.T) {
+			serialized, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+				ser.WriteString(input)
+			})
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], serialized)
+		})
+	}
+
+	// It must be able to deserialize UTF-8 strings
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %s", inputs[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			deserialized := des.ReadString()
+			assert.NoError(t, des.Error())
+			assert.Equal(t, 0, des.Remaining())
+			assert.Equal(t, inputs[i], deserialized)
+		})
+	}
+
+	// It must not succeed if there are not enough bytes to deserialize the number header
+	des := bcs.NewDeserializer([]uint8{})
+	des.ReadString()
+	assert.Error(t, des.Error())
+
+	// It must not succeed if there are not enough bytes to deserialize the number of bytes
+	des = bcs.NewDeserializer([]uint8{0x01})
+	des.ReadString()
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_Sequence
+//
+//   - It must be able to serialize sequences
+//   - It must be able to deserialize sequences
+//   - It must not succeed if one item fails deserializing sequences
+//   - It must not succeed if there are not enough bytes to deserialize the number header
+//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
+func Test_Spec_BCS_Sequence(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{0x00},
+		{0x03, 0x01, 0x00, 0xFF, 0x00, 0xFF, 0xFF},
+	}
+	inputs := [][]uint16{
+		{},
+		{0x01, 0xFF, 0xFFFF},
+	}
+
+	// It must be able to serialize sequences
+	for i, input := range inputs {
+		t.Run(fmt.Sprintf("Serialize %x", input), func(t *testing.T) {
+			ser := &bcs.Serializer{}
+			bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint16) {
+				ser.U16(item)
+			})
+			assert.NoError(t, ser.Error())
+			serialized := ser.ToBytes()
+			assert.Equal(t, expectedBytes[i], serialized)
+		})
+	}
+
+	// It must be able to deserialize sequences
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %x", inputs[i]), func(t *testing.T) {
+			des := bcs.NewDeserializer(bytes)
+			deserialized := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
+				num := des.U16()
+				*out = num
+			})
+			assert.NoError(t, des.Error())
+			assert.Equal(t, inputs[i], deserialized)
+		})
+	}
+
+	// It must not succeed if one item fails deserializing sequences
+	des := bcs.NewDeserializer([]uint8{0x02, 0xFF, 0x00})
+	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *bool) {
+		num := des.Bool()
+		*out = num
+	})
+	assert.Error(t, des.Error())
+
+	// It must not succeed if there are not enough bytes to deserialize the number header
+	des = bcs.NewDeserializer([]uint8{})
+	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
+		num := des.U16()
+		*out = num
+	})
+	assert.Error(t, des.Error())
+
+	// It must not succeed if there are not enough bytes to deserialize the number of bytes
+	des = bcs.NewDeserializer([]uint8{0x01, 0x00})
+	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
+		num := des.U16()
+		*out = num
+	})
+	assert.Error(t, des.Error())
+}
+
+// Test_Spec_BCS_Struct
+//
+//   - It must be able to serialize structs
+//   - It must be able to deserialize structs
+//   - It must be able to serialize struct sequences
+//   - It must be able to deserialize struct sequences
+//   - It must not succeed if there are not enough bytes to deserialize the struct
+//   - It must allow custom error handling for structs
+func Test_Spec_BCS_Struct(t *testing.T) {
+	expectedBytes := [][]uint8{
+		{
+			0x00,
+			0x01,
+			0x01, 0x00,
+			0x01, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			0x03, 0x01, 0x00, 0x00,
+		},
+		{
+			0x01,
+			0x01,
+			0x01, 0x00,
+			0x01, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+			0x03, 0x01, 0x00, 0x00,
+		},
+	}
+	expectedSequenceBytes := []uint8{uint8(len(expectedBytes))}
+
+	for _, expected := range expectedBytes {
+		expectedSequenceBytes = append(expectedSequenceBytes, expected...)
+	}
+	inputs := []testStruct{
+		{
+			bool:    false,
+			u8:      1,
+			u16:     1,
+			u32:     1,
+			u64:     1,
+			u128:    *big.NewInt(1),
+			u256:    *big.NewInt(1),
+			address: &AccountOne,
+			bytes:   []byte{0x01, 0x00, 0x00},
+		},
+		{
+			bool:    true,
+			u8:      1,
+			u16:     1,
+			u32:     1,
+			u64:     1,
+			u128:    *big.NewInt(1),
+			u256:    *big.NewInt(1),
+			address: &AccountOne,
+			bytes:   []byte{0x01, 0x00, 0x00},
+		},
+	}
+
+	// It must be able to serialize structs
+	for i, input := range inputs {
+		t.Run(fmt.Sprintf("Serialize %d", i), func(t *testing.T) {
+			serialized, err := bcs.Serialize(&input)
+			assert.NoError(t, err)
+			assert.Equal(t, expectedBytes[i], serialized)
+		})
+	}
+
+	// It must be able to deserialize structs
+	for i, bytes := range expectedBytes {
+		t.Run(fmt.Sprintf("Deserialize %d", i), func(t *testing.T) {
+			deserialized := testStruct{}
+			err := bcs.Deserialize(&deserialized, bytes)
+			assert.NoError(t, err)
+			assert.Equal(t, inputs[i], deserialized)
+		})
+	}
+
+	// It must be able to serialize struct sequences
+	serializedSequence, err := bcs.SerializeSequenceOnly(inputs)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedSequenceBytes, serializedSequence)
+
+	// It must be able to deserialize struct sequences
+	des := bcs.NewDeserializer(expectedSequenceBytes)
+	deserializedSequence := bcs.DeserializeSequence[testStruct](des)
+	assert.NoError(t, des.Error())
+	assert.Equal(t, 0, des.Remaining())
+	assert.Equal(t, inputs, deserializedSequence)
+
+	// It must not succeed if there are not enough bytes to deserialize
+	des = bcs.NewDeserializer([]uint8{})
+	des.ReadString()
+	assert.Error(t, des.Error())
+
+	// It must allow custom error handling for structs
+	des = bcs.NewDeserializer([]uint8{
+		0x00,
+		0x01,
+		0x01, 0x00,
+		0x01, 0x00, 0x00, 0x00,
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
+		0x00,
+	})
+	deserialized := testStruct{}
+	des.Struct(&deserialized)
+	assert.Error(t, des.Error())
+}
+
+// Take the expected and flip it, since big ints are stored big-endian
+func bytesToBigInt(bytes []byte, numBits int) *big.Int {
+	input := make([]byte, numBits)
+	copy(input, bytes)
+	slices.Reverse(input)
+	val := &big.Int{}
+	val.SetBytes(input)
+	return val
+}
