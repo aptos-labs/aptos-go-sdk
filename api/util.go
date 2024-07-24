@@ -20,8 +20,8 @@ type GUIDId struct {
 // UnmarshalJSON deserializes a JSON data blob into a [GUIDId]
 func (o *GUIDId) UnmarshalJSON(b []byte) error {
 	type inner struct {
-		AccountAddress string `json:"account_address"`
-		CreationNumber U64    `json:"creation_number"`
+		CreationNumber U64                   `json:"creation_number"`
+		AccountAddress *types.AccountAddress `json:"account_address"`
 	}
 
 	data := &inner{}
@@ -29,11 +29,7 @@ func (o *GUIDId) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
-	o.AccountAddress = &types.AccountAddress{}
-	err = o.AccountAddress.ParseStringRelaxed(data.AccountAddress)
-	if err != nil {
-		return err
-	}
+	o.AccountAddress = data.AccountAddress
 	o.CreationNumber = data.CreationNumber.ToUint64()
 	return nil
 }
