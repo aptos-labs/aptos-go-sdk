@@ -36,8 +36,6 @@ func (o *WriteSet) UnmarshalJSON(b []byte) error {
 		o.Inner = &DirectWriteSet{}
 	case WriteSetVariantScript:
 		o.Inner = &ScriptWriteSet{}
-	case WriteSetVariantUnknown:
-		o.Inner = &ScriptWriteSet{}
 	default:
 		o.Inner = &UnknownWriteSet{Type: string(o.Type)}
 		o.Type = WriteSetVariantUnknown
