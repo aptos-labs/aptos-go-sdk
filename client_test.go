@@ -77,7 +77,6 @@ func Test_SingleSignerFlows(t *testing.T) {
 	for name, signer := range TestSigners {
 		for payloadName, buildSingleSignerPayload := range TestSingleSignerPayloads {
 			t.Run(name+" "+payloadName, func(t *testing.T) {
-				t.Parallel()
 				testTransaction(t, signer, buildSingleSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
