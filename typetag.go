@@ -54,10 +54,6 @@ func (tt *TypeTag) String() string {
 // Implements:
 //   - [bcs.Marshaler]
 func (tt *TypeTag) MarshalBCS(ser *bcs.Serializer) {
-	if tt.Value == nil {
-		ser.SetError(fmt.Errorf("nil TypeTag"))
-		return
-	}
 	ser.Uleb128(uint32(tt.Value.GetType()))
 	ser.Struct(tt.Value)
 }
