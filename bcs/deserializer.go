@@ -37,15 +37,12 @@ func NewDeserializer(bytes []byte) *Deserializer {
 //
 // This function will error if there are remaining bytes.
 func Deserialize(dest Unmarshaler, bytes []byte) error {
-	if dest == nil {
-		return fmt.Errorf("cannot deserialize into nil")
-	}
 	des := Deserializer{
 		source: bytes,
 		pos:    0,
 		err:    nil,
 	}
-	dest.UnmarshalBCS(&des)
+	des.Struct(dest)
 	if des.err != nil {
 		return des.err
 	}

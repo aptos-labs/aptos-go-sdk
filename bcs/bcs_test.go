@@ -293,6 +293,13 @@ func Test_SerializeSequence(t *testing.T) {
 	data2 := []TestStruct2{testStruct2}
 	SerializeSequence(data2, &ser)
 	assert.NoError(t, ser.Error())
+
+	bytes := ser.ToBytes()
+
+	// Test only by self
+	onlyBytes, err := SerializeSequenceOnly(data2)
+	assert.NoError(t, err)
+	assert.Equal(t, bytes, onlyBytes)
 }
 
 func Test_DeserializeSequenceError(t *testing.T) {
@@ -406,6 +413,23 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	serializedBytes, err := SerializeBytes([]byte{0x05})
 	assert.NoError(t, err)
 	assert.Equal(t, []byte{0x01, 0x05}, serializedBytes)
+}
+
+func Test_NilStructs(t *testing.T) {
+	ser := Serializer{}
+	ser.Struct(nil)
+	assert.Error(t, ser.Error())
+
+	des := NewDeserializer([]byte{})
+	des.Struct(nil)
+	assert.Error(t, des.Error())
+}
+
+func Test_DeserializeNotEnoughBytes(t *testing.T) {
+	data := []byte{0x01, 0x00, 0x00}
+	testStruct := &TestStruct{}
+	err := Deserialize(testStruct, data)
+	assert.Error(t, err)
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
