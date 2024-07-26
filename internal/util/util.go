@@ -21,6 +21,10 @@ func Sha3256Hash(bytes [][]byte) (output []byte) {
 
 // ParseHex Convenience function to deal with 0x at the beginning of hex strings
 func ParseHex(hexStr string) ([]byte, error) {
+	// Allow hex encoding "empty hex"
+	if hexStr == "0x" {
+		return []byte{}, nil
+	}
 	if strings.HasPrefix(hexStr, "0x") {
 		hexStr = hexStr[2:]
 	}
