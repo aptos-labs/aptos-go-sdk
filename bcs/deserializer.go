@@ -169,26 +169,37 @@ func (des *Deserializer) U256() big.Int {
 //
 // [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
-	var out uint32 = 0
+	const maxU32 = uint64(0xFFFFFFFF)
+	var out uint64 = 0
 	shift := 0
 
-	for {
+	for out < maxU32 {
+		// Ensure we still have bytes to process
 		if des.pos >= len(des.source) {
 			des.setError("not enough bytes remaining to deserialize uleb128")
 			return 0
 		}
 
+		// Append the next byte
 		val := des.source[des.pos]
-		out = out | (uint32(val&0x7f) << shift)
+		out |= uint64(val&0x7f) << shift
 		des.pos++
+
+		// If at any point the highest bit is not set, there are no more bytes to read
 		if (val & 0x80) == 0 {
 			break
 		}
+
 		shift += 7
-		// TODO: if shift is too much, error
 	}
 
-	return out
+	// If all bytes have 0x80, then we have an invalid uleb128
+	if out > maxU32 {
+		des.setError("uleb128 is invalid as it goes higher than the max u32 value")
+		return 0
+	}
+
+	return uint32(out)
 }
 
 // ReadBytes reads bytes prefixed with a length
