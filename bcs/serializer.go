@@ -100,13 +100,12 @@ func (ser *Serializer) U256(v big.Int) {
 }
 
 // Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths, and enums.
-func (ser *Serializer) Uleb128(v uint32) {
-	for v > 0x80 {
-		nb := uint8(v & 0x7f)
-		ser.out.WriteByte(0x80 | nb)
-		v = v >> 7
+func (ser *Serializer) Uleb128(val uint32) {
+	for val>>7 != 0 {
+		ser.out.WriteByte(uint8(val) | 0x80)
+		val >>= 7
 	}
-	ser.out.WriteByte(uint8(v & 0x7f))
+	ser.out.WriteByte(uint8(val))
 }
 
 // WriteBytes serialize an array of bytes with its length first as an Uleb128.
