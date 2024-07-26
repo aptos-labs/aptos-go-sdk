@@ -1,6 +1,12 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/internal/util"
+import (
+	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"math/big"
+	"strconv"
+	"strings"
+)
 
 // TODO Add specific keys that must be deserialized and compared
 const Test64ByteHex = "0x1234123412341234123412341234123412341234123412341234123412341234"
@@ -42,9 +48,195 @@ const (
 
 // ParseHex parses hex, but skips the error
 func parseHex(hex string) []byte {
+
 	bytes, err := util.ParseHex(hex)
 	if err != nil {
 		panic("Failed to parse hex: " + hex + " " + err.Error())
 	}
 	return bytes
+}
+
+func parseBoolean(input string) bool {
+	switch input {
+	case "true":
+		return true
+	case "false":
+		return false
+	default:
+		panic(fmt.Sprintf("invalid boolean input %s", input))
+	}
+}
+
+func parseU8(input string) uint8 {
+	out, err := strconv.ParseUint(input, 10, 8)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u8 input %s", input))
+	}
+	return (uint8)(out)
+}
+
+func parseU16(input string) uint16 {
+	out, err := strconv.ParseUint(input, 10, 16)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u16 input %s", input))
+	}
+	return (uint16)(out)
+}
+
+func parseU32(input string) uint32 {
+	out, err := strconv.ParseUint(input, 10, 32)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u32 input %s", input))
+	}
+	return (uint32)(out)
+}
+
+func parseU64(input string) uint64 {
+	out, err := StrToUint64(input)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u64 input %s", input))
+	}
+	return out
+}
+
+func parseU128(input string) *big.Int {
+	out, err := StrToBigInt(input)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u128 input %s", input))
+	}
+	return out
+}
+
+func parseU256(input string) *big.Int {
+	out, err := StrToBigInt(input)
+	if err != nil {
+		panic(fmt.Sprintf("invalid u256 input %s", input))
+	}
+	return out
+}
+
+func parseString(input string) string {
+	// Remove quotes
+	return strings.ReplaceAll(input, "\"", "")
+}
+
+func parseAddress(input string) *AccountAddress {
+	address := &AccountAddress{}
+	err := address.ParseStringRelaxed(input)
+	if err != nil {
+		panic(fmt.Sprintf("invalid address input %s", input))
+	}
+	return address
+}
+
+func parseSequence(itemType string, items string) any {
+	itemList := strings.Split(items, ",")
+	switch itemType {
+	case "address":
+		addresses := make([]AccountAddress, 0)
+		if items == "" {
+			return addresses
+		}
+		for _, item := range itemList {
+			address := AccountAddress{}
+			err := address.ParseStringRelaxed(item)
+			if err != nil {
+				return nil
+			}
+			addresses = append(addresses, address)
+		}
+		return addresses
+	case "bool":
+		bools := make([]bool, 0)
+		if items == "" {
+			return bools
+		}
+		for _, item := range itemList {
+			bools = append(bools, parseBoolean(item))
+		}
+		return bools
+	case "u8":
+		u8s := make([]uint8, 0)
+		if items == "" {
+			return u8s
+		}
+		for _, item := range itemList {
+			u8s = append(u8s, parseU8(item))
+		}
+		return u8s
+	case "u16":
+		u16s := make([]uint16, 0)
+		if items == "" {
+			return u16s
+		}
+		for _, item := range itemList {
+			u16s = append(u16s, parseU16(item))
+		}
+		return u16s
+	case "u32":
+		u32s := make([]uint32, 0)
+		if items == "" {
+			return u32s
+		}
+		for _, item := range itemList {
+			u32s = append(u32s, parseU32(item))
+		}
+		return u32s
+	case "u64":
+		u64s := make([]uint64, 0)
+		if items == "" {
+			return u64s
+		}
+		for _, item := range itemList {
+			u64s = append(u64s, parseU64(item))
+		}
+		return u64s
+	case "u128":
+		u128s := make([]*big.Int, 0)
+		if items == "" {
+			return u128s
+		}
+		for _, item := range itemList {
+			u128s = append(u128s, parseU128(item))
+		}
+		return u128s
+	case "u256":
+		u256s := make([]*big.Int, 0)
+		if items == "" {
+			return u256s
+		}
+		for _, item := range itemList {
+			u256s = append(u256s, parseU256(item))
+		}
+		return u256s
+	case "uleb128":
+		uleb128s := make([]uint32, 0)
+		if items == "" {
+			return uleb128s
+		}
+		for _, item := range itemList {
+			uleb128s = append(uleb128s, parseU32(item))
+		}
+		return uleb128s
+	case "bytes":
+		bytesList := make([][]byte, 0)
+		if items == "" {
+			return bytesList
+		}
+		for _, item := range itemList {
+			bytesList = append(bytesList, parseHex(item))
+		}
+		return bytesList
+	case "string":
+		stringList := make([]string, 0)
+		if items == "" {
+			return stringList
+		}
+		for _, item := range itemList {
+			stringList = append(stringList, parseString(item))
+		}
+		return stringList
+	}
+
+	panic(fmt.Sprintf("unsupported given sequence item type %s", itemType))
 }

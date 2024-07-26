@@ -1,15 +1,19 @@
 package aptos
 
 import (
+	"bytes"
+	"context"
+	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/stretchr/testify/assert"
+	"github.com/cucumber/godog"
 	"math/big"
 	"slices"
+	"strings"
 	"testing"
 )
 
-type testStruct struct {
+type TestStruct struct {
 	bool    bool
 	u8      uint8
 	u16     uint16
@@ -21,7 +25,7 @@ type testStruct struct {
 	bytes   []byte
 }
 
-func (st *testStruct) MarshalBCS(ser *bcs.Serializer) {
+func (st *TestStruct) MarshalBCS(ser *bcs.Serializer) {
 	ser.Bool(st.bool)
 	ser.U8(st.u8)
 	ser.U16(st.u16)
@@ -33,7 +37,7 @@ func (st *testStruct) MarshalBCS(ser *bcs.Serializer) {
 	ser.WriteBytes(st.bytes)
 }
 
-func (st *testStruct) UnmarshalBCS(des *bcs.Deserializer) {
+func (st *TestStruct) UnmarshalBCS(des *bcs.Deserializer) {
 	st.bool = des.Bool()
 	st.u8 = des.U8()
 	st.u16 = des.U16()
@@ -50,763 +54,1117 @@ func (st *testStruct) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-// Test_Spec_BCS_Bool tests BCS encoding and decoding of unsigned 8-bit integers
-//
-//   - It must be able to serialize a boolean
-//   - It must be able to deserialize a boolean
-//   - It must not succeed if there are not enough bytes to deserialize a boolean
-//   - It must not succeed if it is in an invalid byte for a boolean
-func Test_Spec_BCS_Bool(t *testing.T) {
-	expectedBytes := [][]uint8{{0x00}, {0x01}}
-	vals := []bool{false, true}
-	// It must be able to serialize an unsigned 8-bit integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %t", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeBool(val)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
-		})
+// godogsCtxKey is the key used to store the available godogs in the context.Context.
+type godogsCtxKey struct{}
+
+func givenAddress(ctx context.Context, input string) (context.Context, error) {
+	address := &AccountAddress{}
+	err := address.ParseStringRelaxed(input)
+	if err != nil {
+		return nil, err
 	}
 
-	// It must be able to deserialize an unsigned 8-bit integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %t", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.Bool()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	return context.WithValue(ctx, godogsCtxKey{}, address), nil
+}
+
+func givenBoolean(ctx context.Context, input string) (context.Context, error) {
+	return context.WithValue(ctx, godogsCtxKey{}, parseBoolean(input)), nil
+}
+
+func givenU8(ctx context.Context, input int) (context.Context, error) {
+	if input < 0 || input > 255 {
+		return nil, errors.New("u8 must be between 0 and 255")
+	}
+	return context.WithValue(ctx, godogsCtxKey{}, (uint8)(input)), nil
+}
+
+func givenU16(ctx context.Context, input int) (context.Context, error) {
+	if input < 0 || input > 65535 {
+		return nil, errors.New("u16 must be between 0 and 65535")
+	}
+	return context.WithValue(ctx, godogsCtxKey{}, (uint16)(input)), nil
+}
+
+func givenU32(ctx context.Context, input int) (context.Context, error) {
+	if input < 0 || input > 4294967295 {
+		return nil, errors.New("u32 must be between 0 and 4294967295")
+	}
+	return context.WithValue(ctx, godogsCtxKey{}, (uint32)(input)), nil
+}
+
+func givenU64(ctx context.Context, input string) (context.Context, error) {
+	val, err := StrToUint64(input)
+
+	if err != nil {
+		return nil, err
+	}
+	return context.WithValue(ctx, godogsCtxKey{}, val), nil
+}
+
+func givenU128(ctx context.Context, input string) (context.Context, error) {
+	val, err := StrToBigInt(input)
+
+	// TODO: Check that the input is a valid u128
+	if err != nil {
+		return nil, fmt.Errorf("u128 must be a valid number %w", err)
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 8-bit integer
-	t.Run(fmt.Sprintf("Deserialize not enough bytes"), func(t *testing.T) {
-		des := bcs.NewDeserializer([]uint8{})
-		des.Bool()
-		assert.Error(t, des.Error())
+	return context.WithValue(ctx, godogsCtxKey{}, val), nil
+}
 
-		invalidBytes := [][]uint8{{0x02, 0xFF}}
-		for _, bytes := range invalidBytes {
-			des := bcs.NewDeserializer(bytes)
-			des.Bool()
-			assert.Error(t, des.Error())
+func givenU256(ctx context.Context, input string) (context.Context, error) {
+	val, err := StrToBigInt(input)
+
+	// TODO: Check that the input is a valid u256
+	if err != nil {
+		return nil, fmt.Errorf("u256 must be a valid number %w", err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, val), nil
+}
+
+func givenBytes(ctx context.Context, input string) (context.Context, error) {
+	return context.WithValue(ctx, godogsCtxKey{}, parseHex(input)), nil
+}
+
+func givenString(ctx context.Context, input string) (context.Context, error) {
+	return context.WithValue(ctx, godogsCtxKey{}, input), nil
+}
+
+func givenStruct(ctx context.Context, items string) (context.Context, error) {
+	itemList := strings.Split(items, ",")
+	str := &TestStruct{
+		bool:    parseBoolean(itemList[0]),
+		u8:      parseU8(itemList[1]),
+		u16:     parseU16(itemList[2]),
+		u32:     parseU32(itemList[3]),
+		u64:     parseU64(itemList[4]),
+		u128:    *parseU128(itemList[5]),
+		u256:    *parseU256(itemList[6]),
+		address: parseAddress(itemList[7]),
+		bytes:   parseHex(itemList[8]),
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, str), nil
+}
+
+func givenSequence(ctx context.Context, itemType string, items string) (context.Context, error) {
+	return context.WithValue(ctx, godogsCtxKey{}, parseSequence(itemType, items)), nil
+}
+
+func serializeAddress(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(*AccountAddress)
+	if !ok {
+		return ctx, errors.New("input is not *AccountAddress")
+	}
+
+	out, err := bcs.Serialize(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize address %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeBool(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(bool)
+	if !ok {
+		return ctx, errors.New("input is not bool")
+	}
+
+	out, err := bcs.SerializeBool(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize boolean %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU8(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(uint8)
+	if !ok {
+		return ctx, errors.New("input is not uint8")
+	}
+
+	out, err := bcs.SerializeU8(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u8 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU16(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(uint16)
+	if !ok {
+		return ctx, errors.New("input is not uint16")
+	}
+
+	out, err := bcs.SerializeU16(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u16 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU32(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(uint32)
+	if !ok {
+		return ctx, errors.New("input is not uint32")
+	}
+
+	out, err := bcs.SerializeU32(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u32 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU64(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(uint64)
+	if !ok {
+		return ctx, errors.New("input is not uint64")
+	}
+
+	out, err := bcs.SerializeU64(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u64 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU128(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(*big.Int)
+	if !ok {
+		return ctx, errors.New("input is not *big.Int")
+	}
+
+	out, err := bcs.SerializeU128(*input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u128 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeU256(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(*big.Int)
+	if !ok {
+		return ctx, errors.New("input is not *big.Int")
+	}
+
+	out, err := bcs.SerializeU256(*input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize u256 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeUleb128(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(uint32)
+	if !ok {
+		return ctx, errors.New("input is not uint32")
+	}
+
+	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+		ser.Uleb128(input)
+	})
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize uleb128 %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeFixedBytes(ctx context.Context, _ int) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+		ser.FixedBytes(input)
+	})
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize fixed bytes %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeBytes(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+	out, err := bcs.SerializeBytes(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize fixed bytes %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeString(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(string)
+	if !ok {
+		return ctx, errors.New("input is not string")
+	}
+	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
+		ser.WriteString(input)
+	})
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize string %v: %w", input, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
+}
+
+func serializeSequence(ctx context.Context, itemType string) (context.Context, error) {
+	ser := &bcs.Serializer{}
+
+	switch itemType {
+	case "address":
+		input, ok := ctx.Value(godogsCtxKey{}).([]AccountAddress)
+		if !ok {
+			return ctx, errors.New("input is not []AccountAddress")
 		}
-	})
+
+		bcs.SerializeSequence(input, ser)
+	case "bool":
+		input, ok := ctx.Value(godogsCtxKey{}).([]bool)
+		if !ok {
+			return ctx, errors.New("input is not []bool")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item bool) {
+			ser.Bool(item)
+		})
+	case "u8":
+		input, ok := ctx.Value(godogsCtxKey{}).([]uint8)
+		if !ok {
+			return ctx, errors.New("input is not []uint8")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint8) {
+			ser.U8(item)
+		})
+	case "u16":
+		input, ok := ctx.Value(godogsCtxKey{}).([]uint16)
+		if !ok {
+			return ctx, errors.New("input is not []uint16")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint16) {
+			ser.U16(item)
+		})
+	case "u32":
+		input, ok := ctx.Value(godogsCtxKey{}).([]uint32)
+		if !ok {
+			return ctx, errors.New("input is not []uint32")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint32) {
+			ser.U32(item)
+		})
+	case "u64":
+		input, ok := ctx.Value(godogsCtxKey{}).([]uint64)
+		if !ok {
+			return ctx, errors.New("input is not []uint64")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint64) {
+			ser.U64(item)
+		})
+	case "u128":
+		input, ok := ctx.Value(godogsCtxKey{}).([]*big.Int)
+		if !ok {
+			return ctx, errors.New("input is not []*big.Int")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item *big.Int) {
+			ser.U128(*item)
+		})
+	case "u256":
+		input, ok := ctx.Value(godogsCtxKey{}).([]*big.Int)
+		if !ok {
+			return ctx, errors.New("input is not []*big.Int")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item *big.Int) {
+			ser.U256(*item)
+		})
+	case "uleb128":
+		input, ok := ctx.Value(godogsCtxKey{}).([]uint32)
+		if !ok {
+			return ctx, errors.New("input is not []uint32")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint32) {
+			ser.Uleb128(item)
+		})
+	case "string":
+		input, ok := ctx.Value(godogsCtxKey{}).([]string)
+		if !ok {
+			return ctx, errors.New("input is not []string")
+		}
+
+		bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item string) {
+			ser.WriteString(item)
+		})
+	default:
+		return ctx, fmt.Errorf("unsupported serialize item type %s", itemType)
+	}
+
+	result := ser.ToBytes()
+	err := ser.Error()
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize %s sequence: %w", itemType, err)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_U8 tests BCS encoding and decoding of unsigned 8-bit integers
-//
-//   - It must be able to serialize an unsigned 8-bit integer
-//   - It must be able to deserialize an unsigned 8-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 8-bit integer
-func Test_Spec_BCS_U8(t *testing.T) {
-	expectedBytes := [][]uint8{{0x00}, {0x01}, {0x02}, {0x42}, {0xFF}}
-	vals := []uint8{0x00, 0x01, 0x02, 0x42, 0xFF}
-	// It must be able to serialize an unsigned 8-bit integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU8(val)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
-		})
+func serializeStruct(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).(*TestStruct)
+	if !ok {
+		return ctx, errors.New("input is not *TestStruct")
 	}
 
-	// It must be able to deserialize an unsigned 8-bit integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U8()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	out, err := bcs.Serialize(input)
+
+	if err != nil {
+		return ctx, fmt.Errorf("failed to serialize struct %v: %w", input, err)
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 8-bit integer
-	des := bcs.NewDeserializer([]uint8{})
-	des.U8()
-	assert.Error(t, des.Error())
+	return context.WithValue(ctx, godogsCtxKey{}, out), nil
 }
 
-// Test_Spec_BCS_U16 tests BCS encoding and decoding of unsigned 16-bit integers
-//
-//   - It must be able to serialize an unsigned 16-bit integer
-//   - It must be able to deserialize an unsigned 16-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 16-bit integer
-func Test_Spec_BCS_U16(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00, 0x00},
-		{0x01, 0x00},
-		{0xFF, 0x00},
-		{0x00, 0x01},
-		{0xFF, 0xFF},
-	}
-	vals := []uint16{
-		0x00,
-		0x01,
-		0xFF,
-		0x0100,
-		0xFFFF,
-	}
-	// It must be able to serialize an unsigned 16-bit integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU16(val)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
-		})
+func deserializeAddress(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
 
-	// It must be able to deserialize an unsigned 16-bit integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U16()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	result := &AccountAddress{}
+	err := bcs.Deserialize(result, input)
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 16-bit integer
-	des := bcs.NewDeserializer([]uint8{0x00})
-	des.U16()
-	assert.Error(t, des.Error())
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_U32 tests BCS encoding and decoding of unsigned 32-bit integers
-//
-//   - It must be able to serialize an unsigned 32-bit integer
-//   - It must be able to deserialize an unsigned 32-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 32-bit integer
-func Test_Spec_BCS_U32(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00, 0x00, 0x00, 0x00},
-		{0x01, 0x00, 0x00, 0x00},
-		{0xFF, 0x00, 0x00, 0x00},
-		{0x00, 0x01, 0x00, 0x00},
-		{0xFF, 0xFF, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF},
-	}
-	vals := []uint32{
-		0x00,
-		0x01,
-		0xFF,
-		0x0100,
-		0xFFFF,
-		0xFFFFFF,
-		0xFFFFFFFF,
-	}
-	// It must be able to serialize an unsigned 32-bit integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU32(val)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
-		})
+func deserializeBool(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
 
-	// It must be able to deserialize an unsigned 32-bit integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U32()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	des := bcs.NewDeserializer(input)
+	result := des.Bool()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 32-bit integer
-	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00})
-	des.U32()
-	assert.Error(t, des.Error())
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return context.WithValue(ctx, godogsCtxKey{}, fmt.Errorf("expected no remaining bytes, but got %d", remaining)), nil
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_U64 tests BCS encoding and decoding of unsigned 64-bit integers
-//
-//   - It must be able to serialize an unsigned 64-bit integer
-//   - It must be able to deserialize an unsigned 64-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 64-bit integer
-func Test_Spec_BCS_U64(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-	}
-	vals := []uint64{
-		0x00,
-		0x01,
-		0xFF,
-		0x0100,
-		0xFFFF,
-		0xFFFFFF,
-		0xFFFFFFFF,
-		0xFFFFFFFFFF,
-		0xFFFFFFFFFFFF,
-		0xFFFFFFFFFFFFFF,
-		0xFFFFFFFFFFFFFFFF,
-	}
-	// It must be able to serialize an unsigned 64-bit integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU64(val)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
-		})
+func deserializeU8(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
 
-	// It must be able to deserialize an unsigned 64-bit integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U64()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	des := bcs.NewDeserializer(input)
+	result := des.U8()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 64-bit integer
-	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	des.U64()
-	assert.Error(t, des.Error())
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_U128 tests BCS encoding and decoding of unsigned 128-bit integers
-//
-//   - It must be able to serialize an unsigned 128-bit integer
-//   - It must be able to deserialize an unsigned 128-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 128-bit integer
-func Test_Spec_BCS_U128(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
+func deserializeU16(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
 
-	// It must be able to serialize an unsigned 128-bit integer
-	for _, expected := range expectedBytes {
-		val := bytesToBigInt(expected, 128)
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU128(*val)
-			assert.NoError(t, err)
-			assert.Equal(t, expected, encoded)
-		})
+	des := bcs.NewDeserializer(input)
+	result := des.U16()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
-	// It must be able to deserialize an unsigned 128-bit integer
-	for _, bytes := range expectedBytes {
-		expected := bytesToBigInt(bytes, 128)
-		t.Run(fmt.Sprintf("Deserialize %x", expected), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U128()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, *expected, val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an 128-bit integer
-	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	des.U128()
-	assert.Error(t, des.Error())
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_U256 tests BCS encoding and decoding of unsigned 256-bit integers
-//
-//   - It must be able to serialize an unsigned 256-bit integer
-//   - It must be able to deserialize an unsigned 256-bit integer
-//   - It must not succeed if there are not enough bytes to deserialize an 256-bit integer
-func Test_Spec_BCS_U256(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-		// TODO: I cut this short because I had already tested a lot of them
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00, 0xFF, 0x00},
+func deserializeU32(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
 
-	// It must be able to serialize an unsigned 256-bit integer
-	for _, expected := range expectedBytes {
-		val := bytesToBigInt(expected, 256)
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeU256(*val)
-			assert.NoError(t, err)
-			assert.Equal(t, expected, encoded)
-		})
+	des := bcs.NewDeserializer(input)
+	result := des.U32()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
-	// It must be able to deserialize an unsigned 256-bit integer
-	for _, bytes := range expectedBytes {
-		expected := bytesToBigInt(bytes, 256)
-		t.Run(fmt.Sprintf("Deserialize %x", expected), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.U256()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, *expected, val)
-			assert.Equal(t, 0, des.Remaining())
-		})
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize an unsigned 256-bit integer
-	des := bcs.NewDeserializer([]uint8{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
-	des.U256()
-	assert.Error(t, des.Error())
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-// Test_Spec_BCS_Uleb128 tests BCS encoding and decoding of unsigned leb-128 integers
-//
-//   - It must be able to serialize an unsigned leb-128 integer
-//   - It must be able to deserialize an unsigned leb-128 integer
-//   - It must not succeed if there are not enough bytes to deserialize an unsigned leb-128 integer
-//   - It must not accept invalid values to deserialize for an unsigned leb-128 integer
-func Test_Spec_BCS_Uleb128(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00},
-		{0x01},
-		{0x7F},
-		{0xF0, 0x01},
-		{0xFF, 0x7F},
-		{0xFF, 0xFF, 0x03},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xF},
+func deserializeU64(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
 	}
-	vals := []uint32{
-		0x00,
-		0x01,
-		0x7F,
-		0xF0,
-		0x3FFF,
-		0xFFFF,
-		0xFFFFFFFF,
+
+	des := bcs.NewDeserializer(input)
+	result := des.U64()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
-	// It must be able to serialize an unsigned leb-128 integer
-	for i, val := range vals {
-		t.Run(fmt.Sprintf("Serialize %x", val), func(t *testing.T) {
-			encoded, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
-				ser.Uleb128(val)
-			})
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], encoded)
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeU128(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.U128()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, &result), nil
+}
+
+func deserializeU256(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.U256()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, &result), nil
+}
+
+func deserializeUleb128(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.Uleb128()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeFixedBytes(ctx context.Context, length int) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.ReadFixedBytes(length)
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeBytes(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.ReadBytes()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeString(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	result := des.ReadString()
+	err := des.Error()
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	remaining := des.Remaining()
+	if remaining != 0 {
+		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeStruct(ctx context.Context) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	result := &TestStruct{}
+	err := bcs.Deserialize(result, input)
+	if err != nil {
+		return context.WithValue(ctx, godogsCtxKey{}, err), nil
+	}
+
+	return context.WithValue(ctx, godogsCtxKey{}, result), nil
+}
+
+func deserializeSequence(ctx context.Context, itemType string) (context.Context, error) {
+	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return ctx, errors.New("input is not []byte")
+	}
+
+	des := bcs.NewDeserializer(input)
+	switch itemType {
+	case "address":
+		result := bcs.DeserializeSequence[AccountAddress](des)
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "bool":
+		result := bcs.DeserializeSequenceWithFunction[bool](des, func(des *bcs.Deserializer, out *bool) {
+			boolean := des.Bool()
+			*out = boolean
 		})
-	}
-
-	// It must be able to deserialize an unsigned leb-128 integer
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", vals[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			val := des.Uleb128()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, vals[i], val)
-			assert.Equal(t, 0, des.Remaining())
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u8":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint8) {
+			*out = des.U8()
 		})
-	}
-
-	// It must not succeed if there are not enough bytes to deserialize an unsigned leb-128 integer
-	des := bcs.NewDeserializer([]uint8{})
-	des.Uleb128()
-	assert.Error(t, des.Error())
-
-	// It must not accept invalid values to deserialize for an unsigned leb-128 integer
-	invalidValues := [][]uint8{
-		{0xFF},
-		{0xFF, 0xFF},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xF1},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xFF},
-	}
-
-	for _, invalidVal := range invalidValues {
-		des := bcs.NewDeserializer(invalidVal)
-		des.Uleb128()
-		assert.Error(t, des.Error())
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u16":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
+			*out = des.U16()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u32":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint32) {
+			*out = des.U32()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u64":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint64) {
+			*out = des.U64()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u128":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out **big.Int) {
+			num := des.U128()
+			*out = &num
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "u256":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out **big.Int) {
+			num := des.U256()
+			*out = &num
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "uleb128":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint32) {
+			*out = des.Uleb128()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "bytes":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *[]byte) {
+			*out = des.ReadBytes()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	case "string":
+		result := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *string) {
+			*out = des.ReadString()
+		})
+		err := des.Error()
+		if err != nil {
+			return context.WithValue(ctx, godogsCtxKey{}, err), nil
+		}
+		return context.WithValue(ctx, godogsCtxKey{}, result), nil
+	default:
+		return ctx, fmt.Errorf("unsupported deserialize sequence item type %s", itemType)
 	}
 }
 
-// Test_Spec_BCS_FixedBytes
-//
-//   - It must be able to serialize fixed bytes
-//   - It must be able to deserialize fixed bytes
-//   - It must not succeed if there are not enough bytes to deserialize the fixed bytes
-//   - It must succeed on zero length fixed bytes
-func Test_Spec_BCS_FixedBytes(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00},
-		{0x01},
-		{0x7F},
-		{0xF0, 0x01},
-		{0xFF, 0x7F},
-		{0xFF, 0xFF, 0x03},
-		{0xFF, 0xFF, 0xFF, 0xFF, 0xF},
+func addressResult(ctx context.Context, expected string) error {
+	expectedAddress := &AccountAddress{}
+	err := expectedAddress.ParseStringRelaxed(expected)
+	if err != nil {
+		return err
 	}
 
-	// It must be able to serialize fixed bytes
-	for _, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Serialize %x", bytes), func(t *testing.T) {
-			serialized, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
-				ser.FixedBytes(bytes)
-			})
-			assert.NoError(t, err)
-			assert.Equal(t, bytes, serialized)
-		})
+	result, ok := ctx.Value(godogsCtxKey{}).(*AccountAddress)
+	if !ok {
+		return errors.New("no result available")
 	}
 
-	// It must be able to deserialize fixed bytes
-	for _, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", bytes), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			deserialized := des.ReadFixedBytes(len(bytes))
-			assert.NoError(t, des.Error())
-			assert.Equal(t, 0, des.Remaining())
-			assert.Equal(t, bytes, deserialized)
-		})
+	// You can't compare pointers of addresses
+	if *expectedAddress != *result {
+		return fmt.Errorf("expected %s, but received %s", expectedAddress.String(), result.String())
 	}
 
-	// It must not succeed if there are not enough bytes to deserialize the fixed bytes
-	des := bcs.NewDeserializer([]uint8{})
-	des.ReadFixedBytes(1)
-	assert.Error(t, des.Error())
-
-	// It must succeed on zero length fixed bytes
-	des = bcs.NewDeserializer([]uint8{})
-	out := des.ReadFixedBytes(0)
-	assert.NoError(t, des.Error())
-	assert.Empty(t, out)
+	return nil
 }
 
-// Test_Spec_BCS_Bytes
-//
-//   - It must be able to serialize bytes
-//   - It must be able to deserialize bytes
-//   - It must not succeed if there are not enough bytes to deserialize the number header
-//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
-func Test_Spec_BCS_Bytes(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00},
-		{0x01, 0x00},
-		{0x01, 0x7F},
-		{0x02, 0x01, 0x02},
-	}
-	inputBytes := [][]uint8{
-		{},
-		{0x00},
-		{0x7F},
-		{0x01, 0x02},
+func boolResult(ctx context.Context, expected string) error {
+	expectedBool := parseBoolean(expected)
+
+	result, ok := ctx.Value(godogsCtxKey{}).(bool)
+	if !ok {
+		return errors.New("no result available")
 	}
 
-	// It must be able to serialize fixed bytes
-	for i, bytes := range inputBytes {
-		t.Run(fmt.Sprintf("Serialize %x", bytes), func(t *testing.T) {
-			serialized, err := bcs.SerializeBytes(bytes)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], serialized)
-		})
+	if expectedBool != result {
+		return fmt.Errorf("expected %v, but received %v", expectedBool, result)
 	}
 
-	// It must be able to deserialize fixed bytes
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", inputBytes[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			deserialized := des.ReadBytes()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, 0, des.Remaining())
-			assert.Equal(t, inputBytes[i], deserialized)
-		})
-	}
-
-	// It must not succeed if there are not enough bytes to deserialize the number header
-	des := bcs.NewDeserializer([]uint8{})
-	des.ReadBytes()
-	assert.Error(t, des.Error())
-
-	// It must not succeed if there are not enough bytes to deserialize the number of bytes
-	des = bcs.NewDeserializer([]uint8{0x01})
-	des.ReadBytes()
-	assert.Error(t, des.Error())
+	return nil
 }
 
-// Test_Spec_BCS_String
-//
-//   - It must be able to serialize UTF-8 strings
-//   - It must be able to deserialize UTF-8 strings
-//   - It must not succeed if there are not enough bytes to deserialize the number header
-//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
-//   - TODO It must not succeed in deserializing invalid UTF-8 characters
-func Test_Spec_BCS_String(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x01, 0x41},
-		{0x08, 0x31, 0x32, 0x33, 0x34, 0x61, 0x62, 0x63, 0x64},
-		{0x04, 0xf0, 0x9f, 0x98, 0x80},
-	}
-	inputs := []string{
-		"A",
-		"1234abcd",
-		"😀",
+func u8Result(ctx context.Context, expected int) error {
+	expectedU8 := uint8(expected)
+	result, ok := ctx.Value(godogsCtxKey{}).(uint8)
+	if !ok {
+		return errors.New("no result available")
 	}
 
-	// It must be able to serialize UTF-8 strings
-	for i, input := range inputs {
-		t.Run(fmt.Sprintf("Serialize %s", input), func(t *testing.T) {
-			serialized, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
-				ser.WriteString(input)
-			})
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], serialized)
-		})
+	if expectedU8 != result {
+		return fmt.Errorf("expected %d, but received %d", expectedU8, result)
 	}
 
-	// It must be able to deserialize UTF-8 strings
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %s", inputs[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			deserialized := des.ReadString()
-			assert.NoError(t, des.Error())
-			assert.Equal(t, 0, des.Remaining())
-			assert.Equal(t, inputs[i], deserialized)
-		})
-	}
-
-	// It must not succeed if there are not enough bytes to deserialize the number header
-	des := bcs.NewDeserializer([]uint8{})
-	des.ReadString()
-	assert.Error(t, des.Error())
-
-	// It must not succeed if there are not enough bytes to deserialize the number of bytes
-	des = bcs.NewDeserializer([]uint8{0x01})
-	des.ReadString()
-	assert.Error(t, des.Error())
+	return nil
 }
 
-// Test_Spec_BCS_Sequence
-//
-//   - It must be able to serialize sequences
-//   - It must be able to deserialize sequences
-//   - It must not succeed if one item fails deserializing sequences
-//   - It must not succeed if there are not enough bytes to deserialize the number header
-//   - It must not succeed if there are not enough bytes to deserialize the number of bytes
-func Test_Spec_BCS_Sequence(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{0x00},
-		{0x03, 0x01, 0x00, 0xFF, 0x00, 0xFF, 0xFF},
-	}
-	inputs := [][]uint16{
-		{},
-		{0x01, 0xFF, 0xFFFF},
+func u16Result(ctx context.Context, expected int) error {
+	expectedU16 := uint16(expected)
+
+	result, ok := ctx.Value(godogsCtxKey{}).(uint16)
+	if !ok {
+		return errors.New("no result available")
 	}
 
-	// It must be able to serialize sequences
-	for i, input := range inputs {
-		t.Run(fmt.Sprintf("Serialize %x", input), func(t *testing.T) {
-			ser := &bcs.Serializer{}
-			bcs.SerializeSequenceWithFunction(input, ser, func(ser *bcs.Serializer, item uint16) {
-				ser.U16(item)
-			})
-			assert.NoError(t, ser.Error())
-			serialized := ser.ToBytes()
-			assert.Equal(t, expectedBytes[i], serialized)
-		})
+	if expectedU16 != result {
+		return fmt.Errorf("expected %d, but received %d", expectedU16, result)
 	}
-
-	// It must be able to deserialize sequences
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %x", inputs[i]), func(t *testing.T) {
-			des := bcs.NewDeserializer(bytes)
-			deserialized := bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
-				num := des.U16()
-				*out = num
-			})
-			assert.NoError(t, des.Error())
-			assert.Equal(t, inputs[i], deserialized)
-		})
-	}
-
-	// It must not succeed if one item fails deserializing sequences
-	des := bcs.NewDeserializer([]uint8{0x02, 0xFF, 0x00})
-	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *bool) {
-		num := des.Bool()
-		*out = num
-	})
-	assert.Error(t, des.Error())
-
-	// It must not succeed if there are not enough bytes to deserialize the number header
-	des = bcs.NewDeserializer([]uint8{})
-	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
-		num := des.U16()
-		*out = num
-	})
-	assert.Error(t, des.Error())
-
-	// It must not succeed if there are not enough bytes to deserialize the number of bytes
-	des = bcs.NewDeserializer([]uint8{0x01, 0x00})
-	bcs.DeserializeSequenceWithFunction(des, func(des *bcs.Deserializer, out *uint16) {
-		num := des.U16()
-		*out = num
-	})
-	assert.Error(t, des.Error())
+	return nil
 }
 
-// Test_Spec_BCS_Struct
-//
-//   - It must be able to serialize structs
-//   - It must be able to deserialize structs
-//   - It must be able to serialize struct sequences
-//   - It must be able to deserialize struct sequences
-//   - It must not succeed if there are not enough bytes to deserialize the struct
-//   - It must allow custom error handling for structs
-func Test_Spec_BCS_Struct(t *testing.T) {
-	expectedBytes := [][]uint8{
-		{
-			0x00,
-			0x01,
-			0x01, 0x00,
-			0x01, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-			0x03, 0x01, 0x00, 0x00,
+func u32Result(ctx context.Context, expected int) error {
+	expectedU32 := uint32(expected)
+
+	result, ok := ctx.Value(godogsCtxKey{}).(uint32)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if expectedU32 != result {
+		return fmt.Errorf("expected %d, but received %d", expectedU32, result)
+	}
+	return nil
+}
+
+func u64Result(ctx context.Context, expected string) error {
+	expectedU64, err := StrToUint64(expected)
+	if err != nil {
+		return err
+	}
+
+	result, ok := ctx.Value(godogsCtxKey{}).(uint64)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if expectedU64 != result {
+		return fmt.Errorf("expected %d, but received %d", expectedU64, result)
+	}
+	return nil
+}
+
+func u128Result(ctx context.Context, expected string) error {
+	expectedU128, err := StrToBigInt(expected)
+	if err != nil {
+		return err
+	}
+
+	result, ok := ctx.Value(godogsCtxKey{}).(*big.Int)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if expectedU128.Cmp(result) != 0 {
+		return fmt.Errorf("expected %d, but received %d", expectedU128, result)
+	}
+	return nil
+}
+
+func u256Result(ctx context.Context, expected string) error {
+	expectedU256, err := StrToBigInt(expected)
+	if err != nil {
+		return err
+	}
+
+	result, ok := ctx.Value(godogsCtxKey{}).(*big.Int)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if expectedU256.Cmp(result) != 0 {
+		return fmt.Errorf("expected %d, but received %d", expectedU256, result)
+	}
+	return nil
+}
+
+func bytesResult(ctx context.Context, expected string) error {
+	expectedBytes := parseHex(expected)
+	result, ok := ctx.Value(godogsCtxKey{}).([]byte)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if !bytes.Equal(expectedBytes, result) {
+		return fmt.Errorf("expected 0x%X, but received 0x%X", expectedBytes, result)
+	}
+
+	return nil
+}
+
+func stringResult(ctx context.Context, expected string) error {
+	result, ok := ctx.Value(godogsCtxKey{}).(string)
+	if !ok {
+		return errors.New("no result available")
+	}
+
+	if expected != result {
+		return fmt.Errorf("expected %s, but received %s", expected, result)
+	}
+
+	return nil
+}
+
+func sequenceResult(ctx context.Context, itemType string, expectedList string) error {
+	expected := parseSequence(itemType, expectedList)
+	switch itemType {
+	case "address":
+		result, ok := ctx.Value(godogsCtxKey{}).([]AccountAddress)
+		if !ok {
+			return errors.New("no address result available")
+		}
+
+		if !slices.Equal(expected.([]AccountAddress), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "bool":
+		result, ok := ctx.Value(godogsCtxKey{}).([]bool)
+		if !ok {
+			return errors.New("no bool result available")
+		}
+		if !slices.Equal(expected.([]bool), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "u8":
+		result, ok := ctx.Value(godogsCtxKey{}).([]uint8)
+		if !ok {
+			return errors.New("no u8 result available")
+		}
+		if !slices.Equal(expected.([]uint8), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "u16":
+		result, ok := ctx.Value(godogsCtxKey{}).([]uint16)
+		if !ok {
+			return errors.New("no u16 result available")
+		}
+		if !slices.Equal(expected.([]uint16), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "u32":
+		result, ok := ctx.Value(godogsCtxKey{}).([]uint32)
+		if !ok {
+			return errors.New("no u32 result available")
+		}
+		if !slices.Equal(expected.([]uint32), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "u64":
+		result, ok := ctx.Value(godogsCtxKey{}).([]uint64)
+		if !ok {
+			return errors.New("no u64 result available")
+		}
+		if !slices.Equal(expected.([]uint64), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "u128":
+		result, ok := ctx.Value(godogsCtxKey{}).([]*big.Int)
+		if !ok {
+			return errors.New("no u128 result available")
+		}
+		expectedInts := expected.([]*big.Int)
+		if len(expectedInts) != len(result) {
+			return fmt.Errorf("expected %v, but received %v", expectedInts, result)
+		}
+		for i, expectedInt := range expectedInts {
+			if expectedInt.Cmp(result[i]) != 0 {
+				return fmt.Errorf("expected %v, but received %v", expectedInt, result[i])
+			}
+		}
+	case "u256":
+		result, ok := ctx.Value(godogsCtxKey{}).([]*big.Int)
+		if !ok {
+			return errors.New("no u256 result available")
+		}
+		expectedInts := expected.([]*big.Int)
+		if len(expectedInts) != len(result) {
+			return fmt.Errorf("expected %v, but received %v", expectedInts, result)
+		}
+		for i, expectedInt := range expectedInts {
+			if expectedInt.Cmp(result[i]) != 0 {
+				return fmt.Errorf("expected %v, but received %v", expectedInt, result[i])
+			}
+		}
+	case "uleb128":
+		result, ok := ctx.Value(godogsCtxKey{}).([]uint32)
+		if !ok {
+			return errors.New("no uleb128 result available")
+		}
+		if !slices.Equal(expected.([]uint32), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	case "string":
+		result, ok := ctx.Value(godogsCtxKey{}).([]string)
+		if !ok {
+			return errors.New("no string result available")
+		}
+		if !slices.Equal(expected.([]string), result) {
+			return fmt.Errorf("expected %v, but received %v", expected, result)
+		}
+	default:
+		return fmt.Errorf("unsupported sequence item type %s", itemType)
+	}
+
+	return nil
+}
+
+func failResult(ctx context.Context) error {
+	_, ok := ctx.Value(godogsCtxKey{}).(error)
+	if !ok {
+		return errors.New("no error available")
+	}
+
+	// TODO: add optional error message check
+	return nil
+}
+
+func TestFeatures(t *testing.T) {
+	suite := godog.TestSuite{
+		ScenarioInitializer: InitializeScenario,
+		Options: &godog.Options{
+			Format:   "pretty",
+			Paths:    []string{"features"},
+			TestingT: t, // Testing instance that will run subtests.
 		},
-		{
-			0x01,
-			0x01,
-			0x01, 0x00,
-			0x01, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-			0x03, 0x01, 0x00, 0x00,
-		},
-	}
-	expectedSequenceBytes := []uint8{uint8(len(expectedBytes))}
-
-	for _, expected := range expectedBytes {
-		expectedSequenceBytes = append(expectedSequenceBytes, expected...)
-	}
-	inputs := []testStruct{
-		{
-			bool:    false,
-			u8:      1,
-			u16:     1,
-			u32:     1,
-			u64:     1,
-			u128:    *big.NewInt(1),
-			u256:    *big.NewInt(1),
-			address: &AccountOne,
-			bytes:   []byte{0x01, 0x00, 0x00},
-		},
-		{
-			bool:    true,
-			u8:      1,
-			u16:     1,
-			u32:     1,
-			u64:     1,
-			u128:    *big.NewInt(1),
-			u256:    *big.NewInt(1),
-			address: &AccountOne,
-			bytes:   []byte{0x01, 0x00, 0x00},
-		},
 	}
 
-	// It must be able to serialize structs
-	for i, input := range inputs {
-		t.Run(fmt.Sprintf("Serialize %d", i), func(t *testing.T) {
-			serialized, err := bcs.Serialize(&input)
-			assert.NoError(t, err)
-			assert.Equal(t, expectedBytes[i], serialized)
-		})
+	if suite.Run() != 0 {
+		t.Fatal("non-zero status returned, failed to run feature tests")
 	}
-
-	// It must be able to deserialize structs
-	for i, bytes := range expectedBytes {
-		t.Run(fmt.Sprintf("Deserialize %d", i), func(t *testing.T) {
-			deserialized := testStruct{}
-			err := bcs.Deserialize(&deserialized, bytes)
-			assert.NoError(t, err)
-			assert.Equal(t, inputs[i], deserialized)
-		})
-	}
-
-	// It must be able to serialize struct sequences
-	serializedSequence, err := bcs.SerializeSequenceOnly(inputs)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedSequenceBytes, serializedSequence)
-
-	// It must be able to deserialize struct sequences
-	des := bcs.NewDeserializer(expectedSequenceBytes)
-	deserializedSequence := bcs.DeserializeSequence[testStruct](des)
-	assert.NoError(t, des.Error())
-	assert.Equal(t, 0, des.Remaining())
-	assert.Equal(t, inputs, deserializedSequence)
-
-	// It must not succeed if there are not enough bytes to deserialize
-	des = bcs.NewDeserializer([]uint8{})
-	des.ReadString()
-	assert.Error(t, des.Error())
-
-	// It must allow custom error handling for structs
-	des = bcs.NewDeserializer([]uint8{
-		0x00,
-		0x01,
-		0x01, 0x00,
-		0x01, 0x00, 0x00, 0x00,
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-		0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01,
-		0x00,
-	})
-	deserialized := testStruct{}
-	des.Struct(&deserialized)
-	assert.Error(t, des.Error())
 }
 
-// Take the expected and flip it, since big ints are stored big-endian
-func bytesToBigInt(bytes []byte, numBits int) *big.Int {
-	input := make([]byte, numBits)
-	copy(input, bytes)
-	slices.Reverse(input)
-	val := &big.Int{}
-	val.SetBytes(input)
-	return val
+func InitializeScenario(sc *godog.ScenarioContext) {
+	sc.Given(`^address (0x[0-9a-fA-F]+)$`, givenAddress)
+	sc.Given(`^bool (true|false)$`, givenBoolean)
+	sc.Given(`^u8 (\d+)$`, givenU8)
+	sc.Given(`^u16 (\d+)$`, givenU16)
+	sc.Given(`^u32 (\d+)$`, givenU32)
+	sc.Given(`^u64 (\d+)$`, givenU64)
+	sc.Given(`^u128 (\d+)$`, givenU128)
+	sc.Given(`^u256 (\d+)$`, givenU256)
+	sc.Given(`^bytes (0x[0-9a-fA-F]*)$`, givenBytes)
+	sc.Given(`^string "(.*)"$`, givenString)
+	sc.Given(`^sequence of ([0-9a-zA-Z]+) \[(.*)\]$`, givenSequence)
+	sc.Given(`^struct of \[(.+)\]$`, givenStruct)
+
+	sc.When(`^I serialize as address$`, serializeAddress)
+	sc.When(`^I serialize as bool$`, serializeBool)
+	sc.When(`^I serialize as u8$`, serializeU8)
+	sc.When(`^I serialize as u16$`, serializeU16)
+	sc.When(`^I serialize as u32$`, serializeU32)
+	sc.When(`^I serialize as u64$`, serializeU64)
+	sc.When(`^I serialize as u128$`, serializeU128)
+	sc.When(`^I serialize as u256$`, serializeU256)
+	sc.When(`^I serialize as uleb128$`, serializeUleb128)
+	sc.When(`^I serialize as fixed bytes with length (\d+)$`, serializeFixedBytes)
+	sc.When(`^I serialize as bytes$`, serializeBytes)
+	sc.When(`^I serialize as string$`, serializeString)
+	sc.When(`^I serialize as sequence of ([0-9a-zA-Z]+)$`, serializeSequence)
+
+	sc.When(`^I deserialize as address$`, deserializeAddress)
+	sc.When(`^I deserialize as bool$`, deserializeBool)
+	sc.When(`^I deserialize as u8$`, deserializeU8)
+	sc.When(`^I deserialize as u16$`, deserializeU16)
+	sc.When(`^I deserialize as u32$`, deserializeU32)
+	sc.When(`^I deserialize as u64$`, deserializeU64)
+	sc.When(`^I deserialize as u128$`, deserializeU128)
+	sc.When(`^I deserialize as u256$`, deserializeU256)
+	sc.When(`^I deserialize as uleb128$`, deserializeUleb128)
+	sc.When(`^I deserialize as fixed bytes with length (\d+)$`, deserializeFixedBytes)
+	sc.When(`^I deserialize as bytes$`, deserializeBytes)
+	sc.When(`^I deserialize as string$`, deserializeString)
+	sc.When(`^I deserialize as sequence of ([0-9a-zA-Z]+)$`, deserializeSequence)
+
+	sc.Then(`^the result should be address (0x[0-9a-fA-F]+)$`, addressResult)
+	sc.Then(`^the result should be bool (true|false)$`, boolResult)
+	sc.Then(`^the result should be u8 (\d+)$`, u8Result)
+	sc.Then(`^the result should be u16 (\d+)$`, u16Result)
+	sc.Then(`^the result should be u32 (\d+)$`, u32Result)
+	sc.Then(`^the result should be u64 (\d+)$`, u64Result)
+	sc.Then(`^the result should be u128 (\d+)$`, u128Result)
+	sc.Then(`^the result should be u256 (\d+)$`, u256Result)
+	sc.Then(`^the result should be bytes (0x[0-9a-fA-F]*)`, bytesResult)
+	sc.Then(`^the result should be string "(.*)"$`, stringResult)
+	sc.Then(`^the result should be sequence of ([0-9a-zA-Z]+) \[(.*)\]$`, sequenceResult)
+	sc.Then(`^the deserialization should fail$`, failResult)
 }
