@@ -3,9 +3,10 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 // AccountAddress a 32-byte representation of an on-chain address

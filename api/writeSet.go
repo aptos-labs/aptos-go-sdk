@@ -2,7 +2,8 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
 // WriteSetVariant is the type of [WriteSet]

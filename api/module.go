@@ -1,7 +1,7 @@
 package api
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
 // MoveBytecode describes a module, or script, and it's associated ABI as a [MoveModule]

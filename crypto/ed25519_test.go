@@ -2,10 +2,11 @@ package crypto
 
 import (
 	"crypto/ed25519"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/util"
+	"github.com/stretchr/testify/assert"
 )
 
 const testEd25519PrivateKey = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"

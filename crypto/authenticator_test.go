@@ -2,10 +2,11 @@ package crypto
 
 import (
 	"crypto/ed25519"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/util"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAuthenticationKey_FromPublicKey(t *testing.T) {

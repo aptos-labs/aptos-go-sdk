@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/types"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestWriteSet_WriteModule(t *testing.T) {
