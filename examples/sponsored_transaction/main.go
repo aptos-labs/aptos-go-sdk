@@ -4,7 +4,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
@@ -12,23 +11,23 @@ const FundAmount = 100_000_000
 const TransferAmount = 1_000
 
 // example This example shows you how to make an APT transfer transaction in the simplest possible way
-func example(networkConfig aptos.NetworkConfig) {
+func example(networkConfig types.NetworkConfig) {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(networkConfig)
+	client, err := types.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 
 	// Create accounts locally for alice and bob
-	alice, err := aptos.NewEd25519Account()
+	alice, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create alice:" + err.Error())
 	}
-	bob, err := aptos.NewEd25519Account()
+	bob, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create bob:" + err.Error())
 	}
-	sponsor, err := aptos.NewEd25519Account()
+	sponsor, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sponsor:" + err.Error())
 	}
@@ -68,16 +67,16 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Sponsor: %d\n", sponsorBalance)
 
 	// Build transaction
-	transferPayload, err := aptos.CoinTransferPayload(&aptos.AptosCoinTypeTag, bob.Address, TransferAmount)
+	transferPayload, err := types.CoinTransferPayload(&types.AptosCoinTypeTag, bob.Address, TransferAmount)
 	if err != nil {
 		panic("Failed to build transfer payload:" + err.Error())
 	}
 	rawTxn, err := client.BuildTransactionMultiAgent(
 		alice.Address,
-		aptos.TransactionPayload{
+		types.TransactionPayload{
 			Payload: transferPayload,
 		},
-		aptos.FeePayer(&sponsor.Address),
+		types.FeePayer(&sponsor.Address),
 	)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
@@ -136,10 +135,10 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	rawTxn, err = client.BuildTransactionMultiAgent(
 		alice.Address,
-		aptos.TransactionPayload{
+		types.TransactionPayload{
 			Payload: transferPayload,
 		},
-		aptos.FeePayer(&aptos.AccountZero), // Note that the Address is 0x0, because we don't know the signer
+		types.FeePayer(&types.AccountZero), // Note that the Address is 0x0, because we don't know the signer
 	)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
@@ -204,5 +203,5 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(types.DevnetConfig)
 }

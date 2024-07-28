@@ -4,27 +4,28 @@ package main
 import (
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/client"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
 const FundAmount = 100_000_000
 const TransferAmount = 1_000
 
 // example This example shows you how to make an APT transfer transaction in the simplest possible way
-func example(networkConfig aptos.NetworkConfig) {
+func example(networkConfig client.NetworkConfig) {
 	// Create a client for Aptos
-	client, err := aptos.NewClient(networkConfig)
+	aptosClient, err := client.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 
 	// Create accounts locally for alice and bob
-	alice, err := aptos.NewEd25519Account()
+	alice, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create alice:" + err.Error())
 	}
-	bob, err := aptos.NewEd25519Account()
+	bob, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create bob:" + err.Error())
 	}
@@ -34,16 +35,16 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%s\n", bob.Address.String())
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(alice.Address, FundAmount)
+	err = aptosClient.Fund(alice.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund alice:" + err.Error())
 	}
 
-	aliceBalance, err := client.AccountAPTBalance(alice.Address)
+	aliceBalance, err := aptosClient.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err := client.AccountAPTBalance(bob.Address)
+	bobBalance, err := aptosClient.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -52,7 +53,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%d\n", bobBalance)
 
 	// Build transaction
-	rawTxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, TransferAmount)
+	rawTxn, err := client.APTTransferTransaction(aptosClient, alice, bob.Address, TransferAmount)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
@@ -64,22 +65,22 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Submit and wait for it to complete
-	submitResult, err := client.SubmitTransaction(signedTxn)
+	submitResult, err := aptosClient.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
 	// Wait for the transaction
-	_, err = client.WaitForTransaction(txnHash)
+	_, err = aptosClient.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	aliceBalance, err = client.AccountAPTBalance(alice.Address)
+	aliceBalance, err = aptosClient.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(bob.Address)
+	bobBalance, err = aptosClient.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -98,14 +99,14 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
 
-	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
-		Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
+	resp, err := aptosClient.BuildSignAndSubmitTransaction(alice, types.TransactionPayload{
+		Payload: &types.EntryFunction{
+			Module: types.ModuleId{
+				Address: types.AccountOne,
 				Name:    "aptos_account",
 			},
 			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
+			ArgTypes: []types.TypeTag{},
 			Args: [][]byte{
 				accountBytes,
 				amountBytes,
@@ -116,16 +117,16 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to sign transaction:" + err.Error())
 	}
 
-	_, err = client.WaitForTransaction(resp.Hash)
+	_, err = aptosClient.WaitForTransaction(resp.Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 
-	aliceBalance, err = client.AccountAPTBalance(alice.Address)
+	aliceBalance, err = aptosClient.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(bob.Address)
+	bobBalance, err = aptosClient.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -135,5 +136,5 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(client.DevnetConfig)
 }

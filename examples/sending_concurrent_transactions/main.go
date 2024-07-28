@@ -2,18 +2,18 @@
 package main
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/api"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/api"
 )
 
-func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {
-	client, err := aptos.NewClient(networkConfig)
+func setup(networkConfig types.NetworkConfig) (*types.Client, types.TransactionSigner) {
+	client, err := types.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 
-	sender, err := aptos.NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -26,21 +26,21 @@ func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionS
 	return client, sender
 }
 
-func payload() aptos.TransactionPayload {
-	receiver := aptos.AccountAddress{}
+func payload() types.TransactionPayload {
+	receiver := types.AccountAddress{}
 	err := receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
 	}
 	amount := uint64(100)
-	p, err := aptos.CoinTransferPayload(nil, receiver, amount)
+	p, err := types.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
-	return aptos.TransactionPayload{Payload: p}
+	return types.TransactionPayload{Payload: p}
 }
 
-func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransactions uint64) {
+func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransactions uint64) {
 	client, sender := setup(networkConfig)
 
 	responses := make([]*api.SubmitTransactionResponse, numTransactions)
@@ -49,7 +49,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
 	for i := uint64(0); i < numTransactions; i++ {
-		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
+		rawTxn, err := client.BuildTransaction(senderAddress, payload, types.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
 		}
@@ -77,21 +77,21 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	}
 }
 
-func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTransactions uint64) {
+func sendManyTransactionsConcurrently(networkConfig types.NetworkConfig, numTransactions uint64) {
 	client, sender := setup(networkConfig)
 	payload := payload()
 
 	// start submission goroutine
-	payloads := make(chan aptos.TransactionBuildPayload, 50)
-	results := make(chan aptos.TransactionSubmissionResponse, 50)
+	payloads := make(chan types.TransactionBuildPayload, 50)
+	results := make(chan types.TransactionSubmissionResponse, 50)
 	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
 
 	// Submit transactions to goroutine
 	go func() {
 		for i := uint64(0); i < numTransactions; i++ {
-			payloads <- aptos.TransactionBuildPayload{
+			payloads <- types.TransactionBuildPayload{
 				Id:    i,
-				Type:  aptos.TransactionSubmissionTypeSingle,
+				Type:  types.TransactionSubmissionTypeSingle,
 				Inner: payload,
 			}
 		}
@@ -109,7 +109,7 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTran
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig aptos.NetworkConfig, numTransactions uint64) {
+func example(networkConfig types.NetworkConfig, numTransactions uint64) {
 	println("Sending", numTransactions, "transactions Serially")
 	startSerial := time.Now()
 	sendManyTransactionsSerially(networkConfig, numTransactions)
@@ -126,5 +126,5 @@ func example(networkConfig aptos.NetworkConfig, numTransactions uint64) {
 }
 
 func main() {
-	example(aptos.DevnetConfig, 100)
+	example(types.DevnetConfig, 100)
 }

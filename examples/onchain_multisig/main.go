@@ -4,28 +4,30 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk"
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"time"
+	"github.com/aptos-labs/aptos-go-sdk/client"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
 const TransferAmount = uint64(1_000_000)
 
-func example(networkConfig aptos.NetworkConfig) {
-	client, err := aptos.NewClient(networkConfig)
+func example(networkConfig client.NetworkConfig) {
+	aptosClient, err := client.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client " + err.Error())
 	}
 
-	recipient, err := aptos.NewEd25519Account()
+	recipient, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create recipient " + err.Error())
 	}
 	accounts := generateOwnerAccounts()
 
 	// Fund owners
-	fundAccounts(client, []*aptos.AccountAddress{
+	fundAccounts(aptosClient, []*types.AccountAddress{
 		&accounts[0].Address,
 		&accounts[1].Address,
 		&accounts[2].Address,
@@ -34,47 +36,47 @@ func example(networkConfig aptos.NetworkConfig) {
 	println(accounts[1].Address.String())
 	println(accounts[2].Address.String())
 
-	multisigAddress := setUpMultisig(client, accounts)
+	multisigAddress := setUpMultisig(aptosClient, accounts)
 
 	// Fund multisig
 	println("Funding the multisig account...")
-	fundAccounts(client, []*aptos.AccountAddress{multisigAddress})
+	fundAccounts(aptosClient, []*types.AccountAddress{multisigAddress})
 
 	// Run through flow with the full payload
 	println("Creating a multisig transaction to transfer coins...")
-	payload := createMultisigTransferTransaction(client, accounts[1], *multisigAddress, recipient.Address)
+	payload := createMultisigTransferTransaction(aptosClient, accounts[1], *multisigAddress, recipient.Address)
 	println("Owner 1 rejects but owner 3 approves.")
-	rejectAndApprove(client, *multisigAddress, accounts[0], accounts[2], 1)
+	rejectAndApprove(aptosClient, *multisigAddress, accounts[0], accounts[2], 1)
 	println("Owner 2 can now execute the transfer transaction as it already has 2 approvals (from owners 2 and 3).")
-	executeTransaction(client, *multisigAddress, accounts[1], payload)
+	executeTransaction(aptosClient, *multisigAddress, accounts[1], payload)
 
 	// Check balance of recipient, should be 1_000_000
-	assertBalance(client, recipient.Address, TransferAmount)
+	assertBalance(aptosClient, recipient.Address, TransferAmount)
 	println("Recipient's balance after transfer 1000000")
 
 	// Run through flow with the full just a transaction hash
 	println("Creating another multisig transaction using payload hash...")
-	payload = createMultisigTransferTransactionWithHash(client, accounts[1], *multisigAddress, recipient.Address)
+	payload = createMultisigTransferTransactionWithHash(aptosClient, accounts[1], *multisigAddress, recipient.Address)
 	println("Owner 3 rejects but owner 1 approves.")
-	rejectAndApprove(client, *multisigAddress, accounts[2], accounts[0], 2)
+	rejectAndApprove(aptosClient, *multisigAddress, accounts[2], accounts[0], 2)
 	println("Owner 1 can now execute the transfer with hash transaction as it already has 2 approvals (from owners 1 and 2).")
-	executeTransaction(client, *multisigAddress, accounts[0], payload)
+	executeTransaction(aptosClient, *multisigAddress, accounts[0], payload)
 
 	// Check balance of recipient, should be 2_000_000
-	assertBalance(client, recipient.Address, TransferAmount*2)
+	assertBalance(aptosClient, recipient.Address, TransferAmount*2)
 	println("Recipient's balance after transfer 2000000")
 
 	// Add an owner
 	println("Adding an owner to the multisig account...")
-	payload = addOwnerTransaction(client, accounts[1], *multisigAddress, recipient.Address)
+	payload = addOwnerTransaction(aptosClient, accounts[1], *multisigAddress, recipient.Address)
 	println("Owner 1 rejects but owner 3 approves.")
-	rejectAndApprove(client, *multisigAddress, accounts[0], accounts[2], 3)
+	rejectAndApprove(aptosClient, *multisigAddress, accounts[0], accounts[2], 3)
 	println("Owner 2 can now execute the adding an owner transaction as it already has 2 approvals (from owners 1 and 3).")
-	userTxn := executeTransaction(client, *multisigAddress, accounts[1], payload)
+	userTxn := executeTransaction(aptosClient, *multisigAddress, accounts[1], payload)
 
 	time.Sleep(time.Second)
 
-	_, owners := multisigResource(client, multisigAddress)
+	_, owners := multisigResource(aptosClient, multisigAddress)
 	println("Number of Owners:", len(owners))
 
 	if len(owners) != 4 {
@@ -83,13 +85,13 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Remove an owner
 	println("Removing an owner from the multisig account...")
-	payload = removeOwnerTransaction(client, accounts[1], *multisigAddress, recipient.Address)
+	payload = removeOwnerTransaction(aptosClient, accounts[1], *multisigAddress, recipient.Address)
 	println("Owner 1 rejects but owner 3 approves.")
-	rejectAndApprove(client, *multisigAddress, accounts[0], accounts[2], 4)
+	rejectAndApprove(aptosClient, *multisigAddress, accounts[0], accounts[2], 4)
 	println("Owner 2 can now execute the removing an owner transaction as it already has 2 approvals (from owners 2 and 3).")
-	userTxn = executeTransaction(client, *multisigAddress, accounts[1], payload)
+	userTxn = executeTransaction(aptosClient, *multisigAddress, accounts[1], payload)
 
-	_, owners = multisigResource(client, multisigAddress)
+	_, owners = multisigResource(aptosClient, multisigAddress)
 	println("Number of Owners:", len(owners))
 	if len(owners) != 3 {
 		panic(fmt.Sprintf("Expected 3 owners got %d txn %s", len(owners), userTxn.Hash))
@@ -97,13 +99,13 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Change threshold
 	println("Changing the signature threshold to 3-of-3...")
-	payload = changeThresholdTransaction(client, accounts[1], *multisigAddress, 3)
+	payload = changeThresholdTransaction(aptosClient, accounts[1], *multisigAddress, 3)
 	println("Owner 1 rejects but owner 3 approves.")
-	rejectAndApprove(client, *multisigAddress, accounts[0], accounts[2], 5)
+	rejectAndApprove(aptosClient, *multisigAddress, accounts[0], accounts[2], 5)
 	println("Owner 2 can now execute the change signature threshold transaction as it already has 2 approvals (from owners 2 and 3).")
-	userTxn = executeTransaction(client, *multisigAddress, accounts[1], payload)
+	userTxn = executeTransaction(aptosClient, *multisigAddress, accounts[1], payload)
 
-	threshold, _ := multisigResource(client, multisigAddress)
+	threshold, _ := multisigResource(aptosClient, multisigAddress)
 	println("Signature Threshold: ", threshold)
 	if threshold != 3 {
 		panic(fmt.Sprintf("Expected 3-of-3 owners got %d-of-3 txn %s", threshold, userTxn.Hash))
@@ -111,7 +113,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Multisig setup and transactions complete.")
 }
 
-func assertBalance(client *aptos.Client, address aptos.AccountAddress, expectedBalance uint64) {
+func assertBalance(client *client.Client, address types.AccountAddress, expectedBalance uint64) {
 	amount, err := client.AccountAPTBalance(address)
 	if err != nil {
 		panic("failed to get balance: " + err.Error())
@@ -121,10 +123,10 @@ func assertBalance(client *aptos.Client, address aptos.AccountAddress, expectedB
 	}
 }
 
-func generateOwnerAccounts() []*aptos.Account {
-	accounts := make([]*aptos.Account, 3)
+func generateOwnerAccounts() []*types.Account {
+	accounts := make([]*types.Account, 3)
 	for i := 0; i < 3; i++ {
-		account, err := aptos.NewEd25519Account()
+		account, err := types.NewEd25519Account()
 		if err != nil {
 			panic("Failed to create account " + err.Error())
 		}
@@ -133,7 +135,7 @@ func generateOwnerAccounts() []*aptos.Account {
 	return accounts
 }
 
-func fundAccounts(client *aptos.Client, accounts []*aptos.AccountAddress) {
+func fundAccounts(client *client.Client, accounts []*types.AccountAddress) {
 	for _, account := range accounts {
 		err := client.Fund(*account, 100_000_000)
 		if err != nil {
@@ -142,7 +144,7 @@ func fundAccounts(client *aptos.Client, accounts []*aptos.AccountAddress) {
 	}
 }
 
-func setUpMultisig(client *aptos.Client, accounts []*aptos.Account) *aptos.AccountAddress {
+func setUpMultisig(client *client.Client, accounts []*types.Account) *types.AccountAddress {
 	println("Setting up a 2-of-3 multisig account...")
 
 	// Step 1: Set up a 2-of-3 multisig account
@@ -155,7 +157,7 @@ func setUpMultisig(client *aptos.Client, accounts []*aptos.Account) *aptos.Accou
 	}
 
 	// Create the multisig account with 3 owners and a signature threshold of 2.
-	createMultisig(client, accounts[0], []aptos.AccountAddress{accounts[1].Address, accounts[2].Address})
+	createMultisig(client, accounts[0], []types.AccountAddress{accounts[1].Address, accounts[2].Address})
 	println("Multisig Account Address:", multisigAddress.String())
 
 	// should be 2
@@ -168,7 +170,7 @@ func setUpMultisig(client *aptos.Client, accounts []*aptos.Account) *aptos.Accou
 	return multisigAddress
 }
 
-func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddresses []aptos.AccountAddress) {
+func createMultisig(client *client.Client, account *types.Account, additionalAddresses []types.AccountAddress) {
 	// TODO: Ideally, this would not be done, and the payload function would take an array of items to serialize
 	metadataValue, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
 		bcs.SerializeSequenceWithFunction([]string{"example"}, ser, func(ser *bcs.Serializer, item string) {
@@ -178,7 +180,7 @@ func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddr
 	if err != nil {
 		panic("Failed to serialize metadata value" + err.Error())
 	}
-	payload, err := aptos.MultisigCreateAccountPayload(
+	payload, err := types.MultisigCreateAccountPayload(
 		2,                   // Required signers
 		additionalAddresses, // Other owners
 		[]string{"example"}, // Metadata keys
@@ -192,7 +194,7 @@ func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddr
 }
 
 // TODO: This should be a view function
-func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddress) (uint64, []any) {
+func multisigResource(client *client.Client, multisigAddress *types.AccountAddress) (uint64, []any) {
 	resource, err := client.AccountResource(*multisigAddress, "0x1::multisig_account::MultisigAccount")
 	if err != nil {
 		panic("Failed to get resource for multisig account: " + err.Error())
@@ -202,7 +204,7 @@ func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddres
 
 	numSigsRequiredStr := resourceData["num_signatures_required"].(string)
 
-	numSigsRequired, err := aptos.StrToUint64(numSigsRequiredStr)
+	numSigsRequired, err := types.StrToUint64(numSigsRequiredStr)
 	if err != nil {
 		panic("Failed to convert string to u64: " + err.Error())
 	}
@@ -211,18 +213,18 @@ func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddres
 	return numSigsRequired, ownersArray
 }
 
-func createMultisigTransferTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, recipient aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.CoinTransferPayload(nil, recipient, TransferAmount)
+func createMultisigTransferTransaction(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, recipient types.AccountAddress) *types.MultisigTransactionPayload {
+	entryFunctionPayload, err := types.CoinTransferPayload(nil, recipient, TransferAmount)
 	if err != nil {
 		panic("Failed to create payload for multisig transfer: " + err.Error())
 	}
 
-	multisigPayload := &aptos.MultisigTransactionPayload{
-		Variant: aptos.MultisigTransactionPayloadVariantEntryFunction,
+	multisigPayload := &types.MultisigTransactionPayload{
+		Variant: types.MultisigTransactionPayloadVariantEntryFunction,
 		Payload: entryFunctionPayload,
 	}
 
-	createTransactionPayload, err := aptos.MultisigCreateTransactionPayload(multisigAddress, multisigPayload)
+	createTransactionPayload, err := types.MultisigCreateTransactionPayload(multisigAddress, multisigPayload)
 	if err != nil {
 		panic("Failed to create payload to create transaction for multisig transfer: " + err.Error())
 	}
@@ -232,8 +234,8 @@ func createMultisigTransferTransaction(client *aptos.Client, sender *aptos.Accou
 	return multisigPayload
 }
 
-func createMultisigTransferTransactionWithHash(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, recipient aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.CoinTransferPayload(nil, recipient, 1_000_000)
+func createMultisigTransferTransactionWithHash(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, recipient types.AccountAddress) *types.MultisigTransactionPayload {
+	entryFunctionPayload, err := types.CoinTransferPayload(nil, recipient, 1_000_000)
 	if err != nil {
 		panic("Failed to create payload for multisig transfer: " + err.Error())
 	}
@@ -241,18 +243,18 @@ func createMultisigTransferTransactionWithHash(client *aptos.Client, sender *apt
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
-func addOwnerTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, newOwner aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload := aptos.MultisigAddOwnerPayload(newOwner)
+func addOwnerTransaction(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, newOwner types.AccountAddress) *types.MultisigTransactionPayload {
+	entryFunctionPayload := types.MultisigAddOwnerPayload(newOwner)
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
-func removeOwnerTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, removedOwner aptos.AccountAddress) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload := aptos.MultisigRemoveOwnerPayload(removedOwner)
+func removeOwnerTransaction(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, removedOwner types.AccountAddress) *types.MultisigTransactionPayload {
+	entryFunctionPayload := types.MultisigRemoveOwnerPayload(removedOwner)
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
-func changeThresholdTransaction(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, numSignaturesRequired uint64) *aptos.MultisigTransactionPayload {
-	entryFunctionPayload, err := aptos.MultisigChangeThresholdPayload(numSignaturesRequired)
+func changeThresholdTransaction(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, numSignaturesRequired uint64) *types.MultisigTransactionPayload {
+	entryFunctionPayload, err := types.MultisigChangeThresholdPayload(numSignaturesRequired)
 	if err != nil {
 		panic("Failed to create payload for multisig remove owner: " + err.Error())
 	}
@@ -260,13 +262,13 @@ func changeThresholdTransaction(client *aptos.Client, sender *aptos.Account, mul
 	return createTransactionPayloadCommon(client, sender, multisigAddress, entryFunctionPayload)
 }
 
-func createTransactionPayloadCommon(client *aptos.Client, sender *aptos.Account, multisigAddress aptos.AccountAddress, entryFunctionPayload *aptos.EntryFunction) *aptos.MultisigTransactionPayload {
-	multisigPayload := &aptos.MultisigTransactionPayload{
-		Variant: aptos.MultisigTransactionPayloadVariantEntryFunction,
+func createTransactionPayloadCommon(client *client.Client, sender *types.Account, multisigAddress types.AccountAddress, entryFunctionPayload *types.EntryFunction) *types.MultisigTransactionPayload {
+	multisigPayload := &types.MultisigTransactionPayload{
+		Variant: types.MultisigTransactionPayloadVariantEntryFunction,
 		Payload: entryFunctionPayload,
 	}
 
-	createTransactionPayload, err := aptos.MultisigCreateTransactionPayloadWithHash(multisigAddress, multisigPayload)
+	createTransactionPayload, err := types.MultisigCreateTransactionPayloadWithHash(multisigAddress, multisigPayload)
 	if err != nil {
 		panic("Failed to create payload to create transaction for multisig: " + err.Error())
 	}
@@ -276,14 +278,14 @@ func createTransactionPayloadCommon(client *aptos.Client, sender *aptos.Account,
 	return multisigPayload
 }
 
-func rejectAndApprove(client *aptos.Client, multisigAddress aptos.AccountAddress, rejector *aptos.Account, approver *aptos.Account, transactionId uint64) {
-	rejectPayload, err := aptos.MultisigRejectPayload(multisigAddress, transactionId)
+func rejectAndApprove(client *client.Client, multisigAddress types.AccountAddress, rejector *types.Account, approver *types.Account, transactionId uint64) {
+	rejectPayload, err := types.MultisigRejectPayload(multisigAddress, transactionId)
 	if err != nil {
 		panic("Failed to build reject transaction payload: " + err.Error())
 	}
 	submitAndWait(client, rejector, rejectPayload)
 
-	approvePayload, err := aptos.MultisigApprovePayload(multisigAddress, transactionId)
+	approvePayload, err := types.MultisigApprovePayload(multisigAddress, transactionId)
 	if err != nil {
 		panic("Failed to build approve transaction payload: " + err.Error())
 	}
@@ -291,16 +293,16 @@ func rejectAndApprove(client *aptos.Client, multisigAddress aptos.AccountAddress
 	submitAndWait(client, approver, approvePayload)
 }
 
-func executeTransaction(client *aptos.Client, multisigAddress aptos.AccountAddress, sender *aptos.Account, payload *aptos.MultisigTransactionPayload) *api.UserTransaction {
-	executionPayload := &aptos.Multisig{
+func executeTransaction(client *client.Client, multisigAddress types.AccountAddress, sender *types.Account, payload *types.MultisigTransactionPayload) *api.UserTransaction {
+	executionPayload := &types.Multisig{
 		MultisigAddress: multisigAddress,
 		Payload:         payload,
 	}
 	return submitAndWait(client, sender, executionPayload)
 }
 
-func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.TransactionPayloadImpl) *api.UserTransaction {
-	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, aptos.TransactionPayload{Payload: payload})
+func submitAndWait(client *client.Client, sender *types.Account, payload types.TransactionPayloadImpl) *api.UserTransaction {
+	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, types.TransactionPayload{Payload: payload})
 	if err != nil {
 		panic("Failed to submit transaction: " + err.Error())
 	}
@@ -327,5 +329,5 @@ func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.Tr
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(types.DevnetConfig)
 }

@@ -3,25 +3,24 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/aptos-labs/aptos-go-sdk"
 	"time"
 )
 
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig aptos.NetworkConfig) {
+func example(networkConfig types.NetworkConfig) {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(networkConfig)
+	client, err := types.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 	println("New client:    ", time.Since(before).Milliseconds(), "ms")
 
 	// Create a sender locally
-	sender, err := aptos.NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -38,7 +37,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	before = time.Now()
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := types.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
@@ -46,13 +45,13 @@ func example(networkConfig aptos.NetworkConfig) {
 	amount := uint64(100)
 
 	// Serialize arguments
-	payload, err := aptos.CoinTransferPayload(nil, receiver, amount)
+	payload, err := types.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
 
 	rawTxn, err := client.BuildTransaction(sender.Address,
-		aptos.TransactionPayload{Payload: payload}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
+		types.TransactionPayload{Payload: payload}, types.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
@@ -91,5 +90,5 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(types.DevnetConfig)
 }
