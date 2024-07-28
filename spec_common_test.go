@@ -1,6 +1,6 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/internal/util"
+import "github.com/aptos-labs/aptos-go-sdk/util"
 
 // TODO Add specific keys that must be deserialized and compared
 const Test64ByteHex = "0x1234123412341234123412341234123412341234123412341234123412341234"

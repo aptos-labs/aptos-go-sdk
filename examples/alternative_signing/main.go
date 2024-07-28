@@ -3,8 +3,10 @@ package main
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk"
+
+	"github.com/aptos-labs/aptos-go-sdk/client"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 	"golang.org/x/crypto/ed25519"
 )
 
@@ -71,8 +73,8 @@ func (signer *AlternativeSigner) AuthKey() *crypto.AuthenticationKey {
 	return authKey
 }
 
-func example(network aptos.NetworkConfig) {
-	client, err := aptos.NewClient(network)
+func example(network client.NetworkConfig) {
+	aptosClient, err := client.NewClient(network)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -84,17 +86,17 @@ func example(network aptos.NetworkConfig) {
 	}
 
 	// Create the sender from the key locally
-	sender, err := aptos.NewAccountFromSigner(signer)
+	sender, err := types.NewAccountFromSigner(signer)
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(sender.Address, 100_000_000)
+	err = aptosClient.Fund(sender.Address, 100_000_000)
 	fmt.Printf("We fund the signer account %s with the faucet\n", sender.Address.String())
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := types.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
@@ -102,7 +104,7 @@ func example(network aptos.NetworkConfig) {
 	amount := uint64(100)
 
 	// Build transaction
-	rawTxn, err := aptos.APTTransferTransaction(client, sender, receiver, amount)
+	rawTxn, err := client.APTTransferTransaction(aptosClient, sender, receiver, amount)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
@@ -115,7 +117,7 @@ func example(network aptos.NetworkConfig) {
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
 
 	// Submit and wait for it to complete
-	submitResult, err := client.SubmitTransaction(signedTxn)
+	submitResult, err := aptosClient.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -123,7 +125,7 @@ func example(network aptos.NetworkConfig) {
 
 	// Wait for the transaction
 	fmt.Printf("And we wait for the transaction %s to complete...\n", txnHash)
-	userTxn, err := client.WaitForTransaction(txnHash)
+	userTxn, err := aptosClient.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -132,5 +134,5 @@ func example(network aptos.NetworkConfig) {
 
 // main This example shows you how to make an alternative signer for the SDK, if you prefer a different library
 func main() {
-	example(aptos.DevnetConfig)
+	example(client.DevnetConfig)
 }

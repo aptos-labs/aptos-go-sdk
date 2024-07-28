@@ -3,8 +3,9 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
 )
 

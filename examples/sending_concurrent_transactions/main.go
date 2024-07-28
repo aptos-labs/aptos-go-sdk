@@ -2,46 +2,48 @@
 package main
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/api"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/client"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
-func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {
-	client, err := aptos.NewClient(networkConfig)
+func setup(networkConfig client.NetworkConfig) (*client.Client, types.TransactionSigner) {
+	aptosClient, err := client.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 
-	sender, err := aptos.NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
 
-	err = client.Fund(sender.Address, 100_000_000)
+	err = aptosClient.Fund(sender.Address, 100_000_000)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
 
-	return client, sender
+	return aptosClient, sender
 }
 
-func payload() aptos.TransactionPayload {
-	receiver := aptos.AccountAddress{}
+func payload() types.TransactionPayload {
+	receiver := types.AccountAddress{}
 	err := receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
 	}
 	amount := uint64(100)
-	p, err := aptos.CoinTransferPayload(nil, receiver, amount)
+	p, err := types.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
-	return aptos.TransactionPayload{Payload: p}
+	return types.TransactionPayload{Payload: p}
 }
 
-func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransactions uint64) {
-	client, sender := setup(networkConfig)
+func sendManyTransactionsSerially(networkConfig client.NetworkConfig, numTransactions uint64) {
+	aptosClient, sender := setup(networkConfig)
 
 	responses := make([]*api.SubmitTransactionResponse, numTransactions)
 	payload := payload()
@@ -49,7 +51,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
 	for i := uint64(0); i < numTransactions; i++ {
-		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
+		rawTxn, err := aptosClient.BuildTransaction(senderAddress, payload, client.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
 		}
@@ -59,7 +61,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 			panic("Failed to sign transaction:" + err.Error())
 		}
 
-		submitResult, err := client.SubmitTransaction(signedTxn)
+		submitResult, err := aptosClient.SubmitTransaction(signedTxn)
 		if err != nil {
 			panic("Failed to submit transaction:" + err.Error())
 		}
@@ -68,7 +70,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	}
 
 	// Wait on last transaction
-	response, err := client.WaitForTransaction(responses[numTransactions-1].Hash)
+	response, err := aptosClient.WaitForTransaction(responses[numTransactions-1].Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -77,21 +79,21 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	}
 }
 
-func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTransactions uint64) {
-	client, sender := setup(networkConfig)
+func sendManyTransactionsConcurrently(networkConfig client.NetworkConfig, numTransactions uint64) {
+	aptosClient, sender := setup(networkConfig)
 	payload := payload()
 
 	// start submission goroutine
-	payloads := make(chan aptos.TransactionBuildPayload, 50)
-	results := make(chan aptos.TransactionSubmissionResponse, 50)
-	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
+	payloads := make(chan client.TransactionBuildPayload, 50)
+	results := make(chan client.TransactionSubmissionResponse, 50)
+	go aptosClient.BuildSignAndSubmitTransactions(sender, payloads, results)
 
 	// Submit transactions to goroutine
 	go func() {
 		for i := uint64(0); i < numTransactions; i++ {
-			payloads <- aptos.TransactionBuildPayload{
+			payloads <- client.TransactionBuildPayload{
 				Id:    i,
-				Type:  aptos.TransactionSubmissionTypeSingle,
+				Type:  client.TransactionSubmissionTypeSingle,
 				Inner: payload,
 			}
 		}
@@ -109,7 +111,7 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTran
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig aptos.NetworkConfig, numTransactions uint64) {
+func example(networkConfig client.NetworkConfig, numTransactions uint64) {
 	println("Sending", numTransactions, "transactions Serially")
 	startSerial := time.Now()
 	sendManyTransactionsSerially(networkConfig, numTransactions)
@@ -126,5 +128,5 @@ func example(networkConfig aptos.NetworkConfig, numTransactions uint64) {
 }
 
 func main() {
-	example(aptos.DevnetConfig, 100)
+	example(client.DevnetConfig, 100)
 }

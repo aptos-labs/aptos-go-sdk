@@ -1,10 +1,11 @@
 package crypto
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/util"
+	"github.com/stretchr/testify/assert"
 )
 
 const (

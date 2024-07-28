@@ -2,11 +2,13 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"slices"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/types"
+	"github.com/stretchr/testify/assert"
 )
 
 type testStruct struct {
@@ -17,7 +19,7 @@ type testStruct struct {
 	u64     uint64
 	u128    big.Int
 	u256    big.Int
-	address *AccountAddress
+	address *types.AccountAddress
 	bytes   []byte
 }
 
@@ -41,7 +43,7 @@ func (st *testStruct) UnmarshalBCS(des *bcs.Deserializer) {
 	st.u64 = des.U64()
 	st.u128 = des.U128()
 	st.u256 = des.U256()
-	st.address = &AccountAddress{}
+	st.address = &types.AccountAddress{}
 	des.Struct(st.address)
 	st.bytes = des.ReadBytes()
 	// Custom error
@@ -732,7 +734,7 @@ func Test_Spec_BCS_Struct(t *testing.T) {
 			u64:     1,
 			u128:    *big.NewInt(1),
 			u256:    *big.NewInt(1),
-			address: &AccountOne,
+			address: &types.AccountOne,
 			bytes:   []byte{0x01, 0x00, 0x00},
 		},
 		{
@@ -743,7 +745,7 @@ func Test_Spec_BCS_Struct(t *testing.T) {
 			u64:     1,
 			u128:    *big.NewInt(1),
 			u256:    *big.NewInt(1),
-			address: &AccountOne,
+			address: &types.AccountOne,
 			bytes:   []byte{0x01, 0x00, 0x00},
 		},
 	}

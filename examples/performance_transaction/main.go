@@ -3,25 +3,27 @@ package main
 
 import (
 	"encoding/json"
-	"github.com/aptos-labs/aptos-go-sdk"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/client"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig aptos.NetworkConfig) {
+func example(networkConfig client.NetworkConfig) {
 	start := time.Now()
 	before := time.Now()
 	// Create a client for Aptos
-	client, err := aptos.NewClient(networkConfig)
+	aptosClient, err := client.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
 	println("New client:    ", time.Since(before).Milliseconds(), "ms")
 
 	// Create a sender locally
-	sender, err := aptos.NewEd25519Account()
+	sender, err := types.NewEd25519Account()
 	if err != nil {
 		panic("Failed to create sender:" + err.Error())
 	}
@@ -31,14 +33,14 @@ func example(networkConfig aptos.NetworkConfig) {
 	before = time.Now()
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(sender.Address, 100_000_000)
+	err = aptosClient.Fund(sender.Address, 100_000_000)
 
 	println("Fund sender:", time.Since(before).Milliseconds(), "ms")
 
 	before = time.Now()
 
 	// Prep arguments
-	receiver := aptos.AccountAddress{}
+	receiver := types.AccountAddress{}
 	err = receiver.ParseStringRelaxed("0xBEEF")
 	if err != nil {
 		panic("Failed to parse address:" + err.Error())
@@ -46,13 +48,13 @@ func example(networkConfig aptos.NetworkConfig) {
 	amount := uint64(100)
 
 	// Serialize arguments
-	payload, err := aptos.CoinTransferPayload(nil, receiver, amount)
+	payload, err := types.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
 
-	rawTxn, err := client.BuildTransaction(sender.Address,
-		aptos.TransactionPayload{Payload: payload}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
+	rawTxn, err := aptosClient.BuildTransaction(sender.Address,
+		types.TransactionPayload{Payload: payload}, client.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
@@ -70,7 +72,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Sign transaction:", time.Since(before).Milliseconds(), "ms")
 
 	before = time.Now()
-	submitResult, err := client.SubmitTransaction(signedTxn)
+	submitResult, err := aptosClient.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -79,7 +81,7 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Wait for the transaction
 	before = time.Now()
-	txn, err := client.WaitForTransaction(txnHash)
+	txn, err := aptosClient.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -91,5 +93,5 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func main() {
-	example(aptos.DevnetConfig)
+	example(client.DevnetConfig)
 }

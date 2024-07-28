@@ -4,9 +4,10 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"io"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 //region Ed25519PrivateKey

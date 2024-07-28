@@ -1,11 +1,12 @@
 package main
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/client"
 )
 
 func Test_Main(t *testing.T) {
 	t.Parallel()
-	example(aptos.LocalnetConfig)
+	example(client.LocalnetConfig)
 }

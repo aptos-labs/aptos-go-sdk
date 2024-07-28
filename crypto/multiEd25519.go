@@ -3,8 +3,9 @@ package crypto
 import (
 	"crypto/ed25519"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 //region MultiEd25519PublicKey
