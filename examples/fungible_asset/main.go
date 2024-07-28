@@ -6,7 +6,10 @@ import (
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/client"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/types"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 const testEd25519PrivateKey = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
@@ -34,23 +37,23 @@ func example(networkConfig client.NetworkConfig) {
 	}
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(sender.Address, 100_000_000)
+	err = aptosClient.Fund(sender.Address, 100_000_000)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
 
 	// Publish the package for FA
-	metadataBytes, err := types.ParseHex(metadata)
-	bytecodeBytes, err := types.ParseHex(bytecode)
+	metadataBytes, err := util.ParseHex(metadata)
+	bytecodeBytes, err := util.ParseHex(bytecode)
 	payload, err := types.PublishPackagePayloadFromJsonFile(metadataBytes, [][]byte{bytecodeBytes})
 	if err != nil {
 		panic("Failed to create publish payload:" + err.Error())
 	}
-	response, err := client.BuildSignAndSubmitTransaction(sender, *payload)
+	response, err := aptosClient.BuildSignAndSubmitTransaction(sender, *payload)
 	if err != nil {
 		panic("Failed to build sign and submit publish transaction:" + err.Error())
 	}
-	waitResponse, err := client.WaitForTransaction(response.Hash)
+	waitResponse, err := aptosClient.WaitForTransaction(response.Hash)
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
@@ -62,7 +65,7 @@ func example(networkConfig client.NetworkConfig) {
 	// Get the fungible asset address by view function
 	rupeeModule := types.ModuleId{Address: sender.Address, Name: "rupee"}
 	var noTypeTags []types.TypeTag
-	viewResponse, err := aptosClient.View(&types.ViewPayload{
+	viewResponse, err := aptosClient.View(&client.ViewPayload{
 		Module:   rupeeModule,
 		Function: "fa_address",
 		ArgTypes: noTypeTags,
@@ -76,7 +79,7 @@ func example(networkConfig client.NetworkConfig) {
 	if err != nil {
 		panic("Failed to parse fa address:" + err.Error())
 	}
-	faClient, err := client.NewFungibleAssetClient(client, faMetadataAddress)
+	faClient, err := client.NewFungibleAssetClient(aptosClient, faMetadataAddress)
 	if err != nil {
 		panic("Failed to create fungible asset client:" + err.Error())
 	}
@@ -92,7 +95,7 @@ func example(networkConfig client.NetworkConfig) {
 		panic("Failed to serialize amount:" + err.Error())
 	}
 	serializedSenderAddress, _ := bcs.Serialize(&sender.Address) // This can't fail
-	response, err = client.BuildSignAndSubmitTransaction(sender, types.TransactionPayload{
+	response, err = aptosClient.BuildSignAndSubmitTransaction(sender, types.TransactionPayload{
 		Payload: &types.EntryFunction{
 			Module:   rupeeModule,
 			Function: "mint",
@@ -104,7 +107,7 @@ func example(networkConfig client.NetworkConfig) {
 		panic("Failed to build sign and submit mint transaction:" + err.Error())
 	}
 	fmt.Printf("Submitted mint as: %s\n", response.Hash)
-	_, err = client.WaitForTransaction(response.Hash)
+	_, err = aptosClient.WaitForTransaction(response.Hash)
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}

@@ -5,10 +5,12 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/client"
+	"github.com/aptos-labs/aptos-go-sdk/types"
 )
 
-func setup(networkConfig types.NetworkConfig) (*types.Client, types.TransactionSigner) {
-	client, err := types.NewClient(networkConfig)
+func setup(networkConfig client.NetworkConfig) (*client.Client, types.TransactionSigner) {
+	aptosClient, err := client.NewClient(networkConfig)
 	if err != nil {
 		panic("Failed to create client:" + err.Error())
 	}
@@ -18,12 +20,12 @@ func setup(networkConfig types.NetworkConfig) (*types.Client, types.TransactionS
 		panic("Failed to create sender:" + err.Error())
 	}
 
-	err = client.Fund(sender.Address, 100_000_000)
+	err = aptosClient.Fund(sender.Address, 100_000_000)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
 
-	return client, sender
+	return aptosClient, sender
 }
 
 func payload() types.TransactionPayload {
@@ -40,8 +42,8 @@ func payload() types.TransactionPayload {
 	return types.TransactionPayload{Payload: p}
 }
 
-func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransactions uint64) {
-	client, sender := setup(networkConfig)
+func sendManyTransactionsSerially(networkConfig client.NetworkConfig, numTransactions uint64) {
+	aptosClient, sender := setup(networkConfig)
 
 	responses := make([]*api.SubmitTransactionResponse, numTransactions)
 	payload := payload()
@@ -49,7 +51,7 @@ func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransact
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
 	for i := uint64(0); i < numTransactions; i++ {
-		rawTxn, err := client.BuildTransaction(senderAddress, payload, types.SequenceNumber(sequenceNumber))
+		rawTxn, err := aptosClient.BuildTransaction(senderAddress, payload, client.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
 		}
@@ -59,7 +61,7 @@ func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransact
 			panic("Failed to sign transaction:" + err.Error())
 		}
 
-		submitResult, err := client.SubmitTransaction(signedTxn)
+		submitResult, err := aptosClient.SubmitTransaction(signedTxn)
 		if err != nil {
 			panic("Failed to submit transaction:" + err.Error())
 		}
@@ -68,7 +70,7 @@ func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransact
 	}
 
 	// Wait on last transaction
-	response, err := client.WaitForTransaction(responses[numTransactions-1].Hash)
+	response, err := aptosClient.WaitForTransaction(responses[numTransactions-1].Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -77,21 +79,21 @@ func sendManyTransactionsSerially(networkConfig types.NetworkConfig, numTransact
 	}
 }
 
-func sendManyTransactionsConcurrently(networkConfig types.NetworkConfig, numTransactions uint64) {
-	client, sender := setup(networkConfig)
+func sendManyTransactionsConcurrently(networkConfig client.NetworkConfig, numTransactions uint64) {
+	aptosClient, sender := setup(networkConfig)
 	payload := payload()
 
 	// start submission goroutine
-	payloads := make(chan types.TransactionBuildPayload, 50)
-	results := make(chan types.TransactionSubmissionResponse, 50)
-	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
+	payloads := make(chan client.TransactionBuildPayload, 50)
+	results := make(chan client.TransactionSubmissionResponse, 50)
+	go aptosClient.BuildSignAndSubmitTransactions(sender, payloads, results)
 
 	// Submit transactions to goroutine
 	go func() {
 		for i := uint64(0); i < numTransactions; i++ {
-			payloads <- types.TransactionBuildPayload{
+			payloads <- client.TransactionBuildPayload{
 				Id:    i,
-				Type:  types.TransactionSubmissionTypeSingle,
+				Type:  client.TransactionSubmissionTypeSingle,
 				Inner: payload,
 			}
 		}
@@ -109,7 +111,7 @@ func sendManyTransactionsConcurrently(networkConfig types.NetworkConfig, numTran
 // example This example shows you how to improve performance of the transaction submission
 //
 // Speed can be improved by locally handling the sequence number, gas price, and other factors
-func example(networkConfig types.NetworkConfig, numTransactions uint64) {
+func example(networkConfig client.NetworkConfig, numTransactions uint64) {
 	println("Sending", numTransactions, "transactions Serially")
 	startSerial := time.Now()
 	sendManyTransactionsSerially(networkConfig, numTransactions)
@@ -126,5 +128,5 @@ func example(networkConfig types.NetworkConfig, numTransactions uint64) {
 }
 
 func main() {
-	example(types.DevnetConfig, 100)
+	example(client.DevnetConfig, 100)
 }

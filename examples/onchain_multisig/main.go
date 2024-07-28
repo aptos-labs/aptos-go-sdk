@@ -10,6 +10,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/client"
 	"github.com/aptos-labs/aptos-go-sdk/types"
+	"github.com/aptos-labs/aptos-go-sdk/util"
 )
 
 const TransferAmount = uint64(1_000_000)
@@ -204,7 +205,7 @@ func multisigResource(client *client.Client, multisigAddress *types.AccountAddre
 
 	numSigsRequiredStr := resourceData["num_signatures_required"].(string)
 
-	numSigsRequired, err := types.StrToUint64(numSigsRequiredStr)
+	numSigsRequired, err := util.StrToUint64(numSigsRequiredStr)
 	if err != nil {
 		panic("Failed to convert string to u64: " + err.Error())
 	}
@@ -329,5 +330,5 @@ func submitAndWait(client *client.Client, sender *types.Account, payload types.T
 }
 
 func main() {
-	example(types.DevnetConfig)
+	example(client.DevnetConfig)
 }
