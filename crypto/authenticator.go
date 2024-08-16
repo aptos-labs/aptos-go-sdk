@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
@@ -105,6 +106,58 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 		return
 	}
 	ea.Auth.UnmarshalBCS(des)
+}
+
+func (ea *AccountAuthenticator) FromKeyAndSignature(key PublicKey, sig Signature) error {
+	switch key.(type) {
+	case *Ed25519PublicKey:
+		switch sig.(type) {
+		case *Ed25519Signature:
+			ea.Variant = AccountAuthenticatorEd25519
+			ea.Auth = &Ed25519Authenticator{
+				PubKey: key.(*Ed25519PublicKey),
+				Sig:    sig.(*Ed25519Signature),
+			}
+		default:
+			return errors.New("invalid signature type for Ed25519PublicKey")
+		}
+	case *MultiEd25519PublicKey:
+		switch sig.(type) {
+		case *MultiEd25519Signature:
+			ea.Variant = AccountAuthenticatorMultiEd25519
+			ea.Auth = &MultiEd25519Authenticator{
+				PubKey: key.(*MultiEd25519PublicKey),
+				Sig:    sig.(*MultiEd25519Signature),
+			}
+		default:
+			return errors.New("invalid signature type for MultiEd25519PublicKey")
+		}
+	case *AnyPublicKey:
+		switch sig.(type) {
+		case *AnySignature:
+			ea.Variant = AccountAuthenticatorSingleSender
+			ea.Auth = &SingleKeyAuthenticator{
+				PubKey: key.(*AnyPublicKey),
+				Sig:    sig.(*AnySignature),
+			}
+		default:
+			return errors.New("invalid signature type for AnyPublicKey")
+		}
+	case *MultiKey:
+		switch sig.(type) {
+		case *MultiKeySignature:
+			ea.Variant = AccountAuthenticatorMultiKey
+			ea.Auth = &MultiKeyAuthenticator{
+				PubKey: key.(*MultiKey),
+				Sig:    sig.(*MultiKeySignature),
+			}
+		default:
+			return errors.New("invalid signature type for MultiKey")
+		}
+	default:
+		return errors.New("Invalid key type")
+	}
+	return nil
 }
 
 //endregion

@@ -81,15 +81,17 @@ func (s *MultiEd25519TestSigner) PubKey() crypto.PublicKey {
 	return key
 }
 
+// This is an example for testing, a real signer would be signing and collecting the signatures in a different way
 type MultiKeyTestSigner struct {
 	Signers            []crypto.Signer
 	SignaturesRequired uint8
+	MultiKey           *crypto.MultiKey
 }
 
 func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTestSigner, error) {
 	signers := make([]crypto.Signer, numKeys)
 	for i := range signers {
-		switch i % 2 {
+		switch i % 3 {
 		case 0:
 			signer, err := crypto.GenerateEd25519PrivateKey()
 			if err != nil {
@@ -97,7 +99,7 @@ func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTe
 			}
 			// Wrap in a SingleSigner
 			signers[i] = &crypto.SingleSigner{Signer: signer}
-		case 1:
+		case 1, 2:
 			signer, err := crypto.GenerateSecp256k1Key()
 			if err != nil {
 				return nil, err
@@ -107,9 +109,20 @@ func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTe
 		}
 	}
 
+	pubKeys := make([]*crypto.AnyPublicKey, len(signers))
+	for i, key := range signers {
+		pubKeys[i] = key.PubKey().(*crypto.AnyPublicKey)
+	}
+
+	pubKey := &crypto.MultiKey{
+		PubKeys:            pubKeys,
+		SignaturesRequired: signaturesRequired,
+	}
+
 	return &MultiKeyTestSigner{
 		Signers:            signers,
 		SignaturesRequired: signaturesRequired,
+		MultiKey:           pubKey,
 	}, nil
 }
 
@@ -135,24 +148,21 @@ func (s *MultiKeyTestSigner) Sign(msg []byte) (authenticator *crypto.AccountAuth
 }
 
 func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
-	totalSignature := &crypto.MultiKeySignature{}
-	totalSignature.Signatures = make([]*crypto.AnySignature, s.SignaturesRequired)
+	indexedSigs := make([]crypto.IndexedAnySignature, s.SignaturesRequired)
 
 	// TODO: randomize keys used for testing
 	for i := uint8(0); i < s.SignaturesRequired; i++ {
-		sig, err := s.Signers[i].SignMessage(msg)
-		if err != nil {
-			return nil, err
-		}
-		totalSignature.Signatures[i] = sig.(*crypto.AnySignature)
+		// We skip over keys to ensure that order doesn't matter
+		signerIndex := (i * 2) % uint8(len(s.Signers))
 
-		err = totalSignature.Bitmap.AddKey(i)
+		sig, err := s.Signers[signerIndex].SignMessage(msg)
 		if err != nil {
 			return nil, err
 		}
+		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: signerIndex}
 	}
 
-	return totalSignature, nil
+	return crypto.NewMultiKeySignature(indexedSigs)
 }
 
 func (s *MultiKeyTestSigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
@@ -170,13 +180,5 @@ func (s *MultiKeyTestSigner) AuthKey() *crypto.AuthenticationKey {
 }
 
 func (s *MultiKeyTestSigner) PubKey() crypto.PublicKey {
-	pubKeys := make([]*crypto.AnyPublicKey, len(s.Signers))
-	for i, key := range s.Signers {
-		pubKeys[i] = key.PubKey().(*crypto.AnyPublicKey)
-	}
-
-	return &crypto.MultiKey{
-		PubKeys:            pubKeys,
-		SignaturesRequired: s.SignaturesRequired,
-	}
+	return s.MultiKey
 }

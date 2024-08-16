@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"sort"
 )
 
 //region MultiKey
@@ -32,13 +33,23 @@ type MultiKey struct {
 func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 	switch sig := signature.(type) {
 	case *MultiKeySignature:
-		verified := uint8(0)
-		for i, pub := range key.PubKeys {
-			if pub.Verify(msg, sig.Signatures[i]) {
-				verified++
+		if key.SignaturesRequired > uint8(len(sig.Signatures)) {
+			return false
+		}
+
+		// Convert to individual authenticators, and verify
+		for sigIndex, keyIndex := range sig.Bitmap.Indices() {
+			authenticator := AccountAuthenticator{}
+			err := authenticator.FromKeyAndSignature(key.PubKeys[keyIndex], sig.Signatures[sigIndex])
+			if err != nil {
+				return false
+			}
+
+			if !authenticator.Verify(msg) {
+				return false
 			}
 		}
-		return key.SignaturesRequired <= verified
+		return true
 	default:
 		return false
 	}
@@ -140,6 +151,26 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region MultiKeySignature
 
+type IndexedAnySignature struct {
+	Index     uint8
+	Signature *AnySignature
+}
+
+func (e *IndexedAnySignature) MarshalBCS(ser *bcs.Serializer) {
+	ser.U8(e.Index)
+	ser.Struct(e.Signature)
+}
+
+// UnmarshalBCS converts the signature from BCS
+//
+// Implements:
+//   - [bcs.Unmarshaler]
+func (e *IndexedAnySignature) UnmarshalBCS(des *bcs.Deserializer) {
+	e.Index = des.U8()
+	e.Signature = &AnySignature{}
+	des.Struct(e.Signature)
+}
+
 // MultiKeySignature is an off-chain multi-sig signature that can be verified by a MultiKey
 //
 // Implements:
@@ -151,6 +182,26 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 type MultiKeySignature struct {
 	Signatures []*AnySignature // The signatures of the sub-keys
 	Bitmap     MultiKeyBitmap  // The bitmap of the signatures
+}
+
+func NewMultiKeySignature(signatures []IndexedAnySignature) (*MultiKeySignature, error) {
+	multiKeySig := &MultiKeySignature{}
+
+	// Sort signatures by index
+	// This is necessary because the order of the signatures is not guaranteed
+	// to be the same as the order of the public keys in the MultiKey
+	sort.Slice(signatures, func(i, j int) bool {
+		return signatures[i].Index < signatures[j].Index
+	})
+
+	for _, sig := range signatures {
+		multiKeySig.Signatures = append(multiKeySig.Signatures, sig.Signature)
+		err := multiKeySig.Bitmap.AddKey(sig.Index)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return multiKeySig, nil
 }
 
 //region MultiKeySignature CryptoMaterial implementation
@@ -299,7 +350,7 @@ func (ea *MultiKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 //region MultiKeyBitmap
 
 // MultiKeyBitmapSize represents the 4 bytes needed to make a 32-bit bitmap
-const MultiKeyBitmapSize = uint32(4)
+const MultiKeyBitmapSize = uint8(4)
 
 // MultiKeyBitmap represents a bitmap of signatures in a MultiKey public key that signed the transaction
 // There are a maximum of 32 possible values in MultiKeyBitmapSize, starting from the leftmost bit representing
@@ -320,6 +371,16 @@ func (bm *MultiKeyBitmap) AddKey(index uint8) error {
 	numByte, numBit := KeyIndices(index)
 	bm[numByte] = bm[numByte] | (128 >> numBit)
 	return nil
+}
+
+func (bm *MultiKeyBitmap) Indices() []uint8 {
+	indices := make([]uint8, 0)
+	for i := uint8(0); i < MultiKeyBitmapSize*8; i++ {
+		if bm.ContainsKey(i) {
+			indices = append(indices, i)
+		}
+	}
+	return indices
 }
 
 // KeyIndices determines the byte and bit set in the bitmap
@@ -344,7 +405,7 @@ func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
 //   - [bcs.Unmarshaler]
 func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
 	length := des.Uleb128()
-	if length != MultiKeyBitmapSize {
+	if length != uint32(MultiKeyBitmapSize) {
 		des.SetError(fmt.Errorf("MultiKeyBitmap must be %d bytes, got %d", MultiKeyBitmapSize, length))
 		return
 	}
