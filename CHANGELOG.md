@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 - [`Fix`] Parse GenesisTransaction properly
 - [`Fix`] Ensure if no block transactions are requested, it doesn't fail to fetch a block
+- [`Doc`] Fix comment from milliseconds to microseconds
 
 # v0.6.0 (6/28/2024)
 - [`Breaking`] Change type from Transaction to CommittedTransaction for cases that it's known they're committed
