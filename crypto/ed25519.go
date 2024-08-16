@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/hdevalence/ed25519consensus"
 	"io"
 )
 
@@ -209,7 +210,7 @@ type Ed25519PublicKey struct {
 func (key *Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
 	switch sig := sig.(type) {
 	case *Ed25519Signature:
-		return ed25519.Verify(key.Inner, msg, sig.Bytes())
+		return ed25519consensus.Verify(key.Inner, msg, sig.Bytes())
 	default:
 		return false
 	}
