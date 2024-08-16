@@ -11,10 +11,8 @@ import "encoding/json"
 //	{
 //	  "type": "0x1::coin::WithdrawEvent",
 //	  "guid": {
-//	    "id": {
-//	      "addr": "0x810026ca8291dd88b5b30a1d3ca2edd683d33d06c4a7f7c451d96f6d47bc5e8b",
-//	      "creation_num": "3"
-//	    }
+//	    "addr": "0x810026ca8291dd88b5b30a1d3ca2edd683d33d06c4a7f7c451d96f6d47bc5e8b",
+//	    "creation_num": "3"
 //	  },
 //	  "sequence_number": "0",
 //	  "data": {
@@ -27,10 +25,8 @@ import "encoding/json"
 //	{
 //	  "type": "0x1::fungible_asset::Withdraw",
 //	  "guid": {
-//	    "id": {
-//	      "addr": "0x0",
-//	      "creation_num": "0"
-//	    }
+//	    "addr": "0x0",
+//	    "creation_num": "0"
 //	  },
 //	  "sequence_number": "0",
 //	  "data": {

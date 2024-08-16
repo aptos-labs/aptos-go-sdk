@@ -7,18 +7,15 @@ import (
 )
 
 // GUID describes a GUID associated with things like V1 events
+//
+// Note that this can only be used to deserialize events in the `events` field, and not the `GUID` resource in `changes`.
 type GUID struct {
-	Id GUIDId `json:"id"` // An internal type for the GUID as represented on-chain
-}
-
-// GUIDId is the internal representation of a [GUID] on-chain, which is listed as "id" in JSON
-type GUIDId struct {
 	CreationNumber uint64                // CreationNumber is the number of the GUID
 	AccountAddress *types.AccountAddress // AccountAddress is the account address of the creator of the GUID
 }
 
 // UnmarshalJSON deserializes a JSON data blob into a [GUIDId]
-func (o *GUIDId) UnmarshalJSON(b []byte) error {
+func (o *GUID) UnmarshalJSON(b []byte) error {
 	type inner struct {
 		CreationNumber U64                   `json:"creation_number"`
 		AccountAddress *types.AccountAddress `json:"account_address"`
