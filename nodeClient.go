@@ -245,6 +245,16 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 		return block, fmt.Errorf("get block api err: %w", err)
 	}
 
+	// Return early if we don't need transactions
+	if withTransactions == false {
+		return block, nil
+	}
+
+	// Now, let's fill in any missing transactions in the block
+	if block.Transactions == nil {
+		block.Transactions = make([]*api.CommittedTransaction, 0)
+	}
+
 	// Now, let's fill in any missing transactions in the block
 	numTransactions := block.LastVersion - block.FirstVersion + 1
 	retrievedTransactions := uint64(len(block.Transactions))
