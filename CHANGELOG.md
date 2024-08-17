@@ -7,6 +7,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Parse GenesisTransaction properly
 - [`Fix`] Ensure if no block transactions are requested, it doesn't fail to fetch a block
 - [`Doc`] Fix comment from milliseconds to microseconds
+- [`Fix`] Fix GUID parsing for events
 - Use ed25519-consensus to ensure signatures are verified in a ZIP215 compatible way
 
 # v0.6.0 (6/28/2024)
