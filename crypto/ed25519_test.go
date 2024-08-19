@@ -92,3 +92,21 @@ func TestEd25519Keys(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, authenticator, authenticator2)
 }
+
+func TestEd25519PrivateKeyWrongLength(t *testing.T) {
+	privateKey := &Ed25519PrivateKey{}
+	err := privateKey.FromBytes([]byte{0x01})
+	assert.Error(t, err)
+}
+
+func TestEd25519PublicKeyWrongLength(t *testing.T) {
+	key := &Ed25519PublicKey{}
+	err := key.FromBytes([]byte{0x01})
+	assert.Error(t, err)
+}
+
+func TestEd25519SignatureWrongLength(t *testing.T) {
+	sig := &Ed25519Signature{}
+	err := sig.FromBytes([]byte{0x01})
+	assert.Error(t, err)
+}

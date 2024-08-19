@@ -306,11 +306,14 @@ func (key *Ed25519PublicKey) MarshalBCS(ser *bcs.Serializer) {
 //   - [bcs.Unmarshaler]
 func (key *Ed25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	kb := des.ReadBytes()
-	if len(kb) != ed25519.PublicKeySize {
-		des.SetError(fmt.Errorf("bad ed25519 public key, expected %d bytes but got %d", ed25519.PublicKeySize, len(kb)))
+	if des.Error() != nil {
 		return
 	}
-	key.Inner = kb
+	err := key.FromBytes(kb)
+	if err != nil {
+		des.SetError(err)
+		return
+	}
 }
 
 //endregion
@@ -379,8 +382,7 @@ func (ea *Ed25519Authenticator) MarshalBCS(ser *bcs.Serializer) {
 func (ea *Ed25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	ea.PubKey = &Ed25519PublicKey{}
 	des.Struct(ea.PubKey)
-	err := des.Error()
-	if err != nil {
+	if des.Error() != nil {
 		return
 	}
 	ea.Sig = &Ed25519Signature{}
@@ -473,11 +475,10 @@ func (e *Ed25519Signature) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
-	if len(bytes) != ed25519.SignatureSize {
-		des.SetError(fmt.Errorf("cannot deserialize ed25519 signature, expected %d bytes but got %d", ed25519.SignatureSize, len(bytes)))
-		return
+	err := e.FromBytes(bytes)
+	if err != nil {
+		des.SetError(err)
 	}
-	copy(e.Inner[:], bytes)
 }
 
 //endregion
