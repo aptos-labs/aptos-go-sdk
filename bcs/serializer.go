@@ -55,6 +55,20 @@ func (ser *Serializer) Bool(v bool) {
 	}
 }
 
+func serializeUInt[T uint16 | uint32 | uint64](ser *Serializer, size uint, v T, serialize func(slice []byte, num T)) {
+	ub := make([]byte, size)
+	serialize(ub[:], v)
+	ser.out.Write(ub[:])
+}
+
+func (ser *Serializer) serializeUBigInt(size uint, v *big.Int) {
+	ub := make([]byte, size)
+	v.FillBytes(ub[:])
+	// Reverse, since big.Int outputs bytes in BigEndian
+	slices.Reverse(ub[:])
+	ser.out.Write(ub[:])
+}
+
 // U8 serialize a byte
 func (ser *Serializer) U8(v uint8) {
 	ser.out.WriteByte(v)
@@ -62,41 +76,27 @@ func (ser *Serializer) U8(v uint8) {
 
 // U16 serialize an unsigned 16-bit integer in little-endian format
 func (ser *Serializer) U16(v uint16) {
-	var ub [2]byte
-	binary.LittleEndian.PutUint16(ub[:], v)
-	ser.out.Write(ub[:])
+	serializeUInt(ser, 2, v, binary.LittleEndian.PutUint16)
 }
 
 // U32 serialize an unsigned 32-bit integer in little-endian format
 func (ser *Serializer) U32(v uint32) {
-	var ub [4]byte
-	binary.LittleEndian.PutUint32(ub[:], v)
-	ser.out.Write(ub[:])
+	serializeUInt(ser, 4, v, binary.LittleEndian.PutUint32)
 }
 
 // U64 serialize an unsigned 64-bit integer in little-endian format
 func (ser *Serializer) U64(v uint64) {
-	var ub [8]byte
-	binary.LittleEndian.PutUint64(ub[:], v)
-	ser.out.Write(ub[:])
+	serializeUInt(ser, 8, v, binary.LittleEndian.PutUint64)
 }
 
 // U128 serialize an unsigned 128-bit integer in little-endian format
 func (ser *Serializer) U128(v big.Int) {
-	var ub [16]byte
-	v.FillBytes(ub[:])
-	// Reverse, since big.Int outputs bytes in BigEndian
-	slices.Reverse(ub[:])
-	ser.out.Write(ub[:])
+	ser.serializeUBigInt(16, &v)
 }
 
 // U256 serialize an unsigned 256-bit integer in little-endian format
 func (ser *Serializer) U256(v big.Int) {
-	var ub [32]byte
-	v.FillBytes(ub[:])
-	// Reverse, since big.Int outputs bytes in BigEndian
-	slices.Reverse(ub[:])
-	ser.out.Write(ub[:])
+	ser.serializeUBigInt(32, &v)
 }
 
 // Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths, and enums.
