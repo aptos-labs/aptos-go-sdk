@@ -3,6 +3,10 @@
 All notable changes to the Aptos Go SDK will be captured in this file. This changelog is written by hand for now. It
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+# Unreleased
+- [`Fix`] Paginate transactions properly if no given start version
+- Add account transactions API
+
 # v0.7.0 (8/19/2024)
 - [`Fix`] Parse GenesisTransaction properly
 - [`Fix`] Ensure if no block transactions are requested, it doesn't fail to fetch a block

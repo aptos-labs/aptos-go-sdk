@@ -255,6 +255,8 @@ func (client *Client) PollForTransactions(txnHashes []string, options ...any) er
 }
 
 // WaitForTransaction Do a long-GET for one transaction and wait for it to complete
+//
+//	data, err := client.WaitForTransaction("0x1234")
 func (client *Client) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
 	return client.nodeClient.WaitForTransaction(txnHash, options...)
 }
@@ -269,7 +271,36 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Co
 	return client.nodeClient.Transactions(start, limit)
 }
 
+// AccountTransactions Get transactions associated with an account.
+// Start is a version number. Nil for most recent transactions.
+// Limit is a number of transactions to return. 'about a hundred' by default.
+//
+//	client.AccountTransactions(AccountOne, 0, 2)   // Returns 2 transactions for 0x1
+//	client.AccountTransactions(AccountOne, 1, 100) // Returns 100 transactions for 0x1
+func (client *Client) AccountTransactions(address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return client.nodeClient.AccountTransactions(address, start, limit)
+}
+
 // SubmitTransaction Submits an already signed transaction to the blockchain
+//
+//	sender := NewEd25519Account()
+//	txnPayload := TransactionPayload{
+//		Payload: &EntryFunction{
+//			Module: ModuleId{
+//				Address: AccountOne,
+//				Name: "aptos_account",
+//			},
+//			Function: "transfer",
+//			ArgTypes: []TypeTag{},
+//			Args: [][]byte{
+//				dest[:],
+//				amountBytes,
+//			},
+//		}
+//	}
+//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
+//	signedTxn, _ := sender.SignTransaction(rawTxn)
+//	submitResponse, err := client.SubmitTransaction(signedTxn)
 func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.SubmitTransaction(signedTransaction)
 }
@@ -278,11 +309,48 @@ func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (d
 //
 // It will return the responses in the same order as the input transactions that failed.  If the response is empty, then
 // all transactions succeeded.
+//
+//	sender := NewEd25519Account()
+//	txnPayload := TransactionPayload{
+//		Payload: &EntryFunction{
+//			Module: ModuleId{
+//				Address: AccountOne,
+//				Name: "aptos_account",
+//			},
+//			Function: "transfer",
+//			ArgTypes: []TypeTag{},
+//			Args: [][]byte{
+//				dest[:],
+//				amountBytes,
+//			},
+//		}
+//	}
+//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
+//	signedTxn, _ := sender.SignTransaction(rawTxn)
+//	submitResponse, err := client.BatchSubmitTransaction([]*SignedTransaction{signedTxn})
 func (client *Client) BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
 	return client.nodeClient.BatchSubmitTransaction(signedTxns)
 }
 
 // SimulateTransaction Simulates a raw transaction without sending it to the blockchain
+//
+//	sender := NewEd25519Account()
+//	txnPayload := TransactionPayload{
+//		Payload: &EntryFunction{
+//			Module: ModuleId{
+//				Address: AccountOne,
+//				Name: "aptos_account",
+//			},
+//			Function: "transfer",
+//			ArgTypes: []TypeTag{},
+//			Args: [][]byte{
+//				dest[:],
+//				amountBytes,
+//			},
+//		}
+//	}
+//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
+//	simResponse, err := client.SimulateTransaction(rawTxn, sender)
 func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }

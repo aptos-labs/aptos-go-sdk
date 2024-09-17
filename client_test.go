@@ -296,7 +296,6 @@ func Test_Block(t *testing.T) {
 	for i := uint64(0); i < numToCheck; i++ {
 		go func() {
 			blockNumber := blockHeight - i
-			println("BLOCK:", blockNumber)
 			blockByHeight, err := client.BlockByHeight(blockNumber, true)
 			assert.NoError(t, err)
 
@@ -355,6 +354,124 @@ func Test_Transactions(t *testing.T) {
 	transactions, err = client.Transactions(nil, nil)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 25)
+}
+
+func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
+	payload, err := CoinTransferPayload(nil, AccountOne, 1)
+	assert.NoError(t, err)
+	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
+	assert.NoError(t, err)
+	signedTxn, err := rawTxn.SignedTransaction(account)
+	assert.NoError(t, err)
+	txn, err := client.SubmitTransaction(signedTxn)
+	assert.NoError(t, err)
+	_, err = client.WaitForTransaction(txn.Hash)
+	assert.NoError(t, err)
+}
+
+func Test_AccountTransactions(t *testing.T) {
+	t.Parallel()
+	client, err := createTestClient()
+	assert.NoError(t, err)
+
+	// Create a bunch of transactions so we can test the pagination
+	account, err := NewEd25519Account()
+	assert.NoError(t, err)
+	err = client.Fund(account.AccountAddress(), 100_000_000)
+	assert.NoError(t, err)
+
+	// Build and submit 100 transactions
+	waitGroup := sync.WaitGroup{}
+	waitGroup.Add(100)
+
+	for i := uint64(0); i < 100; i++ {
+		go func() {
+			submitAccountTransaction(t, client, account, i)
+			waitGroup.Done()
+		}()
+	}
+	waitGroup.Wait()
+
+	// Submit one more transaction
+	submitAccountTransaction(t, client, account, 100)
+
+	// Fetch default
+	transactions, err := client.AccountTransactions(account.AccountAddress(), nil, nil)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 25)
+
+	// Fetch 101 with no start
+	zero := uint64(0)
+	one := uint64(1)
+	ten := uint64(10)
+	hundredOne := uint64(101)
+
+	transactions, err = client.AccountTransactions(account.AccountAddress(), nil, &hundredOne)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 101)
+
+	// Fetch 101 with start
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, &hundredOne)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 101)
+
+	// Fetch 100 from 1
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &one, &hundredOne)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 100)
+
+	// Fetch default from 0
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, nil)
+	assert.NoError(t, err)
+	assert.Len(t, transactions, 25)
+
+	// Check global transactions API
+
+	t.Run("Default transaction size, no start", func(t *testing.T) {
+		transactions, err = client.Transactions(nil, nil)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 25)
+	})
+	t.Run("Default transaction size, start from zero", func(t *testing.T) {
+		transactions, err = client.Transactions(&zero, nil)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 25)
+	})
+	t.Run("Default transaction size, start from one", func(t *testing.T) {
+		transactions, err = client.Transactions(&one, nil)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 25)
+	})
+
+	t.Run("101 transactions, no start", func(t *testing.T) {
+		transactions, err = client.Transactions(nil, &hundredOne)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 101)
+	})
+
+	t.Run("101 transactions, start zero", func(t *testing.T) {
+		transactions, err = client.Transactions(&zero, &hundredOne)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 101)
+	})
+
+	t.Run("101 transactions, start one", func(t *testing.T) {
+		transactions, err = client.Transactions(&one, &hundredOne)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 101)
+	})
+
+	t.Run("10 transactions, no start", func(t *testing.T) {
+		transactions, err = client.Transactions(nil, &ten)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 10)
+	})
+
+	t.Run("10 transactions, start one", func(t *testing.T) {
+		transactions, err = client.Transactions(&one, &ten)
+		assert.NoError(t, err)
+		assert.Len(t, transactions, 10)
+	})
 }
 
 func Test_Info(t *testing.T) {

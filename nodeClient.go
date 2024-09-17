@@ -384,16 +384,78 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 //   - start is a version number. Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
+		txn := (*txns)[len(*txns)-1]
+		return txn.Version()
+	}, func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
+		return rc.transactionsInner(start, limit)
+	})
+}
+
+// AccountTransactions Get recent transactions for an account
+//
+// Arguments:
+//   - start is a version number. Nil for most recent transactions.
+//   - limit is a number of transactions to return. 'about a hundred' by default.
+func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
+		// It will always be a UserTransaction, no other type will come from the API
+		userTxn, _ := ((*txns)[0]).UserTransaction()
+		return userTxn.SequenceNumber - 1
+	}, func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
+		return rc.accountTransactionsInner(account, start, limit)
+	})
+}
+
+// handleTransactions is a helper function for fetching transactions
+//
+// It will fetch the transactions from the node in a single request if possible, otherwise it will fetch them concurrently.
+func (rc *NodeClient) handleTransactions(
+	start *uint64,
+	limit *uint64,
+	getNext func(txns *[]*api.CommittedTransaction) uint64,
+	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
+) (data []*api.CommittedTransaction, err error) {
 	// Can only pull everything in parallel if a start and a limit is handled
 	if start != nil && limit != nil {
-		return rc.transactionsConcurrent(*start, *limit)
+		return rc.transactionsConcurrent(*start, *limit, getTxns)
+	} else if limit != nil {
+		// If we don't know the start, we can only pull one page first, then handle the rest
+		// Note that, this actually pulls the last page first, then goes backwards
+		actualLimit := *limit
+		txns, err := getTxns(nil, limit)
+		if err != nil {
+			return nil, err
+		}
+
+		// If we have enough transactions, return otherwise, pull the rest
+		numTxns := uint64(len(txns))
+		if numTxns >= actualLimit {
+			return txns, nil
+		} else {
+			newStart := getNext(&txns)
+			newLength := actualLimit - numTxns
+			extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
+			if err != nil {
+				return nil, err
+			}
+
+			return append(extra, txns...), nil
+		}
 	} else {
-		// TODO: need to pull the first page, then the rest after that / provide similar behavior
-		return rc.transactionsInner(start, limit)
+		// If we know the start, just pull one page
+		return getTxns(start, nil)
 	}
 }
 
-func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data []*api.CommittedTransaction, err error) {
+// transactionsConcurrent fetches the transactions from the node concurrently
+//
+// It will fetch the transactions concurrently if the limit is greater than the page size, otherwise it will fetch them in a single request.
+func (rc *NodeClient) transactionsConcurrent(
+	start uint64,
+	limit uint64,
+	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
+) (data []*api.CommittedTransaction, err error) {
 	const transactionsPageSize = 100
 	// If we know both, we can fetch all concurrently
 	type Pair struct {
@@ -415,22 +477,18 @@ func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data [
 			st := start + i*100 // TODO: allow page size to be configured
 			li := min(transactionsPageSize, limit-i*transactionsPageSize)
 			go fetch(func() ([]*api.CommittedTransaction, error) {
-				return rc.transactionsConcurrent(st, li)
+				return rc.transactionsConcurrent(st, li, getTxns)
 			}, channels[i])
 		}
 
 		// Collect all the responses
-		responses := make([]*api.CommittedTransaction, limit)
-		cursor := 0
+		responses := make([]*api.CommittedTransaction, 0)
 		for i, ch := range channels {
 			response := <-ch
 			if response.Err != nil {
 				return nil, err
 			}
-			end := cursor + len(response.Result)
-
-			copy(responses[cursor:end], response.Result)
-			cursor = end
+			responses = append(responses, response.Result...)
 			close(channels[i])
 		}
 
@@ -440,7 +498,7 @@ func (rc *NodeClient) transactionsConcurrent(start uint64, limit uint64) (data [
 		})
 		return responses, nil
 	} else {
-		response, err := rc.transactionsInner(&start, &limit)
+		response, err := getTxns(&start, &limit)
 		if err != nil {
 			return nil, err
 		} else {
@@ -465,6 +523,27 @@ func (rc *NodeClient) transactionsInner(start *uint64, limit *uint64) (data []*a
 	data, err = Get[[]*api.CommittedTransaction](rc, au.String())
 	if err != nil {
 		return data, fmt.Errorf("get transactions api err: %w", err)
+	}
+	return data, nil
+}
+
+// accountTransactionsInner fetches the transactions from the node in a single request for a single account
+func (rc *NodeClient) accountTransactionsInner(account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	au := rc.baseUrl.JoinPath(fmt.Sprintf("accounts/%s/transactions", account.String()))
+	params := url.Values{}
+	if start != nil {
+		params.Set("start", strconv.FormatUint(*start, 10))
+	}
+	if limit != nil {
+		params.Set("limit", strconv.FormatUint(*limit, 10))
+	}
+	if len(params) != 0 {
+		au.RawQuery = params.Encode()
+	}
+
+	data, err = Get[[]*api.CommittedTransaction](rc, au.String())
+	if err != nil {
+		return data, fmt.Errorf("get account transactions api err: %w", err)
 	}
 	return data, nil
 }
