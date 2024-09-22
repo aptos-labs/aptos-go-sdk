@@ -93,10 +93,16 @@ func NewClient(config NetworkConfig) (client *Client, err error) {
 	if err != nil {
 		return nil, err
 	}
+
+	httpIndexerClient, err := NewHttpClient(config.NodeUrl, config.ChainId)
+	if err != nil {
+		return nil, err
+	}
+
 	// Indexer may not be present
 	var indexerClient *IndexerClient = nil
 	if config.IndexerUrl != "" {
-		indexerClient = NewIndexerClient(nodeClient.client, config.IndexerUrl)
+		indexerClient = NewIndexerClient(httpIndexerClient, config.IndexerUrl)
 	}
 
 	// Faucet may not be present

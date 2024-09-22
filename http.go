@@ -2,9 +2,9 @@ package aptos
 
 import (
 	"fmt"
-	"io"
 	"net/http"
-	"net/url"
+
+	"github.com/valyala/fasthttp"
 )
 
 // HttpErrSummaryLength is the maximum length of the body to include in the error message
@@ -16,21 +16,25 @@ type HttpError struct {
 	StatusCode int         // HTTP status code e.g. 200
 	Header     http.Header // HTTP headers
 	Method     string      // HTTP method e.g. "GET"
-	RequestUrl url.URL     // URL of the request
+	RequestUrl string      // URL of the request
 	Body       []byte      // Body of the response
 }
 
 // NewHttpError creates a new HttpError from a http.Response
-func NewHttpError(response *http.Response) *HttpError {
-	body, _ := io.ReadAll(response.Body)
-	_ = response.Body.Close()
+func NewHttpError(response *fasthttp.Response, request *fasthttp.Request) *HttpError {
+	body := response.Body()
+	var headers http.Header = make(map[string][]string)
+	response.Header.VisitAll(func(key, value []byte) {
+		headers[string(key)] = []string{string(value)}
+	})
+
 	return &HttpError{
-		Status:     response.Status,
-		StatusCode: response.StatusCode,
-		Header:     response.Header,
+		Status:     string(response.Header.StatusMessage()),
+		StatusCode: response.StatusCode(),
+		Header:     headers,
 		Body:       body,
-		Method:     response.Request.Method,
-		RequestUrl: *response.Request.URL,
+		Method:     string(request.Header.Method()),
+		RequestUrl: string(request.URI().FullURI()),
 	}
 }
 
@@ -41,13 +45,13 @@ func NewHttpError(response *http.Response) *HttpError {
 func (he *HttpError) Error() string {
 	if len(he.Body) < HttpErrSummaryLength {
 		return fmt.Sprintf("HttpError %s %#v -> %#v %#v",
-			he.Method, he.RequestUrl.String(), he.Status,
+			he.Method, he.RequestUrl, he.Status,
 			string(he.Body),
 		)
 	} else {
 		// Trim if the error is too long
 		return fmt.Sprintf("HttpError %s %#v -> %#v %s %#v...[+%d]",
-			he.Method, he.RequestUrl.String(), he.Status,
+			he.Method, he.RequestUrl, he.Status,
 			he.Header.Get("Content-Type"),
 			string(he.Body)[:HttpErrSummaryLength-10], len(he.Body)-(HttpErrSummaryLength-10),
 		)

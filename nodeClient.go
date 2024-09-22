@@ -1,11 +1,9 @@
 package aptos
 
 import (
-	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/http/cookiejar"
@@ -13,6 +11,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/valyala/fasthttp"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -35,7 +35,7 @@ const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
 // NodeClient is a client for interacting with an Aptos node API
 type NodeClient struct {
-	client  *http.Client      // HTTP client to use for requests
+	client  *fasthttp.Client  // HTTP client to use for requests
 	baseUrl *url.URL          // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
 	chainId uint8             // Chain ID of the network e.g. 2 for Testnet
 	headers map[string]string // Headers to be added to every transaction
@@ -43,22 +43,42 @@ type NodeClient struct {
 
 // NewNodeClient creates a new client for interacting with an Aptos node API
 func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
+
+	defaultClient := &fasthttp.Client{
+		ReadTimeout:                   1 * time.Minute,
+		WriteTimeout:                  1 * time.Minute,
+		MaxIdleConnDuration:           1 * time.Hour,
+		NoDefaultUserAgentHeader:      true, // Don't send: User-Agent: fasthttp
+		DisableHeaderNamesNormalizing: true, // If you set the case on your headers correctly you can enable this
+		DisablePathNormalizing:        true,
+		// increase DNS cache time to an hour instead of default minute
+		Dial: (&fasthttp.TCPDialer{
+			Concurrency:      4096,
+			DNSCacheDuration: time.Hour,
+		}).Dial,
+	}
+
+	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
+}
+
+func NewHttpClient(rpcUrl string, chainId uint8) (*http.Client, error) {
 	// Set cookie jar so cookie stickiness applies to connections
 	// TODO Add appropriate suffix list
 	jar, err := cookiejar.New(nil)
 	if err != nil {
 		return nil, err
 	}
+
 	defaultClient := &http.Client{
 		Jar:     jar,
 		Timeout: 60 * time.Second,
 	}
 
-	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
+	return defaultClient, nil
 }
 
 // NewNodeClientWithHttpClient creates a new client for interacting with an Aptos node API with a custom http.Client
-func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
+func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *fasthttp.Client) (*NodeClient, error) {
 	baseUrl, err := url.Parse(rpcUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse RPC url '%s': %w", rpcUrl, err)
@@ -75,7 +95,7 @@ func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Clie
 //
 //	client.SetTimeout(5 * time.Millisecond)
 func (rc *NodeClient) SetTimeout(timeout time.Duration) {
-	rc.client.Timeout = timeout
+	// rc.client.Timeout = timeout
 }
 
 // SetHeader sets the header for all future requests
@@ -554,9 +574,9 @@ func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api
 	if err != nil {
 		return
 	}
-	bodyReader := bytes.NewReader(sblob)
+
 	au := rc.baseUrl.JoinPath("transactions")
-	data, err = Post[*api.SubmitTransactionResponse](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = Post[*api.SubmitTransactionResponse](rc, au.String(), ContentTypeAptosSignedTxnBcs, sblob)
 	if err != nil {
 		return nil, fmt.Errorf("submit transaction api err: %w", err)
 	}
@@ -572,9 +592,9 @@ func (rc *NodeClient) BatchSubmitTransaction(signedTxns []*SignedTransaction) (r
 	if err != nil {
 		return
 	}
-	bodyReader := bytes.NewReader(sblob)
+
 	au := rc.baseUrl.JoinPath("transactions/batch")
-	response, err = Post[*api.BatchSubmitTransactionResponse](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	response, err = Post[*api.BatchSubmitTransactionResponse](rc, au.String(), ContentTypeAptosSignedTxnBcs, sblob)
 	if err != nil {
 		return nil, fmt.Errorf("submit transaction api err: %w", err)
 	}
@@ -615,7 +635,6 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	if err != nil {
 		return
 	}
-	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions/simulate")
 
 	// parse simulate tx options
@@ -637,7 +656,7 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 		au.RawQuery = params.Encode()
 	}
 
-	data, err = Post[[]*api.UserTransaction](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = Post[[]*api.UserTransaction](rc, au.String(), ContentTypeAptosSignedTxnBcs, sblob)
 	if err != nil {
 		return nil, fmt.Errorf("simulate transaction api err: %w", err)
 	}
@@ -949,7 +968,6 @@ func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data 
 		return
 	}
 	sblob := serializer.ToBytes()
-	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("view")
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
@@ -957,7 +975,7 @@ func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data 
 		au.RawQuery = params.Encode()
 	}
 
-	data, err = Post[[]any](rc, au.String(), ContentTypeAptosViewFunctionBcs, bodyReader)
+	data, err = Post[[]any](rc, au.String(), ContentTypeAptosViewFunctionBcs, sblob)
 	if err != nil {
 		return nil, fmt.Errorf("view function api err: %w", err)
 	}
@@ -1023,10 +1041,11 @@ func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckRe
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
 func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
-	req, err := http.NewRequest("GET", getUrl, nil)
-	if err != nil {
-		return out, err
-	}
+	req := fasthttp.AcquireRequest()
+	// defer req.SetTimeout(0)
+	req.SetRequestURI(getUrl)
+	req.Header.SetMethod(fasthttp.MethodGet)
+
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
 	// Set all preset headers
@@ -1034,22 +1053,22 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 		req.Header.Set(key, value)
 	}
 
-	response, err := rc.client.Do(req)
+	response := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(response)
+
+	err = rc.client.Do(req, response)
+	fasthttp.ReleaseRequest(req)
 	if err != nil {
-		err = fmt.Errorf("GET %s, %w", getUrl, err)
+		fmt.Println("error", err)
 		return out, err
 	}
 
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
+	if response.StatusCode() >= 400 {
+		err = NewHttpError(response, req)
 		return out, err
 	}
-	blob, err := io.ReadAll(response.Body)
-	if err != nil {
-		return out, fmt.Errorf("error getting response data, %w", err)
-	}
-	_ = response.Body.Close()
-	err = json.Unmarshal(blob, &out)
+
+	err = json.Unmarshal(response.Body(), &out)
 	if err != nil {
 		return out, err
 	}
@@ -1058,10 +1077,10 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 
 // GetBCS makes a GET request to the endpoint and parses the response into the given type with BCS
 func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
-	req, err := http.NewRequest("GET", getUrl, nil)
-	if err != nil {
-		return nil, err
-	}
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+	req.SetRequestURI(getUrl)
+	req.Header.SetMethod(fasthttp.MethodGet)
 	req.Header.Set("Accept", "application/x-bcs")
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
@@ -1070,33 +1089,34 @@ func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
 		req.Header.Set(key, value)
 	}
 
-	response, err := rc.client.Do(req)
+	response := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(response)
+	err = rc.client.Do(req, response)
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", getUrl, err)
 		return
 	}
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
+
+	if response.StatusCode() >= 400 {
+		err = NewHttpError(response, req)
 		return
 	}
-	blob, err := io.ReadAll(response.Body)
-	if err != nil {
-		err = fmt.Errorf("error getting response data, %w", err)
-		return
-	}
-	_ = response.Body.Close()
-	return blob, nil
+
+	return response.Body(), nil
 }
 
 // Post makes a POST request to the endpoint with the given body and parses the response into the given type with JSON
-func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Reader) (data T, err error) {
+func Post[T any](rc *NodeClient, postUrl string, contentType string, body []byte) (data T, err error) {
 	if body == nil {
-		body = http.NoBody
+		body = make([]byte, 0)
 	}
-	req, err := http.NewRequest("POST", postUrl, body)
-	if err != nil {
-		return data, err
-	}
+	req := fasthttp.AcquireRequest()
+	defer fasthttp.ReleaseRequest(req)
+	req.SetRequestURI(postUrl)
+
+	req.SetBody(body)
+	req.Header.SetMethod(fasthttp.MethodPost)
+
 	req.Header.Set("Content-Type", contentType)
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
@@ -1105,23 +1125,21 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 		req.Header.Set(key, value)
 	}
 
-	response, err := rc.client.Do(req)
+	response := fasthttp.AcquireResponse()
+	defer fasthttp.ReleaseResponse(response)
+
+	err = rc.client.Do(req, response)
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", postUrl, err)
 		return data, err
 	}
-	if response.StatusCode >= 400 {
-		err = NewHttpError(response)
-		return data, err
-	}
-	blob, err := io.ReadAll(response.Body)
-	if err != nil {
-		err = fmt.Errorf("error getting response data, %w", err)
-		return data, err
-	}
-	_ = response.Body.Close()
 
-	err = json.Unmarshal(blob, &data)
+	if response.StatusCode() >= 400 {
+		err = NewHttpError(response, req)
+		return data, err
+	}
+
+	err = json.Unmarshal(response.Body(), &data)
 	return data, err
 }
 
