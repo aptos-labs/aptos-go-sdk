@@ -54,7 +54,7 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 		// increase DNS cache time to an hour instead of default minute
 		Dial: (&fasthttp.TCPDialer{
 			Concurrency:      4096,
-			DNSCacheDuration: time.Hour,
+			DNSCacheDuration: time.Minute,
 		}).Dial,
 	}
 
@@ -95,7 +95,8 @@ func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *fasthttp.
 //
 //	client.SetTimeout(5 * time.Millisecond)
 func (rc *NodeClient) SetTimeout(timeout time.Duration) {
-	// rc.client.Timeout = timeout
+	rc.client.WriteTimeout = timeout
+	rc.client.ReadTimeout = timeout
 }
 
 // SetHeader sets the header for all future requests
@@ -1042,7 +1043,7 @@ func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckRe
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
 func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	req := fasthttp.AcquireRequest()
-	// defer req.SetTimeout(0)
+	defer fasthttp.ReleaseRequest(req)
 	req.SetRequestURI(getUrl)
 	req.Header.SetMethod(fasthttp.MethodGet)
 
@@ -1057,7 +1058,6 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	defer fasthttp.ReleaseResponse(response)
 
 	err = rc.client.Do(req, response)
-	fasthttp.ReleaseRequest(req)
 	if err != nil {
 		fmt.Println("error", err)
 		return out, err
