@@ -690,8 +690,6 @@ type ChainIdOption uint8
 //   - [ExpirationSeconds]
 //   - [SequenceNumber]
 //   - [ChainIdOption]
-//   - [FeePayer]
-//   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := DefaultMaxGasAmount

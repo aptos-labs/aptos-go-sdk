@@ -38,7 +38,7 @@ type CoinBalance struct {
 func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
 	var out []CoinBalance
 	var q struct {
-		Current_coin_balances []struct {
+		CurrentCoinBalances []struct {
 			CoinType     string `graphql:"coin_type"`
 			Amount       uint64
 			OwnerAddress string `graphql:"owner_address"`
@@ -54,7 +54,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 		return nil, err
 	}
 
-	for _, coin := range q.Current_coin_balances {
+	for _, coin := range q.CurrentCoinBalances {
 		out = append(out, CoinBalance{
 			CoinType: coin.CoinType,
 			Amount:   coin.Amount,
@@ -67,7 +67,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 // GetProcessorStatus tells the most updated version of the transaction processor.  This helps to determine freshness of data.
 func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error) {
 	var q struct {
-		Processor_status []struct {
+		ProcessorStatus []struct {
 			LastSuccessVersion uint64 `graphql:"last_success_version"`
 		} `graphql:"processor_status(where: {processor: {_eq: $processor_name}})"`
 	}
@@ -79,7 +79,7 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 		return 0, err
 	}
 
-	return q.Processor_status[0].LastSuccessVersion, err
+	return q.ProcessorStatus[0].LastSuccessVersion, err
 }
 
 // WaitOnIndexer waits for the indexer processorName specified to catch up to the requestedVersion

@@ -51,30 +51,69 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 
-	// Build transaction
-	rawTxn, err := aptos.APTTransferTransaction(client, alice, bob.Address, TransferAmount)
+	// 1. Build transaction
+	accountBytes, err := bcs.Serialize(&bob.Address)
+	if err != nil {
+		panic("Failed to serialize bob's address:" + err.Error())
+	}
+
+	amountBytes, err := bcs.SerializeU64(TransferAmount)
+	if err != nil {
+		panic("Failed to serialize transfer amount:" + err.Error())
+	}
+	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
+		Payload: &aptos.EntryFunction{
+			Module: aptos.ModuleId{
+				Address: aptos.AccountOne,
+				Name:    "aptos_account",
+			},
+			Function: "transfer",
+			ArgTypes: []aptos.TypeTag{},
+			Args: [][]byte{
+				accountBytes,
+				amountBytes,
+			},
+		}},
+	)
+
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
 
-	// Sign transaction
+	// 2. Simulate transaction (optional)
+	// This is useful for understanding how much the transaction will cost
+	// and to ensure that the transaction is valid before sending it to the network
+	// This is optional, but recommended
+	simulationResult, err := client.SimulateTransaction(rawTxn, alice)
+	if err != nil {
+		panic("Failed to simulate transaction:" + err.Error())
+	}
+	fmt.Printf("\n=== Simulation ===\n")
+	fmt.Printf("Gas unit price: %d\n", simulationResult[0].GasUnitPrice)
+	fmt.Printf("Gas used: %d\n", simulationResult[0].GasUsed)
+	fmt.Printf("Total gas fee: %d\n", simulationResult[0].GasUsed*simulationResult[0].GasUnitPrice)
+	fmt.Printf("Status: %s\n", simulationResult[0].VmStatus)
+
+	// 3. Sign transaction
 	signedTxn, err := rawTxn.SignedTransaction(alice)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}
 
-	// Submit and wait for it to complete
+	// 4. Submit transaction
 	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
-	// Wait for the transaction
+	// 5. Wait for the transaction to complete
 	_, err = client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
+
+	// Check balances
 	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
@@ -87,17 +126,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 
-	// Now submit as a single call, with a custom payload
-	accountBytes, err := bcs.Serialize(&bob.Address)
-	if err != nil {
-		panic("Failed to serialize bob's address:" + err.Error())
-	}
-
-	amountBytes, err := bcs.SerializeU64(TransferAmount)
-	if err != nil {
-		panic("Failed to serialize transfer amount:" + err.Error())
-	}
-
+	// Now do it again, but with a different method
 	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
