@@ -1,6 +1,8 @@
 package aptos
 
 import (
+	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -88,8 +90,27 @@ type Client struct {
 }
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
-func NewClient(config NetworkConfig) (client *Client, err error) {
-	nodeClient, err := NewNodeClient(config.NodeUrl, config.ChainId)
+func NewClient(config NetworkConfig, options ...any) (client *Client, err error) {
+	var httpClient *http.Client = nil
+	for i, arg := range options {
+		switch value := arg.(type) {
+		case *http.Client:
+			if httpClient != nil {
+				err = fmt.Errorf("NewClient only accepts one http.Client")
+				return
+			}
+			httpClient = value
+		default:
+			err = fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
+			return
+		}
+	}
+	var nodeClient *NodeClient
+	if httpClient == nil {
+		nodeClient, err = NewNodeClient(config.NodeUrl, config.ChainId)
+	} else {
+		nodeClient, err = NewNodeClientWithHttpClient(config.NodeUrl, config.ChainId, httpClient)
+	}
 	if err != nil {
 		return nil, err
 	}
