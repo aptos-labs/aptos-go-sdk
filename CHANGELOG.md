@@ -5,6 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 - Add better error messages around script argument parsing
+- Add example for scripts with FA
 
 # v1.0.0 (10/28/2024)
 - [`Fix`] Paginate transactions properly if no given start version

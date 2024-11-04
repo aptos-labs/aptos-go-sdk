@@ -59,7 +59,7 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 ### TODO
 
 - [ ] Multi-agent example
-- [ ] Script Example
+- [x] Script Example
 - [ ] Digital assets / NFTs example
 - [ ] Transaction parsing example (by blocks)
 
