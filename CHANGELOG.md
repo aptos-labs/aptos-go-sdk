@@ -4,6 +4,7 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+- Add better error messages around script argument parsing
 
 # v1.0.0 (10/28/2024)
 - [`Fix`] Paginate transactions properly if no given start version

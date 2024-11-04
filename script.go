@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"fmt"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"math/big"
 )
@@ -65,29 +66,65 @@ type ScriptArgument struct {
 }
 
 //region ScriptArgument bcs.Struct
+// TODO: consider making a separate function to parse the value at input time rather than build time
 
 func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(sa.Variant))
 	switch sa.Variant {
 	case ScriptArgumentU8:
-		ser.U8(sa.Value.(uint8))
+		value, ok := (sa.Value).(uint8)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU8, must be uint8", sa.Value))
+		}
+		ser.U8(value)
 	case ScriptArgumentU16:
-		ser.U16(sa.Value.(uint16))
+		value, ok := (sa.Value).(uint16)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU16, must be uint16", sa.Value))
+		}
+		ser.U16(value)
 	case ScriptArgumentU32:
-		ser.U32(sa.Value.(uint32))
+		value, ok := (sa.Value).(uint32)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU32, must be uint32", sa.Value))
+		}
+		ser.U32(value)
 	case ScriptArgumentU64:
-		ser.U64(sa.Value.(uint64))
+		value, ok := (sa.Value).(uint64)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU64, must be uint64", sa.Value))
+		}
+		ser.U64(value)
 	case ScriptArgumentU128:
-		ser.U128(sa.Value.(big.Int))
+		value, ok := (sa.Value).(big.Int)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgument128, must be big.Int", sa.Value))
+		}
+		ser.U128(value)
 	case ScriptArgumentU256:
-		ser.U256(sa.Value.(big.Int))
+		value, ok := (sa.Value).(big.Int)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgument256, must be big.Int", sa.Value))
+		}
+		ser.U256(value)
 	case ScriptArgumentAddress:
-		addr := sa.Value.(AccountAddress)
+		addr, ok := (sa.Value).(AccountAddress)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentAddress, must be AccountAddress", sa.Value))
+		}
 		ser.Struct(&addr)
 	case ScriptArgumentU8Vector:
-		ser.WriteBytes(sa.Value.([]byte))
+		bytes, ok := (sa.Value).([]byte)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU8Vector, must be []byte", sa.Value))
+		}
+		ser.WriteBytes(bytes)
 	case ScriptArgumentBool:
-		ser.Bool(sa.Value.(bool))
+		value, ok := (sa.Value).(bool)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentBool, must be bool", sa.Value))
+		}
+		ser.Bool(value)
 	}
 }
 
