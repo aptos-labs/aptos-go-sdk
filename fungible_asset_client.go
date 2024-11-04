@@ -13,11 +13,8 @@ type FungibleAssetClient struct {
 }
 
 // NewFungibleAssetClient verifies the [AccountAddress] of the metadata exists when creating the client
-//
-// TODO: Add lookup of other metadata information such as symbol, supply, etc
 func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (faClient *FungibleAssetClient, err error) {
 	// Retrieve the Metadata resource to ensure the fungible asset actually exists
-	// TODO: all functions should take *AccountAddress
 	_, err = client.AccountResource(*metadataAddress, "0x1::fungible_asset::Metadata")
 	if err != nil {
 		return
@@ -132,24 +129,24 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress) (isFro
 	return
 }
 
+// IsUntransferable returns true if the store can't be transferred
+func (client *FungibleAssetClient) IsUntransferable(storeAddress *AccountAddress) (isFrozen bool, err error) {
+	val, err := client.viewStore([][]byte{storeAddress[:]}, "is_untransferable")
+	if err != nil {
+		return
+	}
+	isFrozen = val.(bool)
+	return
+}
+
 // StoreExists returns true if the store exists
 func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress) (exists bool, err error) {
-	payload := &ViewPayload{
-		Module: ModuleId{
-			Address: AccountOne,
-			Name:    "fungible_asset",
-		},
-		Function: "store_exists",
-		ArgTypes: []TypeTag{},
-		Args:     [][]byte{storeAddress[:]},
-	}
-
-	vals, err := client.aptosClient.View(payload)
+	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_exists")
 	if err != nil {
 		return
 	}
 
-	exists = vals[0].(bool)
+	exists = val.(bool)
 	return
 }
 
@@ -178,7 +175,6 @@ func (client *FungibleAssetClient) Maximum() (maximum *big.Int, err error) {
 		return
 	}
 	return unwrapAggregator(val)
-
 }
 
 // Name returns the name of the fungible asset
@@ -211,86 +207,91 @@ func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 	return
 }
 
+// IconUri returns the URI of the icon for the fungible asset
+func (client *FungibleAssetClient) IconUri(uri string, err error) {
+	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "icon_uri")
+	if err != nil {
+		return
+	}
+	uri = val.(string)
+	return
+}
+
+// ProjectUri returns the URI of the project for the fungible asset
+func (client *FungibleAssetClient) ProjectUri(uri string, err error) {
+	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "project_uri")
+	if err != nil {
+		return
+	}
+	uri = val.(string)
+	return
+}
+
 // viewMetadata calls a view function on the fungible asset metadata
 func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
-	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: functionName,
-		ArgTypes: []TypeTag{typeTag},
+		ArgTypes: []TypeTag{metadataStructTag()},
 		Args:     args,
 	}
-
-	vals, err := client.aptosClient.View(payload)
-	if err != nil {
-		return
-	}
-
-	return vals[0], nil
+	return client.view(payload)
 }
 
 // viewStore calls a view function on the fungible asset store
 func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
-	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "fungible_asset",
 		},
 		Function: functionName,
-		ArgTypes: []TypeTag{typeTag},
+		ArgTypes: []TypeTag{storeStructTag()},
 		Args:     args,
 	}
-
-	vals, err := client.aptosClient.View(payload)
-	if err != nil {
-		return
-	}
-
-	return vals[0], nil
+	return client.view(payload)
 }
 
 // viewPrimaryStore calls a view function on the primary fungible asset store
 func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}
-	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "primary_fungible_store",
 		},
 		Function: functionName,
-		ArgTypes: []TypeTag{typeTag},
+		ArgTypes: []TypeTag{storeStructTag()},
 		Args:     args,
 	}
-
-	vals, err := client.aptosClient.View(payload)
-	if err != nil {
-		return
-	}
-
-	return vals[0], nil
+	return client.view(payload)
 }
 
 // viewPrimaryStoreMetadata calls a view function on the primary fungible asset store metadata
 func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, functionName string) (result any, err error) {
-	structTag := &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}
-	typeTag := TypeTag{Value: structTag}
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "primary_fungible_store",
 		},
 		Function: functionName,
-		ArgTypes: []TypeTag{typeTag},
+		ArgTypes: []TypeTag{metadataStructTag()},
 		Args:     args,
 	}
+	return client.view(payload)
+}
 
+func metadataStructTag() TypeTag {
+	return TypeTag{Value: &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "Metadata"}}
+}
+
+func storeStructTag() TypeTag {
+	return TypeTag{Value: &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}}
+}
+
+func (client *FungibleAssetClient) view(payload *ViewPayload) (result any, err error) {
 	vals, err := client.aptosClient.View(payload)
 	if err != nil {
 		return
