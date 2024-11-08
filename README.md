@@ -5,7 +5,7 @@
 
 # aptos-go-sdk
 
-An SDK for the Aptos blockchain in Go. The SDK is currently in Beta.
+An SDK for the Aptos blockchain in Go.
 
 ## Getting started
 
@@ -69,3 +69,8 @@ You can read more about the Go SDK documentation on [aptos.dev](https://aptos.de
 - [ ] More testing around API parsing
 - [ ] TypeTag string parsing
 - [x] Add examples into the documentation
+
+
+# How to publish
+1. Update changelog with a pull request
+2. Create a new tag via e.g. v1.1.0 with the list of changes
