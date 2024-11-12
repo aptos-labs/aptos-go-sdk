@@ -4,6 +4,7 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+- Add BCS support for optional values
 
 # v1.1.0 (11/07/2024)
 - Add icon uri and project uri to FA client, reduce duplicated code

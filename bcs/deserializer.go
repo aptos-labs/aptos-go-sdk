@@ -275,6 +275,42 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	return out
 }
 
+// DeserializeOption deserializes an optional value
+//
+// # Under the hood, this is represented as a 0 or 1 length array
+//
+// Here's an example for handling an optional value:
+//
+//	// For a Some(10) value
+//	bytes == []byte{0x01, 0x0A}
+//	des := NewDeserializer(bytes)
+//	output := DeserializeOption(des, nil, func(des *Deserializer, out *uint8) {
+//		out = des.U8()
+//	})
+//	// output == &10
+//
+//	// For a None value
+//	bytes2 == []byte{0x00}
+//	des2 := NewDeserializer(bytes2)
+//	output := DeserializeOption(des2, nil, func(des *Deserializer, out *uint8) {
+//		out = des.U8()
+//	})
+//	// output == nil
+func DeserializeOption[T any](des *Deserializer, deserialize func(des *Deserializer, out *T)) *T {
+	array := DeserializeSequenceWithFunction(des, deserialize)
+	switch len(array) {
+	case 0:
+		// None
+		return nil
+	case 1:
+		// Some
+		return &array[0]
+	default:
+		des.setError("expected 0 or 1 element as an option, got %d", len(array))
+	}
+	return nil
+}
+
 // setError overrides the previous error, this can only be called from within the bcs package
 func (des *Deserializer) setError(msg string, args ...any) {
 	if des.err != nil {

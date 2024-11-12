@@ -415,6 +415,32 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	assert.Equal(t, []byte{0x01, 0x05}, serializedBytes)
 }
 
+func Test_SerializeOptional(t *testing.T) {
+	ser := Serializer{}
+	someValue := uint8(0xFF)
+	SerializeOption(&ser, &someValue, func(ser *Serializer, val uint8) {
+		ser.U8(val)
+	})
+	assert.Equal(t, []byte{0x01, 0xFF}, ser.ToBytes())
+	des := NewDeserializer(ser.ToBytes())
+	desValue := DeserializeOption(des, func(des *Deserializer, out *uint8) {
+		*out = des.U8()
+	})
+	assert.Equal(t, &someValue, desValue)
+
+	ser2 := Serializer{}
+	SerializeOption(&ser2, nil, func(ser *Serializer, val uint8) {
+		ser.U8(val)
+	})
+	assert.Equal(t, []byte{0x00}, ser2.ToBytes())
+
+	des2 := NewDeserializer(ser2.ToBytes())
+	desValue2 := DeserializeOption(des2, func(des *Deserializer, out *uint8) {
+		*out = des.U8()
+	})
+	assert.Nil(t, desValue2)
+}
+
 func Test_NilStructs(t *testing.T) {
 	ser := Serializer{}
 	ser.Struct(nil)

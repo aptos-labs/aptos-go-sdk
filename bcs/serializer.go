@@ -324,3 +324,31 @@ func SerializeSingle(marshal func(ser *Serializer)) (bytes []byte, err error) {
 	bytes = ser.ToBytes()
 	return bytes, nil
 }
+
+// SerializeOption serializes an optional value
+//
+// # Under the hood, this is represented as a 0 or 1 length array
+//
+// Here's an example for handling an optional value:
+//
+//	// For a Some(10) value
+//	input := uint8(10)
+//	ser := &Serializer{}
+//	bytes, _ := SerializeOption(ser, &input, func(ser *Serializer, item uint8) {
+//		ser.U8(item)
+//	})
+//	// bytes == []byte{0x01,0x0A}
+//
+//	// For a None value
+//	ser2 := &Serializer{}
+//	bytes2, _ := SerializeOption(ser2, nil, func(ser *Serializer, item uint8) {
+//		ser.U8(item)
+//	})
+//	// bytes2 == []byte{0x00}
+func SerializeOption[T any](ser *Serializer, input *T, serialize func(ser *Serializer, item T)) {
+	if input == nil {
+		SerializeSequenceWithFunction([]T{}, ser, serialize)
+	} else {
+		SerializeSequenceWithFunction([]T{*input}, ser, serialize)
+	}
+}
