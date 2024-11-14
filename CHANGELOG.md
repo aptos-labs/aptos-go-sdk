@@ -4,18 +4,23 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+
+- [`Fix`][`Breaking`] Fix MultiKey implementation to be more consistent with the rest of the SDKs
 - Add BCS support for optional values
 
 # v1.1.0 (11/07/2024)
+
 - Add icon uri and project uri to FA client, reduce duplicated code
 - Add better error messages around script argument parsing
 - Add example for scripts with FA
 
 # v1.0.0 (10/28/2024)
+
 - [`Fix`] Paginate transactions properly if no given start version
 - Add account transactions API
 
 # v0.7.0 (8/19/2024)
+
 - [`Fix`] Parse GenesisTransaction properly
 - [`Fix`] Ensure if no block transactions are requested, it doesn't fail to fetch a block
 - [`Doc`] Fix comment from milliseconds to microseconds
@@ -24,6 +29,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Fix MultiKey signature verification and building to work with any keys
 
 # v0.6.0 (6/28/2024)
+
 - [`Breaking`] Change type from Transaction to CommittedTransaction for cases that it's known they're committed
 - [`Fix`] Fix secp256k1 signing and verification to be correctly used
 - [`Fix`] Fix supply view function for FungibleAssetClient
@@ -42,11 +48,13 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - Change signers to have simulation authenticators by default
 
 # v0.5.0 (6/21/2024)
+
 - [`Fix`] Fix sponsored transactions, and add example for sponsored transactions
 - Add examples to CI
 - Add node health check API to client
 
 # v0.4.1 (6/18/2024)
+
 - [`Fix`] Make examples more portable / not rely on internal packages
 
 # v0.4.0 (6/17/2024)

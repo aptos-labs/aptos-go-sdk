@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"math/rand/v2"
 )
 
 /* This is a collection of test signers, that don't make sense in the real world, but are used for testing */
@@ -91,7 +92,7 @@ type MultiKeyTestSigner struct {
 func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTestSigner, error) {
 	signers := make([]crypto.Signer, numKeys)
 	for i := range signers {
-		switch i % 3 {
+		switch i % 2 {
 		case 0:
 			signer, err := crypto.GenerateEd25519PrivateKey()
 			if err != nil {
@@ -99,7 +100,7 @@ func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTe
 			}
 			// Wrap in a SingleSigner
 			signers[i] = &crypto.SingleSigner{Signer: signer}
-		case 1, 2:
+		case 1:
 			signer, err := crypto.GenerateSecp256k1Key()
 			if err != nil {
 				return nil, err
@@ -150,16 +151,25 @@ func (s *MultiKeyTestSigner) Sign(msg []byte) (authenticator *crypto.AccountAuth
 func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 	indexedSigs := make([]crypto.IndexedAnySignature, s.SignaturesRequired)
 
-	// TODO: randomize keys used for testing
-	for i := uint8(0); i < s.SignaturesRequired; i++ {
-		// We skip over keys to ensure that order doesn't matter
-		signerIndex := (i * 2) % uint8(len(s.Signers))
+	alreadyUsed := make(map[int]bool)
 
-		sig, err := s.Signers[signerIndex].SignMessage(msg)
+	for i := uint8(0); i < s.SignaturesRequired; i++ {
+		// Find a random key
+		index := 0
+		for {
+			index = rand.IntN(len(s.Signers))
+			_, present := alreadyUsed[index]
+			if !present {
+				alreadyUsed[index] = true
+				break
+			}
+		}
+
+		sig, err := s.Signers[index].SignMessage(msg)
 		if err != nil {
 			return nil, err
 		}
-		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: signerIndex}
+		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: uint8(index)}
 	}
 
 	return crypto.NewMultiKeySignature(indexedSigs)

@@ -349,33 +349,56 @@ func (ea *MultiKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 
 //region MultiKeyBitmap
 
-// MultiKeyBitmapSize represents the 4 bytes needed to make a 32-bit bitmap
-const MultiKeyBitmapSize = uint8(4)
+// MaxMultiKeySignatures is the maximum number supported here for ease of use
+const MaxMultiKeySignatures = uint8(32)
+const MaxMultiKeyBitmapBytes = MaxMultiKeySignatures / 8
 
 // MultiKeyBitmap represents a bitmap of signatures in a MultiKey public key that signed the transaction
-// There are a maximum of 32 possible values in MultiKeyBitmapSize, starting from the leftmost bit representing
+// There is a variable length to the possible signers, starting from the leftmost bit representing
 // index 0 of the public key
-type MultiKeyBitmap [MultiKeyBitmapSize]byte
+type MultiKeyBitmap struct {
+	inner []byte
+}
 
 // ContainsKey tells us if the current index is in the map
 func (bm *MultiKeyBitmap) ContainsKey(index uint8) bool {
+	if index >= MaxMultiKeySignatures {
+		return false
+	}
 	numByte, numBit := KeyIndices(index)
-	return (bm[numByte] & (128 >> numBit)) == 1
+
+	// If it's outside the map, then it's definitely false
+	if int(numByte) >= len(bm.inner) {
+		return false
+	}
+	return (bm.inner[numByte] & (128 >> numBit)) == 1
 }
 
 // AddKey adds the value to the map, returning an error if it is already added
 func (bm *MultiKeyBitmap) AddKey(index uint8) error {
+	if index >= MaxMultiKeySignatures {
+		return fmt.Errorf("index %d is greater than the maximum number of signatures %d", index, MaxMultiKeySignatures)
+	}
 	if bm.ContainsKey(index) {
 		return fmt.Errorf("index %d already in bitmap", index)
 	}
 	numByte, numBit := KeyIndices(index)
-	bm[numByte] = bm[numByte] | (128 >> numBit)
+
+	// Expand map if it needs to be extended
+	curLength := len(bm.inner)
+	if int(numByte) >= curLength {
+		newInner := make([]byte, numByte+1)
+		copy(newInner[0:curLength], bm.inner[:])
+		bm.inner = newInner
+	}
+
+	bm.inner[numByte] = bm.inner[numByte] | (128 >> numBit)
 	return nil
 }
 
 func (bm *MultiKeyBitmap) Indices() []uint8 {
 	indices := make([]uint8, 0)
-	for i := uint8(0); i < MultiKeyBitmapSize*8; i++ {
+	for i := uint8(0); i < MaxMultiKeySignatures; i++ {
 		if bm.ContainsKey(i) {
 			indices = append(indices, i)
 		}
@@ -396,7 +419,7 @@ func KeyIndices(index uint8) (numByte uint8, numBit uint8) {
 // Implements:
 //   - [bcs.Marshaler]
 func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
-	ser.WriteBytes(bm[:])
+	ser.WriteBytes(bm.inner[:])
 }
 
 // UnmarshalBCS deserializes the bitmap from bytes
@@ -405,11 +428,12 @@ func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
 //   - [bcs.Unmarshaler]
 func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
 	length := des.Uleb128()
-	if length != uint32(MultiKeyBitmapSize) {
-		des.SetError(fmt.Errorf("MultiKeyBitmap must be %d bytes, got %d", MultiKeyBitmapSize, length))
+	if length > uint32(MaxMultiKeyBitmapBytes) {
+		des.SetError(fmt.Errorf("MultiKeyBitmap must be %d bytes or less, got %d", MaxMultiKeyBitmapBytes, length))
 		return
 	}
-	des.ReadFixedBytesInto(bm[:])
+	bm.inner = make([]byte, length)
+	des.ReadFixedBytesInto(bm.inner[:])
 }
 
 //endregion
