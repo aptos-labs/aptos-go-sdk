@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"encoding/hex"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -83,6 +84,18 @@ func TestMultiKeySerialization(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, auth, authDeserialized)
 
+}
+
+func TestMultiKey_Serialization_CrossPlatform(t *testing.T) {
+	serialized := "020140118d6ebe543aaf3a541453f98a5748ab5b9e3f96d781b8c0a43740af2b65c03529fdf62b7de7aad9150770e0994dc4e0714795fdebf312be66cd0550c607755e00401a90421453aa53fa5a7aa3dfe70d913823cbf087bf372a762219ccc824d3a0eeecccaa9d34f22db4366aec61fb6c204d2440f4ed288bc7cc7e407b766723a60901c0"
+	serializedBytes, err := hex.DecodeString(serialized)
+	assert.NoError(t, err)
+	signature := &MultiKeySignature{}
+	assert.NoError(t, bcs.Deserialize(signature, serializedBytes))
+
+	reserialized, err := bcs.Serialize(signature)
+	assert.NoError(t, err)
+	assert.Equal(t, serializedBytes, reserialized)
 }
 
 func createMultiKey(t *testing.T) (

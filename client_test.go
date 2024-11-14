@@ -47,6 +47,10 @@ func initSigners() {
 		signer, err := NewMultiKeyTestSigner(3, 2)
 		return any(signer).(TransactionSigner), err
 	}
+	TestSigners["5-of-32 MultiKey"] = func() (TransactionSigner, error) {
+		signer, err := NewMultiKeyTestSigner(32, 5)
+		return any(signer).(TransactionSigner), err
+	}
 	/* TODO: MultiEd25519 is not supported ATM
 	TestSigners["MultiEd25519"] = func() (TransactionSigner, error) {
 		signer, err := NewMultiEd25519Signer(3, 2)
