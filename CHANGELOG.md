@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- Add support for optional ledger version in FA functions and APT balance
+
 # v1.2.0 (11/15/2024)
 
 - [`Fix`][`Breaking`] Fix MultiKey implementation to be more consistent with the rest of the SDKs

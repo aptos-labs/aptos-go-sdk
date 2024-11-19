@@ -974,7 +974,7 @@ func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
 }
 
 // AccountAPTBalance fetches the balance of an account of APT.  Response is in octas or 1/10^8 APT.
-func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64, err error) {
+func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
 	accountBytes, err := bcs.Serialize(&account)
 	if err != nil {
 		return 0, err
@@ -986,7 +986,7 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress) (balance uint64,
 		Function: "balance",
 		ArgTypes: []TypeTag{AptosCoinTypeTag},
 		Args:     [][]byte{accountBytes},
-	})
+	}, ledgerVersion...)
 	if err != nil {
 		return 0, err
 	}
