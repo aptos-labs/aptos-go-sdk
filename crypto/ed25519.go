@@ -4,10 +4,11 @@ import (
 	"crypto/ed25519"
 	"errors"
 	"fmt"
+	"io"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/hdevalence/ed25519consensus"
-	"io"
 )
 
 //region Ed25519PrivateKey
@@ -151,6 +152,10 @@ func (key *Ed25519PrivateKey) Bytes() []byte {
 // Implements:
 //   - [CryptoMaterial]
 func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
+	bytes, err = ParsePrivateKey(bytes, PrivateKeyVariantEd25519, false)
+	if err != nil {
+		return err
+	}
 	if len(bytes) != ed25519.SeedSize {
 		return fmt.Errorf("invalid ed25519 private key size %d", len(bytes))
 	}
@@ -166,6 +171,11 @@ func (key *Ed25519PrivateKey) ToHex() string {
 	return util.BytesToHex(key.Bytes())
 }
 
+// ToAIP80 formats the private key to AIP-80 compliant string
+func (key *Ed25519PrivateKey) ToAIP80() (formattedString string, err error) {
+	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantEd25519)
+}
+
 // FromHex sets the [Ed25519PrivateKey] to the bytes represented by the hex string, with or without a leading 0x
 //
 // Errors if the hex string is not valid, or if the bytes length is not [ed25519.SeedSize].
@@ -173,7 +183,7 @@ func (key *Ed25519PrivateKey) ToHex() string {
 // Implements:
 //   - [CryptoMaterial]
 func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
-	bytes, err := util.ParseHex(hexStr)
+	bytes, err := ParsePrivateKey(hexStr, PrivateKeyVariantEd25519)
 	if err != nil {
 		return err
 	}

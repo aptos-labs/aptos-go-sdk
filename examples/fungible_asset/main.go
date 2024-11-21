@@ -9,7 +9,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
-const testEd25519PrivateKey = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
+const testEd25519PrivateKey = "ed25519-priv-0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
 const rupeePublisherAddress = "0x978c213990c4833df71548df7ce49d54c759d6b6d932de22b24d56060b7af2aa"
 
 // These come from fungible_asset.json
