@@ -370,7 +370,7 @@ type AptosRpcClient interface {
 	EstimateGasPrice() (info EstimateGasInfo, err error)
 
 	// AccountAPTBalance retrieves the APT balance in the account
-	AccountAPTBalance(address AccountAddress) (uint64, error)
+	AccountAPTBalance(address AccountAddress, ledgerVersion ...uint64) (uint64, error)
 
 	// NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
 	NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error)
@@ -825,8 +825,8 @@ func (client *Client) EstimateGasPrice() (info EstimateGasInfo, err error) {
 }
 
 // AccountAPTBalance retrieves the APT balance in the account
-func (client *Client) AccountAPTBalance(address AccountAddress) (uint64, error) {
-	return client.nodeClient.AccountAPTBalance(address)
+func (client *Client) AccountAPTBalance(address AccountAddress, ledgerVersion ...uint64) (uint64, error) {
+	return client.nodeClient.AccountAPTBalance(address, ledgerVersion...)
 }
 
 // QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer client on how to make queries

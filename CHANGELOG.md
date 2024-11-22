@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - Add AIP-80 support for Ed25519 and Secp256k1 private keys
+- Add support for optional ledger version in FA functions and APT balance
 
 # v1.2.0 (11/15/2024)
 
