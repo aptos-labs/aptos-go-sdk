@@ -2,13 +2,15 @@ package crypto
 
 import (
 	"crypto/ed25519"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
-const testEd25519PrivateKey = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
+const testEd25519PrivateKey = "ed25519-priv-0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
+const testEd25519PrivateKeyHex = "0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
 const testEd25519PublicKey = "0xde19e5d1880cac87d57484ce9ed2e84cf0f9599f12e7cc3a52e4e7657a763f2c"
 const testEd25519Address = "0x978c213990c4833df71548df7ce49d54c759d6b6d932de22b24d56060b7af2aa"
 const testEd25519Message = "0x68656c6c6f20776f726c64"
@@ -18,7 +20,7 @@ func TestEd25519Keys(t *testing.T) {
 	testEd25519PrivateKeyBytes := []byte{0xc5, 0x33, 0x8c, 0xd2, 0x51, 0xc2, 0x2d, 0xaa, 0x8c, 0x9c, 0x9c, 0xc9, 0x4f, 0x49, 0x8c, 0xc8, 0xa5, 0xc7, 0xe1, 0xd2, 0xe7, 0x52, 0x87, 0xa5, 0xdd, 0xa9, 0x10, 0x96, 0xfe, 0x64, 0xef, 0xa5}
 
 	// First ensure bytes and hex are the same
-	readBytes, err := util.ParseHex(testEd25519PrivateKey)
+	readBytes, err := util.ParseHex(testEd25519PrivateKeyHex)
 	assert.NoError(t, err)
 	assert.Equal(t, testEd25519PrivateKeyBytes, readBytes)
 
@@ -33,7 +35,10 @@ func TestEd25519Keys(t *testing.T) {
 
 	// The outputs should match as well
 	assert.Equal(t, privateKey.Bytes(), testEd25519PrivateKeyBytes)
-	assert.Equal(t, privateKey.ToHex(), testEd25519PrivateKey)
+	assert.Equal(t, privateKey.ToHex(), testEd25519PrivateKeyHex)
+	formattedString, err := privateKey.ToAIP80()
+	assert.NoError(t, err)
+	assert.Equal(t, formattedString, testEd25519PrivateKey)
 
 	// Auth key should match
 	assert.Equal(t, testEd25519Address, privateKey.AuthKey().ToHex())

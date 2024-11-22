@@ -3,6 +3,7 @@ package crypto
 import (
 	"crypto/ecdsa"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	ethCrypto "github.com/ethereum/go-ethereum/crypto"
@@ -98,6 +99,10 @@ func (key *Secp256k1PrivateKey) Bytes() []byte {
 // Implements:
 //   - [CryptoMaterial]
 func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) (err error) {
+	bytes, err = ParsePrivateKey(bytes, PrivateKeyVariantSecp256k1, false)
+	if err != nil {
+		return err
+	}
 	if len(bytes) != Secp256k1PrivateKeyLength {
 		return fmt.Errorf("invalid secp256k1 private key size %d", len(bytes))
 	}
@@ -117,6 +122,11 @@ func (key *Secp256k1PrivateKey) ToHex() string {
 	return util.BytesToHex(key.Bytes())
 }
 
+// ToAIP80 formats the private key to AIP-80 compliant string
+func (key *Secp256k1PrivateKey) ToAIP80() (formattedString string, err error) {
+	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantSecp256k1)
+}
+
 //endregion
 
 // FromHex populates the [Secp256k1PrivateKey] from a hex string
@@ -126,7 +136,7 @@ func (key *Secp256k1PrivateKey) ToHex() string {
 // Implements:
 //   - [CryptoMaterial]
 func (key *Secp256k1PrivateKey) FromHex(hexStr string) (err error) {
-	bytes, err := util.ParseHex(hexStr)
+	bytes, err := ParsePrivateKey(hexStr, PrivateKeyVariantSecp256k1)
 	if err != nil {
 		return err
 	}

@@ -1,14 +1,16 @@
 package crypto
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
-	testSecp256k1PrivateKey     = "0xd107155adf816a0a94c6db3c9489c13ad8a1eda7ada2e558ba3bfa47c020347e"
+	testSecp256k1PrivateKey     = "secp256k1-priv-0xd107155adf816a0a94c6db3c9489c13ad8a1eda7ada2e558ba3bfa47c020347e"
+	testSecp256k1PrivateKeyHex  = "0xd107155adf816a0a94c6db3c9489c13ad8a1eda7ada2e558ba3bfa47c020347e"
 	testSecp256k1PublicKey      = "0x04acdd16651b839c24665b7e2033b55225f384554949fef46c397b5275f37f6ee95554d70fb5d9f93c5831ebf695c7206e7477ce708f03ae9bb2862dc6c9e033ea"
 	testSecp256k1Address        = "0x5792c985bc96f436270bd2a3c692210b09c7febb8889345ceefdbae4bacfe498"
 	testSecp256k1MessageEncoded = "0x68656c6c6f20776f726c64"
@@ -16,7 +18,7 @@ const (
 )
 
 func TestSecp256k1Keys(t *testing.T) {
-	testSecp256k1PrivateKeyBytes, err := util.ParseHex(testSecp256k1PrivateKey)
+	testSecp256k1PrivateKeyBytes, err := util.ParseHex(testSecp256k1PrivateKeyHex)
 	assert.NoError(t, err)
 
 	// Either bytes or hex should work
@@ -30,7 +32,10 @@ func TestSecp256k1Keys(t *testing.T) {
 
 	// The outputs should match as well
 	assert.Equal(t, privateKey.Bytes(), testSecp256k1PrivateKeyBytes)
-	assert.Equal(t, privateKey.ToHex(), testSecp256k1PrivateKey)
+	assert.Equal(t, privateKey.ToHex(), testSecp256k1PrivateKeyHex)
+	formattedString, err := privateKey.ToAIP80()
+	assert.NoError(t, err)
+	assert.Equal(t, formattedString, testSecp256k1PrivateKey)
 
 	// Auth key should match
 	singleSender := SingleSigner{privateKey}
