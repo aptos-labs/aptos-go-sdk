@@ -3,6 +3,8 @@ package aptos
 import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -239,7 +241,7 @@ func Test_Spec_Secp256k1_Authenticator(t *testing.T) {
 	emptySig := key1.EmptySignature()
 	assert.Equal(t, &crypto.AnySignature{
 		Variant:   crypto.AnySignatureVariantSecp256k1,
-		Signature: &crypto.Secp256k1Signature{},
+		Signature: &crypto.Secp256k1Signature{Inner: ecdsa.NewSignature(&secp256k1.ModNScalar{}, &secp256k1.ModNScalar{})},
 	}, emptySig, "It should be able to generate an empty signature AccountAuthenticator")
 	emptyAuth := key1.SimulationAuthenticator()
 	assert.Equal(t, &crypto.AccountAuthenticator{

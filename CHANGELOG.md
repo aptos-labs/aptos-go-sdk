@@ -7,6 +7,10 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 - Add AIP-80 support for Ed25519 and Secp256k1 private keys
 - Add support for optional ledger version in FA functions and APT balance
+- [`Breaking`] Change from the `go-ethereum/crypto` to `decred/dcrd` for secp256k1 signing
+- [`Breaking`] Add checks for malleability to prevent duplicate secp256k1 signatures in verification and to ensure
+  correct on-chain behavior
+- Adds functionality to recover public keys from secp256k1 signatures
 
 # v1.2.0 (11/15/2024)
 

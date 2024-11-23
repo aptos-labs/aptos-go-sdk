@@ -127,3 +127,80 @@ func TestGenerateSecp256k1Key(t *testing.T) {
 
 	assert.True(t, privateKey.VerifyingKey().Verify(msg, sig))
 }
+
+func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
+	privateKey := &Secp256k1PrivateKey{}
+	err := privateKey.FromHex(testSecp256k1PrivateKey)
+	assert.NoError(t, err)
+	message := []byte("hello")
+
+	signature, err := privateKey.SignMessage(message)
+	assert.NoError(t, err)
+
+	// Recover the public key
+	recoveredKey, err := signature.(*Secp256k1Signature).RecoverPublicKey(message, 1)
+	assert.NoError(t, err)
+
+	// Verify the signature with the key
+	assert.True(t, recoveredKey.Verify(message, signature))
+	assert.Equal(t, privateKey.VerifyingKey().ToHex(), recoveredKey.ToHex())
+
+	// Also try with the recovery bit attached to the signature
+	anyPubKey, err := ToAnyPublicKey(privateKey.VerifyingKey())
+	assert.NoError(t, err)
+	recoveredKey2, err := signature.(*Secp256k1Signature).RecoverSecp256k1PublicKeyWithAuthenticationKey(message, anyPubKey.AuthKey())
+	assert.NoError(t, err)
+	assert.Equal(t, privateKey.VerifyingKey().ToHex(), recoveredKey2.ToHex())
+}
+
+func TestSecp256k1Signature_RecoverPublicKeyFromSignature(t *testing.T) {
+	privateKey := &Secp256k1PrivateKey{}
+	err := privateKey.FromHex(testSecp256k1PrivateKey)
+	assert.NoError(t, err)
+	publicKey := &Secp256k1PublicKey{}
+	err = publicKey.FromHex(testSecp256k1PublicKey)
+	assert.NoError(t, err)
+	message, err := util.ParseHex(testSecp256k1MessageEncoded)
+	assert.NoError(t, err)
+
+	assert.Equal(t, publicKey.ToHex(), privateKey.VerifyingKey().ToHex())
+
+	signature := &Secp256k1Signature{}
+	err = signature.FromHex(testSecp256k1Signature)
+	assert.NoError(t, err)
+
+	// Recover the public key
+	recoveryBit := byte(0)
+	recoveredKey, err := signature.RecoverPublicKey(message, recoveryBit)
+	assert.NoError(t, err)
+
+	// Verify the signature with the key
+	assert.True(t, recoveredKey.Verify(message, signature))
+	assert.Equal(t, publicKey.ToHex(), recoveredKey.ToHex())
+}
+
+func TestSecp256k1Signature_RecoverPublicKeyFromSignatureWithRecoveryBit(t *testing.T) {
+	privateKey := &Secp256k1PrivateKey{}
+	err := privateKey.FromHex(testSecp256k1PrivateKey)
+	assert.NoError(t, err)
+	publicKey := &Secp256k1PublicKey{}
+	err = publicKey.FromHex(testSecp256k1PublicKey)
+	assert.NoError(t, err)
+	message, err := util.ParseHex(testSecp256k1MessageEncoded)
+	assert.NoError(t, err)
+
+	assert.Equal(t, publicKey.ToHex(), privateKey.VerifyingKey().ToHex())
+
+	signature := &Secp256k1Signature{}
+	err = signature.FromHex(testSecp256k1Signature)
+	assert.NoError(t, err)
+
+	// Recover the public key
+	recoveryBit := byte(0)
+	recoveredKey, err := signature.RecoverPublicKey(message, recoveryBit)
+	assert.NoError(t, err)
+
+	// Verify the signature with the key
+	assert.True(t, recoveredKey.Verify(message, signature))
+	assert.Equal(t, publicKey.ToHex(), recoveredKey.ToHex())
+}
