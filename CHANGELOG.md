@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.3.0 (11/25/2024)
+
 - Add AIP-80 support for Ed25519 and Secp256k1 private keys
 - Add support for optional ledger version in FA functions and APT balance
 - [`Breaking`] Change from the `go-ethereum/crypto` to `decred/dcrd` for secp256k1 signing
