@@ -75,6 +75,12 @@ func (txn *SignedTransaction) MarshalBCS(ser *bcs.Serializer) {
 	txn.Authenticator.MarshalBCS(ser)
 }
 func (txn *SignedTransaction) UnmarshalBCS(des *bcs.Deserializer) {
+	if txn.Transaction == nil {
+		txn.Transaction = &RawTransaction{}
+	}
+	if txn.Authenticator == nil {
+		txn.Authenticator = &TransactionAuthenticator{}
+	}
 	txn.Transaction.UnmarshalBCS(des)
 	txn.Authenticator.UnmarshalBCS(des)
 }
