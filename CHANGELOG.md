@@ -5,6 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Breaking`] SignedTransaction can only contain `RawTransaction`.  Note, this is technically breaking, but should not change any user behavior or code.
 - [`Fix`] SignedTransaction deserialization will properly initialized `nil` fields before deserializing.
 
 # v1.3.0 (11/25/2024)

@@ -28,7 +28,7 @@ const UserTransactionVariant SignedTransactionVariant = 0
 
 // SignedTransaction a raw transaction plus its authenticator for a fully verifiable message
 type SignedTransaction struct {
-	Transaction   RawTransactionImpl        // The transaction either [RawTransaction] or [RawTransactionWithData]
+	Transaction   *RawTransaction           // The transaction here is always a [RawTransaction], the rest of the information is in the authenticator
 	Authenticator *TransactionAuthenticator // The authenticator for a transaction (can't be be a standalone [crypto.AccountAuthenticator])
 }
 
@@ -75,13 +75,9 @@ func (txn *SignedTransaction) MarshalBCS(ser *bcs.Serializer) {
 	txn.Authenticator.MarshalBCS(ser)
 }
 func (txn *SignedTransaction) UnmarshalBCS(des *bcs.Deserializer) {
-	if txn.Transaction == nil {
-		txn.Transaction = &RawTransaction{}
-	}
-	if txn.Authenticator == nil {
-		txn.Authenticator = &TransactionAuthenticator{}
-	}
+	txn.Transaction = &RawTransaction{}
 	txn.Transaction.UnmarshalBCS(des)
+	txn.Authenticator = &TransactionAuthenticator{}
 	txn.Authenticator.UnmarshalBCS(des)
 }
 
