@@ -79,7 +79,7 @@ func init() {
 
 // AptosClient is an interface for all functionality on the Client.
 // It is a combination of [AptosRpcClient], [AptosIndexerClient], and [AptosFaucetClient] for the purposes
-// of mocking and convenince.
+// of mocking and convenience.
 type AptosClient interface {
 	AptosRpcClient
 	AptosIndexerClient
