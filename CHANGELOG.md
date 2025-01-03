@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.4.1 (01/02/2024)
+
 - [`Fix`] Non struct events, will have a field named `__any_data__` that contains the actual data of the struct
 
 # v1.4.0 (12/09/2024)
