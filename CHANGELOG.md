@@ -5,6 +5,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Dependency`] Update `golang.org/x/crypto` to `v0.32.0`
+- [`Dependency`] Update `github.com/hasura/go-graphql-client` to `v0.13.1`
+
 # v1.4.1 (01/02/2024)
 
 - [`Fix`] Non struct events, will have a field named `__any_data__` that contains the actual data of the struct
