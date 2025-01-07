@@ -5,6 +5,10 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.4.1 (01/02/2024)
+
+- [`Fix`] Non struct events, will have a field named `__any_data__` that contains the actual data of the struct
+
 # v1.4.0 (12/09/2024)
 
 - [`Breaking`] SignedTransaction can only contain `RawTransaction`.  Note, this is technically breaking, but should not change any user behavior or code.

@@ -41,26 +41,53 @@ type Event struct {
 	Data           map[string]any // Data is the event data, a map of field name to value, this should match it's on-chain struct representation
 }
 
-//region Event JSON
+// region Event JSON
+const (
+	AnyDataName = "__any_data__"
+)
 
 // UnmarshalJSON deserializes a JSON data blob into an Event
 func (o *Event) UnmarshalJSON(b []byte) error {
-	type inner struct {
+	// In order to handle non-map types of data, we will give a new field name for it
+	type innerStandard struct {
 		Type           string         `json:"type"`
 		Guid           *GUID          `json:"guid"`
 		SequenceNumber U64            `json:"sequence_number"`
 		Data           map[string]any `json:"data"`
 	}
-	data := &inner{}
+	data := &innerStandard{}
 	err := json.Unmarshal(b, &data)
+	if err == nil {
+		// For maps, we're fine
+		o.Type = data.Type
+		o.Guid = data.Guid
+		o.SequenceNumber = data.SequenceNumber.ToUint64()
+		o.Data = data.Data
+		return nil
+	}
+
+	// Handle the case where the data is anything other than a map
+	type innerAny struct {
+		Type           string `json:"type"`
+		Guid           *GUID  `json:"guid"`
+		SequenceNumber U64    `json:"sequence_number"`
+		Data           any    `json:"data"`
+	}
+
+	dataAny := &innerAny{}
+	err = json.Unmarshal(b, &dataAny)
 	if err != nil {
 		return err
 	}
+	dataMap := make(map[string]any)
+	dataMap[AnyDataName] = dataAny.Data
+
 	o.Type = data.Type
 	o.Guid = data.Guid
 	o.SequenceNumber = data.SequenceNumber.ToUint64()
-	o.Data = data.Data
-	return nil
+	o.Data = dataMap
+
+	return err
 }
 
 //endregion
