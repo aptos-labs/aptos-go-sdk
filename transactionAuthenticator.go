@@ -16,6 +16,7 @@ const (
 	TransactionAuthenticatorMultiAgent   TransactionAuthenticatorVariant = 2
 	TransactionAuthenticatorFeePayer     TransactionAuthenticatorVariant = 3
 	TransactionAuthenticatorSingleSender TransactionAuthenticatorVariant = 4
+	TransactionAuthenticatorNone         TransactionAuthenticatorVariant = 5
 )
 
 type TransactionAuthenticatorImpl interface {
