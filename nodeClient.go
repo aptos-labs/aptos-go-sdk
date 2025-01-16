@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,7 +17,6 @@ import (
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
 const (
@@ -676,18 +676,8 @@ type EstimateMaxGasAmount bool
 type EstimatePrioritizedGasUnitPrice bool
 
 // SimulateTransaction simulates a transaction
-//
-// TODO: This needs to support RawTransactionWithData
-// TODO: Support multikey simulation
 func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
-	derivationScheme := sender.PubKey().Scheme()
-	switch derivationScheme {
-	case crypto.MultiEd25519Scheme:
-	case crypto.MultiKeyScheme:
-		// todo: add support for multikey simulation on the node
-		return nil, fmt.Errorf("currently unsupported sender derivation scheme %v", derivationScheme)
-	}
 	auth := sender.SimulationAuthenticator()
 
 	// generate signed transaction for simulation (with zero signature)
@@ -696,6 +686,63 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 		return nil, err
 	}
 
+	return rc.simulateTransactionInner(signedTxn, options...)
+}
+
+// SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
+func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	expirationSeconds := DefaultExpirationSeconds
+
+	var feePayer *AccountAddress
+	var additionalSigners []AccountAddress
+
+	for opti, option := range options {
+		switch ovalue := option.(type) {
+		case ExpirationSeconds:
+			expirationSeconds = int64(ovalue)
+			if expirationSeconds < 0 {
+				err = errors.New("ExpirationSeconds cannot be less than 0")
+				return nil, err
+			}
+		case FeePayer:
+			feePayer = ovalue
+		case AdditionalSigners:
+			additionalSigners = ovalue
+		default:
+			err = fmt.Errorf("APTTransferTransaction arg [%d] unknown option type %T", opti+4, option)
+			return nil, err
+		}
+	}
+
+	var signedTxn *SignedTransaction
+	var ok bool
+	if feePayer != nil {
+		senderAuth := sender.SimulationAuthenticator()
+		feePayerAuth := crypto.NoAccountAuthenticator()
+		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
+		for i := range additionalSigners {
+			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
+		}
+		signedTxn, ok = rawTxn.ToFeePayerSignedTransaction(senderAuth, feePayerAuth, additionalSignersAuth)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert fee payer signer to signed transaction")
+		}
+	} else {
+		senderAuth := sender.SimulationAuthenticator()
+		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
+		for i := range additionalSigners {
+			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
+		}
+		signedTxn, ok = rawTxn.ToMultiAgentSignedTransaction(senderAuth, additionalSignersAuth)
+		if !ok {
+			return nil, fmt.Errorf("failed to convert multi agent signer to signed transaction")
+		}
+	}
+
+	return rc.simulateTransactionInner(signedTxn, options...)
+}
+
+func (rc *NodeClient) simulateTransactionInner(signedTxn *SignedTransaction, options ...any) (data []*api.UserTransaction, err error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
 		return
@@ -705,7 +752,7 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 
 	// parse simulate tx options
 	params := url.Values{}
-	for i, arg := range options {
+	for _, arg := range options {
 		switch value := arg.(type) {
 		case EstimateGasUnitPrice:
 			params.Set("estimate_gas_unit_price", strconv.FormatBool(bool(value)))
@@ -714,8 +761,7 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 		case EstimatePrioritizedGasUnitPrice:
 			params.Set("estimate_prioritized_gas_unit_price", strconv.FormatBool(bool(value)))
 		default:
-			err = fmt.Errorf("SimulateTransaction arg %d bad type %T", i+1, arg)
-			return
+			// Silently ignore unknown arguments, as there are multiple intakes
 		}
 	}
 	if len(params) != 0 {

@@ -38,6 +38,7 @@ const (
 	AccountAuthenticatorMultiEd25519 AccountAuthenticatorType = 1 // AccountAuthenticatorMultiEd25519 is the authenticator type for multi-ed25519 accounts
 	AccountAuthenticatorSingleSender AccountAuthenticatorType = 2 // AccountAuthenticatorSingleSender is the authenticator type for single-key accounts
 	AccountAuthenticatorMultiKey     AccountAuthenticatorType = 3 // AccountAuthenticatorMultiKey is the authenticator type for multi-key accounts
+	AccountAuthenticatorNone         AccountAuthenticatorType = 4 // AccountAuthenticatorNone is for simulation only, and allows for simulating any authenticator, it is rejected in normal submission
 )
 
 // AccountAuthenticator a generic authenticator type for a transaction
