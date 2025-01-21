@@ -171,18 +171,10 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	rawTxn, err := buildTransaction(client, account)
 	assert.NoError(t, err)
 	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
-	switch account.(type) {
-	case *MultiKeyTestSigner:
-		// multikey simulation currently not supported
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "currently unsupported sender derivation scheme")
-		return // skip rest of the tests
-	default:
-		assert.NoError(t, err)
-		assert.Equal(t, true, simulatedTxn[0].Success)
-		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
-	}
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
 
 	// simulate transaction (estimate gas unit price)
 	rawTxnZeroGasUnitPrice, err := buildTransaction(client, account, GasUnitPrice(0))
