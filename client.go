@@ -348,7 +348,7 @@ type AptosRpcClient interface {
 	//		}
 	//	}
 	//	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, txnPayload)
-	BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error)
+	BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error)
 
 	// View Runs a view function on chain returning a list of return values.
 	//
@@ -797,7 +797,7 @@ func (client *Client) BuildTransactionMultiAgent(sender AccountAddress, payload 
 //		}
 //	}
 //	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, txnPayload)
-func (client *Client) BuildSignAndSubmitTransaction(sender *Account, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+func (client *Client) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
 	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
 }
 
