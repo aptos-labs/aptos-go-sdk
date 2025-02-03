@@ -1006,10 +1006,10 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 	return rc.SubmitTransaction(signedTxn)
 }
 
-// NodeHealthCheck performs a health check on the node
+// NodeAPIHealthCheck performs a health check on the node
 //
 // Returns a HealthCheckResponse if successful, returns error if not.
-func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
+func (rc *NodeClient) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	au := rc.baseUrl.JoinPath("-/healthy")
 	if len(durationSecs) > 0 {
 		params := url.Values{}
@@ -1017,6 +1017,15 @@ func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckRe
 		au.RawQuery = params.Encode()
 	}
 	return Get[api.HealthCheckResponse](rc, au.String())
+}
+
+// NodeHealthCheck performs a health check on the node
+//
+// Returns a HealthCheckResponse if successful, returns error if not.
+//
+// Deprecated: Use NodeAPIHealthCheck instead
+func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	return rc.NodeAPIHealthCheck(durationSecs...)
 }
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
