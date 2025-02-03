@@ -871,5 +871,5 @@ func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, er
 
 // NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
 func (client *Client) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
-	return client.nodeClient.NodeHealthCheck(durationSecs...)
+	return client.nodeClient.NodeAPIHealthCheck(durationSecs...)
 }
