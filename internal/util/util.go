@@ -2,7 +2,6 @@ package util
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"golang.org/x/crypto/sha3"
 	"math/big"
@@ -10,7 +9,7 @@ import (
 	"strings"
 )
 
-// SHA3256Hash hashes the input bytes using SHA3-256
+// Sha3256Hash hashes the input bytes using SHA3-256
 func Sha3256Hash(bytes [][]byte) (output []byte) {
 	hasher := sha3.New256()
 	for _, b := range bytes {
@@ -49,16 +48,4 @@ func StrToBigInt(val string) (num *big.Int, err error) {
 		return nil, fmt.Errorf("num %s is not an integer", val)
 	}
 	return num, nil
-}
-
-// PrettyJson a simple pretty print for JSON examples
-func PrettyJson(x any) string {
-	out := strings.Builder{}
-	enc := json.NewEncoder(&out)
-	enc.SetIndent("", "  ")
-	err := enc.Encode(x)
-	if err != nil {
-		return ""
-	}
-	return out.String()
 }
