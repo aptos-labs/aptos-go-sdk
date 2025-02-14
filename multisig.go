@@ -1,10 +1,14 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import (
+	"context"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+)
 
 // FetchNextMultisigAddress retrieves the next multisig address to be created from the given account
-func (client *Client) FetchNextMultisigAddress(address AccountAddress) (*AccountAddress, error) {
-	viewResponse, err := client.View(&ViewPayload{
+func (client *Client) FetchNextMultisigAddress(ctx context.Context, address AccountAddress) (*AccountAddress, error) {
+	viewResponse, err := client.View(ctx, &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "multisig_account",

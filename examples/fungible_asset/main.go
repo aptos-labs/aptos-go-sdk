@@ -2,8 +2,10 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
@@ -38,7 +40,7 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Fund the sender with the faucet to create it on-chain
 	println("SENDER: ", sender.Address.String())
-	err = client.Fund(sender.Address, FundAmount)
+	err = client.Fund(context.Background(), sender.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
@@ -50,11 +52,11 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to create publish payload:" + err.Error())
 	}
-	response, err := client.BuildSignAndSubmitTransaction(sender, *payload)
+	response, err := client.BuildSignAndSubmitTransaction(context.Background(), sender, *payload)
 	if err != nil {
 		panic("Failed to build sign and submit publish transaction:" + err.Error())
 	}
-	waitResponse, err := client.WaitForTransaction(response.Hash)
+	waitResponse, err := client.WaitForTransaction(context.Background(), response.Hash)
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
@@ -66,7 +68,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// Get the fungible asset address by view function
 	rupeeModule := aptos.ModuleId{Address: sender.Address, Name: "rupee"}
 	var noTypeTags []aptos.TypeTag
-	viewResponse, err := client.View(&aptos.ViewPayload{
+	viewResponse, err := client.View(context.Background(), &aptos.ViewPayload{
 		Module:   rupeeModule,
 		Function: "fa_address",
 		ArgTypes: noTypeTags,
@@ -85,7 +87,7 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to create fungible asset client:" + err.Error())
 	}
 
-	beforeBalance, err := faClient.PrimaryBalance(&sender.Address)
+	beforeBalance, err := faClient.PrimaryBalance(context.Background(), &sender.Address)
 	if err != nil {
 		panic("Failed to get balance:" + err.Error())
 	}
@@ -96,7 +98,7 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize amount:" + err.Error())
 	}
 	serializedSenderAddress, _ := bcs.Serialize(&sender.Address) // This can't fail
-	response, err = client.BuildSignAndSubmitTransaction(sender, aptos.TransactionPayload{
+	response, err = client.BuildSignAndSubmitTransaction(context.Background(), sender, aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module:   rupeeModule,
 			Function: "mint",
@@ -108,12 +110,12 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to build sign and submit mint transaction:" + err.Error())
 	}
 	fmt.Printf("Submitted mint as: %s\n", response.Hash)
-	_, err = client.WaitForTransaction(response.Hash)
+	_, err = client.WaitForTransaction(context.Background(), response.Hash)
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
 
-	afterBalance, err := faClient.PrimaryBalance(&sender.Address)
+	afterBalance, err := faClient.PrimaryBalance(context.Background(), &sender.Address)
 	if err != nil {
 		panic("Failed to get balance:" + err.Error())
 	}
@@ -127,24 +129,24 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Transfer some to 0xCAFE
-	receiverBeforeBalance, err := faClient.PrimaryBalance(receiver)
+	receiverBeforeBalance, err := faClient.PrimaryBalance(context.Background(), receiver)
 	if err != nil {
 		panic("Failed to get balance:" + err.Error())
 	}
-	transferTxn, err := faClient.TransferPrimaryStore(sender, *receiver, TransferAmount)
+	transferTxn, err := faClient.TransferPrimaryStore(context.Background(), sender, *receiver, TransferAmount)
 	if err != nil {
 		panic("Failed to create primary store transfer transaction:" + err.Error())
 	}
-	response, err = client.SubmitTransaction(transferTxn)
+	response, err = client.SubmitTransaction(context.Background(), transferTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	fmt.Printf("Submitted transfer as: %s\n", response.Hash)
-	err = client.PollForTransactions([]string{response.Hash})
+	err = client.PollForTransactions(context.Background(), []string{response.Hash})
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	receiverAfterBalance, err := faClient.PrimaryBalance(receiver)
+	receiverAfterBalance, err := faClient.PrimaryBalance(context.Background(), receiver)
 	if err != nil {
 		panic("Failed to get store balance:" + err.Error())
 	}
@@ -155,7 +157,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("\n== Now running script version ==\n")
 	runScript(client, sender, receiver, faMetadataAddress)
 
-	receiverAfterAfterBalance, err := faClient.PrimaryBalance(receiver)
+	receiverAfterAfterBalance, err := faClient.PrimaryBalance(context.Background(), receiver)
 	if err != nil {
 		panic("Failed to get store balance:" + err.Error())
 	}
@@ -171,7 +173,7 @@ func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAdd
 	}
 
 	// 1. Build transaction
-	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
+	rawTxn, err := client.BuildTransaction(context.Background(), alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.Script{
 			Code:     scriptBytes,
 			ArgTypes: []aptos.TypeTag{},
@@ -191,7 +193,7 @@ func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAdd
 	// This is useful for understanding how much the transaction will cost
 	// and to ensure that the transaction is valid before sending it to the network
 	// This is optional, but recommended
-	simulationResult, err := client.SimulateTransaction(rawTxn, alice)
+	simulationResult, err := client.SimulateTransaction(context.Background(), rawTxn, alice)
 	if err != nil {
 		panic("Failed to simulate transaction:" + err.Error())
 	}
@@ -208,14 +210,14 @@ func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAdd
 	}
 
 	// 4. Submit transaction
-	submitResult, err := client.SubmitTransaction(signedTxn)
+	submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
 	// 5. Wait for the transaction to complete
-	_, err = client.WaitForTransaction(txnHash)
+	_, err = client.WaitForTransaction(context.Background(), txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -39,26 +40,26 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Sponsor:%s\n", sponsor.Address.String())
 
 	// Fund the alice with the faucet to create it on-chain
-	err = client.Fund(alice.Address, FundAmount)
+	err = client.Fund(context.Background(), alice.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund alice:" + err.Error())
 	}
 
 	// And the sponsor
-	err = client.Fund(sponsor.Address, FundAmount)
+	err = client.Fund(context.Background(), sponsor.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund sponsor:" + err.Error())
 	}
 
-	aliceBalance, err := client.AccountAPTBalance(alice.Address)
+	aliceBalance, err := client.AccountAPTBalance(context.Background(), alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err := client.AccountAPTBalance(bob.Address)
+	bobBalance, err := client.AccountAPTBalance(context.Background(), bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
-	sponsorBalance, err := client.AccountAPTBalance(sponsor.Address)
+	sponsorBalance, err := client.AccountAPTBalance(context.Background(), sponsor.Address)
 	if err != nil {
 		panic("Failed to retrieve sponsor balance:" + err.Error())
 	}
@@ -73,6 +74,7 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to build transfer payload:" + err.Error())
 	}
 	rawTxn, err := client.BuildTransactionMultiAgent(
+		context.Background(),
 		alice.Address,
 		aptos.TransactionPayload{
 			Payload: transferPayload,
@@ -103,7 +105,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Submit and wait for it to complete
-	submitResult, err := client.SubmitTransaction(signedFeePayerTxn)
+	submitResult, err := client.SubmitTransaction(context.Background(), signedFeePayerTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -111,19 +113,19 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Submitted transaction hash:", txnHash)
 
 	// Wait for the transaction
-	_, err = client.WaitForTransaction(txnHash)
+	_, err = client.WaitForTransaction(context.Background(), txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	aliceBalance, err = client.AccountAPTBalance(alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(context.Background(), alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(bob.Address)
+	bobBalance, err = client.AccountAPTBalance(context.Background(), bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
-	sponsorBalance, err = client.AccountAPTBalance(sponsor.Address)
+	sponsorBalance, err = client.AccountAPTBalance(context.Background(), sponsor.Address)
 	if err != nil {
 		panic("Failed to retrieve sponsor balance:" + err.Error())
 	}
@@ -135,6 +137,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("\n=== Now do it without knowing the signer ahead of time ===\n")
 
 	rawTxn, err = client.BuildTransactionMultiAgent(
+		context.Background(),
 		alice.Address,
 		aptos.TransactionPayload{
 			Payload: transferPayload,
@@ -173,7 +176,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Submit and wait for it to complete
-	submitResult, err = client.SubmitTransaction(signedFeePayerTxn)
+	submitResult, err = client.SubmitTransaction(context.Background(), signedFeePayerTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -181,19 +184,19 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Submitted transaction hash:", txnHash)
 
 	// Wait for the transaction
-	_, err = client.WaitForTransaction(txnHash)
+	_, err = client.WaitForTransaction(context.Background(), txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	aliceBalance, err = client.AccountAPTBalance(alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(context.Background(), alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(bob.Address)
+	bobBalance, err = client.AccountAPTBalance(context.Background(), bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
-	sponsorBalance, err = client.AccountAPTBalance(sponsor.Address)
+	sponsorBalance, err = client.AccountAPTBalance(context.Background(), sponsor.Address)
 	if err != nil {
 		panic("Failed to retrieve sponsor balance:" + err.Error())
 	}

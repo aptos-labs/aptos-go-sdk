@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"context"
 	"errors"
 	"math/big"
 	"strconv"
@@ -15,7 +16,7 @@ type FungibleAssetClient struct {
 // NewFungibleAssetClient verifies the [AccountAddress] of the metadata exists when creating the client
 func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (faClient *FungibleAssetClient, err error) {
 	// Retrieve the Metadata resource to ensure the fungible asset actually exists
-	_, err = client.AccountResource(*metadataAddress, "0x1::fungible_asset::Metadata")
+	_, err = client.AccountResource(context.Background(), *metadataAddress, "0x1::fungible_asset::Metadata")
 	if err != nil {
 		return
 	}
@@ -30,14 +31,14 @@ func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (fa
 // -- Entry functions -- //
 
 // Transfer sends amount of the fungible asset from senderStore to receiverStore
-func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) Transfer(ctx context.Context, sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	payload, err := FungibleAssetTransferPayload(client.metadataAddress, senderStore, receiverStore, amount)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build transaction
-	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
+	rawTxn, err := client.aptosClient.BuildTransaction(ctx, sender.AccountAddress(), TransactionPayload{Payload: payload})
 	if err != nil {
 		return
 	}
@@ -48,13 +49,13 @@ func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStor
 }
 
 // TransferPrimaryStore sends amount of the fungible asset from the primary store of the sender to receiverAddress
-func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
+func (client *FungibleAssetClient) TransferPrimaryStore(ctx context.Context, sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (signedTxn *SignedTransaction, err error) {
 	// Build transaction
 	payload, err := FungibleAssetPrimaryStoreTransferPayload(client.metadataAddress, receiverAddress, amount)
 	if err != nil {
 		return nil, err
 	}
-	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
+	rawTxn, err := client.aptosClient.BuildTransaction(ctx, sender.AccountAddress(), TransactionPayload{Payload: payload})
 	if err != nil {
 		return
 	}
@@ -68,8 +69,8 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner
 // PrimaryStoreAddress returns the [AccountAddress] of the primary store for the owner
 //
 // Note that the primary store may not exist at the address. Use [FungibleAssetClient.PrimaryStoreExists] to check.
-func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (address *AccountAddress, err error) {
-	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
+func (client *FungibleAssetClient) PrimaryStoreAddress(ctx context.Context, owner *AccountAddress) (address *AccountAddress, err error) {
+	val, err := client.viewPrimaryStoreMetadata(ctx, [][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
 	if err != nil {
 		return
 	}
@@ -79,8 +80,8 @@ func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (a
 }
 
 // PrimaryStoreExists returns true if the primary store for the owner exists
-func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (exists bool, err error) {
-	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
+func (client *FungibleAssetClient) PrimaryStoreExists(ctx context.Context, owner *AccountAddress) (exists bool, err error) {
+	val, err := client.viewPrimaryStoreMetadata(ctx, [][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
 	if err != nil {
 		return
 	}
@@ -90,8 +91,8 @@ func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (ex
 }
 
 // PrimaryBalance returns the balance of the primary store for the owner
-func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
-	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "balance", ledgerVersion...)
+func (client *FungibleAssetClient) PrimaryBalance(ctx context.Context, owner *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+	val, err := client.viewPrimaryStoreMetadata(ctx, [][]byte{owner[:], client.metadataAddress[:]}, "balance", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -100,8 +101,8 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerV
 }
 
 // PrimaryIsFrozen returns true if the primary store for the owner is frozen
-func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
-	val, err := client.viewPrimaryStore([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen", ledgerVersion...)
+func (client *FungibleAssetClient) PrimaryIsFrozen(ctx context.Context, owner *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
+	val, err := client.viewPrimaryStore(ctx, [][]byte{owner[:], client.metadataAddress[:]}, "is_frozen", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -110,8 +111,8 @@ func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress, ledger
 }
 
 // Balance returns the balance of the store
-func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "balance", ledgerVersion...)
+func (client *FungibleAssetClient) Balance(ctx context.Context, storeAddress *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+	val, err := client.viewStore(ctx, [][]byte{storeAddress[:]}, "balance", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -120,8 +121,8 @@ func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress, ledgerV
 }
 
 // IsFrozen returns true if the store is frozen
-func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "is_frozen", ledgerVersion...)
+func (client *FungibleAssetClient) IsFrozen(ctx context.Context, storeAddress *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
+	val, err := client.viewStore(ctx, [][]byte{storeAddress[:]}, "is_frozen", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -130,8 +131,8 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress, ledger
 }
 
 // IsUntransferable returns true if the store can't be transferred
-func (client *FungibleAssetClient) IsUntransferable(storeAddress *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "is_untransferable", ledgerVersion...)
+func (client *FungibleAssetClient) IsUntransferable(ctx context.Context, storeAddress *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
+	val, err := client.viewStore(ctx, [][]byte{storeAddress[:]}, "is_untransferable", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -140,8 +141,8 @@ func (client *FungibleAssetClient) IsUntransferable(storeAddress *AccountAddress
 }
 
 // StoreExists returns true if the store exists
-func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress, ledgerVersion ...uint64) (exists bool, err error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_exists", ledgerVersion...)
+func (client *FungibleAssetClient) StoreExists(ctx context.Context, storeAddress *AccountAddress, ledgerVersion ...uint64) (exists bool, err error) {
+	val, err := client.viewStore(ctx, [][]byte{storeAddress[:]}, "store_exists", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -151,8 +152,8 @@ func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress, led
 }
 
 // StoreMetadata returns the [AccountAddress] of the metadata for the store
-func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress, ledgerVersion ...uint64) (metadataAddress *AccountAddress, err error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_metadata", ledgerVersion...)
+func (client *FungibleAssetClient) StoreMetadata(ctx context.Context, storeAddress *AccountAddress, ledgerVersion ...uint64) (metadataAddress *AccountAddress, err error) {
+	val, err := client.viewStore(ctx, [][]byte{storeAddress[:]}, "store_metadata", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -160,8 +161,8 @@ func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress, l
 }
 
 // Supply returns the total supply of the fungible asset
-func (client *FungibleAssetClient) Supply(ledgerVersion ...uint64) (supply *big.Int, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "supply", ledgerVersion...)
+func (client *FungibleAssetClient) Supply(ctx context.Context, ledgerVersion ...uint64) (supply *big.Int, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "supply", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -169,8 +170,8 @@ func (client *FungibleAssetClient) Supply(ledgerVersion ...uint64) (supply *big.
 }
 
 // Maximum returns the maximum possible supply of the fungible asset
-func (client *FungibleAssetClient) Maximum(ledgerVersion ...uint64) (maximum *big.Int, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "maximum", ledgerVersion...)
+func (client *FungibleAssetClient) Maximum(ctx context.Context, ledgerVersion ...uint64) (maximum *big.Int, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "maximum", ledgerVersion...)
 	if err != nil {
 		return
 	}
@@ -178,8 +179,8 @@ func (client *FungibleAssetClient) Maximum(ledgerVersion ...uint64) (maximum *bi
 }
 
 // Name returns the name of the fungible asset
-func (client *FungibleAssetClient) Name() (name string, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "name")
+func (client *FungibleAssetClient) Name(ctx context.Context) (name string, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "name")
 	if err != nil {
 		return
 	}
@@ -188,8 +189,8 @@ func (client *FungibleAssetClient) Name() (name string, err error) {
 }
 
 // Symbol returns the symbol of the fungible asset
-func (client *FungibleAssetClient) Symbol() (symbol string, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "symbol")
+func (client *FungibleAssetClient) Symbol(ctx context.Context) (symbol string, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "symbol")
 	if err != nil {
 		return
 	}
@@ -198,8 +199,8 @@ func (client *FungibleAssetClient) Symbol() (symbol string, err error) {
 }
 
 // Decimals returns the number of decimal places for the fungible asset
-func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "decimals")
+func (client *FungibleAssetClient) Decimals(ctx context.Context) (decimals uint8, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "decimals")
 	if err != nil {
 		return
 	}
@@ -208,8 +209,8 @@ func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 }
 
 // IconUri returns the URI of the icon for the fungible asset
-func (client *FungibleAssetClient) IconUri(uri string, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "icon_uri")
+func (client *FungibleAssetClient) IconUri(ctx context.Context, uri string, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "icon_uri")
 	if err != nil {
 		return
 	}
@@ -218,8 +219,8 @@ func (client *FungibleAssetClient) IconUri(uri string, err error) {
 }
 
 // ProjectUri returns the URI of the project for the fungible asset
-func (client *FungibleAssetClient) ProjectUri(uri string, err error) {
-	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "project_uri")
+func (client *FungibleAssetClient) ProjectUri(ctx context.Context, uri string, err error) {
+	val, err := client.viewMetadata(ctx, [][]byte{client.metadataAddress[:]}, "project_uri")
 	if err != nil {
 		return
 	}
@@ -228,7 +229,7 @@ func (client *FungibleAssetClient) ProjectUri(uri string, err error) {
 }
 
 // viewMetadata calls a view function on the fungible asset metadata
-func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
+func (client *FungibleAssetClient) viewMetadata(ctx context.Context, args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
@@ -238,11 +239,11 @@ func (client *FungibleAssetClient) viewMetadata(args [][]byte, functionName stri
 		ArgTypes: []TypeTag{metadataStructTag()},
 		Args:     args,
 	}
-	return client.view(payload, ledgerVersion...)
+	return client.view(ctx, payload, ledgerVersion...)
 }
 
 // viewStore calls a view function on the fungible asset store
-func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
+func (client *FungibleAssetClient) viewStore(ctx context.Context, args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
@@ -252,11 +253,11 @@ func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string,
 		ArgTypes: []TypeTag{storeStructTag()},
 		Args:     args,
 	}
-	return client.view(payload, ledgerVersion...)
+	return client.view(ctx, payload, ledgerVersion...)
 }
 
 // viewPrimaryStore calls a view function on the primary fungible asset store
-func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
+func (client *FungibleAssetClient) viewPrimaryStore(ctx context.Context, args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
@@ -266,11 +267,11 @@ func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName 
 		ArgTypes: []TypeTag{storeStructTag()},
 		Args:     args,
 	}
-	return client.view(payload, ledgerVersion...)
+	return client.view(ctx, payload, ledgerVersion...)
 }
 
 // viewPrimaryStoreMetadata calls a view function on the primary fungible asset store metadata
-func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
+func (client *FungibleAssetClient) viewPrimaryStoreMetadata(ctx context.Context, args [][]byte, functionName string, ledgerVersion ...uint64) (result any, err error) {
 	payload := &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,
@@ -280,7 +281,7 @@ func (client *FungibleAssetClient) viewPrimaryStoreMetadata(args [][]byte, funct
 		ArgTypes: []TypeTag{metadataStructTag()},
 		Args:     args,
 	}
-	return client.view(payload, ledgerVersion...)
+	return client.view(ctx, payload, ledgerVersion...)
 }
 
 func metadataStructTag() TypeTag {
@@ -291,8 +292,8 @@ func storeStructTag() TypeTag {
 	return TypeTag{Value: &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}}
 }
 
-func (client *FungibleAssetClient) view(payload *ViewPayload, ledgerVersion ...uint64) (result any, err error) {
-	vals, err := client.aptosClient.View(payload, ledgerVersion...)
+func (client *FungibleAssetClient) view(ctx context.Context, payload *ViewPayload, ledgerVersion ...uint64) (result any, err error) {
+	vals, err := client.aptosClient.View(ctx, payload, ledgerVersion...)
 	if err != nil {
 		return
 	}
