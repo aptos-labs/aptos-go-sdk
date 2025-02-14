@@ -1051,11 +1051,11 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 		err = NewHttpError(response)
 		return out, err
 	}
+	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		return out, fmt.Errorf("error getting response data, %w", err)
 	}
-	_ = response.Body.Close()
 	err = json.Unmarshal(blob, &out)
 	if err != nil {
 		return out, err
@@ -1086,12 +1086,12 @@ func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
 		err = NewHttpError(response)
 		return
 	}
+	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return
 	}
-	_ = response.Body.Close()
 	return blob, nil
 }
 
@@ -1121,12 +1121,12 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 		err = NewHttpError(response)
 		return data, err
 	}
+	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
 		return data, err
 	}
-	_ = response.Body.Close()
 
 	err = json.Unmarshal(blob, &data)
 	return data, err
