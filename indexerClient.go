@@ -3,9 +3,10 @@ package aptos
 import (
 	"context"
 	"fmt"
-	"github.com/hasura/go-graphql-client"
 	"net/http"
 	"time"
+
+	"github.com/hasura/go-graphql-client"
 )
 
 // -- Note: all query parameters must start with capital letters --
@@ -25,8 +26,8 @@ func NewIndexerClient(httpClient *http.Client, url string) *IndexerClient {
 }
 
 // Query is a generic function for making any GraphQL query against the indexer
-func (ic *IndexerClient) Query(query any, variables map[string]any, options ...graphql.Option) error {
-	return ic.inner.Query(context.Background(), query, variables, options...)
+func (ic *IndexerClient) Query(ctx context.Context, query any, variables map[string]any, options ...graphql.Option) error {
+	return ic.inner.Query(ctx, query, variables, options...)
 }
 
 type CoinBalance struct {
@@ -35,7 +36,7 @@ type CoinBalance struct {
 }
 
 // GetCoinBalances retrieve the coin balances for all coins owned by the address
-func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
+func (ic *IndexerClient) GetCoinBalances(ctx context.Context, address AccountAddress) ([]CoinBalance, error) {
 	var out []CoinBalance
 	var q struct {
 		CurrentCoinBalances []struct {
@@ -48,7 +49,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 	variables := map[string]any{
 		"address": address.StringLong(),
 	}
-	err := ic.Query(&q, variables)
+	err := ic.Query(ctx, &q, variables)
 
 	if err != nil {
 		return nil, err
@@ -65,7 +66,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 }
 
 // GetProcessorStatus tells the most updated version of the transaction processor.  This helps to determine freshness of data.
-func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error) {
+func (ic *IndexerClient) GetProcessorStatus(ctx context.Context, processorName string) (uint64, error) {
 	var q struct {
 		ProcessorStatus []struct {
 			LastSuccessVersion uint64 `graphql:"last_success_version"`
@@ -74,7 +75,7 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 	variables := map[string]any{
 		"processor_name": processorName,
 	}
-	err := ic.Query(&q, variables)
+	err := ic.Query(ctx, &q, variables)
 	if err != nil {
 		return 0, err
 	}
@@ -83,13 +84,13 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 }
 
 // WaitOnIndexer waits for the indexer processorName specified to catch up to the requestedVersion
-func (ic *IndexerClient) WaitOnIndexer(processorName string, requestedVersion uint64) error {
+func (ic *IndexerClient) WaitOnIndexer(ctx context.Context, processorName string, requestedVersion uint64) error {
 	// TODO: add customizable timeout and sleep time
 	const sleepTime = 100 * time.Millisecond
 	const timeout = 5 * time.Second
 	startTime := time.Now()
 	for {
-		version, err := ic.GetProcessorStatus(processorName)
+		version, err := ic.GetProcessorStatus(ctx, processorName)
 		if err != nil {
 			// TODO: This should probably just retry, depending on the error
 			return err

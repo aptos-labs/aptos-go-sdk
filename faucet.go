@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -28,7 +29,7 @@ func NewFaucetClient(nodeClient *NodeClient, faucetUrl string) (*FaucetClient, e
 }
 
 // Fund account with the given amount of AptosCoin
-func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) error {
+func (faucetClient *FaucetClient) Fund(ctx context.Context, address AccountAddress, amount uint64) error {
 	if faucetClient.nodeClient == nil {
 		return errors.New("faucet's node-client not initialized")
 	}
@@ -41,7 +42,7 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	mintUrl.RawQuery = params.Encode()
 
 	// Make request for funds
-	txnHashes, err := Post[[]string](faucetClient.nodeClient, mintUrl.String(), "text/plain", nil)
+	txnHashes, err := Post[[]string](ctx, faucetClient.nodeClient, mintUrl.String(), "text/plain", nil)
 	if err != nil {
 		return fmt.Errorf("response api decode error, %w", err)
 	}
@@ -49,9 +50,9 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	// Wait for fund transactions to go through
 	slog.Debug("FundAccount wait for transactions", "number of transactions", len(txnHashes))
 	if len(txnHashes) == 1 {
-		_, err = faucetClient.nodeClient.WaitForTransaction(txnHashes[0])
+		_, err = faucetClient.nodeClient.WaitForTransaction(ctx, txnHashes[0])
 		return err
 	} else {
-		return faucetClient.nodeClient.PollForTransactions(txnHashes)
+		return faucetClient.nodeClient.PollForTransactions(ctx, txnHashes)
 	}
 }

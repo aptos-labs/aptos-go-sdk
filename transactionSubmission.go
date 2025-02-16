@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -66,9 +67,9 @@ func (client *Client) BuildTransactions(sender AccountAddress, payloads chan Tra
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
-func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
+func (rc *NodeClient) BuildTransactions(ctx context.Context, sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	// Initialize state
-	account, err := rc.Account(sender)
+	account, err := rc.Account(ctx, sender)
 	if err != nil {
 		responses <- TransactionBuildResponse{Err: err}
 		close(responses)
@@ -97,7 +98,7 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 			case TransactionSubmissionTypeSingle:
 				curSequenceNumber := snt.Increment()
 				options[optionsLast] = SequenceNumber(curSequenceNumber)
-				txnResponse, err := rc.BuildTransaction(sender, payload.Inner, options...)
+				txnResponse, err := rc.BuildTransaction(ctx, sender, payload.Inner, options...)
 				if err != nil {
 					responses <- TransactionBuildResponse{Err: err}
 				} else {
@@ -106,7 +107,7 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 			case TransactionSubmissionTypeMultiAgent:
 				curSequenceNumber := snt.Increment()
 				options[optionsLast] = SequenceNumber(curSequenceNumber)
-				txnResponse, err := rc.BuildTransactionMultiAgent(sender, payload.Inner, options...)
+				txnResponse, err := rc.BuildTransactionMultiAgent(ctx, sender, payload.Inner, options...)
 				if err != nil {
 					responses <- TransactionBuildResponse{Err: err}
 				} else {
@@ -125,16 +126,16 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 
 // SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
 // closes output chan `responses` when input chan `signedTxns` is closed.
-func (client *Client) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
-	client.nodeClient.SubmitTransactions(requests, responses)
+func (client *Client) SubmitTransactions(ctx context.Context, requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
+	client.nodeClient.SubmitTransactions(ctx, requests, responses)
 }
 
 // SubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
 // closes output chan `responses` when input chan `signedTxns` is closed.
-func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
+func (rc *NodeClient) SubmitTransactions(ctx context.Context, requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
 	for request := range requests {
-		response, err := rc.SubmitTransaction(request.SignedTxn)
+		response, err := rc.SubmitTransaction(ctx, request.SignedTxn)
 		if err != nil {
 			responses <- TransactionSubmissionResponse{Id: request.Id, Err: err}
 		} else {
@@ -145,7 +146,7 @@ func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequ
 
 // BatchSubmitTransactions consumes signed transactions, submits to aptos-node, yields responses.
 // closes output chan `responses` when input chan `signedTxns` is closed.
-func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
+func (rc *NodeClient) BatchSubmitTransactions(ctx context.Context, requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
 
 	inputs := make([]*SignedTransaction, 20)
@@ -160,7 +161,7 @@ func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissio
 
 		if i >= 19 {
 			i = 0
-			response, err := rc.BatchSubmitTransaction(inputs)
+			response, err := rc.BatchSubmitTransaction(ctx, inputs)
 
 			// Process the responses
 			if err != nil {
@@ -195,17 +196,19 @@ func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissio
 // BuildSignAndSubmitTransactions starts up a goroutine to process transactions for a single [TransactionSender]
 // Closes output chan `responses` on completion of input chan `payloads`.
 func (client *Client) BuildSignAndSubmitTransactions(
+	ctx context.Context,
 	sender TransactionSigner,
 	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
 	buildOptions ...any,
 ) {
-	client.nodeClient.BuildSignAndSubmitTransactions(sender, payloads, responses, buildOptions...)
+	client.nodeClient.BuildSignAndSubmitTransactions(ctx, sender, payloads, responses, buildOptions...)
 }
 
 // BuildSignAndSubmitTransactions starts up a goroutine to process transactions for a single [TransactionSender]
 // Closes output chan `responses` on completion of input chan `payloads`.
 func (rc *NodeClient) BuildSignAndSubmitTransactions(
+	ctx context.Context,
 	sender TransactionSigner,
 	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
@@ -230,6 +233,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 	}
 
 	rc.BuildSignAndSubmitTransactionsWithSignFunction(
+		ctx,
 		sender.AccountAddress(),
 		payloads,
 		responses,
@@ -285,6 +289,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 //
 //	}
 func (client *Client) BuildSignAndSubmitTransactionsWithSignFunction(
+	ctx context.Context,
 	sender AccountAddress,
 	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
@@ -292,6 +297,7 @@ func (client *Client) BuildSignAndSubmitTransactionsWithSignFunction(
 	buildOptions ...any,
 ) {
 	client.nodeClient.BuildSignAndSubmitTransactionsWithSignFunction(
+		ctx,
 		sender,
 		payloads,
 		responses,
@@ -347,6 +353,7 @@ func (client *Client) BuildSignAndSubmitTransactionsWithSignFunction(
 //
 //	}
 func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
+	ctx context.Context,
 	sender AccountAddress,
 	payloads chan TransactionBuildPayload,
 	responses chan TransactionSubmissionResponse,
@@ -358,12 +365,12 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	// Set up the channel handling building transactions
 	buildResponses := make(chan TransactionBuildResponse, 20)
 	setSequenceNumber := make(chan uint64)
-	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
+	go rc.BuildTransactions(ctx, sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
 	submissionRequests := make(chan TransactionSubmissionRequest, 20)
 	// Note that, I change this to BatchSubmitTransactions, and it caused no change in performance.  The non-batched
 	// version is more flexible and gives actual responses.  It is may be that with large payloads that batch more performant.
-	go rc.SubmitTransactions(submissionRequests, responses)
+	go rc.SubmitTransactions(ctx, submissionRequests, responses)
 
 	var wg sync.WaitGroup
 

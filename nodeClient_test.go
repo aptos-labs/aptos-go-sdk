@@ -1,9 +1,11 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
+	"context"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPollForTransaction(t *testing.T) {
@@ -13,7 +15,7 @@ func TestPollForTransaction(t *testing.T) {
 	assert.NoError(t, err)
 
 	start := time.Now()
-	err = client.PollForTransactions([]string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
+	err = client.PollForTransactions(context.Background(), []string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
 	dt := time.Now().Sub(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)

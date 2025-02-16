@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Breaking`] Exposed `context.Context` parameter, enabling explicit request cancellation and timeout management.
+
 # v1.5.0 (2/10/2024)
 
 - [`Fix`] Make NodeClient match AptosRpcClient interface

@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -105,10 +106,10 @@ type AptosRpcClient interface {
 	RemoveHeader(key string)
 
 	// Info Retrieves the node info about the network and it's current state
-	Info() (info NodeInfo, err error)
+	Info(ctx context.Context) (info NodeInfo, err error)
 
 	// Account Retrieves information about the account such as [SequenceNumber] and [crypto.AuthenticationKey]
-	Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error)
+	Account(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error)
 
 	// AccountResource Retrieves a single resource given its struct name.
 	//
@@ -119,7 +120,7 @@ type AptosRpcClient interface {
 	//
 	//	address := AccountOne
 	//	dataMap, _ := client.AccountResource(address, "0x1::coin::CoinStore", 1)
-	AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error)
+	AccountResource(ctx context.Context, address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error)
 
 	// AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 	// For fetching raw Move structs as BCS, See #AccountResourcesBCS
@@ -131,10 +132,10 @@ type AptosRpcClient interface {
 	//
 	//	address := AccountOne
 	//	dataMap, _ := client.AccountResource(address, 1)
-	AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error)
+	AccountResources(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error)
 
 	// AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-	AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error)
+	AccountResourcesBCS(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error)
 
 	// BlockByHeight fetches a block by height
 	//
@@ -143,7 +144,7 @@ type AptosRpcClient interface {
 	// Can also fetch with transactions
 	//
 	//	block, _ := client.BlockByHeight(1, true)
-	BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error)
+	BlockByHeight(ctx context.Context, blockHeight uint64, withTransactions bool) (data *api.Block, err error)
 
 	// BlockByVersion fetches a block by ledger version
 	//
@@ -152,7 +153,7 @@ type AptosRpcClient interface {
 	// Can also fetch with transactions
 	//
 	//	block, _ := client.BlockByVersion(123, true)
-	BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error)
+	BlockByVersion(ctx context.Context, ledgerVersion uint64, withTransactions bool) (data *api.Block, err error)
 
 	// TransactionByHash gets info on a transaction
 	// The transaction may be pending or recently committed.
@@ -169,7 +170,7 @@ type AptosRpcClient interface {
 	//			// known to local mempool, but not committed yet
 	//		}
 	//	}
-	TransactionByHash(txnHash string) (data *api.Transaction, err error)
+	TransactionByHash(ctx context.Context, txnHash string) (data *api.Transaction, err error)
 
 	// TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
 	// committed to have a ledger version
@@ -182,7 +183,7 @@ type AptosRpcClient interface {
 	//			}
 	//		}
 	//	}
-	TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error)
+	TransactionByVersion(ctx context.Context, version uint64) (data *api.CommittedTransaction, err error)
 
 	// PollForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
 	// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
@@ -194,12 +195,12 @@ type AptosRpcClient interface {
 	//
 	//	hashes := []string{"0x1234", "0x4567"}
 	//	err := client.PollForTransactions(hashes, PollPeriod(500 * time.Milliseconds), PollTimeout(5 * time.Seconds))
-	PollForTransactions(txnHashes []string, options ...any) error
+	PollForTransactions(ctx context.Context, txnHashes []string, options ...any) error
 
 	// WaitForTransaction Do a long-GET for one transaction and wait for it to complete
 	//
 	//	data, err := client.WaitForTransaction("0x1234")
-	WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error)
+	WaitForTransaction(ctx context.Context, txnHash string, options ...any) (data *api.UserTransaction, err error)
 
 	// Transactions Get recent transactions.
 	// Start is a version number. Nil for most recent transactions.
@@ -207,7 +208,7 @@ type AptosRpcClient interface {
 	//
 	//	client.Transactions(0, 2)   // Returns 2 transactions
 	//	client.Transactions(1, 100) // Returns 100 transactions
-	Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error)
+	Transactions(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error)
 
 	// AccountTransactions Get transactions associated with an account.
 	// Start is a version number. Nil for most recent transactions.
@@ -215,7 +216,7 @@ type AptosRpcClient interface {
 	//
 	//	client.AccountTransactions(AccountOne, 0, 2)   // Returns 2 transactions for 0x1
 	//	client.AccountTransactions(AccountOne, 1, 100) // Returns 100 transactions for 0x1
-	AccountTransactions(address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error)
+	AccountTransactions(ctx context.Context, address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error)
 
 	// SubmitTransaction Submits an already signed transaction to the blockchain
 	//
@@ -237,7 +238,7 @@ type AptosRpcClient interface {
 	//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 	//	signedTxn, _ := sender.SignTransaction(rawTxn)
 	//	submitResponse, err := client.SubmitTransaction(signedTxn)
-	SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error)
+	SubmitTransaction(ctx context.Context, signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error)
 
 	// BatchSubmitTransaction submits a collection of signed transactions to the network in a single request
 	//
@@ -262,7 +263,7 @@ type AptosRpcClient interface {
 	//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 	//	signedTxn, _ := sender.SignTransaction(rawTxn)
 	//	submitResponse, err := client.BatchSubmitTransaction([]*SignedTransaction{signedTxn})
-	BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error)
+	BatchSubmitTransaction(ctx context.Context, signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error)
 
 	// SimulateTransaction Simulates a raw transaction without sending it to the blockchain
 	//
@@ -283,11 +284,11 @@ type AptosRpcClient interface {
 	//	}
 	//	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 	//	simResponse, err := client.SimulateTransaction(rawTxn, sender)
-	SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
+	SimulateTransaction(ctx context.Context, rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
 
 	// GetChainId Retrieves the ChainId of the network
 	// Note this will be cached forever, or taken directly from the config
-	GetChainId() (chainId uint8, err error)
+	GetChainId(ctx context.Context) (chainId uint8, err error)
 
 	// BuildTransaction Builds a raw transaction from the payload and fetches any necessary information from on-chain
 	//
@@ -307,7 +308,7 @@ type AptosRpcClient interface {
 	//		}
 	//	}
 	//	rawTxn, err := client.BuildTransaction(sender.AccountAddress(), txnPayload)
-	BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error)
+	BuildTransaction(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error)
 
 	// BuildTransactionMultiAgent Builds a raw transaction for MultiAgent or FeePayer from the payload and fetches any necessary information from on-chain
 	//
@@ -327,7 +328,7 @@ type AptosRpcClient interface {
 	//		}
 	//	}
 	//	rawTxn, err := client.BuildTransactionMultiAgent(sender.AccountAddress(), txnPayload, FeePayer(AccountZero))
-	BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransactionWithData, err error)
+	BuildTransactionMultiAgent(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransactionWithData, err error)
 
 	// BuildSignAndSubmitTransaction Convenience function to do all three in one
 	// for more configuration, please use them separately
@@ -348,7 +349,7 @@ type AptosRpcClient interface {
 	//		}
 	//	}
 	//	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, txnPayload)
-	BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error)
+	BuildSignAndSubmitTransaction(ctx context.Context, sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error)
 
 	// View Runs a view function on chain returning a list of return values.
 	//
@@ -364,23 +365,23 @@ type AptosRpcClient interface {
 	//		}
 	//		vals, err := client.aptosClient.View(payload)
 	//		balance := StrToU64(vals.(any[])[0].(string))
-	View(payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error)
+	View(ctx context.Context, payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error)
 
 	// EstimateGasPrice Retrieves the gas estimate from the network.
-	EstimateGasPrice() (info EstimateGasInfo, err error)
+	EstimateGasPrice(ctx context.Context) (info EstimateGasInfo, err error)
 
 	// AccountAPTBalance retrieves the APT balance in the account
-	AccountAPTBalance(address AccountAddress, ledgerVersion ...uint64) (uint64, error)
+	AccountAPTBalance(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (uint64, error)
 
 	// NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
-	NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error)
+	NodeAPIHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error)
 }
 
 // AptosFaucetClient is an interface for all functionality on the Client that is Faucet related.  Its main implementation
 // is [FaucetClient]
 type AptosFaucetClient interface {
 	// Fund Uses the faucet to fund an address, only applies to non-production networks
-	Fund(address AccountAddress, amount uint64) error
+	Fund(ctx context.Context, address AccountAddress, amount uint64) error
 }
 
 // AptosIndexerClient is an interface for all functionality on the Client that is Indexer related.  Its main implementation
@@ -413,13 +414,13 @@ type AptosIndexerClient interface {
 	//	}
 	//
 	//	return out, nil
-	QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error
+	QueryIndexer(ctx context.Context, query any, variables map[string]any, options ...graphql.Option) error
 
 	// GetProcessorStatus returns the ledger version up to which the processor has processed
-	GetProcessorStatus(processorName string) (uint64, error)
+	GetProcessorStatus(ctx context.Context, processorName string) (uint64, error)
 
 	// GetCoinBalances gets the balances of all coins associated with a given address
-	GetCoinBalances(address AccountAddress) ([]CoinBalance, error)
+	GetCoinBalances(ctx context.Context, address AccountAddress) ([]CoinBalance, error)
 }
 
 // Client is a facade over the multiple types of underlying clients, as the user doesn't actually care where the data
@@ -478,7 +479,7 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 
 	// Fetch the chain Id if it isn't in the config
 	if config.ChainId == 0 {
-		_, _ = nodeClient.GetChainId()
+		_, _ = nodeClient.GetChainId(context.Background())
 	}
 
 	client = &Client{
@@ -487,13 +488,6 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		indexerClient,
 	}
 	return
-}
-
-// SetTimeout adjusts the HTTP client timeout
-//
-//	client.SetTimeout(5 * time.Millisecond)
-func (client *Client) SetTimeout(timeout time.Duration) {
-	client.nodeClient.SetTimeout(timeout)
 }
 
 // SetHeader sets the header for all future requests
@@ -511,13 +505,13 @@ func (client *Client) RemoveHeader(key string) {
 }
 
 // Info Retrieves the node info about the network and it's current state
-func (client *Client) Info() (info NodeInfo, err error) {
-	return client.nodeClient.Info()
+func (client *Client) Info(ctx context.Context) (info NodeInfo, err error) {
+	return client.nodeClient.Info(ctx)
 }
 
 // Account Retrieves information about the account such as [SequenceNumber] and [crypto.AuthenticationKey]
-func (client *Client) Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
-	return client.nodeClient.Account(address, ledgerVersion...)
+func (client *Client) Account(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
+	return client.nodeClient.Account(ctx, address, ledgerVersion...)
 }
 
 // AccountResource Retrieves a single resource given its struct name.
@@ -529,8 +523,8 @@ func (client *Client) Account(address AccountAddress, ledgerVersion ...uint64) (
 //
 //	address := AccountOne
 //	dataMap, _ := client.AccountResource(address, "0x1::coin::CoinStore", 1)
-func (client *Client) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
-	return client.nodeClient.AccountResource(address, resourceType, ledgerVersion...)
+func (client *Client) AccountResource(ctx context.Context, address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
+	return client.nodeClient.AccountResource(ctx, address, resourceType, ledgerVersion...)
 }
 
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
@@ -543,13 +537,13 @@ func (client *Client) AccountResource(address AccountAddress, resourceType strin
 //
 //	address := AccountOne
 //	dataMap, _ := client.AccountResource(address, 1)
-func (client *Client) AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
-	return client.nodeClient.AccountResources(address, ledgerVersion...)
+func (client *Client) AccountResources(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
+	return client.nodeClient.AccountResources(ctx, address, ledgerVersion...)
 }
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
-func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
-	return client.nodeClient.AccountResourcesBCS(address, ledgerVersion...)
+func (client *Client) AccountResourcesBCS(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
+	return client.nodeClient.AccountResourcesBCS(ctx, address, ledgerVersion...)
 }
 
 // BlockByHeight fetches a block by height
@@ -559,8 +553,8 @@ func (client *Client) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 // Can also fetch with transactions
 //
 //	block, _ := client.BlockByHeight(1, true)
-func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
-	return client.nodeClient.BlockByHeight(blockHeight, withTransactions)
+func (client *Client) BlockByHeight(ctx context.Context, blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
+	return client.nodeClient.BlockByHeight(ctx, blockHeight, withTransactions)
 }
 
 // BlockByVersion fetches a block by ledger version
@@ -570,8 +564,8 @@ func (client *Client) BlockByHeight(blockHeight uint64, withTransactions bool) (
 // Can also fetch with transactions
 //
 //	block, _ := client.BlockByVersion(123, true)
-func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
-	return client.nodeClient.BlockByVersion(ledgerVersion, withTransactions)
+func (client *Client) BlockByVersion(ctx context.Context, ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
+	return client.nodeClient.BlockByVersion(ctx, ledgerVersion, withTransactions)
 }
 
 // TransactionByHash gets info on a transaction
@@ -589,8 +583,8 @@ func (client *Client) BlockByVersion(ledgerVersion uint64, withTransactions bool
 //			// known to local mempool, but not committed yet
 //		}
 //	}
-func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, err error) {
-	return client.nodeClient.TransactionByHash(txnHash)
+func (client *Client) TransactionByHash(ctx context.Context, txnHash string) (data *api.Transaction, err error) {
+	return client.nodeClient.TransactionByHash(ctx, txnHash)
 }
 
 // TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
@@ -604,8 +598,8 @@ func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, 
 //			}
 //		}
 //	}
-func (client *Client) TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error) {
-	return client.nodeClient.TransactionByVersion(version)
+func (client *Client) TransactionByVersion(ctx context.Context, version uint64) (data *api.CommittedTransaction, err error) {
+	return client.nodeClient.TransactionByVersion(ctx, version)
 }
 
 // PollForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
@@ -618,15 +612,15 @@ func (client *Client) TransactionByVersion(version uint64) (data *api.CommittedT
 //
 //	hashes := []string{"0x1234", "0x4567"}
 //	err := client.PollForTransactions(hashes, PollPeriod(500 * time.Milliseconds), PollTimeout(5 * time.Seconds))
-func (client *Client) PollForTransactions(txnHashes []string, options ...any) error {
-	return client.nodeClient.PollForTransactions(txnHashes, options...)
+func (client *Client) PollForTransactions(ctx context.Context, txnHashes []string, options ...any) error {
+	return client.nodeClient.PollForTransactions(ctx, txnHashes, options...)
 }
 
 // WaitForTransaction Do a long-GET for one transaction and wait for it to complete
 //
 //	data, err := client.WaitForTransaction("0x1234")
-func (client *Client) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
-	return client.nodeClient.WaitForTransaction(txnHash, options...)
+func (client *Client) WaitForTransaction(ctx context.Context, txnHash string, options ...any) (data *api.UserTransaction, err error) {
+	return client.nodeClient.WaitForTransaction(ctx, txnHash, options...)
 }
 
 // Transactions Get recent transactions.
@@ -635,8 +629,8 @@ func (client *Client) WaitForTransaction(txnHash string, options ...any) (data *
 //
 //	client.Transactions(0, 2)   // Returns 2 transactions
 //	client.Transactions(1, 100) // Returns 100 transactions
-func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
-	return client.nodeClient.Transactions(start, limit)
+func (client *Client) Transactions(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return client.nodeClient.Transactions(ctx, start, limit)
 }
 
 // AccountTransactions Get transactions associated with an account.
@@ -645,8 +639,8 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Co
 //
 //	client.AccountTransactions(AccountOne, 0, 2)   // Returns 2 transactions for 0x1
 //	client.AccountTransactions(AccountOne, 1, 100) // Returns 100 transactions for 0x1
-func (client *Client) AccountTransactions(address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
-	return client.nodeClient.AccountTransactions(address, start, limit)
+func (client *Client) AccountTransactions(ctx context.Context, address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return client.nodeClient.AccountTransactions(ctx, address, start, limit)
 }
 
 // SubmitTransaction Submits an already signed transaction to the blockchain
@@ -669,8 +663,8 @@ func (client *Client) AccountTransactions(address AccountAddress, start *uint64,
 //	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 //	signedTxn, _ := sender.SignTransaction(rawTxn)
 //	submitResponse, err := client.SubmitTransaction(signedTxn)
-func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
-	return client.nodeClient.SubmitTransaction(signedTransaction)
+func (client *Client) SubmitTransaction(ctx context.Context, signedTransaction *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
+	return client.nodeClient.SubmitTransaction(ctx, signedTransaction)
 }
 
 // BatchSubmitTransaction submits a collection of signed transactions to the network in a single request
@@ -696,8 +690,8 @@ func (client *Client) SubmitTransaction(signedTransaction *SignedTransaction) (d
 //	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 //	signedTxn, _ := sender.SignTransaction(rawTxn)
 //	submitResponse, err := client.BatchSubmitTransaction([]*SignedTransaction{signedTxn})
-func (client *Client) BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
-	return client.nodeClient.BatchSubmitTransaction(signedTxns)
+func (client *Client) BatchSubmitTransaction(ctx context.Context, signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
+	return client.nodeClient.BatchSubmitTransaction(ctx, signedTxns)
 }
 
 // SimulateTransaction Simulates a raw transaction without sending it to the blockchain
@@ -719,19 +713,19 @@ func (client *Client) BatchSubmitTransaction(signedTxns []*SignedTransaction) (r
 //	}
 //	rawTxn, _ := client.BuildTransaction(sender.AccountAddress(), txnPayload)
 //	simResponse, err := client.SimulateTransaction(rawTxn, sender)
-func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
-	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
+func (client *Client) SimulateTransaction(ctx context.Context, rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateTransaction(ctx, rawTxn, sender, options...)
 }
 
 // GetChainId Retrieves the ChainId of the network
 // Note this will be cached forever, or taken directly from the config
-func (client *Client) GetChainId() (chainId uint8, err error) {
-	return client.nodeClient.GetChainId()
+func (client *Client) GetChainId(ctx context.Context) (chainId uint8, err error) {
+	return client.nodeClient.GetChainId(ctx)
 }
 
 // Fund Uses the faucet to fund an address, only applies to non-production networks
-func (client *Client) Fund(address AccountAddress, amount uint64) error {
-	return client.faucetClient.Fund(address, amount)
+func (client *Client) Fund(ctx context.Context, address AccountAddress, amount uint64) error {
+	return client.faucetClient.Fund(ctx, address, amount)
 }
 
 // BuildTransaction Builds a raw transaction from the payload and fetches any necessary information from on-chain
@@ -752,8 +746,8 @@ func (client *Client) Fund(address AccountAddress, amount uint64) error {
 //		}
 //	}
 //	rawTxn, err := client.BuildTransaction(sender.AccountAddress(), txnPayload)
-func (client *Client) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
-	return client.nodeClient.BuildTransaction(sender, payload, options...)
+func (client *Client) BuildTransaction(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+	return client.nodeClient.BuildTransaction(ctx, sender, payload, options...)
 }
 
 // BuildTransactionMultiAgent Builds a raw transaction for MultiAgent or FeePayer from the payload and fetches any necessary information from on-chain
@@ -774,8 +768,8 @@ func (client *Client) BuildTransaction(sender AccountAddress, payload Transactio
 //		}
 //	}
 //	rawTxn, err := client.BuildTransactionMultiAgent(sender.AccountAddress(), txnPayload, FeePayer(AccountZero))
-func (client *Client) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransactionWithData, err error) {
-	return client.nodeClient.BuildTransactionMultiAgent(sender, payload, options...)
+func (client *Client) BuildTransactionMultiAgent(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransactionWithData, err error) {
+	return client.nodeClient.BuildTransactionMultiAgent(ctx, sender, payload, options...)
 }
 
 // BuildSignAndSubmitTransaction Convenience function to do all three in one
@@ -797,8 +791,8 @@ func (client *Client) BuildTransactionMultiAgent(sender AccountAddress, payload 
 //		}
 //	}
 //	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, txnPayload)
-func (client *Client) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
-	return client.nodeClient.BuildSignAndSubmitTransaction(sender, payload, options...)
+func (client *Client) BuildSignAndSubmitTransaction(ctx context.Context, sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+	return client.nodeClient.BuildSignAndSubmitTransaction(ctx, sender, payload, options...)
 }
 
 // View Runs a view function on chain returning a list of return values.
@@ -815,18 +809,18 @@ func (client *Client) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 //		}
 //		vals, err := client.aptosClient.View(payload)
 //		balance := StrToU64(vals.(any[])[0].(string))
-func (client *Client) View(payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error) {
-	return client.nodeClient.View(payload, ledgerVersion...)
+func (client *Client) View(ctx context.Context, payload *ViewPayload, ledgerVersion ...uint64) (vals []any, err error) {
+	return client.nodeClient.View(ctx, payload, ledgerVersion...)
 }
 
 // EstimateGasPrice Retrieves the gas estimate from the network.
-func (client *Client) EstimateGasPrice() (info EstimateGasInfo, err error) {
-	return client.nodeClient.EstimateGasPrice()
+func (client *Client) EstimateGasPrice(ctx context.Context) (info EstimateGasInfo, err error) {
+	return client.nodeClient.EstimateGasPrice(ctx)
 }
 
 // AccountAPTBalance retrieves the APT balance in the account
-func (client *Client) AccountAPTBalance(address AccountAddress, ledgerVersion ...uint64) (uint64, error) {
-	return client.nodeClient.AccountAPTBalance(address, ledgerVersion...)
+func (client *Client) AccountAPTBalance(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (uint64, error) {
+	return client.nodeClient.AccountAPTBalance(ctx, address, ledgerVersion...)
 }
 
 // QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer client on how to make queries
@@ -855,21 +849,21 @@ func (client *Client) AccountAPTBalance(address AccountAddress, ledgerVersion ..
 //	}
 //
 //	return out, nil
-func (client *Client) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {
-	return client.indexerClient.Query(query, variables, options...)
+func (client *Client) QueryIndexer(ctx context.Context, query any, variables map[string]any, options ...graphql.Option) error {
+	return client.indexerClient.Query(ctx, query, variables, options...)
 }
 
 // GetProcessorStatus returns the ledger version up to which the processor has processed
-func (client *Client) GetProcessorStatus(processorName string) (uint64, error) {
-	return client.indexerClient.GetProcessorStatus(processorName)
+func (client *Client) GetProcessorStatus(ctx context.Context, processorName string) (uint64, error) {
+	return client.indexerClient.GetProcessorStatus(ctx, processorName)
 }
 
 // GetCoinBalances gets the balances of all coins associated with a given address
-func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
-	return client.indexerClient.GetCoinBalances(address)
+func (client *Client) GetCoinBalances(ctx context.Context, address AccountAddress) ([]CoinBalance, error) {
+	return client.indexerClient.GetCoinBalances(ctx, address)
 }
 
 // NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
-func (client *Client) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
-	return client.nodeClient.NodeAPIHealthCheck(durationSecs...)
+func (client *Client) NodeAPIHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	return client.nodeClient.NodeAPIHealthCheck(ctx, durationSecs...)
 }

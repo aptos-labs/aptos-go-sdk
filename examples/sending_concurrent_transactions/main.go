@@ -2,9 +2,11 @@
 package main
 
 import (
+	"context"
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"time"
 )
 
 func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {
@@ -18,7 +20,7 @@ func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionS
 		panic("Failed to create sender:" + err.Error())
 	}
 
-	err = client.Fund(sender.Address, 100_000_000)
+	err = client.Fund(context.Background(), sender.Address, 100_000_000)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
@@ -49,7 +51,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
 	for i := uint64(0); i < numTransactions; i++ {
-		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
+		rawTxn, err := client.BuildTransaction(context.Background(), senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
 		}
@@ -59,7 +61,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 			panic("Failed to sign transaction:" + err.Error())
 		}
 
-		submitResult, err := client.SubmitTransaction(signedTxn)
+		submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
 		if err != nil {
 			panic("Failed to submit transaction:" + err.Error())
 		}
@@ -68,7 +70,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	}
 
 	// Wait on last transaction
-	response, err := client.WaitForTransaction(responses[numTransactions-1].Hash)
+	response, err := client.WaitForTransaction(context.Background(), responses[numTransactions-1].Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
@@ -84,7 +86,7 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTran
 	// start submission goroutine
 	payloads := make(chan aptos.TransactionBuildPayload, 50)
 	results := make(chan aptos.TransactionSubmissionResponse, 50)
-	go client.BuildSignAndSubmitTransactions(sender, payloads, results)
+	go client.BuildSignAndSubmitTransactions(context.Background(), sender, payloads, results)
 
 	// Submit transactions to goroutine
 	go func() {
