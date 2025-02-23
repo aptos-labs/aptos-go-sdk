@@ -18,8 +18,10 @@ func init() {
 	vcsMod := ""
 	goArch := ""
 	goOs := ""
+	params := url.Values{}
 	buildInfo, ok := debug.ReadBuildInfo()
 	if ok {
+		params.Set("go", buildInfo.GoVersion)
 		for _, setting := range buildInfo.Settings {
 			switch setting.Key {
 			case "vcs.revision":
@@ -34,11 +36,9 @@ func init() {
 			}
 		}
 	}
-	params := url.Values{}
 	if vcsMod == "true" {
 		params.Set("m", "t")
 	}
-	params.Set("go", buildInfo.GoVersion)
 	if goArch != "" {
 		params.Set("a", goArch)
 	}

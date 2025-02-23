@@ -1,10 +1,6 @@
 [package]
-name = "rupee"
+name = "multiagent_script"
 version = "1.0.0"
-authors = []
-
-[addresses]
-rupee_addr = "_"
 
 [dependencies.AptosFramework]
 git = "https://github.com/aptos-labs/aptos-framework.git"

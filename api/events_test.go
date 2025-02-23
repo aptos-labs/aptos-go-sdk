@@ -57,3 +57,24 @@ func TestEvent_V2(t *testing.T) {
 	assert.Equal(t, uint64(0), data.Guid.CreationNumber)
 	assert.Equal(t, &types.AccountZero, data.Guid.AccountAddress)
 }
+
+func TestEvent_V2_Other(t *testing.T) {
+	testJson := `	{
+		"type": "vector<u64>",
+		"guid": {
+            "account_address": "0x0",
+			"creation_number": "0"
+		},
+		"sequence_number": "0",
+		"data": ["0","1","2"]
+	}`
+	data := &Event{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	assert.NoError(t, err)
+
+	assert.Equal(t, "vector<u64>", data.Type)
+	assert.Equal(t, uint64(0), data.SequenceNumber)
+	assert.Equal(t, []any{"0", "1", "2"}, data.Data[AnyDataName].([]any))
+	assert.Equal(t, uint64(0), data.Guid.CreationNumber)
+	assert.Equal(t, &types.AccountZero, data.Guid.AccountAddress)
+}
