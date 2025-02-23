@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -202,6 +203,17 @@ func (rc *NodeClient) TransactionByHash(txnHash string) (data *api.Transaction, 
 	return data, nil
 }
 
+// Waits for a transaction to be confirmed by its hash.
+// This function allows you to monitor the status of a transaction until it is finalized.
+func (rc *NodeClient) WaitTransactionByHash(txnHash string) (data *api.Transaction, err error) {
+	restUrl := rc.baseUrl.JoinPath("transactions/wait_by_hash", txnHash)
+	data, err = Get[*api.Transaction](rc, restUrl.String())
+	if err != nil {
+		return data, fmt.Errorf("get transaction api err: %w", err)
+	}
+	return data, nil
+}
+
 // TransactionByVersion gets info on a transaction by version number
 // The transaction will have been committed.  The response will not be of the type [api.PendingTransaction].
 func (rc *NodeClient) TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error) {
@@ -316,22 +328,50 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 // Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
 // Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
 func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
+	// Check if the transaction is already done
+	txn, err := rc.TransactionByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	if txn.Type == api.TransactionVariantUser {
+		return txn.UserTransaction()
+	}
+
+	// Wait for the transaction to be done
+	txn, err = rc.WaitTransactionByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	if txn.Type == api.TransactionVariantUser {
+		return txn.UserTransaction()
+	}
+
+	// Poll for the transaction to be done
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
 	if err != nil {
 		return nil, err
 	}
-	start := time.Now()
-	deadline := start.Add(timeout)
+
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+
+	ticker := time.NewTicker(period)
+	defer ticker.Stop()
+
 	for {
-		if time.Now().After(deadline) {
+		select {
+		case <-ctx.Done():
 			return nil, errors.New("PollForTransaction timeout")
-		}
-		time.Sleep(period)
-		txn, err := rc.TransactionByHash(hash)
-		if err == nil {
-			if txn.Type == api.TransactionVariantPending {
+		case <-ticker.C:
+			txn, err := rc.TransactionByHash(hash)
+			if err != nil {
+				continue
+			}
+			switch txn.Type {
+			case api.TransactionVariantPending:
 				// not done yet!
-			} else if txn.Type == api.TransactionVariantUser {
+				continue
+			case api.TransactionVariantUser:
 				// done!
 				slog.Debug("txn done", "hash", hash)
 				return txn.UserTransaction()
