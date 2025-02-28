@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Fix`] Ensure proper cleanup of response body on read error to prevent potential memory leak.
+
 # v1.5.0 (2/10/2024)
 
 - [`Fix`] Make NodeClient match AptosRpcClient interface
