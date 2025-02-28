@@ -330,10 +330,7 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
 	// Wait for the transaction to be done
 	txn, err := rc.WaitTransactionByHash(hash)
-	if err != nil {
-		return nil, err
-	}
-	if txn.Type == api.TransactionVariantUser {
+	if err == nil && txn.Type == api.TransactionVariantUser {
 		return txn.UserTransaction()
 	}
 
