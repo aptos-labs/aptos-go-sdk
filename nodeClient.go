@@ -328,17 +328,8 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 // Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
 // Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
 func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
-	// Check if the transaction is already done
-	txn, err := rc.TransactionByHash(hash)
-	if err != nil {
-		return nil, err
-	}
-	if txn.Type == api.TransactionVariantUser {
-		return txn.UserTransaction()
-	}
-
 	// Wait for the transaction to be done
-	txn, err = rc.WaitTransactionByHash(hash)
+	txn, err := rc.WaitTransactionByHash(hash)
 	if err != nil {
 		return nil, err
 	}
