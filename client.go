@@ -217,6 +217,22 @@ type AptosRpcClient interface {
 	//	client.AccountTransactions(AccountOne, 1, 100) // Returns 100 transactions for 0x1
 	AccountTransactions(address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error)
 
+	// EventsByHandle retrieves events by event handle and field name for a given account.
+	//
+	// Arguments:
+	//   - account - The account address to get events for
+	//   - eventHandle - The event handle struct tag
+	//   - fieldName - The field in the event handle struct
+	//   - start - The starting sequence number. nil for most recent events
+	//   - limit - The number of events to return, 100 by default
+	EventsByHandle(
+		account AccountAddress,
+		eventHandle string,
+		fieldName string,
+		start *uint64,
+		limit *uint64,
+	) ([]*api.Event, error)
+
 	// SubmitTransaction Submits an already signed transaction to the blockchain
 	//
 	//	sender := NewEd25519Account()
@@ -647,6 +663,16 @@ func (client *Client) Transactions(start *uint64, limit *uint64) (data []*api.Co
 //	client.AccountTransactions(AccountOne, 1, 100) // Returns 100 transactions for 0x1
 func (client *Client) AccountTransactions(address AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	return client.nodeClient.AccountTransactions(address, start, limit)
+}
+
+// EventsByHandle Get events by handle and field name for an account.
+// Start is a sequence number. Nil for most recent events.
+// Limit is a number of events to return, 100 by default.
+//
+//	client.EventsByHandle(AccountOne, "0x2", "transfer", 0, 2)   // Returns 2 events
+//	client.EventsByHandle(AccountOne, "0x2", "transfer", 1, 100) // Returns 100 events
+func (client *Client) EventsByHandle(account AccountAddress, eventHandle string, fieldName string, start *uint64, limit *uint64) ([]*api.Event, error) {
+	return client.nodeClient.EventsByHandle(account, eventHandle, fieldName, start, limit)
 }
 
 // SubmitTransaction Submits an already signed transaction to the blockchain
