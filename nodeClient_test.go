@@ -1,9 +1,15 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestPollForTransaction(t *testing.T) {
@@ -19,4 +25,95 @@ func TestPollForTransaction(t *testing.T) {
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)
 	assert.Less(t, dt, 20*time.Millisecond)
 	assert.Error(t, err)
+}
+
+func TestEventsByHandle(t *testing.T) {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			// handle initial request from client
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		assert.Equal(t, "/accounts/0x0/events/0x2/transfer", r.URL.Path)
+
+		start := r.URL.Query().Get("start")
+		limit := r.URL.Query().Get("limit")
+
+		startInt, _ := strconv.ParseUint(start, 10, 64)
+		limitInt, _ := strconv.ParseUint(limit, 10, 64)
+
+		events := make([]map[string]interface{}, 0, limitInt)
+		for i := uint64(0); i < limitInt; i++ {
+			events = append(events, map[string]interface{}{
+				"type": "0x1::coin::TransferEvent",
+				"guid": map[string]interface{}{
+					"creation_number": "1",
+					"account_address": AccountZero.String(),
+				},
+				"sequence_number": strconv.FormatUint(startInt+i, 10),
+				"data": map[string]interface{}{
+					"amount": fmt.Sprintf("%d", (startInt+i)*100),
+				},
+			})
+		}
+
+		json.NewEncoder(w).Encode(events)
+	}))
+	defer mockServer.Close()
+
+	client, err := NewClient(NetworkConfig{
+		Name:    "mocknet",
+		NodeUrl: mockServer.URL,
+	})
+	assert.NoError(t, err)
+
+	t.Run("pagination with concurrent fetching", func(t *testing.T) {
+		start := uint64(0)
+		limit := uint64(150)
+		events, err := client.EventsByHandle(
+			AccountZero,
+			"0x2",
+			"transfer",
+			&start,
+			&limit,
+		)
+
+		assert.NoError(t, err)
+		assert.Len(t, events, 150)
+	})
+
+	t.Run("default page size when limit not provided", func(t *testing.T) {
+		events, err := client.EventsByHandle(
+			AccountZero,
+			"0x2",
+			"transfer",
+			nil,
+			nil,
+		)
+
+		assert.NoError(t, err)
+		assert.Len(t, events, 100)
+		assert.Equal(t, uint64(99), events[99].SequenceNumber)
+	})
+
+	t.Run("single page fetch", func(t *testing.T) {
+		start := uint64(50)
+		limit := uint64(5)
+		events, err := client.EventsByHandle(
+			AccountZero,
+			"0x2",
+			"transfer",
+			&start,
+			&limit,
+		)
+
+		jsonBytes, _ := json.MarshalIndent(events, "", "  ")
+		t.Logf("JSON Response: %s", string(jsonBytes))
+
+		assert.NoError(t, err)
+		assert.Len(t, events, 5)
+		assert.Equal(t, uint64(50), events[0].SequenceNumber)
+		assert.Equal(t, uint64(54), events[4].SequenceNumber)
+	})
 }

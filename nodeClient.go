@@ -407,6 +407,91 @@ func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64,
 	})
 }
 
+func (rc *NodeClient) EventsByHandle(
+	account AccountAddress,
+	eventHandle string,
+	fieldName string,
+	start *uint64,
+	limit *uint64,
+) (data []*api.Event, err error) {
+	basePath := fmt.Sprintf("accounts/%s/events/%s/%s",
+		account.String(),
+		eventHandle,
+		fieldName)
+
+	baseUrl := rc.baseUrl.JoinPath(basePath)
+
+	const eventsPageSize = 100
+	var effectiveLimit uint64
+	if limit == nil {
+		effectiveLimit = eventsPageSize
+	} else {
+		effectiveLimit = *limit
+	}
+
+	var effectiveStart uint64
+	if start == nil {
+		effectiveStart = 0
+	} else {
+		effectiveStart = *start
+	}
+
+	if effectiveLimit <= eventsPageSize {
+		params := url.Values{}
+		params.Set("start", strconv.FormatUint(effectiveStart, 10))
+		params.Set("limit", strconv.FormatUint(effectiveLimit, 10))
+
+		requestUrl := *baseUrl
+		requestUrl.RawQuery = params.Encode()
+
+		data, err = Get[[]*api.Event](rc, requestUrl.String())
+		if err != nil {
+			return nil, fmt.Errorf("get events api err: %w", err)
+		}
+		return data, nil
+	}
+
+	pages := (effectiveLimit + eventsPageSize - 1) / eventsPageSize
+	channels := make([]chan ConcResponse[[]*api.Event], pages)
+
+	for i := uint64(0); i < pages; i++ {
+		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
+		pageStart := effectiveStart + (i * eventsPageSize)
+		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
+
+		go fetch(func() ([]*api.Event, error) {
+			params := url.Values{}
+			params.Set("start", strconv.FormatUint(pageStart, 10))
+			params.Set("limit", strconv.FormatUint(pageLimit, 10))
+
+			requestUrl := *baseUrl
+			requestUrl.RawQuery = params.Encode()
+
+			events, err := Get[[]*api.Event](rc, requestUrl.String())
+			if err != nil {
+				return nil, fmt.Errorf("get events api err: %w", err)
+			}
+			return events, nil
+		}, channels[i])
+	}
+
+	events := make([]*api.Event, 0, effectiveLimit)
+	for i, ch := range channels {
+		response := <-ch
+		if response.Err != nil {
+			return nil, response.Err
+		}
+		events = append(events, response.Result...)
+		close(channels[i])
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].SequenceNumber < events[j].SequenceNumber
+	})
+
+	return events, nil
+}
+
 // handleTransactions is a helper function for fetching transactions
 //
 // It will fetch the transactions from the node in a single request if possible, otherwise it will fetch them concurrently.
