@@ -8,6 +8,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
+
 const testEd25519PrivateKey = "ed25519-priv-0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"
 
 const TransferScriptPayload = "0x008601a11ceb0b0700000a06010002030206050806070e1708252010451900000001010000010003060c05030d6170746f735f6163636f756e74087472616e736665720000000000000000000000000000000000000000000000000000000000000001166170746f733a3a7363726970745f636f6d706f7365720100000100050a000b010b0211000200020920000000000000000000000000000000000000000000000000000000000000000209086400000000000000"
@@ -59,9 +60,8 @@ func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAdd
 	var payload aptos.TransactionPayload
 	payload.UnmarshalBCS(bcs.NewDeserializer(scriptBytes))
 
-
 	// 1. Build transaction
-	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), payload);
+	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), payload)
 
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
