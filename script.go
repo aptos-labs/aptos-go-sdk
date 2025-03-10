@@ -2,8 +2,8 @@ package aptos
 
 import (
 	"fmt"
-	"math/big"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"math/big"
 )
 
 //region Script
