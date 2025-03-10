@@ -2,8 +2,8 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"math/big"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
 //region Script
@@ -48,15 +48,16 @@ func (s *Script) UnmarshalBCS(des *bcs.Deserializer) {
 type ScriptArgumentVariant uint32
 
 const (
-	ScriptArgumentU8       ScriptArgumentVariant = 0 // u8 type argument
-	ScriptArgumentU64      ScriptArgumentVariant = 1 // u64 type argument
-	ScriptArgumentU128     ScriptArgumentVariant = 2 // u128 type argument
-	ScriptArgumentAddress  ScriptArgumentVariant = 3 // address type argument
-	ScriptArgumentU8Vector ScriptArgumentVariant = 4 // vector<u8> type argument
-	ScriptArgumentBool     ScriptArgumentVariant = 5 // bool type argument
-	ScriptArgumentU16      ScriptArgumentVariant = 6 // u16 type argument
-	ScriptArgumentU32      ScriptArgumentVariant = 7 //	u32 type argument
-	ScriptArgumentU256     ScriptArgumentVariant = 8 //	u256 type argument
+	ScriptArgumentU8         ScriptArgumentVariant = 0 // u8 type argument
+	ScriptArgumentU64        ScriptArgumentVariant = 1 // u64 type argument
+	ScriptArgumentU128       ScriptArgumentVariant = 2 // u128 type argument
+	ScriptArgumentAddress    ScriptArgumentVariant = 3 // address type argument
+	ScriptArgumentU8Vector   ScriptArgumentVariant = 4 // vector<u8> type argument
+	ScriptArgumentBool       ScriptArgumentVariant = 5 // bool type argument
+	ScriptArgumentU16        ScriptArgumentVariant = 6 // u16 type argument
+	ScriptArgumentU32        ScriptArgumentVariant = 7 //	u32 type argument
+	ScriptArgumentU256       ScriptArgumentVariant = 8 //	u256 type argument
+	ScriptArgumentSerialized ScriptArgumentVariant = 9 //	Serialized type argument
 )
 
 // ScriptArgument a Move script argument, which encodes its type with it
@@ -125,6 +126,12 @@ func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentBool, must be bool", sa.Value))
 		}
 		ser.Bool(value)
+	case ScriptArgumentSerialized:
+		value, ok := (sa.Value).(*bcs.Serialized)
+		if !ok {
+			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentSerialized, must be *bcs.Serialized", sa.Value))
+		}
+		ser.Serialized(*value)
 	}
 }
 
@@ -151,6 +158,8 @@ func (sa *ScriptArgument) UnmarshalBCS(des *bcs.Deserializer) {
 		sa.Value = des.ReadBytes()
 	case ScriptArgumentBool:
 		sa.Value = des.Bool()
+	case ScriptArgumentSerialized:
+		sa.Value = des.Serialized()
 	}
 }
 
