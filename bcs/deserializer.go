@@ -318,3 +318,8 @@ func (des *Deserializer) setError(msg string, args ...any) {
 	}
 	des.err = fmt.Errorf(msg, args...)
 }
+
+// DeserializeBytes deserializes a byte array prefixed with a length
+func (des *Deserializer) Serialized() *Serialized {
+	return &Serialized{des.ReadBytes()}
+}
