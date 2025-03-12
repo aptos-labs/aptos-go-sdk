@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/sha3"

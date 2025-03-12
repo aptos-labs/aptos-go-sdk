@@ -730,6 +730,76 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	return data, nil
 }
 
+// SimulateMultiTransaction simulates a transaction with optional fee payer and secondary signers
+// If feePayerAddress is nil, no fee payer will be used
+// If secondarySignerAddresses is nil or empty, no secondary signers will be used
+func (rc *NodeClient) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData,  sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	if( rawTxnWithData == nil ) {
+		return nil, fmt.Errorf("rawTxnWithData is nil")
+	}
+	switch rawTxnWithData.Variant{
+	case MultiAgentWithFeePayerRawTransactionWithDataVariant:
+		signedFeePayerTxn, ok := rawTxnWithData.ToFeePayerSignedTransaction(
+			sender.SimulationAuthenticator(),
+			&crypto.AccountAuthenticator{
+				Variant: crypto.AccountAuthenticatorNoAccount,
+				Auth: &crypto.AccountAuthenticatorNoAccountAuthenticator{},
+			},
+			[]crypto.AccountAuthenticator{},
+		);
+		if !ok {
+			return nil, fmt.Errorf("failed to sign agent transaction")
+		}
+		return rc.simulateTransactionWithSignedTxn(signedFeePayerTxn, options...)
+	case MultiAgentRawTransactionWithDataVariant:
+		signedAgentTxn, ok := rawTxnWithData.ToMultiAgentSignedTransaction(
+			sender.SimulationAuthenticator(),
+			[]crypto.AccountAuthenticator{},
+		)
+		if !ok {
+			return nil, fmt.Errorf("failed to sign agent transaction")
+		}
+		return rc.simulateTransactionWithSignedTxn(signedAgentTxn, options...)
+	default:
+		return nil, fmt.Errorf("unsupported raw transaction with data variant %v", rawTxnWithData.Variant)
+	}
+}
+
+// Helper method to avoid code duplication
+func (rc *NodeClient) simulateTransactionWithSignedTxn(signedTxn *SignedTransaction, options ...any) ([]*api.UserTransaction, error) {
+	sblob, err := bcs.Serialize(signedTxn)
+	if err != nil {
+		return nil, err
+	}
+	bodyReader := bytes.NewReader(sblob)
+	au := rc.baseUrl.JoinPath("transactions/simulate")
+
+	// parse simulate tx options
+	params := url.Values{}
+	for i, arg := range options {
+		switch value := arg.(type) {
+		case EstimateGasUnitPrice:
+			params.Set("estimate_gas_unit_price", strconv.FormatBool(bool(value)))
+		case EstimateMaxGasAmount:
+			params.Set("estimate_max_gas_amount", strconv.FormatBool(bool(value)))
+		case EstimatePrioritizedGasUnitPrice:
+			params.Set("estimate_prioritized_gas_unit_price", strconv.FormatBool(bool(value)))
+		default:
+			return nil, fmt.Errorf("SimulateTransaction arg %d bad type %T", i+1, arg)
+		}
+	}
+	if len(params) != 0 {
+		au.RawQuery = params.Encode()
+	}
+
+	data, err := Post[[]*api.UserTransaction](rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	if err != nil {
+		return nil, fmt.Errorf("simulate transaction api err: %w", err)
+	}
+
+	return data, nil
+}
+
 // GetChainId gets the chain ID of the network
 func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	if rc.chainId == 0 {

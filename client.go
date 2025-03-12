@@ -749,6 +749,10 @@ func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }
 
+func (client *Client) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateMultiTransaction(rawTxnWithData, sender, options...)
+}
+
 // GetChainId Retrieves the ChainId of the network
 // Note this will be cached forever, or taken directly from the config
 func (client *Client) GetChainId() (chainId uint8, err error) {
