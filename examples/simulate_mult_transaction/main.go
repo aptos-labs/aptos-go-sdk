@@ -82,7 +82,6 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
 
-	
 	rawTxn, err := client.BuildTransactionMultiAgent(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
@@ -124,7 +123,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// 4.a. merge the signatures together into a single transaction
-	signedTxn, ok := rawTxn.ToFeePayerSignedTransaction(aliceAuth,bobAuth ,[]crypto.AccountAuthenticator{})
+	signedTxn, ok := rawTxn.ToFeePayerSignedTransaction(aliceAuth, bobAuth, []crypto.AccountAuthenticator{})
 	if !ok {
 		panic("Failed to build a signed multiagent transaction")
 	}

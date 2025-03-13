@@ -17,11 +17,11 @@ func (aa *AccountAuthenticatorNoAccountAuthenticator) PublicKey() PublicKey {
 	err := (publicKey).FromHex("0x0000000000000000000000000000000000000000000000000000000000000000")
 	println(publicKey.ToHex())
 	if err != nil {
-		
+
 		// Handle error or log it
 		// For this case, it should never fail since we're using a valid zero key
 	}
-	
+
 	return publicKey
 }
 

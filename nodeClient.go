@@ -13,7 +13,6 @@ import (
 	"sort"
 	"strconv"
 	"time"
-
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
@@ -734,19 +733,19 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 // If feePayerAddress is nil, no fee payer will be used
 // If secondarySignerAddresses is nil or empty, no secondary signers will be used
 func (rc *NodeClient) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, additionalSigners []crypto.AccountAuthenticator, options ...any) (data []*api.UserTransaction, err error) {
-	if( rawTxnWithData == nil ) {
+	if rawTxnWithData == nil {
 		return nil, fmt.Errorf("rawTxnWithData is nil")
 	}
-	switch rawTxnWithData.Variant{
+	switch rawTxnWithData.Variant {
 	case MultiAgentWithFeePayerRawTransactionWithDataVariant:
 		signedFeePayerTxn, ok := rawTxnWithData.ToFeePayerSignedTransaction(
 			sender.SimulationAuthenticator(),
 			&crypto.AccountAuthenticator{
 				Variant: crypto.AccountAuthenticatorNoAccount,
-				Auth: &crypto.AccountAuthenticatorNoAccountAuthenticator{},
+				Auth:    &crypto.AccountAuthenticatorNoAccountAuthenticator{},
 			},
 			additionalSigners,
-		);
+		)
 		if !ok {
 			return nil, fmt.Errorf("failed to sign fee payer transaction")
 		}

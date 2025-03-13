@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 	"time"
-
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/hasura/go-graphql-client"
@@ -776,7 +775,7 @@ func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 //   - data: A slice of pointers to the simulated user transactions.
 //   - err: An error if the simulation fails.
 func (client *Client) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, additionalSigners []crypto.AccountAuthenticator, options ...any) (data []*api.UserTransaction, err error) {
-	return client.nodeClient.SimulateMultiTransaction(rawTxnWithData, sender, additionalSigners , options...)
+	return client.nodeClient.SimulateMultiTransaction(rawTxnWithData, sender, additionalSigners, options...)
 }
 
 // SimulateTransactionWithSignedTxn simulates a transaction using a signed transaction.
