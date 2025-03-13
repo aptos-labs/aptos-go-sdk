@@ -8,8 +8,6 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
-const MultiagentScript = "0xa11ceb0b0700000a0601000403040d04110405151b07302f085f2000000001010203040001000306020100010105010704060c060c03030205050001060c010501090003060c05030109010d6170746f735f6163636f756e74067369676e65720a616464726573735f6f660e7472616e736665725f636f696e73000000000000000000000000000000000000000000000000000000000000000102000000010f0a0011000c040a0111000c050b000b050b0238000b010b040b03380102"
-
 const FundAmount = 100_000_000
 const TransferAmount uint64 = 1
 
@@ -58,29 +56,17 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 
-	// 1. Build transaction
-	// script, err := util.ParseHex(MultiagentScript)
-	// if err != nil {
-	// 	panic("Failed to deserialize script:" + err.Error())
-	// }
-
 	serializer := &bcs.Serializer{}
 
 	bob.Address.MarshalBCS(serializer)
 	accountBytes := serializer.ToBytes()
-
-	if err != nil {
-		panic("Failed to serialize alice's address:" + err.Error())
-	}
 
 	serializer = &bcs.Serializer{}
 
 	serializer.U64(TransferAmount)
 	amountBytes := serializer.ToBytes()
 
-	if err != nil {
-		panic("Failed to serialize transfer amount:" + err.Error())
-	}
+	// 1. Build transaction
 
 	rawTxn, err := client.BuildTransactionMultiAgent(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
