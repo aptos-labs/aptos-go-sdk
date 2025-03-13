@@ -90,6 +90,9 @@ func (account *Account) AccountAddress() AccountAddress {
 	return account.Address
 }
 
+// ErrAddressMissing0x is returned when an AccountAddress is missing the leading 0x
+var ErrAddressMissing0x = errors.New("AccountAddress missing 0x")
+
 // ErrAddressTooShort is returned when an AccountAddress is too short
 var ErrAddressTooShort = errors.New("AccountAddress too short")
 
@@ -102,6 +105,31 @@ func (aa *AccountAddress) ParseStringRelaxed(x string) error {
 	if strings.HasPrefix(x, "0x") {
 		x = x[2:]
 	}
+	if len(x) < 1 {
+		return ErrAddressTooShort
+	}
+	if len(x) > 64 {
+		return ErrAddressTooLong
+	}
+	if len(x)%2 != 0 {
+		x = "0" + x
+	}
+	bytes, err := hex.DecodeString(x)
+	if err != nil {
+		return err
+	}
+	// zero-prefix/right-align what bytes we got
+	copy((*aa)[32-len(bytes):], bytes)
+
+	return nil
+}
+
+// ParseStringWithPrefixRelaxed parses a string into an AccountAddress
+func (aa *AccountAddress) ParseStringWithPrefixRelaxed(x string) error {
+	if !strings.HasPrefix(x, "0x") {
+		return ErrAddressTooShort
+	}
+	x = x[2:]
 	if len(x) < 1 {
 		return ErrAddressTooShort
 	}
