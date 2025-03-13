@@ -2,11 +2,11 @@ package aptos
 
 import (
 	"fmt"
-	"net/http"
-	"time"
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/hasura/go-graphql-client"
+	"net/http"
+	"time"
 )
 
 // NetworkConfig a configuration for the Client and which network to use.  Use one of the preconfigured [LocalnetConfig], [DevnetConfig], [TestnetConfig], or [MainnetConfig] unless you have your own full node.
