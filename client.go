@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/hasura/go-graphql-client"
 )
 
@@ -749,8 +750,48 @@ func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }
 
-func (client *Client) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
-	return client.nodeClient.SimulateMultiTransaction(rawTxnWithData, sender, options...)
+// SimulateMultiTransaction simulates a multi-transaction on the Aptos blockchain.
+// It takes a raw transaction with data, a transaction signer, and optional parameters.
+// It returns a slice of UserTransaction and an error if the simulation fails.
+//
+// Parameters:
+// - rawTxnWithData: A pointer to RawTransactionWithData containing the transaction details.
+// - sender: A TransactionSigner that signs the transaction.
+// - options: Optional parameters for the simulation.
+//
+// Returns:
+// - data: A slice of UserTransaction containing the simulated transaction results.
+// - err: An error if the simulation fails.
+// SimulateMultiTransaction simulates a multi-signature transaction without broadcasting it to the network.
+// This function takes a raw transaction with data, a sender transaction signer, and additional signers.
+// It returns the simulated user transactions or an error if the simulation fails.
+//
+// Parameters:
+//   - rawTxnWithData: A pointer to the raw transaction data to be simulated.
+//   - sender: The primary transaction signer.
+//   - additionalSigners: A slice of additional signers' account authenticators.
+//   - options: Additional options for the simulation.
+//
+// Returns:
+//   - data: A slice of pointers to the simulated user transactions.
+//   - err: An error if the simulation fails.
+func (client *Client) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, additionalSigners []crypto.AccountAuthenticator, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateMultiTransaction(rawTxnWithData, sender, additionalSigners , options...)
+}
+
+// SimulateTransactionWithSignedTxn simulates a transaction using a signed transaction.
+// This function sends the signed transaction to the node client for simulation and returns
+// the resulting user transactions and any error encountered during the simulation.
+//
+// Parameters:
+// - signedTxn: A pointer to the SignedTransaction struct representing the signed transaction to be simulated.
+// - options: Additional optional parameters that can be passed to the simulation.
+//
+// Returns:
+// - data: A slice of pointers to api.UserTransaction structs representing the simulated user transactions.
+// - err: An error object if an error occurred during the simulation, otherwise nil.
+func (client *Client) SimulateTransactionWithSignedTxn(signedTxn *SignedTransaction, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateTransactionWithSignedTxn(signedTxn, options...)
 }
 
 // GetChainId Retrieves the ChainId of the network

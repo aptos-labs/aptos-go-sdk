@@ -733,7 +733,7 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 // SimulateMultiTransaction simulates a transaction with optional fee payer and secondary signers
 // If feePayerAddress is nil, no fee payer will be used
 // If secondarySignerAddresses is nil or empty, no secondary signers will be used
-func (rc *NodeClient) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData,  sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+func (rc *NodeClient) SimulateMultiTransaction(rawTxnWithData *RawTransactionWithData, sender TransactionSigner, additionalSigners []crypto.AccountAuthenticator, options ...any) (data []*api.UserTransaction, err error) {
 	if( rawTxnWithData == nil ) {
 		return nil, fmt.Errorf("rawTxnWithData is nil")
 	}
@@ -745,28 +745,28 @@ func (rc *NodeClient) SimulateMultiTransaction(rawTxnWithData *RawTransactionWit
 				Variant: crypto.AccountAuthenticatorNoAccount,
 				Auth: &crypto.AccountAuthenticatorNoAccountAuthenticator{},
 			},
-			[]crypto.AccountAuthenticator{},
+			additionalSigners,
 		);
 		if !ok {
-			return nil, fmt.Errorf("failed to sign agent transaction")
+			return nil, fmt.Errorf("failed to sign fee payer transaction")
 		}
-		return rc.simulateTransactionWithSignedTxn(signedFeePayerTxn, options...)
+		return rc.SimulateTransactionWithSignedTxn(signedFeePayerTxn, options...)
 	case MultiAgentRawTransactionWithDataVariant:
 		signedAgentTxn, ok := rawTxnWithData.ToMultiAgentSignedTransaction(
 			sender.SimulationAuthenticator(),
-			[]crypto.AccountAuthenticator{},
+			additionalSigners,
 		)
 		if !ok {
-			return nil, fmt.Errorf("failed to sign agent transaction")
+			return nil, fmt.Errorf("failed to sign multi agent transaction")
 		}
-		return rc.simulateTransactionWithSignedTxn(signedAgentTxn, options...)
+		return rc.SimulateTransactionWithSignedTxn(signedAgentTxn, options...)
 	default:
 		return nil, fmt.Errorf("unsupported raw transaction with data variant %v", rawTxnWithData.Variant)
 	}
 }
 
 // Helper method to avoid code duplication
-func (rc *NodeClient) simulateTransactionWithSignedTxn(signedTxn *SignedTransaction, options ...any) ([]*api.UserTransaction, error) {
+func (rc *NodeClient) SimulateTransactionWithSignedTxn(signedTxn *SignedTransaction, options ...any) ([]*api.UserTransaction, error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
 		return nil, err

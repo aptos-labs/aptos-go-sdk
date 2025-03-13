@@ -82,6 +82,7 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
 
+	
 	rawTxn, err := client.BuildTransactionMultiAgent(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
@@ -102,9 +103,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// 2. Simulate transaction (optional)
 	// This is useful for understanding how much the transaction will cost
 	// and to ensure that the transaction is valid before sending it to the network
-	// This is optional, but recommended
-	// TODO: Support simulate transaction with multi-agent / fee payer
-	simulationResult, err := client.SimulateMultiTransaction(rawTxn, alice)
+	simulationResult, err := client.SimulateMultiTransaction(rawTxn, alice, []crypto.AccountAuthenticator{})
 	if err != nil {
 		panic("Failed to simulate transaction:" + err.Error())
 	}
@@ -124,20 +123,20 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to sign multiagent transaction with bob:" + err.Error())
 	}
 
-	// 3.a. merge the signatures together into a single transaction
-	signedTxn, ok := rawTxn.ToMultiAgentSignedTransaction(aliceAuth, []crypto.AccountAuthenticator{*bobAuth})
+	// 4.a. merge the signatures together into a single transaction
+	signedTxn, ok := rawTxn.ToFeePayerSignedTransaction(aliceAuth,bobAuth ,[]crypto.AccountAuthenticator{})
 	if !ok {
 		panic("Failed to build a signed multiagent transaction")
 	}
 
-	// 4. Submit transaction
+	// 5. Submit transaction
 	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
-	// 5. Wait for the transaction to complete
+	// 6. Wait for the transaction to complete
 	_, err = client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
