@@ -7,11 +7,14 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	singleSignerScript = "a11ceb0b060000000701000402040a030e0c041a04051e20073e30086e2000000001010204010001000308000104030401000105050601000002010203060c0305010b0001080101080102060c03010b0001090002050b00010900000a6170746f735f636f696e04636f696e04436f696e094170746f73436f696e087769746864726177076465706f7369740000000000000000000000000000000000000000000000000000000000000001000001080b000b0138000c030b020b03380102"
+	multiSignerScript  = "a11ceb0b0700000a0601000203020605080d071525083a40107a1f010200030201000104060c060c03050003060c0503083c53454c463e5f30046d61696e0d6170746f735f6163636f756e74087472616e73666572ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000114636f6d70696c6174696f6e5f6d65746164617461090003322e3003322e31000001090b000a030a0211000b010b030b02110002"
 	fundAmount         = 100_000_000
 	vmStatusSuccess    = "Executed successfully"
 )
@@ -22,11 +25,19 @@ var TestSigners map[string]CreateSigner
 
 type CreateSingleSignerPayload func(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error)
 
+type CreateMultiSignerPayload func(client *Client, sender TransactionSigner, options ...any) (*RawTransactionWithData, error)
+
 var TestSingleSignerPayloads map[string]CreateSingleSignerPayload
+
+var TestFeePayerSignerPayloads map[string]CreateMultiSignerPayload
+
+var TestMultiSignerPayloads map[string]CreateMultiSignerPayload
 
 func init() {
 	initSigners()
 	initSingleSignerPayloads()
+	initMultiSignerPayloads()
+	initFeePayerSignerPayloads()
 }
 
 func initSigners() {
@@ -65,6 +76,17 @@ func initSingleSignerPayloads() {
 	TestSingleSignerPayloads["Script"] = buildSingleSignerScript
 }
 
+func initFeePayerSignerPayloads() {
+	TestFeePayerSignerPayloads = make(map[string]CreateMultiSignerPayload)
+	TestFeePayerSignerPayloads["Entry Function"] = buildFeePayerSignerEntryFunction
+	TestFeePayerSignerPayloads["Script"] = buildFeePayerSignerScript
+}
+
+func initMultiSignerPayloads() {
+	TestMultiSignerPayloads = make(map[string]CreateMultiSignerPayload)
+	TestMultiSignerPayloads["Script"] = buildMultiSignerScript
+}
+
 func TestNamedConfig(t *testing.T) {
 	names := []string{"mainnet", "devnet", "testnet", "localnet"}
 	for _, name := range names {
@@ -85,6 +107,38 @@ func Test_SingleSignerFlows(t *testing.T) {
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
 				testTransactionSimulation(t, signer, buildSingleSignerPayload)
+			})
+		}
+	}
+}
+
+func Test_MultiSignerFlows(t *testing.T) {
+	for name, signer := range TestSigners {
+		for payloadName, buildMultiSignerPayload := range TestFeePayerSignerPayloads {
+			t.Run(name+" "+payloadName+" Feepayer", func(t *testing.T) {
+				testMultiTransaction(t, signer, &signer, &[]CreateSigner{}, buildMultiSignerPayload)
+			})
+			t.Run(name+" "+payloadName+" Multi Signer", func(t *testing.T) {
+				testMultiTransaction(t, signer, nil, &[]CreateSigner{
+					func() (TransactionSigner, error) {
+						signer, err := NewEd25519Account()
+						return any(signer).(TransactionSigner), err
+					}}, buildMultiSignerPayload)
+			})
+			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
+				// createFeePayerFn := CreateSigner(func() (TransactionSigner, error) {
+				// 	signer, err := NewEd25519Account()
+				// 	return any(signer).(TransactionSigner), err
+				// })
+				// println("createFeePa********yer", createFeePayerFn)
+				// var createFeePayer *CreateSigner = &createFeePayerFn
+				additionalSigners := []CreateSigner{
+					func() (TransactionSigner, error) {
+						signer, err := NewEd25519Account()
+						return any(signer).(TransactionSigner), err
+					},
+				}
+				testMultiTransactionSimulation(t, signer, nil, &additionalSigners, buildMultiSignerPayload)
 			})
 		}
 	}
@@ -213,6 +267,184 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
 	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
 	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+}
+
+func testMultiTransaction(t *testing.T, createAccount CreateSigner, feePayer *CreateSigner, additional *[]CreateSigner, buildTransaction CreateMultiSignerPayload) {
+
+	client, account := setupIntegrationTest(t, createAccount)
+
+	// Build transaction
+	var buildTransactionOptions []any
+
+	var feePayerAddress AccountAddress
+	var feePayerSigner TransactionSigner
+
+	// Add feePayer to options if provided
+	if feePayer != nil {
+		_, feePayerSigner = setupIntegrationTest(t, *feePayer)
+		feePayerAddress = feePayerSigner.AccountAddress()
+		buildTransactionOptions = append(buildTransactionOptions, FeePayer(&feePayerAddress))
+	}
+
+	var additionalAddress []AccountAddress
+	var additionalSigners []TransactionSigner
+	// Add additionalSigners to options if provided
+	if additional != nil && len(*additional) > 0 {
+		// Use the spread operator to properly expand the slice of signers
+		for _, signerCreator := range *additional {
+			_, signerAccount := setupIntegrationTest(t, signerCreator)
+			additionalAddress = append(additionalAddress, signerAccount.AccountAddress())
+			additionalSigners = append(additionalSigners, signerAccount)
+		}
+		buildTransactionOptions = append(buildTransactionOptions, AdditionalSigners(additionalAddress))
+	}
+
+	// Build transaction with dynamically constructed options
+	rawTxn, err := buildTransaction(client, account, buildTransactionOptions...)
+	assert.NoError(t, err)
+
+	senderAuth, err := rawTxn.Sign(account)
+	assert.NoError(t, err)
+	var FeePayerAuthenticator *crypto.AccountAuthenticator
+	if feePayer != nil {
+		feePayerAuth, err := rawTxn.Sign(feePayerSigner)
+		assert.NoError(t, err)
+		FeePayerAuthenticator = feePayerAuth
+	}
+
+	// Sign with additional signers and collect authenticators
+	var additionalAuths []crypto.AccountAuthenticator
+	for _, additionalSigner := range additionalSigners {
+		additionalAuth, err := rawTxn.Sign(additionalSigner)
+		assert.NoError(t, err)
+		additionalAuths = append(additionalAuths, *additionalAuth)
+	}
+	var signedTxn *SignedTransaction
+
+	if feePayer != nil {
+		signed_txn, ok := rawTxn.ToFeePayerSignedTransaction(senderAuth, FeePayerAuthenticator, additionalAuths)
+		if !ok {
+			t.Fatal("Failed to build a signed multiagent transaction")
+		}
+		signedTxn = signed_txn
+	} else {
+		signed_txn, ok := rawTxn.ToMultiAgentSignedTransaction(senderAuth, additionalAuths)
+		if !ok {
+			t.Fatal("Failed to build a signed multiagent transaction")
+		}
+		signedTxn = signed_txn
+	}
+
+	// Send transaction
+	result, err := client.SubmitTransaction(signedTxn)
+	assert.NoError(t, err)
+
+	hash := result.Hash
+
+	// Wait for the transaction
+	_, err = client.WaitForTransaction(hash)
+	assert.NoError(t, err)
+
+	// Read transaction by hash
+	txn, err := client.TransactionByHash(hash)
+	assert.NoError(t, err)
+
+	// Read transaction by version
+	userTxn, _ := txn.Inner.(*api.UserTransaction)
+	version := userTxn.Version
+
+	// Load the transaction again
+	txnByVersion, err := client.TransactionByVersion(version)
+	assert.NoError(t, err)
+
+	// Assert that both are the same
+	expectedTxn, err := txn.UserTransaction()
+	assert.NoError(t, err)
+	actualTxn, err := txnByVersion.UserTransaction()
+	assert.NoError(t, err)
+	assert.Equal(t, expectedTxn, actualTxn)
+}
+
+func testMultiTransactionSimulation(t *testing.T, createAccount CreateSigner, feePayer *CreateSigner, additional *[]CreateSigner, buildTransaction CreateMultiSignerPayload) {
+	client, account := setupIntegrationTest(t, createAccount)
+
+	// Build transaction
+	var buildTransactionOptions []any
+
+	var feePayerAddress AccountAddress
+	var feePayerSigner TransactionSigner
+
+	// Add feePayer to options if provided
+	if feePayer != nil {
+		_, feePayerSigner = setupIntegrationTest(t, *feePayer)
+		feePayerAddress = feePayerSigner.AccountAddress()
+		buildTransactionOptions = append(buildTransactionOptions, FeePayer(&feePayerAddress))
+	}
+
+	// Build transaction with dynamically constructed options
+	rawTxn, err := buildTransaction(client, account, buildTransactionOptions...)
+	assert.NoError(t, err)
+
+	additionalSignersFn := func(additional *[]CreateSigner) []crypto.AccountAuthenticator {
+		var additionalSigners []crypto.AccountAuthenticator
+		// Add additionalSigners to options if provided
+		if additional != nil && len(*additional) > 0 {
+			// Use the spread operator to properly expand the slice of signers
+			for _, signerCreator := range *additional {
+				_, _ = setupIntegrationTest(t, signerCreator)
+				additionalSigners = append(additionalSigners, crypto.AccountAuthenticator{
+					Variant: crypto.AccountAuthenticatorNoAccount,
+					Auth:    &crypto.AccountAuthenticatorNoAccountAuthenticator{},
+				})
+			}
+		}
+		return additionalSigners
+	}
+
+	simulatedTxn, err := client.SimulateMultiTransaction(rawTxn, account, additionalSignersFn(additional))
+	switch account.(type) {
+	case *MultiKeyTestSigner:
+		// multikey simulation currently not supported
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "currently unsupported sender derivation scheme")
+		return // skip rest of the tests
+	default:
+		assert.NoError(t, err)
+		assert.Equal(t, true, simulatedTxn[0].Success)
+		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
+	}
+
+	// simulate transaction (estimate gas unit price)
+	rawTxnZeroGasUnitPrice, err := buildTransaction(client, account, GasUnitPrice(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateMultiTransaction(rawTxnZeroGasUnitPrice, account, []crypto.AccountAuthenticator{}, EstimateGasUnitPrice(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
+	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+
+	// simulate transaction (estimate max gas amount)
+	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateMultiTransaction(rawTxnZeroMaxGasAmount, account, []crypto.AccountAuthenticator{}, EstimateMaxGasAmount(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+
+	// simulate transaction (estimate prioritized gas unit price and max gas amount)
+	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
+	assert.NoError(t, err)
+	simulatedTxn, err = client.SimulateMultiTransaction(rawTxnZeroGasConfig, account, []crypto.AccountAuthenticator{}, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
+	assert.NoError(t, err)
+	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
+	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
+	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
@@ -685,6 +917,38 @@ func buildSingleSignerEntryFunction(client *Client, sender TransactionSigner, op
 	return APTTransferTransaction(client, sender, AccountOne, 100, options...)
 }
 
+func buildFeePayerSignerEntryFunction(client *Client, sender TransactionSigner, options ...any) (*RawTransactionWithData, error) {
+	amount := uint64(100)
+	amountBytes, err := bcs.SerializeU64(amount)
+	if err != nil {
+		return nil, err
+	}
+	dest := AccountOne
+
+	rawTxn, err := client.BuildTransactionMultiAgent(
+		sender.AccountAddress(),
+		TransactionPayload{
+			Payload: &EntryFunction{
+				Module: ModuleId{
+					Address: AccountOne,
+					Name:    "aptos_account",
+				},
+				Function: "transfer",
+				ArgTypes: []TypeTag{},
+				Args: [][]byte{
+					dest[:],
+					amountBytes,
+				},
+			}},
+		options...,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTxn, nil
+}
+
 func buildSingleSignerScript(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
 	scriptBytes, err := ParseHex(singleSignerScript)
 	if err != nil {
@@ -708,6 +972,82 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 		}},
 		options...,
 	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTxn, nil
+}
+
+func buildFeePayerSignerScript(client *Client, sender TransactionSigner, options ...any) (*RawTransactionWithData, error) {
+	scriptBytes, err := ParseHex(singleSignerScript)
+	if err != nil {
+		return nil, err
+	}
+
+	amount := uint64(1)
+	dest := AccountOne
+
+	rawTxn, err := client.BuildTransactionMultiAgent(
+		sender.AccountAddress(),
+		TransactionPayload{
+			Payload: &Script{
+				Code:     scriptBytes,
+				ArgTypes: []TypeTag{},
+				Args: []ScriptArgument{{
+					Variant: ScriptArgumentU64,
+					Value:   amount,
+				}, {
+					Variant: ScriptArgumentAddress,
+					Value:   dest,
+				}},
+			},
+		},
+		options...,
+	)
+	if err != nil {
+		panic("Failed to build multiagent raw transaction:" + err.Error())
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return rawTxn, nil
+}
+
+func buildMultiSignerScript(client *Client, sender TransactionSigner, options ...any) (*RawTransactionWithData, error) {
+	scriptBytes, err := ParseHex(multiSignerScript)
+	if err != nil {
+		return nil, err
+	}
+
+	amount := uint64(1)
+
+	rawTxn, err := client.BuildTransactionMultiAgent(
+		sender.AccountAddress(),
+		TransactionPayload{
+			Payload: &Script{
+				Code:     scriptBytes,
+				ArgTypes: []TypeTag{},
+				Args: []ScriptArgument{
+					{
+						Variant: ScriptArgumentU64,
+						Value:   uint64(amount),
+					},
+					{
+						Variant: ScriptArgumentAddress,
+						Value:   AccountOne,
+					},
+				},
+			},
+		},
+		options...,
+	)
+	if err != nil {
+		panic("Failed to build multiagent raw transaction:" + err.Error())
+	}
+
 	if err != nil {
 		return nil, err
 	}
