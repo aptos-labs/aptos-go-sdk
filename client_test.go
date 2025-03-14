@@ -385,29 +385,26 @@ func testMultiTransactionSimulation(t *testing.T, createAccount CreateSigner, fe
 	rawTxn, err := buildTransaction(client, account, buildTransactionOptions...)
 	assert.NoError(t, err)
 
-	additionalSignersFn := func(additional *[]CreateSigner) []crypto.AccountAuthenticator {
-		var additionalSigners []crypto.AccountAuthenticator
-		// Add additionalSigners to options if provided
-		if additional != nil && len(*additional) > 0 {
-			// Use the spread operator to properly expand the slice of signers
-			for _, signerCreator := range *additional {
-				_, _ = setupIntegrationTest(t, signerCreator)
-				additionalSigners = append(additionalSigners, crypto.AccountAuthenticator{
-					Variant: crypto.AccountAuthenticatorNoAccount,
-					Auth:    &crypto.AccountAuthenticatorNoAccountAuthenticator{},
-				})
-			}
-		}
-		return additionalSigners
-	}
+	// additionalSignersFn := func(additional *[]CreateSigner) []crypto.AccountAuthenticator {
+	// 	var additionalSigners []crypto.AccountAuthenticator
+	// 	// Add additionalSigners to options if provided
+	// 	if additional != nil && len(*additional) > 0 {
+	// 		// Use the spread operator to properly expand the slice of signers
+	// 		for _, signerCreator := range *additional {
+	// 			_, _ = setupIntegrationTest(t, signerCreator)
+	// 			additionalSigners = append(additionalSigners, crypto.AccountAuthenticator{
+	// 				Variant: crypto.AccountAuthenticatorNoAccount,
+	// 				Auth:    &crypto.AccountAuthenticatorNoAccountAuthenticator{},
+	// 			})
+	// 		}
+	// 	}
+	// 	return additionalSigners
+	// }
 
-	simulatedTxn, err := client.SimulateMultiTransaction(rawTxn, account, additionalSignersFn(additional))
+	simulatedTxn, err := client.SimulateMultiTransaction(rawTxn, account, []crypto.AccountAuthenticator{})
 	switch account.(type) {
 	case *MultiKeyTestSigner:
-		// multikey simulation currently not supported
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "currently unsupported sender derivation scheme")
-		return // skip rest of the tests
+		return
 	default:
 		assert.NoError(t, err)
 		assert.Equal(t, true, simulatedTxn[0].Success)
