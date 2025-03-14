@@ -126,12 +126,6 @@ func Test_MultiSignerFlows(t *testing.T) {
 					}}, buildMultiSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
-				// createFeePayerFn := CreateSigner(func() (TransactionSigner, error) {
-				// 	signer, err := NewEd25519Account()
-				// 	return any(signer).(TransactionSigner), err
-				// })
-				// println("createFeePa********yer", createFeePayerFn)
-				// var createFeePayer *CreateSigner = &createFeePayerFn
 				additionalSigners := []CreateSigner{
 					func() (TransactionSigner, error) {
 						signer, err := NewEd25519Account()
@@ -384,22 +378,6 @@ func testMultiTransactionSimulation(t *testing.T, createAccount CreateSigner, fe
 	// Build transaction with dynamically constructed options
 	rawTxn, err := buildTransaction(client, account, buildTransactionOptions...)
 	assert.NoError(t, err)
-
-	// additionalSignersFn := func(additional *[]CreateSigner) []crypto.AccountAuthenticator {
-	// 	var additionalSigners []crypto.AccountAuthenticator
-	// 	// Add additionalSigners to options if provided
-	// 	if additional != nil && len(*additional) > 0 {
-	// 		// Use the spread operator to properly expand the slice of signers
-	// 		for _, signerCreator := range *additional {
-	// 			_, _ = setupIntegrationTest(t, signerCreator)
-	// 			additionalSigners = append(additionalSigners, crypto.AccountAuthenticator{
-	// 				Variant: crypto.AccountAuthenticatorNoAccount,
-	// 				Auth:    &crypto.AccountAuthenticatorNoAccountAuthenticator{},
-	// 			})
-	// 		}
-	// 	}
-	// 	return additionalSigners
-	// }
 
 	simulatedTxn, err := client.SimulateMultiTransaction(rawTxn, account, []crypto.AccountAuthenticator{})
 	switch account.(type) {
