@@ -352,3 +352,16 @@ func SerializeOption[T any](ser *Serializer, input *T, serialize func(ser *Seria
 		SerializeSequenceWithFunction([]T{*input}, ser, serialize)
 	}
 }
+
+// Serialized wraps already serialized bytes with BCS serialization
+// It prepends the byte array with its length (encoded as Uleb128) and writes the bytes
+// Primarily used for handling nested serialization structures where bytes are already in BCS format
+func (ser *Serializer) Serialized(s Serialized) {
+	ser.WriteBytes(s.Value)
+}
+
+func SerializeSerialized(input Serialized) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.Serialized(input)
+	})
+}
