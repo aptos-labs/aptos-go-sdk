@@ -177,6 +177,117 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 	return
 }
 
+// AccountModule
+func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error) {
+	au := rc.baseUrl.JoinPath("accounts", address.String(), "module", moduleName)
+	if len(ledgerVersion) > 0 {
+		params := url.Values{}
+		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
+		au.RawQuery = params.Encode()
+	}
+	data, err = Get[*api.MoveBytecode](rc, au.String())
+	if err != nil {
+		return nil, fmt.Errorf("get module api err: %w", err)
+	}
+	return data, nil
+}
+
+func (rc *NodeClient) EntryFunctionWithArgs(address AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
+	// TODO: This should be cached / we should be able to take in an ABI
+	module, err := rc.AccountModule(address, moduleName)
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: everything below should be moved out of the client
+	// Find function
+	var function *api.MoveFunction
+	for _, fun := range module.Abi.ExposedFunctions {
+		if fun.Name == functionName {
+			if fun.IsEntry == false {
+				return nil, fmt.Errorf("function %s is not a entry function in module %s", functionName, moduleName)
+			}
+
+			function = fun
+			break
+		}
+	}
+
+	if function == nil {
+		return nil, fmt.Errorf("entry function %s not found in module %s", functionName, moduleName)
+	}
+
+	// Check type args length matches
+	if len(typeArgs) != len(function.GenericTypeParams) {
+		return nil, fmt.Errorf("entry function %s does not have the correct number of type arguments for function %s", functionName, functionName)
+	}
+
+	// Convert TypeTag, *TypeTag, and string to TypeTag
+	// TODO: Check properties of generic type?
+	convertedTypeArgs := make([]TypeTag, len(typeArgs))
+	for i, typeArg := range typeArgs {
+		tag, err := ConvertTypeTag(typeArg)
+		if err != nil {
+			return nil, err
+		}
+		convertedTypeArgs[i] = *tag
+	}
+
+	// Convert string types to actual types
+	argTypes := make([]TypeTag, 0)
+	for _, typeStr := range function.Params {
+		typeArg, err := ParseTypeTag(typeStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// If it's `signer` or `&signer` need to skip
+		// TODO: only skip at the beginning
+		switch typeArg.Value.(type) {
+		case *SignerTag:
+			// Skip
+			continue
+		case *ReferenceTag:
+			innerArg := typeArg.Value.(*ReferenceTag)
+			switch innerArg.TypeParam.Value.(type) {
+			case *SignerTag:
+				// Skip
+				continue
+			default:
+				argTypes = append(argTypes, *typeArg)
+			}
+		default:
+			argTypes = append(argTypes, *typeArg)
+		}
+	}
+
+	// Check args length matches
+	if len(args) != len(argTypes) {
+		return nil, fmt.Errorf("entry function %s does not have the correct number of arguments for function %s", functionName, functionName)
+	}
+
+	convertedArgs := make([][]byte, len(args))
+	for i, arg := range args {
+		b, err := ConvertArg(argTypes[i], arg, argTypes)
+		if err != nil {
+			return nil, err
+		}
+		convertedArgs[i] = b
+	}
+
+	entry = &EntryFunction{
+		Module: ModuleId{
+			Address: address,
+			Name:    moduleName,
+		},
+		Function: functionName,
+		ArgTypes: convertedTypeArgs,
+		Args:     convertedArgs,
+	}
+
+	return entry, err
+}
+
 // TransactionByHash gets info on a transaction
 // The transaction may be pending or recently committed.  If the transaction is a [api.PendingTransaction], then it is
 // still in the mempool.  If the transaction is any other type, it has been committed.

@@ -899,3 +899,11 @@ func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, er
 func (client *Client) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	return client.nodeClient.NodeAPIHealthCheck(durationSecs...)
 }
+
+func (client *Client) AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error) {
+	return client.nodeClient.AccountModule(address, moduleName, ledgerVersion...)
+}
+
+func (client *Client) EntryFunctionWithArgs(address AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
+	return client.nodeClient.EntryFunctionWithArgs(address, moduleName, functionName, typeArgs, args)
+}
