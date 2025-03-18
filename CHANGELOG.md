@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - [`Fix`] Ensure proper cleanup of response body on read error to prevent potential memory leak.
+- [`Fix`] Fixes possible conflicts between signatures of multiple goroutines
 
 # v1.5.0 (2/10/2024)
 

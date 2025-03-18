@@ -5,11 +5,13 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/sha3"
+	"sync"
 )
 
 //region RawTransaction
 
 var rawTransactionPrehash []byte
+var rawTransactionWithPrehashOnce sync.Once
 
 const rawTransactionPrehashStr = "APTOS::RawTransaction"
 
@@ -17,13 +19,10 @@ const rawTransactionPrehashStr = "APTOS::RawTransaction"
 // Do not write to the []byte returned
 func RawTransactionPrehash() []byte {
 	// Cache the prehash
-	if rawTransactionPrehash == nil {
+	rawTransactionWithPrehashOnce.Do(func() {
 		b32 := sha3.Sum256([]byte(rawTransactionPrehashStr))
-		out := make([]byte, len(b32))
-		copy(out, b32[:])
-		rawTransactionPrehash = out
-		return out
-	}
+		rawTransactionPrehash = b32[:]
+	})
 	return rawTransactionPrehash
 }
 
@@ -130,6 +129,7 @@ func (txn *RawTransaction) Sign(signer crypto.Signer) (authenticator *crypto.Acc
 //region RawTransactionWithData
 
 var rawTransactionWithDataPrehash []byte
+var rawTransactionWithDataPrehashOnce sync.Once
 
 const rawTransactionWithDataPrehashStr = "APTOS::RawTransactionWithData"
 
@@ -137,14 +137,12 @@ const rawTransactionWithDataPrehashStr = "APTOS::RawTransactionWithData"
 // Do not write to the []byte returned
 func RawTransactionWithDataPrehash() []byte {
 	// Cache the prehash
-	if rawTransactionWithDataPrehash == nil {
+	rawTransactionWithDataPrehashOnce.Do(func() {
 		b32 := sha3.Sum256([]byte(rawTransactionWithDataPrehashStr))
-		out := make([]byte, len(b32))
-		copy(out, b32[:])
-		rawTransactionPrehash = out
-		return out
-	}
-	return rawTransactionPrehash
+		rawTransactionWithDataPrehash = b32[:]
+	})
+	return rawTransactionWithDataPrehash
+
 }
 
 type RawTransactionWithDataVariant uint32
