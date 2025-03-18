@@ -2,9 +2,10 @@ package types
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (

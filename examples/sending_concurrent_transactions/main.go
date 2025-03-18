@@ -2,9 +2,10 @@
 package main
 
 import (
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
-	"time"
 )
 
 func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionSigner) {

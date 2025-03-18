@@ -3,8 +3,9 @@ package types
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"strings"
+
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
 // Account represents an on-chain account, with an associated signer, which must be a [crypto.Signer]
@@ -138,9 +139,7 @@ var ErrAddressTooLong = errors.New("AccountAddress too long")
 // ParseStringRelaxed parses a string into an AccountAddress
 // TODO: add strict mode checking
 func (aa *AccountAddress) ParseStringRelaxed(x string) error {
-	if strings.HasPrefix(x, "0x") {
-		x = x[2:]
-	}
+	x = strings.TrimPrefix(x, "0x")
 	if len(x) < 1 {
 		return ErrAddressTooShort
 	}

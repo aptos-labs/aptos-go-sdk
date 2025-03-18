@@ -182,7 +182,6 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 		}
 		// If neither works, let's pass an error up
 		ser.SetError(fmt.Errorf("type or reference of type is not Marshaler"))
-		return
 	})
 }
 

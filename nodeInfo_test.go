@@ -3,10 +3,11 @@ package aptos
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type levelCounts struct {
@@ -24,29 +25,6 @@ func (lc *levelCounts) get(level slog.Level) int {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
 	return lc.counts[level]
-}
-
-func (lc *levelCounts) total() int {
-	lc.lock.Lock()
-	defer lc.lock.Unlock()
-	sum := 0
-	for _, count := range lc.counts {
-		sum += count
-	}
-	return sum
-}
-
-// e.g. slog.LevelDebug == -4, slog.LevelError = 8
-func (lc *levelCounts) totalAbove(level slog.Level) int {
-	lc.lock.Lock()
-	defer lc.lock.Unlock()
-	sum := 0
-	for xlevel, count := range lc.counts {
-		if xlevel >= level {
-			sum += count
-		}
-	}
-	return sum
 }
 
 func newLevelCounts() *levelCounts {
@@ -70,16 +48,19 @@ func NewCountingHandlerWrapper(inner slog.Handler) *CountingHandlerWrapper {
 func (chw *CountingHandlerWrapper) Enabled(ctx context.Context, level slog.Level) bool {
 	return chw.inner.Enabled(ctx, level)
 }
+
 func (chw *CountingHandlerWrapper) Handle(ctx context.Context, rec slog.Record) error {
 	chw.counts.inc(rec.Level)
 	return chw.inner.Handle(ctx, rec)
 }
+
 func (chw *CountingHandlerWrapper) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &CountingHandlerWrapper{
 		inner:  chw.inner.WithAttrs(attrs),
 		counts: chw.counts,
 	}
 }
+
 func (chw *CountingHandlerWrapper) WithGroup(name string) slog.Handler {
 	return &CountingHandlerWrapper{
 		inner:  chw.inner.WithGroup(name),
@@ -112,7 +93,7 @@ func setupTestLogging() *testSlogContext {
 
 func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
 	if t.Failed() {
-		t.Log(string(logContext.logbuf.Bytes()))
+		t.Log(logContext.logbuf.String())
 	}
 	slog.SetDefault(logContext.oldDefault)
 }

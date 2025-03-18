@@ -15,9 +15,7 @@ type AccountInfo struct {
 // AuthenticationKey Hex decode of AuthenticationKeyHex
 func (ai AccountInfo) AuthenticationKey() ([]byte, error) {
 	ak := ai.AuthenticationKeyHex
-	if strings.HasPrefix(ak, "0x") {
-		ak = ak[2:]
-	}
+	ak = strings.TrimPrefix(ak, "0x")
 	return hex.DecodeString(ak)
 }
 

@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestPayload_EntryFunction(t *testing.T) {

@@ -8,8 +8,10 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
-const FundAmount = 100_000_000
-const TransferAmount = 1_000
+const (
+	FundAmount     = 100_000_000
+	TransferAmount = 1_000
+)
 
 // example This example shows you how to make an APT transfer transaction in the simplest possible way
 func example(networkConfig aptos.NetworkConfig) {

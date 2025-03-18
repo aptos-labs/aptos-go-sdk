@@ -2,11 +2,12 @@ package crypto
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-//region SingleSigner
+// region SingleSigner
 
 // SingleSigner is a wrapper around different types of MessageSigners to allow for many types of keys
 //
@@ -114,10 +115,10 @@ func (key *SingleSigner) PubKey() PublicKey {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region AnyPublicKey
+// region AnyPublicKey
 
 // AnyPublicKeyVariant is an enum ID for the public key used in AnyPublicKey
 type AnyPublicKeyVariant uint32
@@ -137,14 +138,14 @@ type AnyPublicKey struct {
 // ToAnyPublicKey converts a [VerifyingKey] to an [AnyPublicKey]
 func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 	out := &AnyPublicKey{}
-	switch key.(type) {
+	switch key := key.(type) {
 	case *Ed25519PublicKey:
 		out.Variant = AnyPublicKeyVariantEd25519
 	case *Secp256k1PublicKey:
 		out.Variant = AnyPublicKeyVariantSecp256k1
 	case *AnyPublicKey:
 		// Passthrough for conversion
-		return key.(*AnyPublicKey), nil
+		return key, nil
 	default:
 		return nil, fmt.Errorf("unknown public key type: %T", key)
 	}
@@ -152,7 +153,7 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 	return out, nil
 }
 
-//region AnyPublicKey VerifyingKey implementation
+// region AnyPublicKey VerifyingKey implementation
 
 // Verify verifies the signature against the message
 //
@@ -167,9 +168,9 @@ func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 	}
 }
 
-//endregion
+// endregion
 
-//region AnyPublicKey PublicKey implementation
+// region AnyPublicKey PublicKey implementation
 
 // AuthKey converts the public key to an authentication key
 //
@@ -189,9 +190,9 @@ func (key *AnyPublicKey) Scheme() uint8 {
 	return SingleKeyScheme
 }
 
-//endregion
+// endregion
 
-//region AnyPublicKey CryptoMaterial implementation
+// region AnyPublicKey CryptoMaterial implementation
 
 // Bytes returns the raw bytes of the [AnyPublicKey]
 //
@@ -230,9 +231,9 @@ func (key *AnyPublicKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region AnyPublicKey bcs.Struct implementation
+// region AnyPublicKey bcs.Struct implementation
 
 // MarshalBCS serializes the [AnyPublicKey] to bytes
 //
@@ -261,10 +262,10 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(key.PubKey)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region AnySignature
+// region AnySignature
 
 // AnySignatureVariant is an enum ID for the signature used in AnySignature
 type AnySignatureVariant uint32
@@ -326,9 +327,9 @@ func (e *AnySignature) FromHex(hexStr string) (err error) {
 	return e.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region AnySignature bcs.Struct implementation
+// region AnySignature bcs.Struct implementation
 
 // MarshalBCS serializes the [AnySignature] to bytes
 //
@@ -357,10 +358,10 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(e.Signature)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region SingleKeyAuthenticator
+// region SingleKeyAuthenticator
 
 // SingleKeyAuthenticator is an authenticator for a [SingleSigner]
 //
@@ -374,7 +375,7 @@ type SingleKeyAuthenticator struct {
 	Sig    *AnySignature
 }
 
-//region SingleKeyAuthenticator AccountAuthenticatorImpl implementation
+// region SingleKeyAuthenticator AccountAuthenticatorImpl implementation
 
 // PublicKey returns the public key of the authenticator
 //
@@ -400,9 +401,9 @@ func (ea *SingleKeyAuthenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
 
-//endregion
+// endregion
 
-//region SingleKeyAuthenticator bcs.Struct implementation
+// region SingleKeyAuthenticator bcs.Struct implementation
 
 // MarshalBCS serializes the authenticator to bytes
 //
@@ -428,5 +429,5 @@ func (ea *SingleKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(ea.Sig)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

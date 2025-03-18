@@ -3,9 +3,10 @@ package bcs
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestStruct struct {
@@ -17,6 +18,7 @@ func (st *TestStruct) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
+
 func (st *TestStruct) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
@@ -27,11 +29,12 @@ type TestStruct2 struct {
 	b   bool
 }
 
-func (st TestStruct2) MarshalBCS(ser *Serializer) {
+func (st *TestStruct2) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
-func (st TestStruct2) UnmarshalBCS(des *Deserializer) {
+
+func (st *TestStruct2) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
 }
@@ -40,14 +43,15 @@ type TestStruct3 struct {
 	num uint16
 }
 
-func (st TestStruct3) MarshalBCS(ser *Serializer) {
+func (st *TestStruct3) MarshalBCS(ser *Serializer) {
 	if st.num > 255 {
 		ser.SetError(errors.New("value is greater than 255"))
 		return
 	}
 	ser.U8(uint8(st.num))
 }
-func (st TestStruct3) UnmarshalBCS(des *Deserializer) {
+
+func (st *TestStruct3) UnmarshalBCS(des *Deserializer) {
 	st.num = uint16(des.U8())
 }
 
@@ -248,13 +252,13 @@ func Test_InvalidFixedBytesInto(t *testing.T) {
 }
 
 func Test_FailedStructSerialize(t *testing.T) {
-	str := TestStruct3{
+	str := &TestStruct3{
 		num: uint16(5),
 	}
-	_, err := Serialize(&str)
+	_, err := Serialize(str)
 	assert.NoError(t, err)
 	str.num = uint16(256)
-	_, err = Serialize(&str)
+	_, err = Serialize(str)
 	assert.Error(t, err)
 }
 
@@ -286,11 +290,11 @@ func Test_SerializeSequence(t *testing.T) {
 	assert.True(t, len(ser.ToBytes()) == 0)
 
 	// Test by value
-	testStruct2 := TestStruct2{
+	testStruct2 := &TestStruct2{
 		num: 52,
 		b:   false,
 	}
-	data2 := []TestStruct2{testStruct2}
+	data2 := []*TestStruct2{testStruct2}
 	SerializeSequence(data2, &ser)
 	assert.NoError(t, ser.Error())
 
@@ -459,7 +463,6 @@ func Test_DeserializeNotEnoughBytes(t *testing.T) {
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}
@@ -479,7 +482,6 @@ func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *t
 }
 
 func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, serialize func(serializer *Serializer, val *big.Int), deserialize func(deserializer *Deserializer) big.Int) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}

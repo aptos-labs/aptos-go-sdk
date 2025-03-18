@@ -65,7 +65,8 @@ func MultisigCreateAccountPayload(requiredSigners uint64, additionalAddresses []
 			requiredSignersBytes, // The number of required signatures 2-of-3
 			metadataKeysBytes,    // Metadata keys for any metadata you want to add to the account
 			metadataValues,       // Values for the metadata added, must be BCS encoded
-		}}, nil
+		},
+	}, nil
 }
 
 // MultisigAddOwnerPayload creates a payload to add an owner from the multisig

@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 )
 
-//region Block
+// region Block
 
 // Block describes a block properties and may have attached transactions
 //
@@ -27,7 +27,7 @@ type Block struct {
 	Transactions   []*CommittedTransaction // Transactions in the block if requested, otherwise it is empty
 }
 
-//region Block JSON
+// region Block JSON
 
 // UnmarshalJSON deserializes a JSON data blob into a [Block]
 //
@@ -63,5 +63,5 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

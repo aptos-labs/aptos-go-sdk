@@ -3,10 +3,11 @@ package util
 import (
 	"encoding/hex"
 	"fmt"
-	"golang.org/x/crypto/sha3"
 	"math/big"
 	"strconv"
 	"strings"
+
+	"golang.org/x/crypto/sha3"
 )
 
 // Sha3256Hash hashes the input bytes using SHA3-256
@@ -24,9 +25,7 @@ func ParseHex(hexStr string) ([]byte, error) {
 	if hexStr == "0x" {
 		return []byte{}, nil
 	}
-	if strings.HasPrefix(hexStr, "0x") {
-		hexStr = hexStr[2:]
-	}
+	hexStr = strings.TrimPrefix(hexStr, "0x")
 	return hex.DecodeString(hexStr)
 }
 

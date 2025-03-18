@@ -9,7 +9,7 @@ import (
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 )
 
-//region Secp256k1PrivateKey
+// region Secp256k1PrivateKey
 
 // Secp256k1PrivateKeyLength is the [Secp256k1PrivateKey] length in bytes
 const Secp256k1PrivateKeyLength = 32
@@ -42,7 +42,7 @@ func GenerateSecp256k1Key() (*Secp256k1PrivateKey, error) {
 	return &Secp256k1PrivateKey{priv}, nil
 }
 
-//region Secp256k1PrivateKey MessageSigner
+// region Secp256k1PrivateKey MessageSigner
 
 // VerifyingKey returns the corresponding public key for the private key
 //
@@ -72,9 +72,9 @@ func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err erro
 	return &Secp256k1Signature{signature}, nil
 }
 
-//endregion
+// endregion
 
-//region Secp256k1PrivateKey CryptoMaterial
+// region Secp256k1PrivateKey CryptoMaterial
 
 // Bytes outputs the raw byte representation of the [Secp256k1PrivateKey]
 //
@@ -115,7 +115,7 @@ func (key *Secp256k1PrivateKey) ToAIP80() (formattedString string, err error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantSecp256k1)
 }
 
-//endregion
+// endregion
 
 // FromHex populates the [Secp256k1PrivateKey] from a hex string
 //
@@ -131,10 +131,10 @@ func (key *Secp256k1PrivateKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Secp256k1PublicKey
+// region Secp256k1PublicKey
 
 // Secp256k1PublicKey is the corresponding public key for [Secp256k1PrivateKey], it cannot be used on its own
 //
@@ -149,7 +149,7 @@ type Secp256k1PublicKey struct {
 	Inner *secp256k1.PublicKey // Inner is the actual public key
 }
 
-//region Secp256k1PublicKey VerifyingKey
+// region Secp256k1PublicKey VerifyingKey
 
 // Verify verifies the signature of a message
 //
@@ -168,9 +168,9 @@ func (key *Secp256k1PublicKey) Verify(msg []byte, sig Signature) bool {
 	}
 }
 
-//endregion
+// endregion
 
-//region Secp256k1PublicKey CryptoMaterial
+// region Secp256k1PublicKey CryptoMaterial
 
 // Bytes returns the raw bytes of the [Secp256k1PublicKey]
 //
@@ -213,9 +213,9 @@ func (key *Secp256k1PublicKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region Secp256k1PublicKey bcs.Struct
+// region Secp256k1PublicKey bcs.Struct
 
 // MarshalBCS serializes the [Secp256k1PublicKey] to BCS bytes
 //
@@ -232,7 +232,6 @@ func (key *Secp256k1PublicKey) MarshalBCS(ser *bcs.Serializer) {
 func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	kb := des.ReadBytes()
 	pubKey, err := secp256k1.ParsePubKey(kb)
-
 	if err != nil {
 		des.SetError(err)
 		return
@@ -240,10 +239,10 @@ func (key *Secp256k1PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	key.Inner = pubKey
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Secp256k1Authenticator
+// region Secp256k1Authenticator
 
 // Secp256k1Authenticator is the authenticator for Secp256k1, but it cannot stand on its own and must be used with SingleKeyAuthenticator
 //
@@ -257,7 +256,7 @@ type Secp256k1Authenticator struct {
 	Sig    *Secp256k1Signature // Sig is the signature
 }
 
-//region Secp256k1Authenticator AccountAuthenticatorImpl
+// region Secp256k1Authenticator AccountAuthenticatorImpl
 
 // PublicKey returns the [VerifyingKey] for the authenticator
 //
@@ -283,9 +282,9 @@ func (ea *Secp256k1Authenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
 
-//endregion
+// endregion
 
-//region Secp256k1Authenticator bcs.Struct
+// region Secp256k1Authenticator bcs.Struct
 
 // MarshalBCS serializes the [Secp256k1Authenticator] to BCS bytes
 //
@@ -311,10 +310,10 @@ func (ea *Secp256k1Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(ea.Sig)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Secp256k1Signature
+// region Secp256k1Signature
 
 // Secp256k1Signature a wrapper for serialization of Secp256k1 signatures
 //
@@ -376,7 +375,7 @@ func (e *Secp256k1Signature) recoverSecp256k1PublicKey(messageHash []byte, recov
 	return &Secp256k1PublicKey{Inner: publicKey}, nil
 }
 
-//region Secp256k1Signature CryptoMaterial
+// region Secp256k1Signature CryptoMaterial
 
 // Bytes returns the raw bytes of the [Secp256k1Signature] without a recovery bit.
 // It's used for signing and verification.
@@ -445,9 +444,9 @@ func (e *Secp256k1Signature) FromHex(hexStr string) (err error) {
 	return e.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region Secp256k1Signature bcs.Struct
+// region Secp256k1Signature bcs.Struct
 
 // MarshalBCS serializes the [Secp256k1Signature] to BCS bytes
 //
@@ -472,5 +471,5 @@ func (e *Secp256k1Signature) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

@@ -2,7 +2,7 @@ package api
 
 import "encoding/json"
 
-//region Event
+// region Event
 
 // Event describes an on-chain event from Move. There are currently two types:
 //
@@ -90,5 +90,5 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 	return err
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

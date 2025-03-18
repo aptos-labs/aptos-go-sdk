@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
@@ -45,8 +46,7 @@ func (o *WriteSet) UnmarshalJSON(b []byte) error {
 }
 
 // WriteSetImpl is an interface for all write sets
-type WriteSetImpl interface {
-}
+type WriteSetImpl interface{}
 
 // UnknownWriteSet is a placeholder for unknown write sets
 type UnknownWriteSet struct {
@@ -120,8 +120,7 @@ func (o *WriteSetChange) UnmarshalJSON(b []byte) error {
 }
 
 // WriteSetChangeImpl is an interface for all write set changes
-type WriteSetChangeImpl interface {
-}
+type WriteSetChangeImpl interface{}
 
 // WriteSetChangeUnknown is a placeholder for unknown write set changes
 type WriteSetChangeUnknown struct {

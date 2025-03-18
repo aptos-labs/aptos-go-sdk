@@ -283,7 +283,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 	}
 
 	// Return early if we don't need transactions
-	if withTransactions == false {
+	if !withTransactions {
 		return block, nil
 	}
 
@@ -595,11 +595,6 @@ func (rc *NodeClient) transactionsConcurrent(
 	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
 ) (data []*api.CommittedTransaction, err error) {
 	const transactionsPageSize = 100
-	// If we know both, we can fetch all concurrently
-	type Pair struct {
-		start uint64 // inclusive
-		end   uint64 // exclusive
-	}
 
 	// If the limit is  greater than the page size, we need to fetch concurrently, otherwise not
 	if limit > transactionsPageSize {
@@ -875,7 +870,6 @@ type ChainIdOption uint8
 //   - [SequenceNumber]
 //   - [ChainIdOption]
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -926,7 +920,6 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 //   - [FeePayer]
 //   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -1163,10 +1156,11 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ..
 	if err != nil {
 		return 0, err
 	}
-	values, err := rc.View(&ViewPayload{Module: ModuleId{
-		Address: AccountOne,
-		Name:    "coin",
-	},
+	values, err := rc.View(&ViewPayload{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "coin",
+		},
 		Function: "balance",
 		ArgTypes: []TypeTag{AptosCoinTypeTag},
 		Args:     [][]byte{accountBytes},

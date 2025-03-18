@@ -20,7 +20,7 @@ func TestPollForTransaction(t *testing.T) {
 
 	start := time.Now()
 	err = client.PollForTransactions([]string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
-	dt := time.Now().Sub(start)
+	dt := time.Since(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)
 	assert.Less(t, dt, 20*time.Millisecond)
@@ -58,7 +58,8 @@ func TestEventsByHandle(t *testing.T) {
 			})
 		}
 
-		json.NewEncoder(w).Encode(events)
+		err := json.NewEncoder(w).Encode(events)
+		assert.NoError(t, err)
 	}))
 	defer mockServer.Close()
 

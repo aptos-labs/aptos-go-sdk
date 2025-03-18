@@ -3,6 +3,7 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 
@@ -11,8 +12,10 @@ import (
 
 const MultiagentScript = "0xa11ceb0b0700000a0601000403040d04110405151b07302f085f2000000001010203040001000306020100010105010704060c060c03030205050001060c010501090003060c05030109010d6170746f735f6163636f756e74067369676e65720a616464726573735f6f660e7472616e736665725f636f696e73000000000000000000000000000000000000000000000000000000000000000102000000010f0a0011000c040a0111000c050b000b050b0238000b010b040b03380102"
 
-const FundAmount = 100_000_000
-const TransferAmount = 1_000
+const (
+	FundAmount     = 100_000_000
+	TransferAmount = 1_000
+)
 
 // example This example shows you how to make an APT transfer transaction in the simplest possible way
 func example(networkConfig aptos.NetworkConfig) {
@@ -76,7 +79,8 @@ func example(networkConfig aptos.NetworkConfig) {
 					Value:   uint64(TransferAmount + 200),
 				},
 			},
-		}}, aptos.AdditionalSigners([]aptos.AccountAddress{bob.Address}))
+		},
+	}, aptos.AdditionalSigners([]aptos.AccountAddress{bob.Address}))
 	if err != nil {
 		panic("Failed to build multiagent raw transaction:" + err.Error())
 	}

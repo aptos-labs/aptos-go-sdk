@@ -4,10 +4,11 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"time"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"time"
 )
 
 const TransferAmount = uint64(1_000_000)
@@ -182,7 +183,7 @@ func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddr
 		2,                   // Required signers
 		additionalAddresses, // Other owners
 		[]string{"example"}, // Metadata keys
-		metadataValue,       //Metadata values
+		metadataValue,       // Metadata values
 	)
 	if err != nil {
 		panic("Failed to create multisig account payload " + err.Error())

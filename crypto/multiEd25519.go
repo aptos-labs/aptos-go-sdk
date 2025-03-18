@@ -3,11 +3,12 @@ package crypto
 import (
 	"crypto/ed25519"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-//region MultiEd25519PublicKey
+// region MultiEd25519PublicKey
 
 // MultiEd25519PublicKey is the public key for off-chain multi-sig on Aptos with Ed25519 keys
 //
@@ -25,7 +26,7 @@ type MultiEd25519PublicKey struct {
 	SignaturesRequired uint8
 }
 
-//region MultiEd25519PublicKey VerifyingKey implementation
+// region MultiEd25519PublicKey VerifyingKey implementation
 
 // Verify verifies the signature against the message
 //
@@ -48,12 +49,11 @@ func (key *MultiEd25519PublicKey) Verify(msg []byte, signature Signature) bool {
 	default:
 		return false
 	}
-
 }
 
-//endregion
+// endregion
 
-//region MultiEd25519PublicKey PublicKey implementation
+// region MultiEd25519PublicKey PublicKey implementation
 
 // AuthKey converts the public key to an authentication key
 //
@@ -74,9 +74,9 @@ func (key *MultiEd25519PublicKey) Scheme() uint8 {
 	return MultiEd25519Scheme
 }
 
-//endregion
+// endregion
 
-//region MultiEd25519PublicKey CryptoMaterial implementation
+// region MultiEd25519PublicKey CryptoMaterial implementation
 
 // Bytes serializes the public key to bytes
 //
@@ -142,9 +142,9 @@ func (key *MultiEd25519PublicKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region MultiEd25519PublicKey bcs.Struct implementation
+// region MultiEd25519PublicKey bcs.Struct implementation
 
 // MarshalBCS serializes the public key to bytes
 //
@@ -171,10 +171,10 @@ func (key *MultiEd25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiEd25519Authenticator
+// region MultiEd25519Authenticator
 
 // MultiEd25519Authenticator is an authenticator for a MultiEd25519Signature
 //
@@ -214,7 +214,7 @@ func (ea *MultiEd25519Authenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
 
-//endregion
+// endregion
 
 // region MultiEd25519Authenticator bcs.Struct implementation
 
@@ -244,10 +244,10 @@ func (ea *MultiEd25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(ea.Sig)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiEd25519Signature
+// region MultiEd25519Signature
 
 // MultiEd25519BitmapLen is number of bytes in the bitmap representing who signed the transaction
 const MultiEd25519BitmapLen = 4
@@ -265,7 +265,7 @@ type MultiEd25519Signature struct {
 	Bitmap     [MultiEd25519BitmapLen]byte
 }
 
-//region MultiEd25519Signature CryptoMaterial implementation
+// region MultiEd25519Signature CryptoMaterial implementation
 
 // Bytes serializes the signature to bytes
 //
@@ -327,9 +327,9 @@ func (e *MultiEd25519Signature) FromHex(hexStr string) (err error) {
 	return e.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region MultiEd25519Signature bcs.Struct implementation
+// region MultiEd25519Signature bcs.Struct implementation
 
 // MarshalBCS serializes the signature to bytes
 //
@@ -353,5 +353,5 @@ func (e *MultiEd25519Signature) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
