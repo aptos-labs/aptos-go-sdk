@@ -2,12 +2,110 @@ package aptos
 
 import (
 	"fmt"
+	"github.com/aptos-labs/aptos-go-sdk/api"
 	"math/big"
 	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
+
+func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
+	var function *api.MoveFunction
+	switch abi.(type) {
+	case *api.MoveModule:
+		moduleAbi := abi.(*api.MoveModule)
+		// Find function
+		for _, fun := range moduleAbi.ExposedFunctions {
+			if fun.Name == functionName {
+				if fun.IsEntry == false {
+					return nil, fmt.Errorf("function %s is not a entry function in module %s", functionName, moduleAbi.Name)
+				}
+
+				function = fun
+				break
+			}
+		}
+	case *api.MoveFunction:
+		function = abi.(*api.MoveFunction)
+	default:
+		return nil, fmt.Errorf("unknown abi type: %T", abi)
+	}
+
+	if function == nil {
+		return nil, fmt.Errorf("entry function %s not found in module %s", functionName, moduleName)
+	}
+
+	// Check type args length matches
+	if len(typeArgs) != len(function.GenericTypeParams) {
+		return nil, fmt.Errorf("entry function %s does not have the correct number of type arguments for function %s", functionName, functionName)
+	}
+
+	// Convert TypeTag, *TypeTag, and string to TypeTag
+	// TODO: Check properties of generic type?
+	convertedTypeArgs := make([]TypeTag, len(typeArgs))
+	for i, typeArg := range typeArgs {
+		tag, err := ConvertTypeTag(typeArg)
+		if err != nil {
+			return nil, err
+		}
+		convertedTypeArgs[i] = *tag
+	}
+
+	// Convert string types to actual types
+	argTypes := make([]TypeTag, 0)
+	for _, typeStr := range function.Params {
+		typeArg, err := ParseTypeTag(typeStr)
+		if err != nil {
+			return nil, err
+		}
+
+		// If it's `signer` or `&signer` need to skip
+		// TODO: only skip at the beginning
+		switch typeArg.Value.(type) {
+		case *SignerTag:
+			// Skip
+			continue
+		case *ReferenceTag:
+			innerArg := typeArg.Value.(*ReferenceTag)
+			switch innerArg.TypeParam.Value.(type) {
+			case *SignerTag:
+				// Skip
+				continue
+			default:
+				argTypes = append(argTypes, *typeArg)
+			}
+		default:
+			argTypes = append(argTypes, *typeArg)
+		}
+	}
+
+	// Check args length matches
+	if len(args) != len(argTypes) {
+		return nil, fmt.Errorf("entry function %s does not have the correct number of arguments for function %s", functionName, functionName)
+	}
+
+	convertedArgs := make([][]byte, len(args))
+	for i, arg := range args {
+		b, err := ConvertArg(argTypes[i], arg, argTypes)
+		if err != nil {
+			return nil, err
+		}
+		convertedArgs[i] = b
+	}
+
+	entry = &EntryFunction{
+		Module: ModuleId{
+			Address: moduleAddress,
+			Name:    moduleName,
+		},
+		Function: functionName,
+		ArgTypes: convertedTypeArgs,
+		Args:     convertedArgs,
+	}
+
+	return entry, err
+}
 
 func ConvertTypeTag(typeArg any) (*TypeTag, error) {
 	switch typeArg.(type) {
