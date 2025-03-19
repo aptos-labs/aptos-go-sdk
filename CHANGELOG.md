@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - [`Feature`] Add the ability for ABI simple type conversion of entry function arguments with both remote and local ABI
+- Add ability to simulate for any transaction including multi-agent and fee payer
 - [`Fix`] Ensure proper cleanup of response body on read error to prevent potential memory leak.
 - [`Fix`] Fixes possible conflicts between signatures of multiple goroutines
 
@@ -14,6 +15,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Make NodeClient match AptosRpcClient interface
 - [`Dependency`] Update `golang.org/x/crypto` to `v0.32.0`
 - [`Dependency`] Update `github.com/hasura/go-graphql-client` to `v0.13.1`
+- [`Fix`] Make NodeClient satisfy AptosRpcClient interface
+- [`Breaking`] Change Account signer input to use Address instead of AuthKey, authkey comes from the private key
 
 # v1.4.1 (01/02/2024)
 

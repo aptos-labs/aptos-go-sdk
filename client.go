@@ -301,6 +301,9 @@ type AptosRpcClient interface {
 	//	simResponse, err := client.SimulateTransaction(rawTxn, sender)
 	SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
 
+	// SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
+	SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
+
 	// GetChainId Retrieves the ChainId of the network
 	// Note this will be cached forever, or taken directly from the config
 	GetChainId() (chainId uint8, err error)
@@ -747,6 +750,11 @@ func (client *Client) BatchSubmitTransaction(signedTxns []*SignedTransaction) (r
 //	simResponse, err := client.SimulateTransaction(rawTxn, sender)
 func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
+}
+
+// SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
+func (client *Client) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateTransactionMultiAgent(rawTxn, sender, options...)
 }
 
 // GetChainId Retrieves the ChainId of the network

@@ -85,8 +85,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// This is useful for understanding how much the transaction will cost
 	// and to ensure that the transaction is valid before sending it to the network
 	// This is optional, but recommended
-	// TODO: Support simulate transaction with multi-agent / fee payer
-	/*simulationResult, err := client.SimulateTransaction(rawTxn, alice)
+	simulationResult, err := client.SimulateTransactionMultiAgent(rawTxn, alice, aptos.AdditionalSigners{bob.Address})
 	if err != nil {
 		panic("Failed to simulate transaction:" + err.Error())
 	}
@@ -95,7 +94,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Gas used: %d\n", simulationResult[0].GasUsed)
 	fmt.Printf("Total gas fee: %d\n", simulationResult[0].GasUsed*simulationResult[0].GasUnitPrice)
 	fmt.Printf("Status: %s\n", simulationResult[0].VmStatus)
-	*/
+
 	// 3. Sign transaction with both parties separately, this would be on different machines or places
 	aliceAuth, err := rawTxn.Sign(alice)
 	if err != nil {
