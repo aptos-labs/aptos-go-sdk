@@ -41,12 +41,12 @@ type Event struct {
 	Data           map[string]any // Data is the event data, a map of field name to value, this should match it's on-chain struct representation
 }
 
-// region Event JSON
+// region Event JSON.
 const (
 	AnyDataName = "__any_data__"
 )
 
-// UnmarshalJSON deserializes a JSON data blob into an Event
+// UnmarshalJSON deserializes a JSON data blob into an Event.
 func (o *Event) UnmarshalJSON(b []byte) error {
 	// In order to handle non-map types of data, we will give a new field name for it
 	type innerStandard struct {

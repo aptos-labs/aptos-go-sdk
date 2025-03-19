@@ -679,6 +679,7 @@ func deserializeSequence(ctx context.Context, itemType string) (context.Context,
 	}
 
 	des := bcs.NewDeserializer(input)
+
 	switch itemType {
 	case "address":
 		result := bcs.DeserializeSequence[AccountAddress](des)
@@ -942,6 +943,7 @@ func stringResult(ctx context.Context, expected string) error {
 
 func sequenceResult(ctx context.Context, itemType string, expectedList string) error {
 	expected := parseSequence(itemType, expectedList)
+
 	switch itemType {
 	case "address":
 		result, ok := ctx.Value(godogsCtxKey{}).([]AccountAddress)

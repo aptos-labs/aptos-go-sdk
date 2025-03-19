@@ -70,6 +70,7 @@ type ScriptArgument struct {
 
 func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(sa.Variant))
+
 	switch sa.Variant {
 	case ScriptArgumentU8:
 		value, ok := (sa.Value).(uint8)

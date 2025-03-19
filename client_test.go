@@ -74,7 +74,7 @@ func TestNamedConfig(t *testing.T) {
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
-	assert.Greater(t, len(ClientHeaderValue), 0)
+	assert.NotEmpty(t, ClientHeaderValue)
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
@@ -127,6 +127,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 }
 
 func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Build transaction
@@ -168,21 +169,23 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 }
 
 func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Simulate transaction (no options)
 	rawTxn, err := buildTransaction(client, account)
 	assert.NoError(t, err)
 	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
+
 	switch account.(type) {
 	case *MultiKeyTestSigner:
 		// multikey simulation currently not supported, skip it for now
 		return // skip rest of the tests
 	default:
 		assert.NoError(t, err)
-		assert.Equal(t, true, simulatedTxn[0].Success)
+		assert.True(t, simulatedTxn[0].Success)
 		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
+		assert.Positive(t, simulatedTxn[0].GasUsed)
 	}
 
 	// simulate transaction (estimate gas unit price)
@@ -190,30 +193,30 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
 	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
-	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+	assert.Positive(t, estimatedGasUnitPrice)
 
 	// simulate transaction (estimate max gas amount)
 	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
 
 	// simulate transaction (estimate prioritized gas unit price and max gas amount)
 	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
 	assert.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
-	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
-	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+	assert.Positive(t, estimatedGasUnitPrice)
+	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
@@ -251,6 +254,7 @@ func Test_Indexer(t *testing.T) {
 	// TODO: May need to wait on indexer for this one
 	coins, err := client.GetCoinBalances(account.AccountAddress())
 	assert.NoError(t, err)
+
 	switch len(coins) {
 	case 0:
 	// TODO we need to wait on the indexer, we'll skip for now
@@ -362,6 +366,7 @@ func Test_Transactions(t *testing.T) {
 }
 
 func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
+	t.Helper()
 	payload, err := CoinTransferPayload(nil, AccountOne, 1)
 	assert.NoError(t, err)
 	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
@@ -485,7 +490,7 @@ func Test_Info(t *testing.T) {
 
 	info, err := client.Info()
 	assert.NoError(t, err)
-	assert.Greater(t, info.BlockHeight(), uint64(0))
+	assert.Positive(t, info.BlockHeight())
 }
 
 func Test_AccountResources(t *testing.T) {
@@ -494,21 +499,22 @@ func Test_AccountResources(t *testing.T) {
 
 	resources, err := client.AccountResources(AccountOne)
 	assert.NoError(t, err)
-	assert.Greater(t, len(resources), 0)
+	assert.NotEmpty(t, resources)
 
 	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
 	assert.NoError(t, err)
-	assert.Greater(t, len(resourcesBcs), 0)
+	assert.NotEmpty(t, resourcesBcs)
 }
 
 // A worker thread that reads from a chan of transactions that have been submitted and waits on their completion status
 func concurrentTxnWaiter(
+	t *testing.T,
 	results chan TransactionSubmissionResponse,
 	waitResults chan ConcResponse[*api.UserTransaction],
 	client *Client,
-	t *testing.T,
 	wg *sync.WaitGroup,
 ) {
+	t.Helper()
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -553,6 +559,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// start submission goroutine
 	payloads := make(chan TransactionBuildPayload, 50)
 	results := make(chan TransactionSubmissionResponse, 50)
+
 	go client.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
 	transferPayload, err := CoinTransferPayload(nil, AccountOne, 100)
@@ -574,10 +581,10 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// Start waiting on txns
 	waitResults := make(chan ConcResponse[*api.UserTransaction], numWaiters*10)
 
-	var wg sync.WaitGroup
-	wg.Add(numWaiters)
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(numWaiters)
 	for range numWaiters {
-		go concurrentTxnWaiter(results, waitResults, client, t, &wg)
+		go concurrentTxnWaiter(t, results, waitResults, client, &waitGroup)
 	}
 
 	// Wait on all the results, recording the succeeding ones
@@ -588,6 +595,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// We could wait on a close, but I'm going to be a little pickier here
 	i := uint64(0)
 	txnGoodEvents := 0
+
 	for {
 		response := <-waitResults
 		if response.Err == nil && response.Result == nil {
@@ -596,8 +604,10 @@ func Test_Concurrent_Submission(t *testing.T) {
 			if waitersRunning == 0 {
 				close(results)
 				t.Log("last txn waiter done")
+
 				break
 			}
+
 			continue
 		}
 		assert.NoError(t, response.Err)
@@ -609,12 +619,13 @@ func Test_Concurrent_Submission(t *testing.T) {
 		i++
 		if i >= numTxns {
 			t.Logf("waited on %d txns, done", i)
+
 			break
 		}
 	}
 	t.Log("done waiting for txns, waiting for txn waiter threads")
 
-	wg.Wait()
+	waitGroup.Wait()
 
 	// Check all transactions were successful from [0-numTxns)
 	t.Logf("got %d(%d) successful txns of %d attempted, error submission indexes:", len(txnMap), txnGoodEvents, numTxns)
@@ -655,6 +666,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 }
 
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
@@ -662,7 +674,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 		t.Parallel()
 		response, err := client.NodeAPIHealthCheck()
 		assert.NoError(t, err)
-		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+		assert.Contains(t, response.Message, "ok", "Node API health check failed"+response.Message)
 	})
 
 	// Now, check node API health check with a future time that should never fail
@@ -670,7 +682,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 		t.Parallel()
 		response, err := client.NodeAPIHealthCheck(10000)
 		assert.NoError(t, err)
-		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+		assert.Contains(t, response.Message, "ok", "Node API health check failed"+response.Message)
 	})
 
 	// Now, check node API health check with 0

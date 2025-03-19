@@ -15,7 +15,7 @@ func TestRawTransactionSign(t *testing.T) {
 	assert.NoError(t, err)
 	dest := receiver.Address
 
-	sn := uint64(1)
+	sequenceNumber := uint64(1)
 	amount := uint64(10_000)
 
 	payload, err := CoinTransferPayload(nil, dest, amount)
@@ -23,7 +23,7 @@ func TestRawTransactionSign(t *testing.T) {
 
 	txn := RawTransaction{
 		Sender:                     sender.Address,
-		SequenceNumber:             sn + 1,
+		SequenceNumber:             sequenceNumber + 1,
 		Payload:                    TransactionPayload{Payload: payload},
 		MaxGasAmount:               1000,
 		GasUnitPrice:               2000,

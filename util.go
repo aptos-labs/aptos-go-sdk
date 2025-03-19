@@ -15,7 +15,7 @@ func ParseHex(hexStr string) ([]byte, error) {
 }
 
 // Sha3256Hash takes a hash of the given sets of bytes
-func Sha3256Hash(bytes [][]byte) (output []byte) {
+func Sha3256Hash(bytes [][]byte) []byte {
 	return util.Sha3256Hash(bytes)
 }
 
@@ -30,6 +30,6 @@ func StrToUint64(s string) (uint64, error) {
 }
 
 // StrToBigInt converts a string to a big.Int
-func StrToBigInt(val string) (num *big.Int, err error) {
+func StrToBigInt(val string) (*big.Int, error) {
 	return util.StrToBigInt(val)
 }

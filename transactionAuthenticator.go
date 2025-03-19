@@ -34,6 +34,7 @@ type TransactionAuthenticator struct {
 
 func NewTransactionAuthenticator(auth *crypto.AccountAuthenticator) (*TransactionAuthenticator, error) {
 	txnAuth := &TransactionAuthenticator{}
+
 	switch auth.Variant {
 	case crypto.AccountAuthenticatorEd25519:
 		txnAuth.Variant = TransactionAuthenticatorEd25519
@@ -79,7 +80,9 @@ func (ea *TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
+
 	ea.Variant = TransactionAuthenticatorVariant(kindNum)
+
 	switch ea.Variant {
 	case TransactionAuthenticatorEd25519:
 		ea.Auth = &Ed25519TransactionAuthenticator{}

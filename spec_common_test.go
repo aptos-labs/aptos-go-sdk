@@ -133,6 +133,7 @@ func parseAddress(input string) *AccountAddress {
 
 func parseSequence(itemType string, items string) any {
 	itemList := strings.Split(items, ",")
+
 	switch itemType {
 	case "address":
 		addresses := make([]AccountAddress, 0)
@@ -145,6 +146,7 @@ func parseSequence(itemType string, items string) any {
 			if err != nil {
 				return nil
 			}
+
 			addresses = append(addresses, address)
 		}
 		return addresses

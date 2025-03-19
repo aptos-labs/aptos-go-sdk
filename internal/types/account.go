@@ -20,13 +20,13 @@ type Account struct {
 // NewAccountFromSigner creates an account from a [crypto.Signer] with an optional [crypto.AuthenticationKey]
 func NewAccountFromSigner(signer crypto.Signer, address ...AccountAddress) (*Account, error) {
 	out := &Account{}
-	if len(address) == 1 {
-		copy(out.Address[:], address[0][:])
-	} else if len(address) > 1 {
-		// Throw error
-		return nil, errors.New("must only provide one auth key")
-	} else {
+	switch len(authKey) {
+	case 0:
 		copy(out.Address[:], signer.AuthKey()[:])
+	case 1:
+		copy(out.Address[:], authKey[0][:])
+	default:
+		return nil, errors.New("must only provide one auth key")
 	}
 	out.Signer = signer
 	return out, nil
@@ -138,18 +138,18 @@ var ErrAddressTooLong = errors.New("AccountAddress too long")
 
 // ParseStringRelaxed parses a string into an AccountAddress
 // TODO: add strict mode checking
-func (aa *AccountAddress) ParseStringRelaxed(x string) error {
-	x = strings.TrimPrefix(x, "0x")
-	if len(x) < 1 {
+func (aa *AccountAddress) ParseStringRelaxed(input string) error {
+	input = strings.TrimPrefix(input, "0x")
+	if len(input) < 1 {
 		return ErrAddressTooShort
 	}
-	if len(x) > 64 {
+	if len(input) > 64 {
 		return ErrAddressTooLong
 	}
-	if len(x)%2 != 0 {
-		x = "0" + x
+	if len(input)%2 != 0 {
+		input = "0" + input
 	}
-	bytes, err := hex.DecodeString(x)
+	bytes, err := hex.DecodeString(input)
 	if err != nil {
 		return err
 	}
@@ -160,21 +160,21 @@ func (aa *AccountAddress) ParseStringRelaxed(x string) error {
 }
 
 // ParseStringWithPrefixRelaxed parses a string into an AccountAddress
-func (aa *AccountAddress) ParseStringWithPrefixRelaxed(x string) error {
-	if !strings.HasPrefix(x, "0x") {
+func (aa *AccountAddress) ParseStringWithPrefixRelaxed(input string) error {
+	if !strings.HasPrefix(input, "0x") {
 		return ErrAddressTooShort
 	}
-	x = x[2:]
-	if len(x) < 1 {
+	input = input[2:]
+	if len(input) < 1 {
 		return ErrAddressTooShort
 	}
-	if len(x) > 64 {
+	if len(input) > 64 {
 		return ErrAddressTooLong
 	}
-	if len(x)%2 != 0 {
-		x = "0" + x
+	if len(input)%2 != 0 {
+		input = "0" + input
 	}
-	bytes, err := hex.DecodeString(x)
+	bytes, err := hex.DecodeString(input)
 	if err != nil {
 		return err
 	}

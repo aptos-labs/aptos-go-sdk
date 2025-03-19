@@ -99,8 +99,8 @@ func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
 }
 
 func TestEpoch(t *testing.T) {
-	lc := setupTestLogging()
-	defer restoreNormalLogging(t, lc)
+	logger := setupTestLogging()
+	defer restoreNormalLogging(t, logger)
 
 	info := NodeInfo{
 		EpochStr: "123",
@@ -108,12 +108,12 @@ func TestEpoch(t *testing.T) {
 	assert.Equal(t, uint64(123), info.Epoch())
 	info.EpochStr = "garbage"
 	assert.Equal(t, uint64(0), info.Epoch())
-	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 1, logger.countingHandler.counts.get(slog.LevelError))
 }
 
 func TestLedgerVersion(t *testing.T) {
-	lc := setupTestLogging()
-	defer restoreNormalLogging(t, lc)
+	logger := setupTestLogging()
+	defer restoreNormalLogging(t, logger)
 
 	info := NodeInfo{
 		LedgerVersionStr: "123",
@@ -121,12 +121,12 @@ func TestLedgerVersion(t *testing.T) {
 	assert.Equal(t, uint64(123), info.LedgerVersion())
 	info.LedgerVersionStr = "garbage"
 	assert.Equal(t, uint64(0), info.LedgerVersion())
-	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 1, logger.countingHandler.counts.get(slog.LevelError))
 }
 
 func TestOldestLedgerVersion(t *testing.T) {
-	lc := setupTestLogging()
-	defer restoreNormalLogging(t, lc)
+	logger := setupTestLogging()
+	defer restoreNormalLogging(t, logger)
 
 	info := NodeInfo{
 		OldestLedgerVersionStr: "123",
@@ -134,12 +134,12 @@ func TestOldestLedgerVersion(t *testing.T) {
 	assert.Equal(t, uint64(123), info.OldestLedgerVersion())
 	info.OldestLedgerVersionStr = "garbage"
 	assert.Equal(t, uint64(0), info.OldestLedgerVersion())
-	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 1, logger.countingHandler.counts.get(slog.LevelError))
 }
 
 func TestBlockHeight(t *testing.T) {
-	lc := setupTestLogging()
-	defer restoreNormalLogging(t, lc)
+	logger := setupTestLogging()
+	defer restoreNormalLogging(t, logger)
 
 	info := NodeInfo{
 		BlockHeightStr: "123",
@@ -147,12 +147,12 @@ func TestBlockHeight(t *testing.T) {
 	assert.Equal(t, uint64(123), info.BlockHeight())
 	info.BlockHeightStr = "garbage"
 	assert.Equal(t, uint64(0), info.BlockHeight())
-	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 1, logger.countingHandler.counts.get(slog.LevelError))
 }
 
 func TestOldestBlockHeight(t *testing.T) {
-	lc := setupTestLogging()
-	defer restoreNormalLogging(t, lc)
+	logger := setupTestLogging()
+	defer restoreNormalLogging(t, logger)
 
 	info := NodeInfo{
 		OldestBlockHeightStr: "123",
@@ -160,5 +160,5 @@ func TestOldestBlockHeight(t *testing.T) {
 	assert.Equal(t, uint64(123), info.OldestBlockHeight())
 	info.OldestBlockHeightStr = "garbage"
 	assert.Equal(t, uint64(0), info.OldestBlockHeight())
-	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 1, logger.countingHandler.counts.get(slog.LevelError))
 }

@@ -102,6 +102,7 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 				close(responses)
 				return
 			}
+
 			switch payload.Type {
 			case TransactionSubmissionTypeSingle:
 				curSequenceNumber := snt.Increment()
@@ -121,13 +122,11 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 				} else {
 					responses <- TransactionBuildResponse{Response: txnResponse}
 				}
-			default:
-				// Skip the payload
 			}
 		case newSequenceNumber := <-setSequenceNumber:
 			// This can be used to update the sequence number at anytime
-			snt.Update(newSequenceNumber)
 			// TODO: We should periodically handle reconciliation of the sequence numbers, but this needs to know submission as well
+			snt.Update(newSequenceNumber)
 		}
 	}
 }
@@ -180,12 +179,12 @@ func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissio
 			} else {
 				// Partial failure, means we need to send errors for those that failed
 				// and responses for those that succeeded
-
 				for j := uint32(0); j < i; j++ {
 					failed := -1
 					for k := 0; k < len(response.TransactionFailures); k++ {
 						if response.TransactionFailures[k].TransactionIndex == j {
 							failed = k
+
 							break
 						}
 					}
@@ -363,10 +362,10 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	buildOptions ...any,
 ) {
 	// TODO: Make internal buffer size configurable with an optional parameter
-
 	// Set up the channel handling building transactions
 	buildResponses := make(chan TransactionBuildResponse, 20)
 	setSequenceNumber := make(chan uint64)
+
 	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
 	submissionRequests := make(chan TransactionSubmissionRequest, 20)
@@ -374,16 +373,17 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	// version is more flexible and gives actual responses.  It is may be that with large payloads that batch more performant.
 	go rc.SubmitTransactions(submissionRequests, responses)
 
-	var wg sync.WaitGroup
+	var waitGroup sync.WaitGroup
 
 	for buildResponse := range buildResponses {
 		if buildResponse.Err != nil {
 			responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: buildResponse.Err}
 		} else {
 			// TODO: replace this with a fixed number (configurable) of sign() workers
-			wg.Add(1)
+			waitGroup.Add(1)
+
 			go func() {
-				defer wg.Done()
+				defer waitGroup.Done()
 				signedTxn, err := sign(buildResponse.Response)
 				if err != nil {
 					responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
@@ -397,7 +397,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 		}
 	}
 
-	wg.Wait()
+	waitGroup.Wait()
 	close(submissionRequests)
 }
 

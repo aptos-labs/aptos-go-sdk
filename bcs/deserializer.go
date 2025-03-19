@@ -52,12 +52,12 @@ func Deserialize(dest Unmarshaler, bytes []byte) error {
 	return nil
 }
 
-// Error If there has been any error, return it
+// Error If there has been any error, return it.
 func (des *Deserializer) Error() error {
 	return des.err
 }
 
-// SetError If the data is well-formed but nonsense, UnmarshalBCS() code can set error
+// SetError If the data is well-formed but nonsense, UnmarshalBCS() code can set error.
 func (des *Deserializer) SetError(err error) {
 	des.err = err
 }
@@ -72,7 +72,7 @@ func (des *Deserializer) Remaining() int {
 	return len(des.source) - des.pos
 }
 
-// Bool deserializes a single byte as a bool
+// Bool deserializes a single byte as a bool.
 func (des *Deserializer) Bool() bool {
 	if des.pos >= len(des.source) {
 		des.setError("not enough bytes remaining to deserialize bool")
@@ -91,7 +91,12 @@ func (des *Deserializer) Bool() bool {
 	return out
 }
 
-func deserializeUint[T uint8 | uint16 | uint32 | uint64](des *Deserializer, typeName string, size int, decode func(slice []byte) T) T {
+func deserializeUint[T uint8 | uint16 | uint32 | uint64](
+	des *Deserializer,
+	typeName string,
+	size int,
+	decode func(slice []byte) T,
+) T {
 	end := des.pos + size
 	if end > len(des.source) {
 		des.setError("not enough bytes remaining to deserialize %s", typeName)
@@ -109,53 +114,52 @@ func (des *Deserializer) deserializeUBigint(typeName string, size int) big.Int {
 		return *big.NewInt(-1)
 	}
 	bytesBigEndian := make([]byte, size)
-	copy(bytesBigEndian[:], des.source[des.pos:end])
+	copy(bytesBigEndian, des.source[des.pos:end])
 	des.pos = end
-	slices.Reverse(bytesBigEndian[:])
+	slices.Reverse(bytesBigEndian)
 	var out big.Int
-	out.SetBytes(bytesBigEndian[:])
+	out.SetBytes(bytesBigEndian)
 	return out
 }
 
-// U8 deserializes a single unsigned 8-bit integer
+// U8 deserializes a single unsigned 8-bit integer.
 func (des *Deserializer) U8() uint8 {
 	return deserializeUint(des, "u8", 1, func(slice []byte) uint8 {
 		return slice[0]
 	})
 }
 
-// U16 deserializes a single unsigned 16-bit integer
+// U16 deserializes a single unsigned 16-bit integer.
 func (des *Deserializer) U16() uint16 {
 	return deserializeUint(des, "u16", 2, binary.LittleEndian.Uint16)
 }
 
-// U32 deserializes a single unsigned 32-bit integer
+// U32 deserializes a single unsigned 32-bit integer.
 func (des *Deserializer) U32() uint32 {
 	return deserializeUint(des, "u32", 4, binary.LittleEndian.Uint32)
 }
 
-// U64 deserializes a single unsigned 64-bit integer
-
+// U64 deserializes a single unsigned 64-bit integer.
 func (des *Deserializer) U64() uint64 {
 	return deserializeUint(des, "u64", 8, binary.LittleEndian.Uint64)
 }
 
-// U128 deserializes a single unsigned 128-bit integer
+// U128 deserializes a single unsigned 128-bit integer.
 func (des *Deserializer) U128() big.Int {
 	return des.deserializeUBigint("u128", 16)
 }
 
-// U256 deserializes a single unsigned 256-bit integer
+// U256 deserializes a single unsigned 256-bit integer.
 func (des *Deserializer) U256() big.Int {
 	return des.deserializeUBigint("u256", 32)
 }
 
-// Uleb128 deserializes a 32-bit integer from a variable length [Unsigned LEB128]
+// Uleb128 deserializes a 32-bit integer from a variable length [Unsigned LEB128].
 //
 // [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
 	const maxU32 = uint64(0xFFFFFFFF)
-	var out uint64 = 0
+	var out uint64
 	shift := 0
 
 	for out < maxU32 {
@@ -264,8 +268,8 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 		return nil
 	}
 	out := make([]T, length)
-	for i := 0; i < int(length); i++ {
-		deserialize(des, &out[i])
+	for i, entry := range out {
+		deserialize(des, &entry)
 
 		if des.Error() != nil {
 			des.setError("could not deserialize sequence[%d] member of %w", i, des.Error())

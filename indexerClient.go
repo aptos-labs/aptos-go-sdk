@@ -37,8 +37,7 @@ type CoinBalance struct {
 
 // GetCoinBalances retrieve the coin balances for all coins owned by the address
 func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
-	var out []CoinBalance
-	var q struct {
+	var query struct {
 		CurrentCoinBalances []struct {
 			CoinType     string `graphql:"coin_type"`
 			Amount       uint64
@@ -49,16 +48,17 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 	variables := map[string]any{
 		"address": address.StringLong(),
 	}
-	err := ic.Query(&q, variables)
+	err := ic.Query(&query, variables)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, coin := range q.CurrentCoinBalances {
-		out = append(out, CoinBalance{
+	out := make([]CoinBalance, len(query.CurrentCoinBalances))
+	for i, coin := range query.CurrentCoinBalances {
+		out[i] = CoinBalance{
 			CoinType: coin.CoinType,
 			Amount:   coin.Amount,
-		})
+		}
 	}
 
 	return out, nil
@@ -66,7 +66,7 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 
 // GetProcessorStatus tells the most updated version of the transaction processor.  This helps to determine freshness of data.
 func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error) {
-	var q struct {
+	var query struct {
 		ProcessorStatus []struct {
 			LastSuccessVersion uint64 `graphql:"last_success_version"`
 		} `graphql:"processor_status(where: {processor: {_eq: $processor_name}})"`
@@ -74,12 +74,12 @@ func (ic *IndexerClient) GetProcessorStatus(processorName string) (uint64, error
 	variables := map[string]any{
 		"processor_name": processorName,
 	}
-	err := ic.Query(&q, variables)
+	err := ic.Query(&query, variables)
 	if err != nil {
 		return 0, err
 	}
 
-	return q.ProcessorStatus[0].LastSuccessVersion, err
+	return query.ProcessorStatus[0].LastSuccessVersion, err
 }
 
 // WaitOnIndexer waits for the indexer processorName specified to catch up to the requestedVersion
@@ -88,6 +88,7 @@ func (ic *IndexerClient) WaitOnIndexer(processorName string, requestedVersion ui
 	const sleepTime = 100 * time.Millisecond
 	const timeout = 5 * time.Second
 	startTime := time.Now()
+
 	for {
 		version, err := ic.GetProcessorStatus(processorName)
 		if err != nil {

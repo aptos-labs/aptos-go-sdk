@@ -28,17 +28,17 @@ func TestPollForTransaction(t *testing.T) {
 }
 
 func TestEventsByHandle(t *testing.T) {
-	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/" {
+	mockServer := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
+		if request.URL.Path == "/" {
 			// handle initial request from client
-			w.WriteHeader(http.StatusOK)
+			writer.WriteHeader(http.StatusOK)
 			return
 		}
 
-		assert.Equal(t, "/accounts/0x0/events/0x2/transfer", r.URL.Path)
+		assert.Equal(t, "/accounts/0x0/events/0x2/transfer", request.URL.Path)
 
-		start := r.URL.Query().Get("start")
-		limit := r.URL.Query().Get("limit")
+		start := request.URL.Query().Get("start")
+		limit := request.URL.Query().Get("limit")
 
 		startInt, _ := strconv.ParseUint(start, 10, 64)
 		limitInt, _ := strconv.ParseUint(limit, 10, 64)
@@ -58,7 +58,7 @@ func TestEventsByHandle(t *testing.T) {
 			})
 		}
 
-		err := json.NewEncoder(w).Encode(events)
+		err := json.NewEncoder(writer).Encode(events)
 		assert.NoError(t, err)
 	}))
 	defer mockServer.Close()

@@ -1,6 +1,6 @@
 package api
 
-// Error is an error from the REST API
+// Error is an error from the REST API.
 type Error struct {
 	Message     string `json:"message"`       // Message is the error message
 	ErrorCode   string `json:"error_code"`    // ErrorCode is the string name of the error

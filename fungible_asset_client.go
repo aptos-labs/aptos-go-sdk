@@ -68,25 +68,27 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner
 // PrimaryStoreAddress returns the [AccountAddress] of the primary store for the owner
 //
 // Note that the primary store may not exist at the address. Use [FungibleAssetClient.PrimaryStoreExists] to check.
-func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (address *AccountAddress, err error) {
+func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (*AccountAddress, error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
 	if err != nil {
-		return
+		return nil, err
 	}
-	address = &AccountAddress{}
+	address := &AccountAddress{}
 	err = address.ParseStringRelaxed(val.(string))
-	return
+	if err != nil {
+		return nil, err
+	}
+	return address, nil
 }
 
 // PrimaryStoreExists returns true if the primary store for the owner exists
-func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (exists bool, err error) {
+func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (bool, error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
 	if err != nil {
-		return
+		return false, err
 	}
 
-	exists = val.(bool)
-	return
+	return val.(bool), nil
 }
 
 // PrimaryBalance returns the balance of the primary store for the owner
@@ -160,51 +162,48 @@ func (client *FungibleAssetClient) StoreMetadata(storeAddress *AccountAddress, l
 }
 
 // Supply returns the total supply of the fungible asset
-func (client *FungibleAssetClient) Supply(ledgerVersion ...uint64) (supply *big.Int, err error) {
+func (client *FungibleAssetClient) Supply(ledgerVersion ...uint64) (*big.Int, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "supply", ledgerVersion...)
 	if err != nil {
-		return
+		return nil, err
 	}
 	return unwrapAggregator(val)
 }
 
 // Maximum returns the maximum possible supply of the fungible asset
-func (client *FungibleAssetClient) Maximum(ledgerVersion ...uint64) (maximum *big.Int, err error) {
+func (client *FungibleAssetClient) Maximum(ledgerVersion ...uint64) (*big.Int, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "maximum", ledgerVersion...)
 	if err != nil {
-		return
+		return nil, err
 	}
 	return unwrapAggregator(val)
 }
 
 // Name returns the name of the fungible asset
-func (client *FungibleAssetClient) Name() (name string, err error) {
+func (client *FungibleAssetClient) Name() (string, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "name")
 	if err != nil {
-		return
+		return "", err
 	}
-	name = val.(string)
-	return
+	return val.(string), nil
 }
 
 // Symbol returns the symbol of the fungible asset
-func (client *FungibleAssetClient) Symbol() (symbol string, err error) {
+func (client *FungibleAssetClient) Symbol() (string, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "symbol")
 	if err != nil {
-		return
+		return "", err
 	}
-	symbol = val.(string)
-	return
+	return val.(string), nil
 }
 
 // Decimals returns the number of decimal places for the fungible asset
-func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
+func (client *FungibleAssetClient) Decimals() (uint8, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "decimals")
 	if err != nil {
-		return
+		return 0, err
 	}
-	decimals = uint8(val.(float64))
-	return
+	return uint8(val.(float64)), nil
 }
 
 // IconUri returns the URI of the icon for the fungible asset
@@ -291,10 +290,10 @@ func storeStructTag() TypeTag {
 	return TypeTag{Value: &StructTag{Address: AccountOne, Module: "fungible_asset", Name: "FungibleStore"}}
 }
 
-func (client *FungibleAssetClient) view(payload *ViewPayload, ledgerVersion ...uint64) (result any, err error) {
+func (client *FungibleAssetClient) view(payload *ViewPayload, ledgerVersion ...uint64) (any, error) {
 	vals, err := client.aptosClient.View(payload, ledgerVersion...)
 	if err != nil {
-		return
+		return nil, err
 	}
 
 	return vals[0], nil
@@ -302,34 +301,34 @@ func (client *FungibleAssetClient) view(payload *ViewPayload, ledgerVersion ...u
 
 // Helper function to pull out the object address
 // TODO: Move to somewhere more useful
-func unwrapObject(val any) (address *AccountAddress, err error) {
+func unwrapObject(val any) (*AccountAddress, error) {
 	inner, ok := val.(map[string]any)
 	if !ok {
-		err = errors.New("bad view return from node, could not unwrap object")
-		return
+		return nil, errors.New("bad view return from node, could not unwrap object")
 	}
 	addressString := inner["inner"].(string)
-	address = &AccountAddress{}
-	err = address.ParseStringRelaxed(addressString)
-	return
+	address := &AccountAddress{}
+	err := address.ParseStringRelaxed(addressString)
+	if err != nil {
+		return nil, err
+	}
+	return address, nil
 }
 
 // Helper function to pull out the object address
 // TODO: Move to somewhere more useful
-func unwrapAggregator(val any) (num *big.Int, err error) {
+func unwrapAggregator(val any) (*big.Int, error) {
 	inner, ok := val.(map[string]any)
 	if !ok {
-		err = errors.New("bad view return from node, could not unwrap aggregator")
-		return
+		return nil, errors.New("bad view return from node, could not unwrap aggregator")
 	}
 	vals := inner["vec"].([]any)
 	if len(vals) == 0 {
-		return nil, nil
+		return nil, errors.New("aggregator returned no values")
 	}
 	numStr, ok := vals[0].(string)
 	if !ok {
-		err = errors.New("bad view return from node, aggregator value is not a string")
-		return
+		return nil, errors.New("bad view return from node, aggregator value is not a string")
 	}
 
 	return StrToBigInt(numStr)

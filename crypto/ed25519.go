@@ -172,7 +172,7 @@ func (key *Ed25519PrivateKey) ToHex() string {
 }
 
 // ToAIP80 formats the private key to AIP-80 compliant string
-func (key *Ed25519PrivateKey) ToAIP80() (formattedString string, err error) {
+func (key *Ed25519PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantEd25519)
 }
 

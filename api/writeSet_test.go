@@ -9,7 +9,7 @@ import (
 )
 
 func TestWriteSet_WriteModule(t *testing.T) {
-	testJson := `{
+	testJSON := `{
 "address": "0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5",
 "state_key_hash": "0xa9fd877ba16b362e10efda9410f3e718ae114e567858cbe120732935aceb1f0e",
 "data": {
@@ -88,7 +88,7 @@ func TestWriteSet_WriteModule(t *testing.T) {
 "type": "write_module"
 }`
 	data := &WriteSetChange{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteModule, data.Type)
@@ -102,7 +102,7 @@ func TestWriteSet_WriteModule(t *testing.T) {
 }
 
 func TestWriteSet_WriteResource(t *testing.T) {
-	testJson := `{
+	testJSON := `{
   "address": "0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5",
   "state_key_hash": "0xa396667bfbfc6af66d8969edfbda02ef9c2f4e4468bf4c71f165a5427afdf6dc",
   "data": {
@@ -119,7 +119,7 @@ func TestWriteSet_WriteResource(t *testing.T) {
   "type": "write_resource"
 }`
 	data := &WriteSetChange{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteResource, data.Type)
@@ -133,14 +133,14 @@ func TestWriteSet_WriteResource(t *testing.T) {
 }
 
 func TestWriteSet_DeleteResource(t *testing.T) {
-	testJson := `{
+	testJSON := `{
       "address": "0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a",
       "state_key_hash": "0x3775f4dbd6900b26cf6c833b112fdfda084f84ef4e562678ca6b54a4791063fd",
       "resource": "0x1::object::ObjectGroup",
       "type": "delete_resource"
     }`
 	data := &WriteSetChange{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantDeleteResource, data.Type)

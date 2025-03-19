@@ -58,17 +58,17 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (byte
 	aip80Prefix := AIP80Prefixes[keyType]
 
 	// Get the first boolean if it exists, otherwise nil
-	var strictness *bool = nil
+	var strictness *bool
 	if len(strict) > 1 {
 		return nil, fmt.Errorf("strictness must be a single boolean")
 	} else if len(strict) == 1 {
 		strictness = &strict[0]
 	}
 
-	switch v := value.(type) {
+	switch val := value.(type) {
 	case string:
-		if (strictness == nil || !*strictness) && !strings.HasPrefix(v, aip80Prefix) {
-			bytes, err := util.ParseHex(v)
+		if (strictness == nil || !*strictness) && !strings.HasPrefix(val, aip80Prefix) {
+			bytes, err := util.ParseHex(val)
 			if err != nil {
 				return nil, err
 			}
@@ -79,14 +79,14 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (byte
 			}
 
 			return bytes, nil
-		} else if strings.HasPrefix(v, aip80Prefix) {
+		} else if strings.HasPrefix(val, aip80Prefix) {
 			// Parse for AIP-80 compliant String input
-			parts := strings.Split(v, "-")
+			parts := strings.Split(val, "-")
 			return util.ParseHex(parts[2])
 		}
 		return nil, fmt.Errorf("invalid hex string input while parsing private key. Must be AIP-80 compliant string")
 	case []byte:
-		return v, nil
+		return val, nil
 	default:
 		return nil, fmt.Errorf("unsupported private key type: must be string or []byte")
 	}

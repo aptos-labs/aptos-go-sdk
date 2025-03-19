@@ -409,7 +409,7 @@ func (bm *MultiKeyBitmap) Indices() []uint8 {
 }
 
 // KeyIndices determines the byte and bit set in the bitmap
-func KeyIndices(index uint8) (numByte uint8, numBit uint8) {
+func KeyIndices(index uint8) (uint8, uint8) {
 	// Bytes and bits are counted from left
 	return index / 8, index % 8
 }

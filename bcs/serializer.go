@@ -57,16 +57,16 @@ func (ser *Serializer) Bool(v bool) {
 
 func serializeUInt[T uint16 | uint32 | uint64](ser *Serializer, size uint, v T, serialize func(slice []byte, num T)) {
 	ub := make([]byte, size)
-	serialize(ub[:], v)
-	ser.out.Write(ub[:])
+	serialize(ub, v)
+	ser.out.Write(ub)
 }
 
 func (ser *Serializer) serializeUBigInt(size uint, v *big.Int) {
 	ub := make([]byte, size)
-	v.FillBytes(ub[:])
+	v.FillBytes(ub)
 	// Reverse, since big.Int outputs bytes in BigEndian
-	slices.Reverse(ub[:])
-	ser.out.Write(ub[:])
+	slices.Reverse(ub)
+	ser.out.Write(ub)
 }
 
 // U8 serialize a byte
@@ -99,13 +99,14 @@ func (ser *Serializer) U256(v big.Int) {
 	ser.serializeUBigInt(32, &v)
 }
 
-// Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths, and enums.
+// Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths,
+// and enums.
 func (ser *Serializer) Uleb128(val uint32) {
 	for val>>7 != 0 {
-		ser.out.WriteByte(uint8(val) | 0x80)
+		ser.out.WriteByte(uint8(val&0xFF) | 0x80)
 		val >>= 7
 	}
-	ser.out.WriteByte(uint8(val))
+	ser.out.WriteByte(uint8(val & 0xFF))
 }
 
 // WriteBytes serialize an array of bytes with its length first as an Uleb128.

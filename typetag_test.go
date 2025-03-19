@@ -45,17 +45,17 @@ func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagVarian
 	assert.Equal(t, expectedString, tag.String())
 
 	// Serialize and deserialize test
-	tt := NewTypeTag(tag)
-	bytes, err := bcs.Serialize(&tt)
+	typeTag := NewTypeTag(tag)
+	bytes, err := bcs.Serialize(&typeTag)
 	assert.NoError(t, err)
 	var newTag TypeTag
 	err = bcs.Deserialize(&newTag, bytes)
 	assert.NoError(t, err)
-	assert.Equal(t, tt, newTag)
+	assert.Equal(t, typeTag, newTag)
 }
 
 func TestStructTag(t *testing.T) {
-	st := StructTag{
+	structTag := StructTag{
 		Address: AccountOne,
 		Module:  "coin",
 		Name:    "CoinStore",
@@ -68,17 +68,18 @@ func TestStructTag(t *testing.T) {
 			}},
 		},
 	}
-	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", st.String())
+	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", structTag.String())
 	var aa3 AccountAddress
 	err := aa3.ParseStringRelaxed("0x3")
 	assert.NoError(t, err)
-	st.TypeParams = append(st.TypeParams, TypeTag{Value: &StructTag{
+
+	structTag.TypeParams = append(structTag.TypeParams, TypeTag{Value: &StructTag{
 		Address:    aa3,
 		Module:     "other",
 		Name:       "thing",
 		TypeParams: nil,
 	}})
-	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin,0x3::other::thing>", st.String())
+	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin,0x3::other::thing>", structTag.String())
 }
 
 func TestInvalidTypeTag(t *testing.T) {

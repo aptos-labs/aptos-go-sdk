@@ -100,7 +100,11 @@ func Test_U64(t *testing.T) {
 }
 
 func Test_U128(t *testing.T) {
-	serialized := []string{"00000000000000000000000000000000", "01000000000000000000000000000000", "ff000000000000000000000000000000"}
+	serialized := []string{
+		"00000000000000000000000000000000",
+		"01000000000000000000000000000000",
+		"ff000000000000000000000000000000",
+	}
 	deserialized := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
 	helperBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
@@ -111,7 +115,11 @@ func Test_U128(t *testing.T) {
 }
 
 func Test_U256(t *testing.T) {
-	serialized := []string{"0000000000000000000000000000000000000000000000000000000000000000", "0100000000000000000000000000000000000000000000000000000000000000", "ff00000000000000000000000000000000000000000000000000000000000000"}
+	serialized := []string{
+		"0000000000000000000000000000000000000000000000000000000000000000",
+		"0100000000000000000000000000000000000000000000000000000000000000",
+		"ff00000000000000000000000000000000000000000000000000000000000000",
+	}
 	deserialized := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
 	helperBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
@@ -155,8 +163,14 @@ func Test_String(t *testing.T) {
 }
 
 func Test_FixedBytes(t *testing.T) {
-	serialized := []string{"123456", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
-	deserialized := []string{"123456", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}
+	serialized := []string{
+		"123456",
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+	}
+	deserialized := []string{
+		"123456",
+		"FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF",
+	}
 
 	// Serialize
 	for i, input := range deserialized {
@@ -179,8 +193,14 @@ func Test_FixedBytes(t *testing.T) {
 }
 
 func Test_Bytes(t *testing.T) {
-	serialized := []string{"03123456", "2cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
-	deserialized := []string{"123456", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
+	serialized := []string{
+		"03123456",
+		"2cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+	}
+	deserialized := []string{
+		"123456",
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+	}
 
 	helper(t, serialized, deserialized, func(serializer *Serializer, input string) {
 		bytes, _ := hex.DecodeString(input)
@@ -408,11 +428,61 @@ func Test_ConvenienceFunctions(t *testing.T) {
 
 	serializedU128, err := SerializeU128(*big.NewInt(5))
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU128)
+	assert.Equal(t, []byte{
+		0x05,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+	}, serializedU128)
 
 	serializedU256, err := SerializeU256(*big.NewInt(6))
 	assert.NoError(t, err)
-	assert.Equal(t, []byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU256)
+	assert.Equal(t, []byte{
+		0x06,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+		0x00,
+	}, serializedU256)
 
 	serializedBytes, err := SerializeBytes([]byte{0x05})
 	assert.NoError(t, err)

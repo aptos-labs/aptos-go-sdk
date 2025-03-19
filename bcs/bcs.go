@@ -15,7 +15,8 @@ package bcs
 //	  ser.Bool(str.boolean)
 //	}
 //
-// Additionally, if there is expected data, you can add errors to serialization.  It's suggested to stop serialization after any errors.
+// Additionally, if there is expected data, you can add errors to serialization.  It's suggested to stop serialization
+// after any errors.
 //
 //	type MyStruct struct {
 //	  num     uint8 // Only allowed to be 0-10
@@ -40,7 +41,8 @@ type Marshaler interface {
 // Unmarshaler is an interface for any type that can be deserialized from BCS
 //
 // It's highly suggested to implement on a pointer to a type, and not the type directly.
-// For example, you could implement a simple Unmarshaler for a given struct.  You will need to add any appropriate error handling.
+// For example, you could implement a simple Unmarshaler for a given struct.  You will need to add any appropriate
+// error handling.
 //
 //	type MyStruct struct {
 //	  num     uint8
@@ -52,7 +54,8 @@ type Marshaler interface {
 //	  str.boolean = des.Bool()
 //	}
 //
-// Additionally, if there is expected formatting errors, you can add errors to deserialization.  It's suggested to stop serialization after any errors.
+// Additionally, if there is expected formatting errors, you can add errors to deserialization.  It's suggested to
+// stop serialization after any errors.
 //
 //	type MyStruct struct {
 //	  num     uint8 // Only allowed to be 0-10
@@ -72,13 +75,13 @@ type Marshaler interface {
 //	  str.boolean = des.Bool()
 //	}
 type Unmarshaler interface {
-	// UnmarshalBCS implements a way to deserialize the type into BCS.  Note that the error will need to be directly set
-	// using [Deserializer.SetError] on the [Deserializer].  If using this function, you will need to use [Deserializer.Error]
-	// to retrieve the error.
+	// UnmarshalBCS implements a way to deserialize the type into BCS.  Note that the error will need to be directly
+	// set using [Deserializer.SetError] on the [Deserializer].  If using this function, you will need to use
+	// [Deserializer.Error] to retrieve the error.
 	UnmarshalBCS(des *Deserializer)
 }
 
-// Struct is an interface for an on-chain type.  It must be able to be both Marshaler and Unmarshaler for BCS
+// Struct is an interface for an on-chain type.  It must be able to be both Marshaler and Unmarshaler for BCS.
 type Struct interface {
 	Marshaler
 	Unmarshaler

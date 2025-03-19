@@ -71,10 +71,10 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 
 	// Iterate through characters, handling border conditions, we don't use a range because we sometimes skip ahead
 	for cur < len(inputRunes) {
-		r := inputRunes[cur]
-		// println(fmt.Printf("%c | %s | %s\n", r, currentStr, util.PrettyJson(saved)))
+		inputRune := inputRunes[cur]
+		// println(fmt.Printf("%c | %s | %s\n", inputRune, currentStr, util.PrettyJson(saved)))
 
-		switch r {
+		switch inputRune {
 		case '<':
 			// Start of a type argument, save the current state
 			saved = append(saved, parseInfo{
@@ -129,8 +129,11 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			innerTypes = make([]TypeTag, 0)
+
 			curTypes = append(curTypes, *newType)
+
 			currentStr = ""
 			expectedTypes += 1
 		case ' ':
@@ -145,7 +148,9 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 				}
 
 				innerTypes = make([]TypeTag, 0)
+
 				curTypes = append(curTypes, *newType)
+
 				currentStr = ""
 				parsedTypeTag = true
 			}
@@ -167,7 +172,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			// Skip over incrementing, we already did it above
 			continue
 		default:
-			currentStr += string(r)
+			currentStr += string(inputRune)
 		}
 
 		cur += 1

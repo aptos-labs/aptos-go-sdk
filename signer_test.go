@@ -35,7 +35,7 @@ func (s *MultiEd25519TestSigner) AccountAddress() AccountAddress {
 	return address
 }
 
-func (s *MultiEd25519TestSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (s *MultiEd25519TestSigner) Sign(msg []byte) (*crypto.AccountAuthenticator, error) {
 	signature, err := s.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -134,7 +134,7 @@ func (s *MultiKeyTestSigner) AccountAddress() AccountAddress {
 	return address
 }
 
-func (s *MultiKeyTestSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (s *MultiKeyTestSigner) Sign(msg []byte) (*crypto.AccountAuthenticator, error) {
 	signature, err := s.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -156,7 +156,8 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 
 	for i := uint8(0); i < s.SignaturesRequired; i++ {
 		// Find a random key
-		index := 0
+		var index int
+
 		for {
 			index = rand.IntN(len(s.Signers))
 			_, present := alreadyUsed[index]
