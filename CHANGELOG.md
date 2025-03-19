@@ -5,6 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- Add ability to simulate for any transaction including multi-agent and fee payer
 - [`Fix`] Ensure proper cleanup of response body on read error to prevent potential memory leak.
 - [`Fix`] Fixes possible conflicts between signatures of multiple goroutines
 
