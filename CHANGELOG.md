@@ -14,6 +14,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Make NodeClient match AptosRpcClient interface
 - [`Dependency`] Update `golang.org/x/crypto` to `v0.32.0`
 - [`Dependency`] Update `github.com/hasura/go-graphql-client` to `v0.13.1`
+- [`Fix`] Make NodeClient satisfy AptosRpcClient interface
+- [`Breaking`] Change Account signer input to use Address instead of AuthKey, authkey comes from the private key
 
 # v1.4.1 (01/02/2024)
 
