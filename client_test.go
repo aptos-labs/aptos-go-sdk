@@ -120,6 +120,8 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 	err = client.Fund(account.AccountAddress(), fundAmount)
 	assert.NoError(t, err)
 
+	// This is messy... but there seems to be some race condition here, I don't have a ton of time to figure it out, so I'm just going to sleep
+	time.Sleep(1 * time.Second)
 	return client, account
 }
 
