@@ -60,8 +60,8 @@ func NewSecp256k1Account() (*Account, error) {
 	return NewAccountFromSigner(signer)
 }
 
-// ExtractMessageSigner extracts the message signer from the account for
-func (account *Account) ExtractMessageSigner() (crypto.MessageSigner, bool) {
+// MessageSigner extracts the message signer from the account for
+func (account *Account) MessageSigner() (crypto.MessageSigner, bool) {
 	ed25519PrivateKey, ok := account.Signer.(*crypto.Ed25519PrivateKey)
 	if ok {
 		return ed25519PrivateKey, ok
@@ -73,8 +73,8 @@ func (account *Account) ExtractMessageSigner() (crypto.MessageSigner, bool) {
 	return nil, false
 }
 
-// ExtractPrivateKeyString extracts the private key string
-func (account *Account) ExtractPrivateKeyString() (string, error) {
+// PrivateKeyString extracts the private key as an AIP-80 compliant string
+func (account *Account) PrivateKeyString() (string, error) {
 	// Handle the key by itself
 	ed25519PrivateKey, ok := account.Signer.(*crypto.Ed25519PrivateKey)
 	if ok {

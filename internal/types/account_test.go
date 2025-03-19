@@ -116,14 +116,14 @@ func TestAccount_ExtractMessageSigner(t *testing.T) {
 	ed25519Account, err := NewAccountFromSigner(ed25519PrivateKey)
 	assert.NoError(t, err)
 
-	ed25519Out, ok := ed25519Account.ExtractMessageSigner()
+	ed25519Out, ok := ed25519Account.MessageSigner()
 	assert.True(t, ok)
 	assert.Equal(t, ed25519PrivateKey, ed25519Out)
 
 	ed25519SingleSignerAccount, err := NewAccountFromSigner(crypto.NewSingleSigner(ed25519PrivateKey))
 	assert.NoError(t, err)
 
-	ed25519Out, ok = ed25519SingleSignerAccount.ExtractMessageSigner()
+	ed25519Out, ok = ed25519SingleSignerAccount.MessageSigner()
 	assert.True(t, ok)
 	assert.Equal(t, ed25519PrivateKey, ed25519Out)
 
@@ -132,14 +132,14 @@ func TestAccount_ExtractMessageSigner(t *testing.T) {
 	secp256k1SingleSignerAccount, err := NewAccountFromSigner(crypto.NewSingleSigner(secp256k1PrivateKey))
 	assert.NoError(t, err)
 
-	secp256k1Out, ok := secp256k1SingleSignerAccount.ExtractMessageSigner()
+	secp256k1Out, ok := secp256k1SingleSignerAccount.MessageSigner()
 	assert.True(t, ok)
 	assert.Equal(t, secp256k1PrivateKey, secp256k1Out)
 
 	wrapperSigner := &WrapperSigner{signer: secp256k1SingleSignerAccount}
 	customAccount, err := NewAccountFromSigner(wrapperSigner)
 	assert.NoError(t, err)
-	out, ok := customAccount.ExtractMessageSigner()
+	out, ok := customAccount.MessageSigner()
 	assert.False(t, ok)
 	assert.Nil(t, out)
 }
@@ -150,7 +150,7 @@ func TestAccount_ExtractPrivateKeyString(t *testing.T) {
 	ed25519Account, err := NewAccountFromSigner(ed25519PrivateKey)
 	assert.NoError(t, err)
 
-	ed25519KeyString, err := ed25519Account.ExtractPrivateKeyString()
+	ed25519KeyString, err := ed25519Account.PrivateKeyString()
 	assert.NoError(t, err)
 	expectedEd25519String, err := ed25519PrivateKey.ToAIP80()
 	assert.NoError(t, err)
@@ -159,7 +159,7 @@ func TestAccount_ExtractPrivateKeyString(t *testing.T) {
 	ed25519SingleSignerAccount, err := NewAccountFromSigner(crypto.NewSingleSigner(ed25519PrivateKey))
 	assert.NoError(t, err)
 
-	ed25519SingleSignerKeyString, err := ed25519SingleSignerAccount.ExtractPrivateKeyString()
+	ed25519SingleSignerKeyString, err := ed25519SingleSignerAccount.PrivateKeyString()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedEd25519String, ed25519SingleSignerKeyString)
 
@@ -170,14 +170,14 @@ func TestAccount_ExtractPrivateKeyString(t *testing.T) {
 
 	expectedSecp256k1String, err := secp256k1PrivateKey.ToAIP80()
 	assert.NoError(t, err)
-	secp256k1SingleSignerKeyString, err := secp256k1SingleSignerAccount.ExtractPrivateKeyString()
+	secp256k1SingleSignerKeyString, err := secp256k1SingleSignerAccount.PrivateKeyString()
 	assert.NoError(t, err)
 	assert.Equal(t, expectedSecp256k1String, secp256k1SingleSignerKeyString)
 
 	wrapperSigner := &WrapperSigner{signer: secp256k1SingleSignerAccount}
 	customAccount, err := NewAccountFromSigner(wrapperSigner)
 	assert.NoError(t, err)
-	out, err := customAccount.ExtractPrivateKeyString()
+	out, err := customAccount.PrivateKeyString()
 	assert.Error(t, err)
 	assert.Empty(t, out)
 }
