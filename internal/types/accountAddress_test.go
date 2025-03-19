@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -17,6 +18,13 @@ func TestAccountSpecialString(t *testing.T) {
 	err := aa2.ParseStringRelaxed("0x3")
 	assert.NoError(t, err)
 	assert.Equal(t, aa, aa2)
+}
+
+func TestAccountAddress_AuthKey(t *testing.T) {
+	authKey := &crypto.AuthenticationKey{}
+	var aa AccountAddress
+	aa.FromAuthKey(authKey)
+	assert.Equal(t, AccountZero, aa)
 }
 
 func TestSpecialAddresses(t *testing.T) {

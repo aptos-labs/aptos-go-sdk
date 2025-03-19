@@ -17,11 +17,11 @@ type Account struct {
 }
 
 // NewAccountFromSigner creates an account from a [crypto.Signer] with an optional [crypto.AuthenticationKey]
-func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.AuthenticationKey) (*Account, error) {
+func NewAccountFromSigner(signer crypto.Signer, address ...AccountAddress) (*Account, error) {
 	out := &Account{}
-	if len(authKey) == 1 {
-		copy(out.Address[:], authKey[0][:])
-	} else if len(authKey) > 1 {
+	if len(address) == 1 {
+		copy(out.Address[:], address[0][:])
+	} else if len(address) > 1 {
 		// Throw error
 		return nil, errors.New("must only provide one auth key")
 	} else {
@@ -58,6 +58,42 @@ func NewSecp256k1Account() (*Account, error) {
 	}
 	signer := crypto.NewSingleSigner(privateKey)
 	return NewAccountFromSigner(signer)
+}
+
+// MessageSigner extracts the message signer from the account for
+func (account *Account) MessageSigner() (crypto.MessageSigner, bool) {
+	ed25519PrivateKey, ok := account.Signer.(*crypto.Ed25519PrivateKey)
+	if ok {
+		return ed25519PrivateKey, ok
+	}
+	singleSigner, ok := account.Signer.(*crypto.SingleSigner)
+	if ok {
+		return singleSigner.Signer, ok
+	}
+	return nil, false
+}
+
+// PrivateKeyString extracts the private key as an AIP-80 compliant string
+func (account *Account) PrivateKeyString() (string, error) {
+	// Handle the key by itself
+	ed25519PrivateKey, ok := account.Signer.(*crypto.Ed25519PrivateKey)
+	if ok {
+		return ed25519PrivateKey.ToAIP80()
+	}
+
+	// Handle key in single signer
+	singleSigner, ok := account.Signer.(*crypto.SingleSigner)
+	if ok {
+		innerSigner := singleSigner.Signer
+		switch innerSigner.(type) {
+		case *crypto.Ed25519PrivateKey:
+			return innerSigner.(*crypto.Ed25519PrivateKey).ToAIP80()
+		case *crypto.Secp256k1PrivateKey:
+			return innerSigner.(*crypto.Secp256k1PrivateKey).ToAIP80()
+		}
+	}
+
+	return "", errors.New("signer is not a private key")
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
