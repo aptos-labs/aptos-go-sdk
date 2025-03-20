@@ -30,8 +30,8 @@ var AccountThree = types.AccountThree
 var AccountFour = types.AccountFour
 
 // NewAccountFromSigner creates an account from a Signer, which is most commonly a private key
-func NewAccountFromSigner(signer crypto.Signer, authKey ...crypto.AuthenticationKey) (*Account, error) {
-	return types.NewAccountFromSigner(signer, authKey...)
+func NewAccountFromSigner(signer crypto.Signer, accountAddress ...AccountAddress) (*Account, error) {
+	return types.NewAccountFromSigner(signer, accountAddress...)
 }
 
 // NewEd25519Account creates a legacy Ed25519 account, this is most commonly used in wallets

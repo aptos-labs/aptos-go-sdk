@@ -301,6 +301,9 @@ type AptosRpcClient interface {
 	//	simResponse, err := client.SimulateTransaction(rawTxn, sender)
 	SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
 
+	// SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
+	SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error)
+
 	// GetChainId Retrieves the ChainId of the network
 	// Note this will be cached forever, or taken directly from the config
 	GetChainId() (chainId uint8, err error)
@@ -749,6 +752,11 @@ func (client *Client) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 	return client.nodeClient.SimulateTransaction(rawTxn, sender, options...)
 }
 
+// SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
+func (client *Client) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	return client.nodeClient.SimulateTransactionMultiAgent(rawTxn, sender, options...)
+}
+
 // GetChainId Retrieves the ChainId of the network
 // Note this will be cached forever, or taken directly from the config
 func (client *Client) GetChainId() (chainId uint8, err error) {
@@ -898,4 +906,12 @@ func (client *Client) GetCoinBalances(address AccountAddress) ([]CoinBalance, er
 // NodeAPIHealthCheck checks if the node is within durationSecs of the current time, if not provided the node default is used
 func (client *Client) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	return client.nodeClient.NodeAPIHealthCheck(durationSecs...)
+}
+
+func (client *Client) AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error) {
+	return client.nodeClient.AccountModule(address, moduleName, ledgerVersion...)
+}
+
+func (client *Client) EntryFunctionWithArgs(address AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
+	return client.nodeClient.EntryFunctionWithArgs(address, moduleName, functionName, typeArgs, args)
 }

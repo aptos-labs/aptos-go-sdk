@@ -83,6 +83,20 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to build transaction:" + err.Error())
 	}
 
+	// Simulate transaction (optional)
+	// This is useful for understanding how much the transaction will cost
+	// and to ensure that the transaction is valid before sending it to the network
+	// This is optional, but recommended
+	simulationResult, err := client.SimulateTransactionMultiAgent(rawTxn, alice, aptos.FeePayer(&sponsor.Address))
+	if err != nil {
+		panic("Failed to simulate transaction:" + err.Error())
+	}
+	fmt.Printf("\n=== Simulation ===\n")
+	fmt.Printf("Gas unit price: %d\n", simulationResult[0].GasUnitPrice)
+	fmt.Printf("Gas used: %d\n", simulationResult[0].GasUsed)
+	fmt.Printf("Total gas fee: %d\n", simulationResult[0].GasUsed*simulationResult[0].GasUnitPrice)
+	fmt.Printf("Status: %s\n", simulationResult[0].VmStatus)
+
 	// Sign transaction
 	aliceAuth, err := rawTxn.Sign(alice)
 	if err != nil {

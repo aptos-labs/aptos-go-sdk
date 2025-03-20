@@ -3,13 +3,9 @@ package main
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 
 	"github.com/aptos-labs/aptos-go-sdk"
 )
-
-const MultiagentScript = "0xa11ceb0b0700000a0601000403040d04110405151b07302f085f2000000001010203040001000306020100010105010704060c060c03030205050001060c010501090003060c05030109010d6170746f735f6163636f756e74067369676e65720a616464726573735f6f660e7472616e736665725f636f696e73000000000000000000000000000000000000000000000000000000000000000102000000010f0a0011000c040a0111000c050b000b050b0238000b010b040b03380102"
 
 const FundAmount = 100_000_000
 const TransferAmount = 1_000
@@ -41,10 +37,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to fund alice:" + err.Error())
 	}
-	err = client.Fund(bob.Address, FundAmount)
-	if err != nil {
-		panic("Failed to fund bob:" + err.Error())
-	}
+
 	aliceBalance, err := client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
@@ -57,35 +50,24 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 
-	// 1. Build transaction
-	script, err := util.ParseHex(MultiagentScript)
+	// 1. Build transaction, with easy mode, no BCS serialization necessary
+	payload, err := client.EntryFunctionWithArgs(aptos.AccountOne, "aptos_account", "transfer_coins", []any{"0x1::aptos_coin::AptosCoin"}, []any{bob.Address, TransferAmount})
 	if err != nil {
-		panic("Failed to deserialize script:" + err.Error())
+		panic("Failed to call EntryFunctionWithArgs:" + err.Error())
 	}
-	rawTxn, err := client.BuildTransactionMultiAgent(alice.AccountAddress(), aptos.TransactionPayload{
-		Payload: &aptos.Script{
-			Code:     script,
-			ArgTypes: []aptos.TypeTag{aptos.AptosCoinTypeTag, aptos.AptosCoinTypeTag},
-			Args: []aptos.ScriptArgument{
-				{
-					Variant: aptos.ScriptArgumentU64,
-					Value:   uint64(TransferAmount),
-				},
-				{
-					Variant: aptos.ScriptArgumentU64,
-					Value:   uint64(TransferAmount + 200),
-				},
-			},
-		}}, aptos.AdditionalSigners([]aptos.AccountAddress{bob.Address}))
+	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
+		Payload: payload,
+	})
+
 	if err != nil {
-		panic("Failed to build multiagent raw transaction:" + err.Error())
+		panic("Failed to build transaction:" + err.Error())
 	}
 
 	// 2. Simulate transaction (optional)
 	// This is useful for understanding how much the transaction will cost
 	// and to ensure that the transaction is valid before sending it to the network
 	// This is optional, but recommended
-	simulationResult, err := client.SimulateTransactionMultiAgent(rawTxn, alice, aptos.AdditionalSigners{bob.Address})
+	simulationResult, err := client.SimulateTransaction(rawTxn, alice)
 	if err != nil {
 		panic("Failed to simulate transaction:" + err.Error())
 	}
@@ -95,20 +77,10 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Total gas fee: %d\n", simulationResult[0].GasUsed*simulationResult[0].GasUnitPrice)
 	fmt.Printf("Status: %s\n", simulationResult[0].VmStatus)
 
-	// 3. Sign transaction with both parties separately, this would be on different machines or places
-	aliceAuth, err := rawTxn.Sign(alice)
+	// 3. Sign transaction
+	signedTxn, err := rawTxn.SignedTransaction(alice)
 	if err != nil {
-		panic("Failed to sign multiagent transaction with alice:" + err.Error())
-	}
-	bobAuth, err := rawTxn.Sign(bob)
-	if err != nil {
-		panic("Failed to sign multiagent transaction with bob:" + err.Error())
-	}
-
-	// 3.a. merge the signatures together into a single transaction
-	signedTxn, ok := rawTxn.ToMultiAgentSignedTransaction(aliceAuth, []crypto.AccountAuthenticator{*bobAuth})
-	if !ok {
-		panic("Failed to build a signed multiagent transaction")
+		panic("Failed to sign transaction:" + err.Error())
 	}
 
 	// 4. Submit transaction
@@ -134,6 +106,36 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
 	fmt.Printf("\n=== Intermediate Balances ===\n")
+	fmt.Printf("Alice: %d\n", aliceBalance)
+	fmt.Printf("Bob:%d\n", bobBalance)
+
+	// Now do it again, but with a different function, with types
+	payload2, err := client.EntryFunctionWithArgs(aptos.AccountOne, "aptos_account", "transfer_coins", []any{aptos.AptosCoinTypeTag}, []any{bob.Address.String(), "1000"})
+	if err != nil {
+		panic("Failed to call EntryFunctionWithArgs:" + err.Error())
+	}
+	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
+		Payload: payload2,
+	})
+
+	if err != nil {
+		panic("Failed to sign transaction:" + err.Error())
+	}
+
+	_, err = client.WaitForTransaction(resp.Hash)
+	if err != nil {
+		panic("Failed to wait for transaction:" + err.Error())
+	}
+
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
+	if err != nil {
+		panic("Failed to retrieve alice balance:" + err.Error())
+	}
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
+	if err != nil {
+		panic("Failed to retrieve bob balance:" + err.Error())
+	}
+	fmt.Printf("\n=== Final Balances ===\n")
 	fmt.Printf("Alice: %d\n", aliceBalance)
 	fmt.Printf("Bob:%d\n", bobBalance)
 }
