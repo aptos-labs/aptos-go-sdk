@@ -293,6 +293,13 @@ func SerializeU256(input big.Int) ([]byte, error) {
 	})
 }
 
+// SerializeUleb128 Serializes a single uleb128
+func SerializeUleb128(input uint32) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.Uleb128(input)
+	})
+}
+
 // SerializeBytes Serializes a single byte array
 //
 //	input := []byte{0x1, 0x2}

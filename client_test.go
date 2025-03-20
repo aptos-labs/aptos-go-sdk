@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"strings"
 	"sync"
 	"testing"
@@ -713,4 +714,30 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 	}
 
 	return rawTxn, nil
+}
+
+func TestClient_EntryFunctionWithArgs(t *testing.T) {
+	client, err := createTestClient()
+	assert.NoError(t, err)
+
+	// Setup account
+	account, err := types.NewEd25519Account()
+	assert.NoError(t, err)
+	err = client.Fund(account.Address, 100000000)
+	assert.NoError(t, err)
+
+	// Attempt to transfer to an account, using the ABI directly
+	payload, err := client.EntryFunctionWithArgs(AccountOne, "aptos_account", "transfer_coins", []any{"0x1::aptos_coin::AptosCoin"}, []any{AccountTwo, 100})
+	assert.NoError(t, err)
+	rawTxn, err := client.BuildTransaction(account.Address, TransactionPayload{Payload: payload})
+	assert.NoError(t, err)
+	signedTxn, err := rawTxn.SignedTransaction(account)
+	assert.NoError(t, err)
+	transaction, err := client.SubmitTransaction(signedTxn)
+	assert.NoError(t, err)
+	txn, err := client.WaitForTransaction(transaction.Hash)
+	assert.NoError(t, err)
+
+	assert.True(t, txn.Success)
+
 }
