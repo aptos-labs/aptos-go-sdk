@@ -16,6 +16,7 @@ const (
 	TransactionSubmissionTypeSingle TransactionSubmissionType = iota
 	// TransactionSubmissionTypeMultiAgent represents a multi-agent or fee payer transaction
 	TransactionSubmissionTypeMultiAgent TransactionSubmissionType = iota
+	defaultWorkerCount                  uint32                    = 20
 )
 
 type TransactionBuildPayload struct {
@@ -39,6 +40,14 @@ type TransactionSubmissionResponse struct {
 	Id       uint64
 	Response *api.SubmitTransactionResponse
 	Err      error
+}
+
+// WorkerPoolConfig contains configuration for the transaction processing worker pool
+type WorkerPoolConfig struct {
+	NumWorkers uint32
+	// Channel buffer sizes. If 0, defaults to NumWorkers
+	BuildResponseBuffer uint32
+	SubmissionBuffer    uint32
 }
 
 type SequenceNumberTracker struct {
@@ -389,5 +398,107 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	}
 
 	wg.Wait()
+	close(submissionRequests)
+}
+
+func (cfg WorkerPoolConfig) getBufferSizes() (build, submission uint32) {
+	workers := defaultWorkerCount
+	if cfg.NumWorkers > 0 {
+		workers = cfg.NumWorkers
+	}
+
+	build = workers
+	if cfg.BuildResponseBuffer > 0 {
+		build = cfg.BuildResponseBuffer
+	}
+
+	submission = workers
+	if cfg.SubmissionBuffer > 0 {
+		submission = cfg.SubmissionBuffer
+	}
+
+	return build, submission
+}
+
+// startSigningWorkers initializes and starts a pool of worker goroutines for signing transactions.
+func startSigningWorkers(
+	numWorkers uint32,
+	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
+	submissionRequests chan<- TransactionSubmissionRequest,
+	responses chan<- TransactionSubmissionResponse,
+	signingWg *sync.WaitGroup,
+	transactionWg *sync.WaitGroup,
+) chan TransactionBuildResponse {
+	transactionsToSign := make(chan TransactionBuildResponse, numWorkers)
+
+	signingWg.Add(int(numWorkers))
+	for i := uint32(0); i < numWorkers; i++ {
+		go func() {
+			defer signingWg.Done()
+			for buildResponse := range transactionsToSign {
+				signedTxn, err := sign(buildResponse.Response)
+				if err != nil {
+					responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: err}
+				} else {
+					submissionRequests <- TransactionSubmissionRequest{
+						Id:        buildResponse.Id,
+						SignedTxn: signedTxn,
+					}
+				}
+				transactionWg.Done()
+			}
+		}()
+	}
+
+	return transactionsToSign
+}
+
+// BuildSignAndSubmitTransactionsWithSignFnAndWorkerPool processes transactions using a fixed-size worker pool.
+// It coordinates three stages of the pipeline:
+// 1. Building transactions (BuildTransactions)
+// 2. Signing transactions (worker pool)
+// 3. Submitting transactions (SubmitTransactions)
+func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFnAndWorkerPool(
+	sender AccountAddress,
+	payloads chan TransactionBuildPayload,
+	responses chan TransactionSubmissionResponse,
+	sign func(rawTxn RawTransactionImpl) (*SignedTransaction, error),
+	workerPoolConfig WorkerPoolConfig,
+	buildOptions ...any,
+) {
+	buildBuffer, submissionBuffer := workerPoolConfig.getBufferSizes()
+	numWorkers := workerPoolConfig.NumWorkers
+	if numWorkers == 0 {
+		numWorkers = defaultWorkerCount
+	}
+
+	buildResponses := make(chan TransactionBuildResponse, buildBuffer)
+	setSequenceNumber := make(chan uint64)
+	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
+
+	submissionRequests := make(chan TransactionSubmissionRequest, submissionBuffer)
+	go rc.SubmitTransactions(submissionRequests, responses)
+
+	var signingWg sync.WaitGroup
+	var transactionWg sync.WaitGroup
+
+	transactionsToSign := startSigningWorkers(numWorkers, sign, submissionRequests, responses, &signingWg, &transactionWg)
+
+	for buildResponse := range buildResponses {
+		if buildResponse.Err != nil {
+			responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: buildResponse.Err}
+			continue
+		}
+		transactionWg.Add(1)
+		transactionsToSign <- buildResponse
+	}
+
+	// 1. Wait for all transactions to complete processing
+	transactionWg.Wait()
+	// 2. Close signing channel to signal workers to shut down
+	close(transactionsToSign)
+	// 3. Wait for all workers to finish and clean up
+	signingWg.Wait()
+	// 4. Close submission channel after all signing is done
 	close(submissionRequests)
 }
