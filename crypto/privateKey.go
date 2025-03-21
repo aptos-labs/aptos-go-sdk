@@ -35,7 +35,7 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedStrin
 		}
 
 		// If it's already a string, just ensure it's properly formatted
-		var strBytes, err = util.ParseHex(v)
+		strBytes, err := util.ParseHex(v)
 		if err != nil {
 			return "", err
 		}

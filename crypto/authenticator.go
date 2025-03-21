@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
@@ -28,7 +29,7 @@ type AccountAuthenticatorImpl interface {
 	Verify(data []byte) bool
 }
 
-//region AccountAuthenticator
+// region AccountAuthenticator
 
 // AccountAuthenticatorType single byte representing the spot in the enum from the Rust implementation
 type AccountAuthenticatorType uint8
@@ -53,7 +54,7 @@ type AccountAuthenticator struct {
 	Auth    AccountAuthenticatorImpl // Auth is the actual authenticator
 }
 
-//region AccountAuthenticator AccountAuthenticatorImpl implementation
+// region AccountAuthenticator AccountAuthenticatorImpl implementation
 
 // PubKey returns the public key of the authenticator
 func (ea *AccountAuthenticator) PubKey() PublicKey {
@@ -70,9 +71,9 @@ func (ea *AccountAuthenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
 }
 
-//endregion
+// endregion
 
-//region AccountAuthenticator bcs.Struct implementation
+// region AccountAuthenticator bcs.Struct implementation
 
 // MarshalBCS serializes the [AccountAuthenticator] to the BCS format
 //
@@ -161,5 +162,5 @@ func (ea *AccountAuthenticator) FromKeyAndSignature(key PublicKey, sig Signature
 	return nil
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

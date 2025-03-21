@@ -2,18 +2,21 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"math/big"
 	"strconv"
 	"strings"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // TODO Add specific keys that must be deserialized and compared
-const Test64ByteHex = "0x1234123412341234123412341234123412341234123412341234123412341234"
-const Test65ByteHex = "0x1234123412341234123412341234123412341234123412341234123412341234A"
-const Test128ByteHex = "0x12341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234"
-const TestInvalidHex = "0x0101"
-const TestInvalidHexCharacters = "Not-Hex"
+const (
+	Test64ByteHex            = "0x1234123412341234123412341234123412341234123412341234123412341234"
+	Test65ByteHex            = "0x1234123412341234123412341234123412341234123412341234123412341234A"
+	Test128ByteHex           = "0x12341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234123412341234"
+	TestInvalidHex           = "0x0101"
+	TestInvalidHexCharacters = "Not-Hex"
+)
 
 // Ed25519 test data
 const (
@@ -48,7 +51,6 @@ const (
 
 // ParseHex parses hex, but skips the error
 func parseHex(hex string) []byte {
-
 	bytes, err := util.ParseHex(hex)
 	if err != nil {
 		panic("Failed to parse hex: " + hex + " " + err.Error())

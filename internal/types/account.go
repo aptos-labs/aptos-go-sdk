@@ -3,8 +3,9 @@ package types
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"strings"
+
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
 // Account represents an on-chain account, with an associated signer, which must be a [crypto.Signer]

@@ -2,9 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestAccountAuthenticator_Unknown(t *testing.T) {
@@ -19,6 +20,7 @@ func TestAccountAuthenticator_Unknown(t *testing.T) {
 
 	assert.Equal(t, "something", auth.Type)
 }
+
 func TestAccountAuthenticator_Ed25519(t *testing.T) {
 	testJson := `{
       "public_key": "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",

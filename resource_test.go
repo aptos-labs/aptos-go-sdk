@@ -2,11 +2,12 @@ package aptos
 
 import (
 	"encoding/base64"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/stretchr/testify/assert"
 )
 
 func decodeB64(x string) ([]byte, error) {

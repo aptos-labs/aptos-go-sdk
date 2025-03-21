@@ -1,9 +1,10 @@
 package aptos
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestRawTransactionSign(t *testing.T) {

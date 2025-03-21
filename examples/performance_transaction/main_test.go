@@ -1,8 +1,9 @@
 package main
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk"
 )
 
 func Test_Main(t *testing.T) {

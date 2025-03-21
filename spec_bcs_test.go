@@ -5,12 +5,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/cucumber/godog"
 	"math/big"
 	"slices"
 	"strings"
 	"testing"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/cucumber/godog"
 )
 
 type TestStruct struct {
@@ -94,7 +95,6 @@ func givenU32(ctx context.Context, input int) (context.Context, error) {
 
 func givenU64(ctx context.Context, input string) (context.Context, error) {
 	val, err := StrToUint64(input)
-
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +103,6 @@ func givenU64(ctx context.Context, input string) (context.Context, error) {
 
 func givenU128(ctx context.Context, input string) (context.Context, error) {
 	val, err := StrToBigInt(input)
-
 	// TODO: Check that the input is a valid u128
 	if err != nil {
 		return nil, fmt.Errorf("u128 must be a valid number %w", err)
@@ -114,7 +113,6 @@ func givenU128(ctx context.Context, input string) (context.Context, error) {
 
 func givenU256(ctx context.Context, input string) (context.Context, error) {
 	val, err := StrToBigInt(input)
-
 	// TODO: Check that the input is a valid u256
 	if err != nil {
 		return nil, fmt.Errorf("u256 must be a valid number %w", err)
@@ -159,7 +157,6 @@ func serializeAddress(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.Serialize(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize address %v: %w", input, err)
 	}
@@ -174,7 +171,6 @@ func serializeBool(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeBool(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize boolean %v: %w", input, err)
 	}
@@ -189,7 +185,6 @@ func serializeU8(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU8(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u8 %v: %w", input, err)
 	}
@@ -204,7 +199,6 @@ func serializeU16(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU16(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u16 %v: %w", input, err)
 	}
@@ -219,7 +213,6 @@ func serializeU32(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU32(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u32 %v: %w", input, err)
 	}
@@ -234,7 +227,6 @@ func serializeU64(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU64(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u64 %v: %w", input, err)
 	}
@@ -249,7 +241,6 @@ func serializeU128(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU128(*input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u128 %v: %w", input, err)
 	}
@@ -264,7 +255,6 @@ func serializeU256(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.SerializeU256(*input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize u256 %v: %w", input, err)
 	}
@@ -281,7 +271,6 @@ func serializeUleb128(ctx context.Context) (context.Context, error) {
 	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
 		ser.Uleb128(input)
 	})
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize uleb128 %v: %w", input, err)
 	}
@@ -297,7 +286,6 @@ func serializeFixedBytes(ctx context.Context, _ int) (context.Context, error) {
 	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
 		ser.FixedBytes(input)
 	})
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize fixed bytes %v: %w", input, err)
 	}
@@ -311,7 +299,6 @@ func serializeBytes(ctx context.Context) (context.Context, error) {
 		return ctx, errors.New("input is not []byte")
 	}
 	out, err := bcs.SerializeBytes(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize fixed bytes %v: %w", input, err)
 	}
@@ -327,7 +314,6 @@ func serializeString(ctx context.Context) (context.Context, error) {
 	out, err := bcs.SerializeSingle(func(ser *bcs.Serializer) {
 		ser.WriteString(input)
 	})
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize string %v: %w", input, err)
 	}
@@ -433,7 +419,6 @@ func serializeSequence(ctx context.Context, itemType string) (context.Context, e
 
 	result := ser.ToBytes()
 	err := ser.Error()
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize %s sequence: %w", itemType, err)
 	}
@@ -448,7 +433,6 @@ func serializeStruct(ctx context.Context) (context.Context, error) {
 	}
 
 	out, err := bcs.Serialize(input)
-
 	if err != nil {
 		return ctx, fmt.Errorf("failed to serialize struct %v: %w", input, err)
 	}

@@ -2,7 +2,7 @@ package crypto
 
 import "github.com/aptos-labs/aptos-go-sdk/bcs"
 
-//region NoAuthenticator
+// region NoAuthenticator
 
 // NoAuthenticator represents a verifiable signature with it's accompanied public key
 //
@@ -12,10 +12,9 @@ import "github.com/aptos-labs/aptos-go-sdk/bcs"
 //   - [bcs.Marshaler]
 //   - [bcs.Unmarshaler]
 //   - [bcs.Struct]
-type NoAuthenticator struct {
-}
+type NoAuthenticator struct{}
 
-//region NoAuthenticator AccountAuthenticatorImpl implementation
+// region NoAuthenticator AccountAuthenticatorImpl implementation
 
 // PublicKey returns the [PublicKey] of the authenticator
 //
@@ -41,9 +40,9 @@ func (ea *NoAuthenticator) Verify([]byte) bool {
 	return false
 }
 
-//endregion
+// endregion
 
-//region NoAuthenticator bcs.Struct implementation
+// region NoAuthenticator bcs.Struct implementation
 
 // MarshalBCS serializes the [NoAuthenticator] to BCS bytes
 //
@@ -66,8 +65,9 @@ func (ea *NoAuthenticator) UnmarshalBCS(*bcs.Deserializer) {
 func NoAccountAuthenticator() *AccountAuthenticator {
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorNone,
-		Auth:    &NoAuthenticator{}}
+		Auth:    &NoAuthenticator{},
+	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

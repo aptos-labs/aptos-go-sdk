@@ -1,13 +1,16 @@
 package crypto
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
-var materials map[string]CryptoMaterial
-var structs map[string]bcs.Struct
+var (
+	materials map[string]CryptoMaterial
+	structs   map[string]bcs.Struct
+)
 
 func init() {
 	msg := []byte("hello")

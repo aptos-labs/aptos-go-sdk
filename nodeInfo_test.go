@@ -3,10 +3,11 @@ package aptos
 import (
 	"bytes"
 	"context"
-	"github.com/stretchr/testify/assert"
 	"log/slog"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type levelCounts struct {
@@ -70,16 +71,19 @@ func NewCountingHandlerWrapper(inner slog.Handler) *CountingHandlerWrapper {
 func (chw *CountingHandlerWrapper) Enabled(ctx context.Context, level slog.Level) bool {
 	return chw.inner.Enabled(ctx, level)
 }
+
 func (chw *CountingHandlerWrapper) Handle(ctx context.Context, rec slog.Record) error {
 	chw.counts.inc(rec.Level)
 	return chw.inner.Handle(ctx, rec)
 }
+
 func (chw *CountingHandlerWrapper) WithAttrs(attrs []slog.Attr) slog.Handler {
 	return &CountingHandlerWrapper{
 		inner:  chw.inner.WithAttrs(attrs),
 		counts: chw.counts,
 	}
 }
+
 func (chw *CountingHandlerWrapper) WithGroup(name string) slog.Handler {
 	return &CountingHandlerWrapper{
 		inner:  chw.inner.WithGroup(name),

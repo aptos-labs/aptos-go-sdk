@@ -1,12 +1,13 @@
 package aptos
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 /**
@@ -40,7 +41,6 @@ func Test_Spec_Secp256k1_Generation(t *testing.T) {
 //   - It must be able to output to a byte array
 //   - It must be able to output to a 0x prefixed hex string
 func Test_Spec_Secp256k1_PrivateKey(t *testing.T) {
-
 	// It must be able to load a private key from a byte array
 	key1 := &crypto.Secp256k1PrivateKey{}
 	err := key1.FromBytes(parseHex(TestSecp256k1PrivateKeyHex))

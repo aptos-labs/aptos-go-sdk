@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"errors"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
@@ -20,7 +21,7 @@ type TransactionSigner interface {
 	AccountAddress() AccountAddress
 }
 
-//region SignedTransaction
+// region SignedTransaction
 
 // UserTransactionVariant is the variant for a transaction submitted by a user.  For now, we don't support any others,
 // because they can't be submitted.
@@ -68,12 +69,12 @@ func (txn *SignedTransaction) Hash() (string, error) {
 	return BytesToHex(hashBytes), nil
 }
 
-//region SignedTransaction bcs.Struct
-
+// region SignedTransaction bcs.Struct
 func (txn *SignedTransaction) MarshalBCS(ser *bcs.Serializer) {
 	txn.Transaction.MarshalBCS(ser)
 	txn.Authenticator.MarshalBCS(ser)
 }
+
 func (txn *SignedTransaction) UnmarshalBCS(des *bcs.Deserializer) {
 	txn.Transaction = &RawTransaction{}
 	txn.Transaction.UnmarshalBCS(des)
@@ -81,5 +82,5 @@ func (txn *SignedTransaction) UnmarshalBCS(des *bcs.Deserializer) {
 	txn.Authenticator.UnmarshalBCS(des)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

@@ -2,9 +2,10 @@ package crypto
 
 import (
 	"encoding/hex"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMultiKey(t *testing.T) {
@@ -83,7 +84,6 @@ func TestMultiKeySerialization(t *testing.T) {
 	err = bcs.Deserialize(authDeserialized, authBytes)
 	assert.NoError(t, err)
 	assert.Equal(t, auth, authDeserialized)
-
 }
 
 func TestMultiKey_Serialization_CrossPlatform(t *testing.T) {

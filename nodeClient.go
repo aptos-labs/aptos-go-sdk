@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"io"
 	"log/slog"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"sort"
 	"strconv"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -875,7 +876,6 @@ type ChainIdOption uint8
 //   - [SequenceNumber]
 //   - [ChainIdOption]
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -926,7 +926,6 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 //   - [FeePayer]
 //   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -1163,10 +1162,11 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ..
 	if err != nil {
 		return 0, err
 	}
-	values, err := rc.View(&ViewPayload{Module: ModuleId{
-		Address: AccountOne,
-		Name:    "coin",
-	},
+	values, err := rc.View(&ViewPayload{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "coin",
+		},
 		Function: "balance",
 		ArgTypes: []TypeTag{AptosCoinTypeTag},
 		Args:     [][]byte{accountBytes},

@@ -37,8 +37,10 @@ script {
 }
 */
 
-const scriptBytes = "a11ceb0b0700000a0601000202020405061d07231c083f40107f1f0103000207001101020d0e03040f0508000a020a0d0a0e0a030a040a0f0a050a080000083c53454c463e5f30046d61696e06537472696e6706737472696e67ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000114636f6d70696c6174696f6e5f6d65746164617461090003322e3003322e310000010102"
-const FundAmount = uint64(100_000_000)
+const (
+	scriptBytes = "a11ceb0b0700000a0601000202020405061d07231c083f40107f1f0103000207001101020d0e03040f0508000a020a0d0a0e0a030a040a0f0a050a080000083c53454c463e5f30046d61696e06537472696e6706737472696e67ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff000000000000000000000000000000000000000000000000000000000000000114636f6d70696c6174696f6e5f6d65746164617461090003322e3003322e310000010102"
+	FundAmount  = uint64(100_000_000)
+)
 
 func example(networkConfig aptos.NetworkConfig) {
 	// Create a client for Aptos
@@ -269,7 +271,8 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 					Value:   &bcs.Serialized{Value: vec_string_arg},
 				},
 			},
-		}})
+		},
+	})
 	if err != nil {
 		panic("Failed to build multiagent raw transaction:" + err.Error())
 	}
@@ -311,6 +314,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 }
+
 func main() {
 	example(aptos.DevnetConfig)
 }
