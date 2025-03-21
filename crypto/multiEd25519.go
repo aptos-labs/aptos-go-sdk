@@ -87,7 +87,7 @@ func (key *MultiEd25519PublicKey) Bytes() []byte {
 	for i, publicKey := range key.PubKeys {
 		start := i * ed25519.PublicKeySize
 		end := start + ed25519.PublicKeySize
-		copy(keyBytes[start:end], publicKey.Bytes()[:])
+		copy(keyBytes[start:end], publicKey.Bytes())
 	}
 	keyBytes[len(keyBytes)-1] = key.SignaturesRequired
 	return keyBytes
@@ -277,7 +277,7 @@ func (e *MultiEd25519Signature) Bytes() []byte {
 	for i, signature := range e.Signatures {
 		start := i * ed25519.SignatureSize
 		end := start + ed25519.SignatureSize
-		copy(sigBytes[start:end], signature.Bytes()[:])
+		copy(sigBytes[start:end], signature.Bytes())
 	}
 	copy(sigBytes[len(sigBytes)-MultiEd25519BitmapLen:], e.Bitmap[:])
 	return sigBytes

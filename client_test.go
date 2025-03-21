@@ -332,7 +332,7 @@ func Test_Account(t *testing.T) {
 	assert.Equal(t, uint64(0), sequenceNumber)
 	authKey, err := account.AuthenticationKey()
 	assert.NoError(t, err)
-	assert.Equal(t, AccountOne[:], authKey[:])
+	assert.Equal(t, AccountOne[:], authKey)
 }
 
 func Test_Transactions(t *testing.T) {

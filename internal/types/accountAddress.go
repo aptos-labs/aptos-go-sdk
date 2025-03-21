@@ -127,7 +127,7 @@ func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAd
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
 func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
 	authKey := aa.AuthKey()
-	authKey.FromBytesAndScheme(append(authKey[:], seed[:]...), typeByte)
+	authKey.FromBytesAndScheme(append(authKey[:], seed...), typeByte)
 	copy(accountAddress[:], authKey[:])
 	return
 }

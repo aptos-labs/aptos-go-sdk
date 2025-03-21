@@ -72,7 +72,7 @@ func TestEd25519Keys(t *testing.T) {
 	assert.NoError(t, err)
 	// Need to prepend the length
 	expectedBcsPublicKeyBytes := []byte{ed25519.PublicKeySize}
-	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, expectedPublicKeyBytes[:]...)
+	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, expectedPublicKeyBytes...)
 	assert.Equal(t, expectedBcsPublicKeyBytes, publicKeyBytes)
 
 	publicKey2 := &Ed25519PublicKey{}
