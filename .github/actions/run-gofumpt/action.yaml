@@ -1,0 +1,21 @@
+name: "Go Unit Tests"
+description: |
+  Run Go unit tests
+
+runs:
+  using: composite
+  steps:
+    # Setup checkout of Git
+    - uses: actions/checkout@v4
+    # Setup Go
+    - uses: actions/setup-go@v5
+      with:
+        go-version: '>=1.22'
+    # Run vet and formatter
+    - shell: bash
+      run: 'go vet ./...'
+    - shell: bash
+      run: 'go install mvdan.cc/gofumpt@latest'
+    - shell: bash
+      run: "(test `gofumpt -l -e . | wc -l | sed 's/ //g'` = '0' && echo 'Formatting is good') || (echo 'Formatting is wrong please run gofumpt -l -w' && exit -1)"
+
