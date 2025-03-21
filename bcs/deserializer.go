@@ -109,11 +109,11 @@ func (des *Deserializer) deserializeUBigint(typeName string, size int) big.Int {
 		return *big.NewInt(-1)
 	}
 	bytesBigEndian := make([]byte, size)
-	copy(bytesBigEndian[:], des.source[des.pos:end])
+	copy(bytesBigEndian, des.source[des.pos:end])
 	des.pos = end
-	slices.Reverse(bytesBigEndian[:])
+	slices.Reverse(bytesBigEndian)
 	var out big.Int
-	out.SetBytes(bytesBigEndian[:])
+	out.SetBytes(bytesBigEndian)
 	return out
 }
 

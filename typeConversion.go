@@ -63,12 +63,11 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 
 		// If it's `signer` or `&signer` need to skip
 		// TODO: only skip at the beginning
-		switch typeArg.Value.(type) {
+		switch innerArg := typeArg.Value.(type) {
 		case *SignerTag:
 			// Skip
 			continue
 		case *ReferenceTag:
-			innerArg := typeArg.Value.(*ReferenceTag)
 			switch innerArg.TypeParam.Value.(type) {
 			case *SignerTag:
 				// Skip
@@ -583,7 +582,7 @@ func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) (out []byte, 
 }
 
 func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
-	switch typeArg.Value.(type) {
+	switch innerType := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
 		if err != nil {
@@ -634,23 +633,21 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 		return bcs.Serialize(a)
 	case *GenericTag:
 		// Convert based on number
-		genericTag := typeArg.Value.(*GenericTag)
-		genericNum := genericTag.Num
+		genericNum := innerType.Num
 		if genericNum >= uint64(len(generics)) {
 			return nil, fmt.Errorf("generic number out of bounds")
 		}
 
-		tag := generics[genericTag.Num]
+		tag := generics[genericNum]
 		return ConvertArg(tag, arg, generics)
 	case *ReferenceTag:
 		// Convert based on inner type
-		refTag := typeArg.Value.(*ReferenceTag)
-		return ConvertArg(refTag.TypeParam, arg, generics)
+		return ConvertArg(innerType.TypeParam, arg, generics)
 	case *VectorTag:
 		// This has two paths:
 		// 1. Hex strings are allowed for vector<u8>
 		// 2. Otherwise, everything is just parsed as an array of the inner type
-		vecTag := typeArg.Value.(*VectorTag)
+		vecTag := innerType
 		switch vecTag.TypeParam.Value.(type) {
 		case *U8Tag:
 			return ConvertToVectorU8(arg)
@@ -658,7 +655,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 			return ConvertToVector(vecTag.TypeParam, arg, generics)
 		}
 	case *StructTag:
-		structTag := typeArg.Value.(*StructTag)
+		structTag := innerType
 		// TODO: We should be able to support custom structs, but for now only support known
 		switch structTag.Address {
 		case AccountOne:

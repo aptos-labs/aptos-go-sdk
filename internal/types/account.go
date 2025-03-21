@@ -20,13 +20,13 @@ type Account struct {
 // NewAccountFromSigner creates an account from a [crypto.Signer] with an optional [crypto.AuthenticationKey]
 func NewAccountFromSigner(signer crypto.Signer, address ...AccountAddress) (*Account, error) {
 	out := &Account{}
-	if len(address) == 1 {
-		copy(out.Address[:], address[0][:])
-	} else if len(address) > 1 {
-		// Throw error
-		return nil, errors.New("must only provide one auth key")
-	} else {
+	switch len(address) {
+	case 0:
 		copy(out.Address[:], signer.AuthKey()[:])
+	case 1:
+		copy(out.Address[:], address[0][:])
+	default:
+		return nil, errors.New("must only provide one auth key")
 	}
 	out.Signer = signer
 	return out, nil

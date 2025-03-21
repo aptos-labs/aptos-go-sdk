@@ -59,16 +59,16 @@ func (ser *Serializer) Bool(v bool) {
 
 func serializeUInt[T uint16 | uint32 | uint64](ser *Serializer, size uint, v T, serialize func(slice []byte, num T)) {
 	ub := make([]byte, size)
-	serialize(ub[:], v)
-	ser.out.Write(ub[:])
+	serialize(ub, v)
+	ser.out.Write(ub)
 }
 
 func (ser *Serializer) serializeUBigInt(size uint, v *big.Int) {
 	ub := make([]byte, size)
-	v.FillBytes(ub[:])
+	v.FillBytes(ub)
 	// Reverse, since big.Int outputs bytes in BigEndian
-	slices.Reverse(ub[:])
-	ser.out.Write(ub[:])
+	slices.Reverse(ub)
+	ser.out.Write(ub)
 }
 
 // U8 serialize a byte

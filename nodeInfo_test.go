@@ -18,7 +18,7 @@ type levelCounts struct {
 func (lc *levelCounts) inc(level slog.Level) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
-	lc.counts[level] = lc.counts[level] + 1
+	lc.counts[level]++
 }
 
 func (lc *levelCounts) get(level slog.Level) int {
