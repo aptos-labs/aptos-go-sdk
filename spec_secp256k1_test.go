@@ -192,6 +192,7 @@ func Test_Spec_Secp256k1_Signature(t *testing.T) {
 
 	// It must be able to encode in BCS bytes
 	bcsBytes1, err := bcs.Serialize(sig1)
+	assert.NoError(t, err, "It must be able to encode in BCS bytes")
 
 	// It must be able to decode from BCS bytes
 	decodedSig := &crypto.Secp256k1Signature{}

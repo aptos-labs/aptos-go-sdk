@@ -27,29 +27,6 @@ func (lc *levelCounts) get(level slog.Level) int {
 	return lc.counts[level]
 }
 
-func (lc *levelCounts) total() int {
-	lc.lock.Lock()
-	defer lc.lock.Unlock()
-	sum := 0
-	for _, count := range lc.counts {
-		sum += count
-	}
-	return sum
-}
-
-// e.g. slog.LevelDebug == -4, slog.LevelError = 8
-func (lc *levelCounts) totalAbove(level slog.Level) int {
-	lc.lock.Lock()
-	defer lc.lock.Unlock()
-	sum := 0
-	for xlevel, count := range lc.counts {
-		if xlevel >= level {
-			sum += count
-		}
-	}
-	return sum
-}
-
 func newLevelCounts() *levelCounts {
 	out := new(levelCounts)
 	out.counts = make(map[slog.Level]int, 5)
@@ -116,7 +93,7 @@ func setupTestLogging() *testSlogContext {
 
 func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
 	if t.Failed() {
-		t.Log(string(logContext.logbuf.Bytes()))
+		t.Log(logContext.logbuf.String())
 	}
 	slog.SetDefault(logContext.oldDefault)
 }

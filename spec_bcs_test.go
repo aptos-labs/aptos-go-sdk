@@ -426,20 +426,6 @@ func serializeSequence(ctx context.Context, itemType string) (context.Context, e
 	return context.WithValue(ctx, godogsCtxKey{}, result), nil
 }
 
-func serializeStruct(ctx context.Context) (context.Context, error) {
-	input, ok := ctx.Value(godogsCtxKey{}).(*TestStruct)
-	if !ok {
-		return ctx, errors.New("input is not *TestStruct")
-	}
-
-	out, err := bcs.Serialize(input)
-	if err != nil {
-		return ctx, fmt.Errorf("failed to serialize struct %v: %w", input, err)
-	}
-
-	return context.WithValue(ctx, godogsCtxKey{}, out), nil
-}
-
 func deserializeAddress(ctx context.Context) (context.Context, error) {
 	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
 	if !ok {
@@ -681,21 +667,6 @@ func deserializeString(ctx context.Context) (context.Context, error) {
 	remaining := des.Remaining()
 	if remaining != 0 {
 		return ctx, fmt.Errorf("expected no remaining bytes, but got %d", remaining)
-	}
-
-	return context.WithValue(ctx, godogsCtxKey{}, result), nil
-}
-
-func deserializeStruct(ctx context.Context) (context.Context, error) {
-	input, ok := ctx.Value(godogsCtxKey{}).([]byte)
-	if !ok {
-		return ctx, errors.New("input is not []byte")
-	}
-
-	result := &TestStruct{}
-	err := bcs.Deserialize(result, input)
-	if err != nil {
-		return context.WithValue(ctx, godogsCtxKey{}, err), nil
 	}
 
 	return context.WithValue(ctx, godogsCtxKey{}, result), nil

@@ -70,8 +70,8 @@ func (snt *SequenceNumberTracker) Update(next uint64) uint64 {
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
-func (client *Client) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) (*RawTransaction, error) {
-	return client.BuildTransactions(sender, payloads, responses, setSequenceNumber, options...)
+func (client *Client) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
+	client.nodeClient.BuildTransactions(sender, payloads, responses, setSequenceNumber, options...)
 }
 
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].

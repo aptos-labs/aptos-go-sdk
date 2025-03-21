@@ -25,9 +25,7 @@ func ParseHex(hexStr string) ([]byte, error) {
 	if hexStr == "0x" {
 		return []byte{}, nil
 	}
-	if strings.HasPrefix(hexStr, "0x") {
-		hexStr = hexStr[2:]
-	}
+	hexStr = strings.TrimPrefix(hexStr, "0x")
 	return hex.DecodeString(hexStr)
 }
 
