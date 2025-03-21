@@ -10,7 +10,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-//region TypeTag
+// region TypeTag
 
 // TypeTagVariant is an enum representing the different types of TypeTag
 type TypeTagVariant uint32
@@ -72,7 +72,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 	// Iterate through characters, handling border conditions, we don't use a range because we sometimes skip ahead
 	for cur < len(inputRunes) {
 		r := inputRunes[cur]
-		//println(fmt.Printf("%c | %s | %s\n", r, currentStr, util.PrettyJson(saved)))
+		// println(fmt.Printf("%c | %s | %s\n", r, currentStr, util.PrettyJson(saved)))
 
 		switch r {
 		case '<':
@@ -193,7 +193,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 	str := strings.TrimSpace(input)
 
-	//println(fmt.Printf("-- %s | %s\n", input, util.PrettyJson(types)))
+	// println(fmt.Printf("-- %s | %s\n", input, util.PrettyJson(types)))
 	// TODO: for now we aren't going to lowercase this
 
 	// Handle primitive types
@@ -277,7 +277,7 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 
 		// Validate struct address
 		address := &AccountAddress{}
-		//println("PARTS:", util.PrettyJson(parts))
+		// println("PARTS:", util.PrettyJson(parts))
 		err := address.ParseStringWithPrefixRelaxed(parts[0])
 		if err != nil {
 			return nil, errors.New("invalid type tag struct address")
@@ -311,7 +311,7 @@ func (tt *TypeTag) String() string {
 	return tt.Value.String()
 }
 
-//region TypeTag bcs.Struct
+// region TypeTag bcs.Struct
 
 // MarshalBCS serializes the TypeTag to bytes
 //
@@ -358,16 +358,15 @@ func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(tt.Value)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region SignerTag
+// region SignerTag
 
 // SignerTag represents the signer type in Move
 type SignerTag struct{}
 
-//region SignerTag TypeTagImpl
-
+// region SignerTag TypeTagImpl
 func (xt *SignerTag) String() string {
 	return "signer"
 }
@@ -376,23 +375,21 @@ func (xt *SignerTag) GetType() TypeTagVariant {
 	return TypeTagSigner
 }
 
-//endregion
+// endregion
 
-//region SignerTag bcs.Struct
-
+// region SignerTag bcs.Struct
 func (xt *SignerTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *SignerTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region AddressTag
+// region AddressTag
 
 // AddressTag represents the address type in Move
 type AddressTag struct{}
 
-//region AddressTag TypeTagImpl
-
+// region AddressTag TypeTagImpl
 func (xt *AddressTag) String() string {
 	return "address"
 }
@@ -401,23 +398,21 @@ func (xt *AddressTag) GetType() TypeTagVariant {
 	return TypeTagAddress
 }
 
-//endregion
+// endregion
 
-//region AddressTag bcs.Struct
-
+// region AddressTag bcs.Struct
 func (xt *AddressTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *AddressTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region BoolTag
+// region BoolTag
 
 // BoolTag represents the bool type in Move
 type BoolTag struct{}
 
-//region BoolTag TypeTagImpl
-
+// region BoolTag TypeTagImpl
 func (xt *BoolTag) String() string {
 	return "bool"
 }
@@ -426,23 +421,21 @@ func (xt *BoolTag) GetType() TypeTagVariant {
 	return TypeTagBool
 }
 
-//endregion
+// endregion
 
-//region BoolTag bcs.struct
-
+// region BoolTag bcs.struct
 func (xt *BoolTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *BoolTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U8Tag
+// region U8Tag
 
 // U8Tag represents the u8 type in Move
 type U8Tag struct{}
 
-//region U8Tag TypeTagImpl
-
+// region U8Tag TypeTagImpl
 func (xt *U8Tag) String() string {
 	return "u8"
 }
@@ -451,23 +444,21 @@ func (xt *U8Tag) GetType() TypeTagVariant {
 	return TypeTagU8
 }
 
-//endregion
+// endregion
 
-//region U8Tag bcs.Struct
-
+// region U8Tag bcs.Struct
 func (xt *U8Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U8Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U16Tag
+// region U16Tag
 
 // U16Tag represents the u16 type in Move
 type U16Tag struct{}
 
-//region U16Tag TypeTagImpl
-
+// region U16Tag TypeTagImpl
 func (xt *U16Tag) String() string {
 	return "u16"
 }
@@ -476,23 +467,21 @@ func (xt *U16Tag) GetType() TypeTagVariant {
 	return TypeTagU16
 }
 
-//endregion
+// endregion
 
-//region U16Tag bcs.Struct
-
+// region U16Tag bcs.Struct
 func (xt *U16Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U16Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U32Tag
+// region U32Tag
 
 // U32Tag represents the u32 type in Move
 type U32Tag struct{}
 
-//region U32Tag TypeTagImpl
-
+// region U32Tag TypeTagImpl
 func (xt *U32Tag) String() string {
 	return "u32"
 }
@@ -501,23 +490,21 @@ func (xt *U32Tag) GetType() TypeTagVariant {
 	return TypeTagU32
 }
 
-//endregion
+// endregion
 
-//region U32Tag bcs.Struct
-
+// region U32Tag bcs.Struct
 func (xt *U32Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U32Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U64Tag
+// region U64Tag
 
 // U64Tag represents the u64 type in Move
 type U64Tag struct{}
 
-//region U64Tag TypeTagImpl
-
+// region U64Tag TypeTagImpl
 func (xt *U64Tag) String() string {
 	return "u64"
 }
@@ -526,23 +513,21 @@ func (xt *U64Tag) GetType() TypeTagVariant {
 	return TypeTagU64
 }
 
-//endregion
+// endregion
 
-//region U64Tag bcs.Struct
-
+// region U64Tag bcs.Struct
 func (xt *U64Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U64Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U128Tag
+// region U128Tag
 
 // U128Tag represents the u128 type in Move
 type U128Tag struct{}
 
-//region U128Tag TypeTagImpl
-
+// region U128Tag TypeTagImpl
 func (xt *U128Tag) String() string {
 	return "u128"
 }
@@ -551,23 +536,21 @@ func (xt *U128Tag) GetType() TypeTagVariant {
 	return TypeTagU128
 }
 
-//endregion
+// endregion
 
-//region U128Tag bcs.Struct
-
+// region U128Tag bcs.Struct
 func (xt *U128Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U128Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region U256Tag
+// region U256Tag
 
 // U256Tag represents the u256 type in Move
 type U256Tag struct{}
 
-//region U256Tag TypeTagImpl
-
+// region U256Tag TypeTagImpl
 func (xt *U256Tag) String() string {
 	return "u256"
 }
@@ -576,25 +559,23 @@ func (xt *U256Tag) GetType() TypeTagVariant {
 	return TypeTagU256
 }
 
-//endregion
+// endregion
 
-//region U256Tag bcs.Struct
-
+// region U256Tag bcs.Struct
 func (xt *U256Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U256Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region VectorTag
+// region VectorTag
 
 // VectorTag represents the vector<T> type in Move, where T is another [TypeTag]
 type VectorTag struct {
 	TypeParam TypeTag // TypeParam is the type of the elements in the vector
 }
 
-//region VectorTag TypeTagImpl
-
+// region VectorTag TypeTagImpl
 func (xt *VectorTag) GetType() TypeTagVariant {
 	return TypeTagVector
 }
@@ -607,10 +588,9 @@ func (xt *VectorTag) String() string {
 	return out.String()
 }
 
-//endregion
+// endregion
 
-//region TypeTagVector bcs.Struct
-
+// region TypeTagVector bcs.Struct
 func (xt *VectorTag) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(&xt.TypeParam)
 }
@@ -621,10 +601,10 @@ func (xt *VectorTag) UnmarshalBCS(des *bcs.Deserializer) {
 	xt.TypeParam = tag
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region StructTag
+// region StructTag
 
 // StructTag represents an on-chain struct of the form address::module::name<T1,T2,...> and each T is a [TypeTag]
 type StructTag struct {
@@ -634,8 +614,7 @@ type StructTag struct {
 	TypeParams []TypeTag      // TypeParams are the TypeTags of the type parameters
 }
 
-//region StructTag TypeTagImpl
-
+// region StructTag TypeTagImpl
 func (xt *StructTag) GetType() TypeTagVariant {
 	return TypeTagStruct
 }
@@ -662,16 +641,16 @@ func (xt *StructTag) String() string {
 	return out.String()
 }
 
-//endregion
+// endregion
 
-//region StructTag bcs.Struct
-
+// region StructTag bcs.Struct
 func (xt *StructTag) MarshalBCS(ser *bcs.Serializer) {
 	xt.Address.MarshalBCS(ser)
 	ser.WriteString(xt.Module)
 	ser.WriteString(xt.Name)
 	bcs.SerializeSequence(xt.TypeParams, ser)
 }
+
 func (xt *StructTag) UnmarshalBCS(des *bcs.Deserializer) {
 	xt.Address.UnmarshalBCS(des)
 	xt.Module = des.ReadString()
@@ -679,18 +658,17 @@ func (xt *StructTag) UnmarshalBCS(des *bcs.Deserializer) {
 	xt.TypeParams = bcs.DeserializeSequence[TypeTag](des)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region ReferenceTag
+// region ReferenceTag
 
 // ReferenceTag represents a reference of a type in Move
 type ReferenceTag struct {
 	TypeParam TypeTag
 }
 
-//region ReferenceTag TypeTagImpl
-
+// region ReferenceTag TypeTagImpl
 func (xt *ReferenceTag) String() string {
 	out := strings.Builder{}
 	out.WriteString("&")
@@ -702,25 +680,24 @@ func (xt *ReferenceTag) GetType() TypeTagVariant {
 	return TypeTagReference
 }
 
-//endregion
+// endregion
 
-//region Reference bcs.Struct
+// region Reference bcs.Struct
 
 // TODO: Do we need a proper serialization here
 func (xt *ReferenceTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *ReferenceTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
+// endregion
 
-//region GenericTag
+// region GenericTag
 
 // GenericTag represents a generic of a type in Move
 type GenericTag struct {
 	Num uint64
 }
 
-//region GenericTag TypeTagImpl
-
+// region GenericTag TypeTagImpl
 func (xt *GenericTag) String() string {
 	out := strings.Builder{}
 	out.WriteString("T")
@@ -732,17 +709,17 @@ func (xt *GenericTag) GetType() TypeTagVariant {
 	return TypeTagGeneric
 }
 
-//endregion
+// endregion
 
-//region Generic bcs.Struct
+// region Generic bcs.Struct
 
 // TODO: Do we need a proper serialization here
 func (xt *GenericTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *GenericTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
-//endregion
+// endregion
 
-//region TypeTag helpers
+// region TypeTag helpers
 
 // NewTypeTag wraps a TypeTagImpl in a TypeTag
 func NewTypeTag(inner TypeTagImpl) TypeTag {
@@ -795,4 +772,4 @@ var AptosCoinTypeTag = TypeTag{&StructTag{
 	Name:    "AptosCoin",
 }}
 
-//endregion
+// endregion

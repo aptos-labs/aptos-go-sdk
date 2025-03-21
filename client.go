@@ -405,7 +405,6 @@ type AptosFaucetClient interface {
 // AptosIndexerClient is an interface for all functionality on the Client that is Indexer related.  Its main implementation
 // is [IndexerClient]
 type AptosIndexerClient interface {
-
 	// QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer client on how to make queries
 	//
 	//	var out []CoinBalance

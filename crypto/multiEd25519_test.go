@@ -1,9 +1,10 @@
 package crypto
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestMultiEd25519Keys(t *testing.T) {
@@ -58,7 +59,6 @@ func TestMultiEd25519KeySerialization(t *testing.T) {
 	err = bcs.Deserialize(authDeserialized, authBytes)
 	assert.NoError(t, err)
 	assert.Equal(t, auth, authDeserialized)
-
 }
 
 func createMultiEd25519Key(t *testing.T) (

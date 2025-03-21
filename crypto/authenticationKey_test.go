@@ -1,9 +1,10 @@
 package crypto
 
 import (
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const testAuthKey = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"

@@ -2,10 +2,11 @@ package types
 
 import (
 	"encoding/json"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestAccountSpecialString(t *testing.T) {

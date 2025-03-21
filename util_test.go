@@ -1,9 +1,10 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var testConfig = LocalnetConfig

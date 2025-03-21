@@ -1,11 +1,12 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/stretchr/testify/assert"
@@ -739,5 +740,4 @@ func TestClient_EntryFunctionWithArgs(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, txn.Success)
-
 }

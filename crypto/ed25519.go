@@ -11,7 +11,7 @@ import (
 	"github.com/hdevalence/ed25519consensus"
 )
 
-//region Ed25519PrivateKey
+// region Ed25519PrivateKey
 
 // Ed25519PrivateKey represents an Ed25519Private key
 //
@@ -45,7 +45,7 @@ func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey
 	return &Ed25519PrivateKey{priv}, nil
 }
 
-//region Ed25519PrivateKey Signer Implementation
+// region Ed25519PrivateKey Signer Implementation
 
 // Sign signs a message and returns an [AccountAuthenticator] with the [Ed25519Signature] and [Ed25519PublicKey]
 //
@@ -102,9 +102,9 @@ func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
 	return out
 }
 
-//endregion
+// endregion
 
-//region Ed25519PrivateKey MessageSigner Implementation
+// region Ed25519PrivateKey MessageSigner Implementation
 
 // SignMessage signs a message and returns the raw [Signature] without a [VerifyingKey] for verification
 //
@@ -133,9 +133,9 @@ func (key *Ed25519PrivateKey) VerifyingKey() VerifyingKey {
 	return key.PubKey()
 }
 
-//endregion
+// endregion
 
-//region Ed25519PrivateKey CryptoMaterial Implementation
+// region Ed25519PrivateKey CryptoMaterial Implementation
 
 // Bytes returns the raw bytes of the [Ed25519PrivateKey]
 //
@@ -190,11 +190,11 @@ func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//endregion
+// endregion
 
-//region Ed25519PublicKey
+// region Ed25519PublicKey
 
 // Ed25519PublicKey is a Ed25519PublicKey which can be used to verify signatures
 //
@@ -209,7 +209,7 @@ type Ed25519PublicKey struct {
 	Inner ed25519.PublicKey // Inner is the actual public key
 }
 
-//region Ed25519PublicKey VerifyingKey implementation
+// region Ed25519PublicKey VerifyingKey implementation
 
 // Verify verifies a message with the public key and [Signature]
 //
@@ -226,9 +226,9 @@ func (key *Ed25519PublicKey) Verify(msg []byte, sig Signature) bool {
 	}
 }
 
-//endregion
+// endregion
 
-//region Ed25519PublicKey PublicKey implementation
+// region Ed25519PublicKey PublicKey implementation
 
 // AuthKey returns the [AuthenticationKey] associated with the [Ed25519PublicKey] for a [Ed25519Scheme].
 //
@@ -248,9 +248,9 @@ func (key *Ed25519PublicKey) Scheme() uint8 {
 	return Ed25519Scheme
 }
 
-//endregion
+// endregion
 
-//region Ed25519PublicKey CryptoMaterial implementation
+// region Ed25519PublicKey CryptoMaterial implementation
 
 // Bytes returns the raw bytes of the [Ed25519PublicKey]
 //
@@ -296,9 +296,9 @@ func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region Ed25519PublicKey bcs.Struct implementation
+// region Ed25519PublicKey bcs.Struct implementation
 
 // MarshalBCS serializes the [Ed25519PublicKey] to BCS bytes
 //
@@ -326,10 +326,10 @@ func (key *Ed25519PublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Ed25519Authenticator
+// region Ed25519Authenticator
 
 // Ed25519Authenticator represents a verifiable signature with it's accompanied public key
 //
@@ -344,7 +344,7 @@ type Ed25519Authenticator struct {
 	Sig    *Ed25519Signature // Sig is the signature
 }
 
-//region Ed25519Authenticator AccountAuthenticatorImpl implementation
+// region Ed25519Authenticator AccountAuthenticatorImpl implementation
 
 // PublicKey returns the [PublicKey] of the authenticator
 //
@@ -370,9 +370,9 @@ func (ea *Ed25519Authenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
 
-//endregion
+// endregion
 
-//region Ed25519Authenticator bcs.Struct implementation
+// region Ed25519Authenticator bcs.Struct implementation
 
 // MarshalBCS serializes the [Ed25519Authenticator] to BCS bytes
 //
@@ -399,10 +399,10 @@ func (ea *Ed25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(ea.Sig)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Ed25519Signature
+// region Ed25519Signature
 
 // Ed25519Signature a wrapper for serialization of Ed25519 signatures
 //
@@ -416,7 +416,7 @@ type Ed25519Signature struct {
 	Inner [ed25519.SignatureSize]byte // Inner is the actual signature
 }
 
-//region Ed25519Signature CryptoMaterial implementation
+// region Ed25519Signature CryptoMaterial implementation
 
 // Bytes returns the raw bytes of the [Ed25519Signature]
 //
@@ -462,9 +462,9 @@ func (e *Ed25519Signature) FromHex(hexStr string) (err error) {
 	return e.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region Ed25519Signature bcs.Struct implementation
+// region Ed25519Signature bcs.Struct implementation
 
 // MarshalBCS serializes the [Ed25519Signature] to BCS bytes
 //
@@ -491,5 +491,5 @@ func (e *Ed25519Signature) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

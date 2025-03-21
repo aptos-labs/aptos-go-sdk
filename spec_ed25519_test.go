@@ -1,11 +1,12 @@
 package aptos
 
 import (
+	"strings"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
-	"strings"
-	"testing"
 )
 
 /**
@@ -48,7 +49,6 @@ func Test_Spec_Ed25519_Generation(t *testing.T) {
 //   - It must be able to output to a byte array
 //   - It must be able to output to a 0x prefixed hex string
 func Test_Spec_Ed25519_PrivateKey(t *testing.T) {
-
 	// It must be able to load a private key from a byte array
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromBytes(parseHex(TestEd25519PrivateKeyHex))

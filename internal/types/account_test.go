@@ -2,9 +2,10 @@ package types
 
 import (
 	"errors"
+	"testing"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -96,15 +97,19 @@ type WrapperSigner struct {
 func (w *WrapperSigner) Sign(_ []byte) (*crypto.AccountAuthenticator, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (w *WrapperSigner) SignMessage(_ []byte) (crypto.Signature, error) {
 	return nil, errors.New("not implemented")
 }
+
 func (w *WrapperSigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
 	return nil
 }
+
 func (w *WrapperSigner) AuthKey() *crypto.AuthenticationKey {
 	return &crypto.AuthenticationKey{}
 }
+
 func (w *WrapperSigner) PubKey() crypto.PublicKey {
 	// Note this is just for testing
 	return &crypto.Ed25519PublicKey{}

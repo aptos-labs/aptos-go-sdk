@@ -1,8 +1,9 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"math/rand/v2"
+
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
 /* This is a collection of test signers, that don't make sense in the real world, but are used for testing */

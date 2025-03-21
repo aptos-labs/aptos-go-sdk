@@ -3,9 +3,10 @@ package bcs
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestStruct struct {
@@ -17,6 +18,7 @@ func (st *TestStruct) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
+
 func (st *TestStruct) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
@@ -31,6 +33,7 @@ func (st TestStruct2) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
+
 func (st TestStruct2) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
@@ -47,6 +50,7 @@ func (st TestStruct3) MarshalBCS(ser *Serializer) {
 	}
 	ser.U8(uint8(st.num))
 }
+
 func (st TestStruct3) UnmarshalBCS(des *Deserializer) {
 	st.num = uint16(des.U8())
 }
@@ -459,7 +463,6 @@ func Test_DeserializeNotEnoughBytes(t *testing.T) {
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}
@@ -479,7 +482,6 @@ func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *t
 }
 
 func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, serialize func(serializer *Serializer, val *big.Int), deserialize func(deserializer *Deserializer) big.Int) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}

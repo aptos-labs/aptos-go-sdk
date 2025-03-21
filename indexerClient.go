@@ -3,9 +3,10 @@ package aptos
 import (
 	"context"
 	"fmt"
-	"github.com/hasura/go-graphql-client"
 	"net/http"
 	"time"
+
+	"github.com/hasura/go-graphql-client"
 )
 
 // -- Note: all query parameters must start with capital letters --
@@ -49,7 +50,6 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 		"address": address.StringLong(),
 	}
 	err := ic.Query(&q, variables)
-
 	if err != nil {
 		return nil, err
 	}
