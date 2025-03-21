@@ -227,6 +227,7 @@ func ConvertToU64(arg any) (uint64, error) {
 	}
 }
 
+// TODO: Check bounds of bigints
 func ConvertToU128(arg any) (num *big.Int, err error) {
 	switch arg := arg.(type) {
 	case int:
@@ -234,25 +235,21 @@ func ConvertToU128(arg any) (num *big.Int, err error) {
 	case uint:
 		return util.UintToUBigInt(arg)
 	case big.Int:
-		num = &arg
+		return &arg, nil
 	case *big.Int:
-		// TODO: check bounds
 		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint128, input is nil")
 		}
+		return arg, nil
 	case string:
 		// Convert the number
-		num, err = util.StrToBigInt(arg)
-		if err != nil {
-			return nil, err
-		}
+		return util.StrToBigInt(arg)
 	default:
 		return nil, fmt.Errorf("invalid input type for uint128")
 	}
-
-	return num, nil
 }
 
+// TODO: Check bounds of bigints
 func ConvertToU256(arg any) (num *big.Int, err error) {
 	switch arg := arg.(type) {
 	case int:
@@ -260,19 +257,18 @@ func ConvertToU256(arg any) (num *big.Int, err error) {
 	case uint:
 		return util.UintToUBigInt(arg)
 	case big.Int:
-		num = &arg
+		return &arg, nil
 	case *big.Int:
 		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint256, input is nil")
 		}
+		return arg, nil
 	case string:
 		// Convert the number
 		return util.StrToBigInt(arg)
 	default:
 		return nil, fmt.Errorf("invalid input type for uint256")
 	}
-
-	return num, nil
 }
 
 func ConvertToBool(arg any) (b bool, err error) {
