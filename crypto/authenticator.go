@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // AccountAuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types.
@@ -93,7 +94,12 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
-	ea.Variant = AccountAuthenticatorType(kindNum)
+	index, err := util.Uint32ToU8(kindNum)
+	if err != nil {
+		des.SetError(err)
+		return
+	}
+	ea.Variant = AccountAuthenticatorType(index)
 	switch ea.Variant {
 	case AccountAuthenticatorEd25519:
 		ea.Auth = &Ed25519Authenticator{}

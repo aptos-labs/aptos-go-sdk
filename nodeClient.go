@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -24,7 +26,7 @@ import (
 const (
 	DefaultMaxGasAmount      = uint64(100_000) // Default to 0.001 APT max gas amount
 	DefaultGasUnitPrice      = uint64(100)     // Default to min gas price
-	DefaultExpirationSeconds = int64(300)      // Default to 5 minutes
+	DefaultExpirationSeconds = uint64(300)     // Default to 5 minutes
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -836,7 +838,7 @@ type MaxGasAmount uint64
 type GasUnitPrice uint64
 
 // ExpirationSeconds will set the number of seconds from the current time to expire a transaction
-type ExpirationSeconds int64
+type ExpirationSeconds uint64
 
 // FeePayer will set the fee payer for a transaction
 type FeePayer *AccountAddress
@@ -879,11 +881,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -932,11 +930,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -986,7 +980,7 @@ func (rc *NodeClient) buildTransactionInner(
 	maxGasAmount uint64,
 	gasUnitPrice uint64,
 	haveGasUnitPrice bool,
-	expirationSeconds int64,
+	expirationSeconds uint64,
 	sequenceNumber uint64,
 	haveSequenceNumber bool,
 	chainId uint8,
@@ -1074,7 +1068,11 @@ func (rc *NodeClient) buildTransactionInner(
 		}
 	}
 
-	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
+	now, err := util.IntToU64(int(time.Now().Unix()))
+	if err != nil {
+		return nil, err
+	}
+	expirationTimestampSeconds := now + expirationSeconds
 
 	// Base raw transaction used for all requests
 	rawTxn = &RawTransaction{
@@ -1101,7 +1099,12 @@ func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
 	vp.Module.MarshalBCS(ser)
 	ser.WriteString(vp.Function)
 	bcs.SerializeSequence(vp.ArgTypes, ser)
-	ser.Uleb128(uint32(len(vp.Args)))
+	length, err := util.IntToU32(len(vp.Args))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	for _, a := range vp.Args {
 		ser.WriteBytes(a)
 	}

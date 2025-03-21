@@ -3,6 +3,8 @@ package aptos
 import (
 	"math/rand/v2"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
 
@@ -170,7 +172,12 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 		if err != nil {
 			return nil, err
 		}
-		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: uint8(index)}
+		u8Index, err := util.IntToU8(index)
+		if err != nil {
+			return nil, err
+		}
+
+		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: u8Index}
 	}
 
 	return crypto.NewMultiKeySignature(indexedSigs)
