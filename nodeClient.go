@@ -617,7 +617,7 @@ func (rc *NodeClient) transactionsConcurrent(
 		for i, ch := range channels {
 			response := <-ch
 			if response.Err != nil {
-				return nil, err
+				return nil, response.Err
 			}
 			responses = append(responses, response.Result...)
 			close(channels[i])
