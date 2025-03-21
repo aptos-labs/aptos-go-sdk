@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/internal/testutil"
 )
@@ -60,8 +62,13 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 			workerStartTime := time.Now()
 			for txNum := 0; txNum < txPerSender; txNum++ {
 				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transferAmount)
+				num, err := util.IntToU64(txNum)
+				if err != nil {
+					t.Errorf("failed to convert transaction number to uint64: %v", err)
+					return
+				}
 				payloads <- aptos.TransactionBuildPayload{
-					Id:    uint64(txNum),
+					Id:    *num,
 					Inner: payload,
 					Type:  aptos.TransactionSubmissionTypeSingle,
 				}

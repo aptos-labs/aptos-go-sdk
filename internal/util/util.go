@@ -53,3 +53,84 @@ func StrToBigInt(val string) (*big.Int, error) {
 
 	return num, nil
 }
+
+func UintToU8(u uint) (*uint8, error) {
+	if u > 255 {
+		return nil, fmt.Errorf("u %d is greater than 255", u)
+	} else {
+		val := uint8(u)
+		return &val, nil
+	}
+}
+
+func UintToU16(u uint) (*uint16, error) {
+	if u > 65535 {
+		return nil, fmt.Errorf("u %d is greater than 65535", u)
+	}
+
+	val := uint16(u)
+	return &val, nil
+}
+
+func UintToU32(u uint) (*uint32, error) {
+	if u > 4294967295 {
+		return nil, fmt.Errorf("u %d is greater than 4294967295", u)
+	}
+	val := uint32(u)
+	return &val, nil
+}
+
+func UintToU64(u uint) (*uint64, error) {
+	// FIXME max U64
+	if u > 4294967295 {
+		return nil, fmt.Errorf("u %d is greater than 4294967295", u)
+	}
+
+	val := uint64(u)
+	return &val, nil
+}
+
+func IntToU8(u int) (*uint8, error) {
+	if u > 255 {
+		return nil, fmt.Errorf("u %d is greater than 255", u)
+	} else if u < 0 {
+		return nil, fmt.Errorf("u %d is less than 0", u)
+	}
+
+	val := uint8(u)
+	return &val, nil
+}
+
+func IntToU16(u int) (*uint16, error) {
+	if u > 65535 {
+		return nil, fmt.Errorf("u %d is greater than 65535", u)
+	} else if u < 0 {
+		return nil, fmt.Errorf("u %d is less than 0", u)
+	}
+
+	val := uint16(u)
+	return &val, nil
+}
+
+func IntToU32(u int) (*uint32, error) {
+	if u > 4294967295 {
+		return nil, fmt.Errorf("u %d is greater than 4294967295", u)
+	} else if u < 0 {
+		return nil, fmt.Errorf("u %d is less than 0", u)
+	}
+
+	val := uint32(u)
+	return &val, nil
+}
+
+func IntToU64(u int) (*uint64, error) {
+	// FIXME: max u64
+	if u > 4294967295 {
+		return nil, fmt.Errorf("u %d is greater than 4294967295", u)
+	} else if u < 0 {
+		return nil, fmt.Errorf("u %d is less than 0", u)
+	}
+
+	val := uint64(u)
+	return &val, nil
+}

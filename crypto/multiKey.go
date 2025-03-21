@@ -34,7 +34,9 @@ type MultiKey struct {
 func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 	switch sig := signature.(type) {
 	case *MultiKeySignature:
-		if key.SignaturesRequired > uint8(len(sig.Signatures)) {
+		num, err := util.IntToU8(len(sig.Signatures))
+
+		if err != nil || key.SignaturesRequired > *num {
 			return false
 		}
 

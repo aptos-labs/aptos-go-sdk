@@ -45,6 +45,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 	// Convert TypeTag, *TypeTag, and string to TypeTag
 	// TODO: Check properties of generic type?
 	convertedTypeArgs := make([]TypeTag, len(typeArgs))
+
 	for i, typeArg := range typeArgs {
 		tag, err := ConvertTypeTag(typeArg)
 		if err != nil {
@@ -55,6 +56,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 
 	// Convert string types to actual types
 	argTypes := make([]TypeTag, 0)
+
 	for _, typeStr := range function.Params {
 		typeArg, err := ParseTypeTag(typeStr)
 		if err != nil {
@@ -129,18 +131,11 @@ func ConvertToU8(arg any) (*uint8, error) {
 	var num uint8
 	switch arg := arg.(type) {
 	case int:
-		num = uint8(arg)
+		return util.IntToU8(arg)
 	case uint:
-		num = uint8(arg)
+		return util.UintToU8(arg)
 	case uint8:
 		num = arg
-	case big.Int:
-		num = uint8(arg.Uint64())
-	case *big.Int:
-		if arg == nil {
-			return nil, fmt.Errorf("cannot convert to uint8, input is nil")
-		}
-		num = uint8(arg.Uint64())
 	case string:
 		// Convert the number
 		u64, err := strconv.ParseUint(arg, 10, 8)
@@ -159,18 +154,11 @@ func ConvertToU16(arg any) (*uint16, error) {
 	var num uint16
 	switch arg := arg.(type) {
 	case int:
-		num = uint16(arg)
+		return util.IntToU16(arg)
 	case uint:
-		num = uint16(arg)
+		return util.UintToU16(arg)
 	case uint16:
 		num = arg
-	case big.Int:
-		num = uint16(arg.Uint64())
-	case *big.Int:
-		if arg == nil {
-			return nil, fmt.Errorf("cannot convert to uint16, input is nil")
-		}
-		num = uint16(arg.Uint64())
 	case string:
 		// Convert the number
 		u64, err := strconv.ParseUint(arg, 10, 16)
@@ -189,18 +177,11 @@ func ConvertToU32(arg any) (*uint32, error) {
 	var num uint32
 	switch arg := arg.(type) {
 	case int:
-		num = uint32(arg)
+		return util.IntToU32(arg)
 	case uint:
-		num = uint32(arg)
+		return util.UintToU32(arg)
 	case uint32:
 		num = arg
-	case big.Int:
-		num = uint32(arg.Uint64())
-	case *big.Int:
-		if arg == nil {
-			return nil, fmt.Errorf("cannot convert to uint32, input is nil")
-		}
-		num = uint32(arg.Uint64())
 	case string:
 		// Convert the number
 		u64, err := strconv.ParseUint(arg, 10, 32)
@@ -219,9 +200,9 @@ func ConvertToU64(arg any) (*uint64, error) {
 	var num uint64
 	switch arg := arg.(type) {
 	case int:
-		num = uint64(arg)
+		return util.IntToU64(arg)
 	case uint:
-		num = uint64(arg)
+		return util.UintToU64(arg)
 	case uint64:
 		num = arg
 	case big.Int:
@@ -473,6 +454,7 @@ func ConvertToVectorAddress(arg any) ([]byte, error) {
 		}
 		// Convert []*AccountAddress to []AccountAddress
 		addresses := make([]AccountAddress, len(arg))
+
 		for i, addr := range arg {
 			if addr == nil {
 				return nil, fmt.Errorf("cannot convert nil address in vector")
@@ -505,7 +487,11 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) ([]byt
 		}
 
 		// Serialize length
-		bytes, err := bcs.SerializeUleb128(uint32(len(arg)))
+		num, err := util.IntToU32(len(arg))
+		if err != nil {
+			return nil, err
+		}
+		bytes, err := bcs.SerializeUleb128(*num)
 		if err != nil {
 			return nil, err
 		}
@@ -541,7 +527,11 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) ([]b
 		}
 
 		// Serialize length
-		bytes, err := bcs.SerializeUleb128(uint32(len(arg)))
+		num, err := util.IntToU32(len(arg))
+		if err != nil {
+			return nil, err
+		}
+		bytes, err := bcs.SerializeUleb128(*num)
 		if err != nil {
 			return nil, err
 		}

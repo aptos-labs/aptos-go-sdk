@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // Serializer is a holding type to serialize a set of items into one shared buffer
@@ -111,7 +113,12 @@ func (ser *Serializer) Uleb128(val uint32) {
 
 // WriteBytes serialize an array of bytes with its length first as an Uleb128.
 func (ser *Serializer) WriteBytes(v []byte) {
-	ser.Uleb128(uint32(len(v)))
+	num, err := util.IntToU32(len(v))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(*num)
 	ser.out.Write(v)
 }
 
@@ -195,7 +202,12 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 //		ser.WriteString(item)
 //	}
 func SerializeSequenceWithFunction[AT []T, T any](array AT, ser *Serializer, serialize func(ser *Serializer, item T)) {
-	ser.Uleb128(uint32(len(array)))
+	num, err := util.IntToU32(len(array))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(*num)
 
 	for i, v := range array {
 		serialize(ser, v)

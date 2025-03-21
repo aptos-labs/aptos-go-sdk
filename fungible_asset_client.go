@@ -109,7 +109,7 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerV
 	}
 	balanceStr, ok := val.(string)
 	if !ok {
-		err = errors.New("primary_store_address is not a string")
+		return 0, errors.New("primary_store_address is not a string")
 	}
 	return StrToUint64(balanceStr)
 }

@@ -15,6 +15,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -511,11 +513,14 @@ func (rc *NodeClient) EventsByHandle(
 	pages := (effectiveLimit + eventsPageSize - 1) / eventsPageSize
 	channels := make([]chan ConcResponse[[]*api.Event], pages)
 
-	for index, concChan := range channels {
-		i := uint64(index)
-		concChan = make(chan ConcResponse[[]*api.Event], 1)
-		pageStart := effectiveStart + (i * eventsPageSize)
-		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
+	for index := range channels {
+		i, err := util.IntToU64(index)
+		if err != nil {
+			return nil, fmt.Errorf("get events api err: %w", err)
+		}
+		channels[index] = make(chan ConcResponse[[]*api.Event], 1)
+		pageStart := effectiveStart + (*i * eventsPageSize)
+		pageLimit := min(eventsPageSize, effectiveLimit-(*i*eventsPageSize))
 
 		go fetch(func() ([]*api.Event, error) {
 			params := url.Values{}
@@ -530,7 +535,7 @@ func (rc *NodeClient) EventsByHandle(
 				return nil, fmt.Errorf("get events api err: %w", err)
 			}
 			return events, nil
-		}, concChan)
+		}, channels[index])
 	}
 
 	events := make([]*api.Event, 0, effectiveLimit)
@@ -1103,7 +1108,12 @@ func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
 	vp.Module.MarshalBCS(ser)
 	ser.WriteString(vp.Function)
 	bcs.SerializeSequence(vp.ArgTypes, ser)
-	ser.Uleb128(uint32(len(vp.Args)))
+	num, err := util.IntToU32(len(vp.Args))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(*num)
 
 	for _, a := range vp.Args {
 		ser.WriteBytes(a)

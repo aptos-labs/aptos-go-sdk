@@ -94,6 +94,7 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
+
 	ea.Variant = AccountAuthenticatorType(kindNum)
 	switch ea.Variant {
 	case AccountAuthenticatorEd25519:

@@ -525,6 +525,7 @@ func concurrentTxnWaiter(
 		defer wg.Done()
 	}
 	responseCount := 0
+
 	for response := range results {
 		responseCount++
 		assert.NoError(t, response.Err)
@@ -589,6 +590,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(numWaiters)
+
 	for range numWaiters {
 		go concurrentTxnWaiter(t, results, waitResults, client, &waitGroup)
 	}
