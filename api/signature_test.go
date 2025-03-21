@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,8 +16,8 @@ func TestAccountAuthenticator_Unknown(t *testing.T) {
 	}`
 	data := &Signature{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, SignatureVariantUnknown)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantUnknown, data.Type)
 	auth := data.Inner.(*UnknownSignature)
 
 	assert.Equal(t, "something", auth.Type)
@@ -29,17 +31,17 @@ func TestAccountAuthenticator_Ed25519(t *testing.T) {
 	}`
 	data := &Signature{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, SignatureVariantEd25519)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantEd25519, data.Type)
 	auth := data.Inner.(*Ed25519Signature)
 
 	expectedPubKey := crypto.Ed25519PublicKey{}
 	err = expectedPubKey.FromHex("0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	expectedSignature := crypto.Ed25519Signature{}
 	err = expectedSignature.FromHex("0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedSignature, *auth.Sig)
 }
 
@@ -62,8 +64,8 @@ func TestAccountAuthenticator_FeePayer(t *testing.T) {
 }`
 	data := &Signature{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, SignatureVariantFeePayer)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantFeePayer, data.Type)
 
 	// TODO: verify some parsing
 	// auth := data.Inner.(*FeePayerSignature)

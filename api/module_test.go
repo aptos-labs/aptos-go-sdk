@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
 )
@@ -15,7 +17,7 @@ func TestModule_MoveBytecode(t *testing.T) {
 	}`
 	data := &MoveBytecode{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expectedRes, _ := util.ParseHex("0xa11ceb0b060000000901000202020403060f0515")
 	assert.Equal(t, HexBytes(expectedRes), data.Bytecode)
 }
@@ -27,7 +29,7 @@ func TestModule_MoveScript(t *testing.T) {
 	}`
 	data := &MoveScript{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expectedRes, _ := util.ParseHex("0xa11ceb0b060000000901000202020403060f0515")
 	assert.Equal(t, HexBytes(expectedRes), data.Bytecode)
 }

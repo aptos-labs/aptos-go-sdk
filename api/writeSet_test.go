@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
 )
@@ -89,13 +91,13 @@ func TestWriteSet_WriteModule(t *testing.T) {
 }`
 	data := &WriteSetChange{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteModule, data.Type)
 	inner := data.Inner.(*WriteSetChangeWriteModule) // TODO: probably make this a bit cleaner with a function
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedAddress, inner.Address)
 	assert.Equal(t, "0xa9fd877ba16b362e10efda9410f3e718ae114e567858cbe120732935aceb1f0e", inner.StateKeyHash)
 	assert.NotNil(t, inner.Data) // TODO: more verification
@@ -120,13 +122,13 @@ func TestWriteSet_WriteResource(t *testing.T) {
 }`
 	data := &WriteSetChange{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteResource, data.Type)
 	inner := data.Inner.(*WriteSetChangeWriteResource) // TODO: probably make this a bit cleaner with a function
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedAddress, inner.Address)
 	assert.Equal(t, "0xa396667bfbfc6af66d8969edfbda02ef9c2f4e4468bf4c71f165a5427afdf6dc", inner.StateKeyHash)
 	assert.Equal(t, "0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5::tablemania::Blah", inner.Data.Type)
@@ -141,13 +143,13 @@ func TestWriteSet_DeleteResource(t *testing.T) {
     }`
 	data := &WriteSetChange{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantDeleteResource, data.Type)
 	inner := data.Inner.(*WriteSetChangeDeleteResource) // TODO: probably make this a bit cleaner with a function
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedAddress, inner.Address)
 	assert.Equal(t, "0x3775f4dbd6900b26cf6c833b112fdfda084f84ef4e562678ca6b54a4791063fd", inner.StateKeyHash)
 	assert.Equal(t, "0x1::object::ObjectGroup", inner.Resource)
@@ -164,13 +166,13 @@ func TestWriteSet_WriteTableItem(t *testing.T) {
 }`
 	data := &WriteSetChange{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteTableItem, data.Type)
 	inner := data.Inner.(*WriteSetChangeWriteTableItem) // TODO: probably make this a bit cleaner with a function
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, inner.Data)
 	assert.Equal(t, "0x6e4b28d40f98a106a65163530924c0dcb40c1349d3aa915d108b4d6cfc1ddb19", inner.StateKeyHash)
 	assert.Equal(t, "0x1b854694ae746cdbd8d44186ca4929b2b337df21d1c74633be19b2710552fdca", inner.Handle)
@@ -188,13 +190,13 @@ func TestWriteSet_DeleteTableItem(t *testing.T) {
 }`
 	data := &WriteSetChange{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantDeleteTableItem, data.Type)
 	inner := data.Inner.(*WriteSetChangeDeleteTableItem) // TODO: probably make this a bit cleaner with a function
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Nil(t, inner.Data)
 	assert.Equal(t, "0x6b89622e7799dc7c46060ba5941b0d1655c1fc96311f7c6f70f0099f99d467cf", inner.StateKeyHash)
 	assert.Equal(t, "0x18cca5d121ebb854e2f16bd2892d0aad9ae0460e21250bc25daa2cdd6f93a070", inner.Handle)

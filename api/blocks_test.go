@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -18,7 +20,7 @@ func TestBlock(t *testing.T) {
 	}`
 	data := &Block{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80", data.BlockHash)
 	assert.Equal(t, uint64(1665609760857472), data.BlockTimestamp)
@@ -39,7 +41,7 @@ func TestBlockWithNoTransactions(t *testing.T) {
 	}`
 	data := &Block{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80", data.BlockHash)
 	assert.Equal(t, uint64(1665609760857472), data.BlockTimestamp)
@@ -154,7 +156,7 @@ func TestBlockWithTransactions(t *testing.T) {
 	}`
 	data := &Block{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80", data.BlockHash)
 	assert.Equal(t, uint64(1665609760857472), data.BlockTimestamp)

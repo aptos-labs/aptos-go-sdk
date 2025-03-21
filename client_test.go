@@ -1,10 +1,11 @@
 package aptos
 
 import (
-	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 
@@ -75,7 +76,7 @@ func TestNamedConfig(t *testing.T) {
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
-	assert.Greater(t, len(ClientHeaderValue), 0)
+	assert.NotEmpty(t, ClientHeaderValue)
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
@@ -99,11 +100,11 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 	}
 	// Create a client
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Verify chain id retrieval works
 	chainId, err := client.GetChainId()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	if testConfig == DevnetConfig {
 		assert.Greater(t, chainId, LocalnetConfig.ChainId)
 	} else {
@@ -112,15 +113,15 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 
 	// Verify gas estimation works
 	_, err = client.EstimateGasPrice()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Create an account
 	account, err := createAccount()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Fund the account with 1 APT
 	err = client.Fund(account.AccountAddress(), fundAmount)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// This is messy... but there seems to be some race condition here, I don't have a ton of time to figure it out, so I'm just going to sleep
 	time.Sleep(1 * time.Second)
@@ -132,25 +133,25 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 
 	// Build transaction
 	rawTxn, err := buildTransaction(client, account)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Sign transaction
 	signedTxn, err := rawTxn.SignedTransaction(account)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Send transaction
 	result, err := client.SubmitTransaction(signedTxn)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	hash := result.Hash
 
 	// Wait for the transaction
 	_, err = client.WaitForTransaction(hash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Read transaction by hash
 	txn, err := client.TransactionByHash(hash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Read transaction by version
 	userTxn, _ := txn.Inner.(*api.UserTransaction)
@@ -158,13 +159,13 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 
 	// Load the transaction again
 	txnByVersion, err := client.TransactionByVersion(version)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Assert that both are the same
 	expectedTxn, err := txn.UserTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualTxn, err := txnByVersion.UserTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedTxn, actualTxn)
 }
 
@@ -173,85 +174,85 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 
 	// Simulate transaction (no options)
 	rawTxn, err := buildTransaction(client, account)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
 	switch account.(type) {
 	case *MultiKeyTestSigner:
 		// multikey simulation currently not supported, skip it for now
 		return // skip rest of the tests
 	default:
-		assert.NoError(t, err)
-		assert.Equal(t, true, simulatedTxn[0].Success)
+		require.NoError(t, err)
+		assert.True(t, simulatedTxn[0].Success)
 		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(0))
+		assert.Positive(t, simulatedTxn[0].GasUsed)
 	}
 
 	// simulate transaction (estimate gas unit price)
 	rawTxnZeroGasUnitPrice, err := buildTransaction(client, account, GasUnitPrice(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
-	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	require.NoError(t, err)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
-	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
+	assert.Positive(t, estimatedGasUnitPrice)
 
 	// simulate transaction (estimate max gas amount)
 	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
-	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	require.NoError(t, err)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
 
 	// simulate transaction (estimate prioritized gas unit price and max gas amount)
 	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
-	assert.NoError(t, err)
-	assert.Equal(t, true, simulatedTxn[0].Success)
+	require.NoError(t, err)
+	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
-	assert.Greater(t, estimatedGasUnitPrice, uint64(0))
-	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(0))
+	assert.Positive(t, estimatedGasUnitPrice)
+	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
 	sender, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	dest, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	signedTxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, signedTxn)
 
 	// use defaults for: max gas amount, gas unit price
 	signedTxn, err = APTTransferTransaction(client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, signedTxn)
 }
 
 func Test_Indexer(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Fund account
 	account, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = client.Fund(account.AccountAddress(), 10)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	balance, err := client.AccountAPTBalance(account.AccountAddress())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// TODO: May need to wait on indexer for this one
 	coins, err := client.GetCoinBalances(account.AccountAddress())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	switch len(coins) {
 	case 0:
 	// TODO we need to wait on the indexer, we'll skip for now
@@ -268,29 +269,29 @@ func Test_Indexer(t *testing.T) {
 
 	// Get current version
 	status, err := client.GetProcessorStatus("default_processor")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// TODO: When we have waiting on indexer, we can add this check to be more accurate
 	assert.GreaterOrEqual(t, status, uint64(0))
 }
 
 func Test_Genesis(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	genesis, err := client.BlockByHeight(0, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	txn, err := genesis.Transactions[0].GenesisTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, uint64(0), *txn.TxnVersion())
 }
 
 func Test_Block(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	info, err := client.Info()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// TODO: I need to add hardcoded testing sets for these conversions
 	numToCheck := uint64(10)
@@ -324,67 +325,67 @@ func Test_Block(t *testing.T) {
 
 func Test_Account(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	account, err := client.Account(AccountOne)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	sequenceNumber, err := account.SequenceNumber()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, uint64(0), sequenceNumber)
 	authKey, err := account.AuthenticationKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountOne[:], authKey)
 }
 
 func Test_Transactions(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	start := uint64(1)
 	count := uint64(2)
 	// Specific 2 should only give 2
 	transactions, err := client.Transactions(&start, &count)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 2)
 
 	// This will give the latest 2
 	transactions, err = client.Transactions(nil, &count)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 2)
 
 	// This will give the 25 from 2
 	transactions, err = client.Transactions(&start, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
 	// This will give the latest 25
 	transactions, err = client.Transactions(nil, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 25)
 }
 
 func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
 	payload, err := CoinTransferPayload(nil, AccountOne, 1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	signedTxn, err := rawTxn.SignedTransaction(account)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn, err := client.SubmitTransaction(signedTxn)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	_, err = client.WaitForTransaction(txn.Hash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func Test_AccountTransactions(t *testing.T) {
 	t.Parallel()
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Create a bunch of transactions so we can test the pagination
 	account, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = client.Fund(account.AccountAddress(), 100_000_000)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Build and submit 100 transactions
 	waitGroup := sync.WaitGroup{}
@@ -403,7 +404,7 @@ func Test_AccountTransactions(t *testing.T) {
 
 	// Fetch default
 	transactions, err := client.AccountTransactions(account.AccountAddress(), nil, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
 	// Fetch 101 with no start
@@ -413,93 +414,93 @@ func Test_AccountTransactions(t *testing.T) {
 	hundredOne := uint64(101)
 
 	transactions, err = client.AccountTransactions(account.AccountAddress(), nil, &hundredOne)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 101)
 
 	// Fetch 101 with start
 	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, &hundredOne)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 101)
 
 	// Fetch 100 from 1
 	transactions, err = client.AccountTransactions(account.AccountAddress(), &one, &hundredOne)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 100)
 
 	// Fetch default from 0
 	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, nil)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
 	// Check global transactions API
 
 	t.Run("Default transaction size, no start", func(t *testing.T) {
 		transactions, err = client.Transactions(nil, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from zero", func(t *testing.T) {
 		transactions, err = client.Transactions(&zero, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from one", func(t *testing.T) {
 		transactions, err = client.Transactions(&one, nil)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 
 	t.Run("101 transactions, no start", func(t *testing.T) {
 		transactions, err = client.Transactions(nil, &hundredOne)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start zero", func(t *testing.T) {
 		transactions, err = client.Transactions(&zero, &hundredOne)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start one", func(t *testing.T) {
 		transactions, err = client.Transactions(&one, &hundredOne)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("10 transactions, no start", func(t *testing.T) {
 		transactions, err = client.Transactions(nil, &ten)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
 
 	t.Run("10 transactions, start one", func(t *testing.T) {
 		transactions, err = client.Transactions(&one, &ten)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
 }
 
 func Test_Info(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	info, err := client.Info()
-	assert.NoError(t, err)
-	assert.Greater(t, info.BlockHeight(), uint64(0))
+	require.NoError(t, err)
+	assert.Positive(t, info.BlockHeight())
 }
 
 func Test_AccountResources(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	resources, err := client.AccountResources(AccountOne)
-	assert.NoError(t, err)
-	assert.Greater(t, len(resources), 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, resources)
 
 	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
-	assert.NoError(t, err)
-	assert.Greater(t, len(resourcesBcs), 0)
+	require.NoError(t, err)
+	assert.NotEmpty(t, resourcesBcs)
 }
 
 // A worker thread that reads from a chan of transactions that have been submitted and waits on their completion status
@@ -516,7 +517,7 @@ func concurrentTxnWaiter(
 	responseCount := 0
 	for response := range results {
 		responseCount++
-		assert.NoError(t, response.Err)
+		require.NoError(t, response.Err)
 
 		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(21*time.Second))
 		if err != nil {
@@ -539,17 +540,17 @@ func Test_Concurrent_Submission(t *testing.T) {
 	const numWaiters = 4
 
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	account1, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	account2, err := NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err = client.Fund(account1.AccountAddress(), 100_000_000)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = client.Fund(account2.AccountAddress(), 0)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// start submission goroutine
 	payloads := make(chan TransactionBuildPayload, 50)
@@ -557,7 +558,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	go client.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
 	transferPayload, err := CoinTransferPayload(nil, AccountOne, 100)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Generate transactions
 	for i := uint64(0); i < numTxns; i++ {
@@ -601,7 +602,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 			}
 			continue
 		}
-		assert.NoError(t, response.Err)
+		require.NoError(t, response.Err)
 		assert.True(t, (response.Result != nil) && response.Result.Success)
 		if response.Result != nil {
 			txnMap[response.Result.SequenceNumber] = true
@@ -632,7 +633,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 func TestClient_View(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	payload := &ViewPayload{
 		Module:   ModuleId{Address: AccountOne, Name: "coin"},
@@ -641,37 +642,37 @@ func TestClient_View(t *testing.T) {
 		Args:     [][]byte{AccountOne[:]},
 	}
 	vals, err := client.View(payload)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Len(t, vals, 1)
 	_, err = StrToUint64(vals[0].(string))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	_, err = client.BlockByHeight(1, true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("Node API health check default", func(t *testing.T) {
 		t.Parallel()
 		response, err := client.NodeAPIHealthCheck()
-		assert.NoError(t, err)
-		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+		require.NoError(t, err)
+		assert.Contains(t, response.Message, "ok", "Node API health check failed"+response.Message)
 	})
 
 	// Now, check node API health check with a future time that should never fail
 	t.Run("Node API health check far future", func(t *testing.T) {
 		t.Parallel()
 		response, err := client.NodeAPIHealthCheck(10000)
-		assert.NoError(t, err)
-		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
+		require.NoError(t, err)
+		assert.Contains(t, response.Message, "ok", "Node API health check failed"+response.Message)
 	})
 
 	// Now, check node API health check with 0
@@ -679,7 +680,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 		t.Parallel()
 		// Now, check node API health check with a time that should probably fail
 		_, err := client.NodeAPIHealthCheck(0)
-		assert.Error(t, err)
+		require.Error(t, err)
 	})
 }
 
@@ -719,25 +720,25 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 
 func TestClient_EntryFunctionWithArgs(t *testing.T) {
 	client, err := createTestClient()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Setup account
 	account, err := types.NewEd25519Account()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = client.Fund(account.Address, 100000000)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Attempt to transfer to an account, using the ABI directly
 	payload, err := client.EntryFunctionWithArgs(AccountOne, "aptos_account", "transfer_coins", []any{"0x1::aptos_coin::AptosCoin"}, []any{AccountTwo, 100})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	rawTxn, err := client.BuildTransaction(account.Address, TransactionPayload{Payload: payload})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	signedTxn, err := rawTxn.SignedTransaction(account)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	transaction, err := client.SubmitTransaction(signedTxn)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn, err := client.WaitForTransaction(transaction.Hash)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.True(t, txn.Success)
 }

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
@@ -21,20 +23,20 @@ import (
 func Test_Spec_Ed25519_Generation(t *testing.T) {
 	// It must be able to generate keys
 	key1, err := crypto.GenerateEd25519PrivateKey()
-	assert.NoError(t, err, "It must be able to generate keys")
+	require.NoError(t, err, "It must be able to generate keys")
 
 	// It should be able to generate keys with a specific seed, and have a deterministic outcome
 	seed := strings.NewReader("abcdefghijklmnopqrstuvwxyzabcdefghijk") // Note that this API on Go only supports 32-byte inputs TODO: Maybe we want to hash this seed?
 	specificKey, err := crypto.GenerateEd25519PrivateKey(seed)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	seed = strings.NewReader("abcdefghijklmnopqrstuvwxyzabcdefghijk")
 	specificKey2, err := crypto.GenerateEd25519PrivateKey(seed)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, specificKey, specificKey2, "It should be able to generate keys with a specific seed, and have a deterministic outcome")
 
 	// It must be able to not generate the same key twice on default input
 	key2, err := crypto.GenerateEd25519PrivateKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEqual(t, key1, key2, "It must not be able to generate the same key twice on default input")
 }
 
@@ -52,27 +54,27 @@ func Test_Spec_Ed25519_PrivateKey(t *testing.T) {
 	// It must be able to load a private key from a byte array
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromBytes(parseHex(TestEd25519PrivateKeyHex))
-	assert.NoError(t, err, "It must be able to load a private key from a byte array")
+	require.NoError(t, err, "It must be able to load a private key from a byte array")
 
 	// It must not be able to load a private key from an invalid length byte array
 	err = key1.FromBytes(parseHex(TestInvalidHex))
-	assert.Error(t, err, "It must not be able to load a private key from an invalid length byte array")
+	require.Error(t, err, "It must not be able to load a private key from an invalid length byte array")
 
 	// It must be able to load a private key from a 0x prefixed hex string
 	key2 := &crypto.Ed25519PrivateKey{}
 	err = key2.FromHex(TestEd25519PrivateKeyHex)
-	assert.NoError(t, err, "It must be able to load a private key from a 0x prefixed hex string")
+	require.NoError(t, err, "It must be able to load a private key from a 0x prefixed hex string")
 
 	// It must be able to load the same private key and be the same
 	assert.Equal(t, key1, key2, "It must be able to load the same private key and be the same")
 
 	// It must not be able to load a private key from an invalid length hex string
 	err = key2.FromHex(TestInvalidHex)
-	assert.Error(t, err, "It must not be able to load a private key from an invalid length hex string")
+	require.Error(t, err, "It must not be able to load a private key from an invalid length hex string")
 
 	// It must not be able to load a private key from an invalid hex string with invalid characters
 	err = key2.FromHex(TestInvalidHexCharacters)
-	assert.Error(t, err, "It must not be able to load a private key from an invalid hex string with invalid characters")
+	require.Error(t, err, "It must not be able to load a private key from an invalid hex string with invalid characters")
 
 	// It must be able to output to a byte array
 	assert.Equal(t, parseHex(TestEd25519PrivateKeyHex), key1.Bytes(), "It must be able to output to a byte array")
@@ -100,24 +102,24 @@ func Test_Spec_Ed25519_PublicKey(t *testing.T) {
 	// It must be able to load a public key from a byte array
 	key1 := &crypto.Ed25519PublicKey{}
 	err := key1.FromBytes(parseHex(TestEd25519PublicKeyHex))
-	assert.NoError(t, err, "It must be able to load a public key from a byte array")
+	require.NoError(t, err, "It must be able to load a public key from a byte array")
 
 	// It must not be able to load a public key from an invalid length byte array
 	err = key1.FromBytes(parseHex(TestInvalidHex))
-	assert.Error(t, err, "It must not be able to load a public key from an invalid length byte array")
+	require.Error(t, err, "It must not be able to load a public key from an invalid length byte array")
 
 	// It must be able to load a public key from a 0x prefixed hex string
 	key2 := &crypto.Ed25519PublicKey{}
 	err = key2.FromHex(TestEd25519PublicKeyHex)
-	assert.NoError(t, err, "It must be able to load a public key from a 0x prefixed hex string")
+	require.NoError(t, err, "It must be able to load a public key from a 0x prefixed hex string")
 
 	// It must not be able to load a public key from an invalid length hex string
 	err = key2.FromHex(TestInvalidHex)
-	assert.Error(t, err, "It must not be able to load a public key from an invalid length hex string")
+	require.Error(t, err, "It must not be able to load a public key from an invalid length hex string")
 
 	// It must not be able to load a private key from an invalid hex string with invalid characters
 	err = key2.FromHex(TestInvalidHexCharacters)
-	assert.Error(t, err, "It must not be able to load a public key from an invalid hex string with invalid characters")
+	require.Error(t, err, "It must not be able to load a public key from an invalid hex string with invalid characters")
 
 	// It must be able to load the same public key and be the same
 	assert.Equal(t, key1, key2, "It must able to load the same public key and be the same")
@@ -130,19 +132,19 @@ func Test_Spec_Ed25519_PublicKey(t *testing.T) {
 
 	// It must be able to encode in BCS bytes
 	bcsBytes1, err := bcs.Serialize(key1)
-	assert.NoError(t, err, "It must be able to encode in BCS bytes")
+	require.NoError(t, err, "It must be able to encode in BCS bytes")
 
 	// It must be able to decode from BCS bytes
 	decodedKey := &crypto.Ed25519PublicKey{}
 	err = bcs.Deserialize(decodedKey, bcsBytes1)
-	assert.NoError(t, err, "It must be able to decode from BCS bytes")
+	require.NoError(t, err, "It must be able to decode from BCS bytes")
 
 	// It must be able to encode in BCS bytes and decode back to the same
 	assert.Equal(t, key1, decodedKey, "It must be able to encode in BCS bytes and decode back to the same")
 
 	// It must be able to catch an invalid byte size from BCS bytes
 	err = bcs.Deserialize(decodedKey, parseHex(TestInvalidHex))
-	assert.Error(t, err, "It must be able to catch an invalid byte size from BCS bytes")
+	require.Error(t, err, "It must be able to catch an invalid byte size from BCS bytes")
 
 	// It must be able to generate an AuthenticationKey
 	authKey := key1.AuthKey()
@@ -167,24 +169,24 @@ func Test_Spec_Ed25519_Signature(t *testing.T) {
 	// It must be able to load a signature from a byte array
 	sig1 := &crypto.Ed25519Signature{}
 	err := sig1.FromBytes(parseHex(TestSecp256k1SignatureHex))
-	assert.NoError(t, err, "It must be able to load a signature from a byte array")
+	require.NoError(t, err, "It must be able to load a signature from a byte array")
 
 	// It must not be able to load a signature from an invalid length byte array
 	err = sig1.FromBytes(parseHex(TestInvalidHex))
-	assert.Error(t, err, "It must not be able to load a signature from an invalid length byte array")
+	require.Error(t, err, "It must not be able to load a signature from an invalid length byte array")
 
 	// It must be able to load a signature from a 0x prefixed hex string
 	sig2 := &crypto.Ed25519Signature{}
 	err = sig2.FromHex(TestSecp256k1SignatureHex)
-	assert.NoError(t, err, "It must be able to load a signature from a 0x prefixed hex string")
+	require.NoError(t, err, "It must be able to load a signature from a 0x prefixed hex string")
 
 	// It must not be able to load a signature from an invalid length hex string
 	err = sig2.FromHex(TestInvalidHex)
-	assert.Error(t, err, "It must not be able to load a signature from an invalid length hex string")
+	require.Error(t, err, "It must not be able to load a signature from an invalid length hex string")
 
 	// It must not be able to load a signature from an invalid hex string with invalid characters
 	err = sig2.FromHex(TestInvalidHexCharacters)
-	assert.Error(t, err, "It must not be able to load a signature from an invalid hex string with invalid characters")
+	require.Error(t, err, "It must not be able to load a signature from an invalid hex string with invalid characters")
 
 	// It must be able to load the same signature and be the same
 	assert.Equal(t, sig1, sig2, "It must able to load the same signature and be the same")
@@ -197,19 +199,19 @@ func Test_Spec_Ed25519_Signature(t *testing.T) {
 
 	// It must be able to encode in BCS bytes
 	bcsBytes1, err := bcs.Serialize(sig1)
-	assert.NoError(t, err, "It must be able to encode in BCS bytes")
+	require.NoError(t, err, "It must be able to encode in BCS bytes")
 
 	// It must be able to decode from BCS bytes
 	decodedSig := &crypto.Ed25519Signature{}
 	err = bcs.Deserialize(decodedSig, bcsBytes1)
-	assert.NoError(t, err, "It must be able to decode from BCS bytes")
+	require.NoError(t, err, "It must be able to decode from BCS bytes")
 
 	// It must be able to encode in BCS bytes and decode back to the same
 	assert.Equal(t, sig1, decodedSig, "It must be able to encode in BCS bytes and decode back to the same")
 
 	// It must be able to catch an invalid byte size from BCS bytes
 	err = bcs.Deserialize(decodedSig, parseHex(TestInvalidHex))
-	assert.Error(t, err, "It must be able to catch an invalid byte size from BCS bytes")
+	require.Error(t, err, "It must be able to catch an invalid byte size from BCS bytes")
 }
 
 // Test_Spec_Ed25519_Authentication tests the Ed25519 authenticator
@@ -225,13 +227,13 @@ func Test_Spec_Ed25519_Signature(t *testing.T) {
 func Test_Spec_Ed25519_Authenticator(t *testing.T) {
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromHex(TestEd25519PrivateKeyHex)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	pubKey1 := key1.PubKey()
 
 	// It must be able to generate an AccountAuthenticator
 	message := parseHex(TestEd25519Message)
 	auth1, err := key1.Sign(message)
-	assert.NoError(t, err, "It must be able to generate an AccountAuthenticator")
+	require.NoError(t, err, "It must be able to generate an AccountAuthenticator")
 
 	// It must be able to verify the message with the AccountAuthenticator
 	assert.True(t, auth1.Verify(message), "It must be able to verify the message with the AccountAuthenticator")
@@ -253,12 +255,12 @@ func Test_Spec_Ed25519_Authenticator(t *testing.T) {
 
 	// It must be able to encode in BCS bytes
 	bcsBytes1, err := bcs.Serialize(auth1)
-	assert.NoError(t, err, "It must be able to encode in BCS bytes")
+	require.NoError(t, err, "It must be able to encode in BCS bytes")
 
 	// It must be able to decode from BCS bytes
 	decodedAuth := &crypto.AccountAuthenticator{}
 	err = bcs.Deserialize(decodedAuth, bcsBytes1)
-	assert.NoError(t, err, "It must be able to decode from BCS bytes")
+	require.NoError(t, err, "It must be able to decode from BCS bytes")
 
 	// It must be able to encode in BCS bytes and decode back to the same
 	assert.Equal(t, auth1, decodedAuth, "It must be able to encode in BCS bytes and decode back to the same")
@@ -278,9 +280,9 @@ func Test_Spec_Ed25519_Authenticator(t *testing.T) {
 func Test_Spec_Ed25519_Signing(t *testing.T) {
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromHex(TestEd25519PrivateKeyHex)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	key2, err := crypto.GenerateEd25519PrivateKey()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to generate a public key from the private key
 	pubkey1 := key1.PubKey()
@@ -289,22 +291,22 @@ func Test_Spec_Ed25519_Signing(t *testing.T) {
 	// It must be able to sign messages
 	message := parseHex(TestEd25519Message)
 	signature1, err := key1.SignMessage(message)
-	assert.NoError(t, err, "It must be able to sign messages")
+	require.NoError(t, err, "It must be able to sign messages")
 	assert.Equal(t, TestEd25519SignatureHex, signature1.ToHex(), "It must be able to sign messages")
 
 	signature1Copy, err := key1.SignMessage(message)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, signature1, signature1Copy, "It must have deterministic signing")
 
 	// It must have different signatures for different keys
 	signature2, err := key2.SignMessage(message)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEqual(t, signature1, signature2, "It must have different signatures for different keys")
 
 	// It must have different signatures for different messages
 	message2 := parseHex(OtherMessage)
 	signature1Message2, err := key1.SignMessage(message2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotEqual(t, signature1, signature1Message2, "It must have different signatures for different messages")
 
 	// It must be able to verify the message with the public key
