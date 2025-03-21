@@ -1065,6 +1065,7 @@ func failResult(ctx context.Context) error {
 }
 
 func TestFeatures(t *testing.T) {
+	t.Parallel()
 	suite := godog.TestSuite{
 		ScenarioInitializer: InitializeScenario,
 		Options: &godog.Options{

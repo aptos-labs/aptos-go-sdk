@@ -10,6 +10,7 @@ import (
 )
 
 func TestEvent_V1(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"type": "0x1::coin::WithdrawEvent",
 		"guid": {
@@ -36,6 +37,7 @@ func TestEvent_V1(t *testing.T) {
 }
 
 func TestEvent_V2(t *testing.T) {
+	t.Parallel()
 	testJson := `	{
 		"type": "0x1::fungible_asset::Withdraw",
 		"guid": {
@@ -61,6 +63,7 @@ func TestEvent_V2(t *testing.T) {
 }
 
 func TestEvent_V2_Other(t *testing.T) {
+	t.Parallel()
 	testJson := `	{
 		"type": "vector<u64>",
 		"guid": {

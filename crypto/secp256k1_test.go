@@ -19,6 +19,7 @@ const (
 )
 
 func TestSecp256k1Keys(t *testing.T) {
+	t.Parallel()
 	testSecp256k1PrivateKeyBytes, err := util.ParseHex(testSecp256k1PrivateKeyHex)
 	require.NoError(t, err)
 
@@ -118,6 +119,7 @@ func TestSecp256k1Keys(t *testing.T) {
 }
 
 func TestGenerateSecp256k1Key(t *testing.T) {
+	t.Parallel()
 	privateKey, err := GenerateSecp256k1Key()
 	require.NoError(t, err)
 
@@ -130,6 +132,7 @@ func TestGenerateSecp256k1Key(t *testing.T) {
 }
 
 func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
+	t.Parallel()
 	privateKey := &Secp256k1PrivateKey{}
 	err := privateKey.FromHex(testSecp256k1PrivateKey)
 	require.NoError(t, err)
@@ -155,6 +158,7 @@ func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
 }
 
 func TestSecp256k1Signature_RecoverPublicKeyFromSignature(t *testing.T) {
+	t.Parallel()
 	privateKey := &Secp256k1PrivateKey{}
 	err := privateKey.FromHex(testSecp256k1PrivateKey)
 	require.NoError(t, err)
@@ -181,6 +185,7 @@ func TestSecp256k1Signature_RecoverPublicKeyFromSignature(t *testing.T) {
 }
 
 func TestSecp256k1Signature_RecoverPublicKeyFromSignatureWithRecoveryBit(t *testing.T) {
+	t.Parallel()
 	privateKey := &Secp256k1PrivateKey{}
 	err := privateKey.FromHex(testSecp256k1PrivateKey)
 	require.NoError(t, err)

@@ -11,6 +11,7 @@ import (
 )
 
 func TestAuthenticationKey_FromPublicKey(t *testing.T) {
+	t.Parallel()
 	// Ed25519
 	privateKey, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
@@ -28,6 +29,7 @@ func TestAuthenticationKey_FromPublicKey(t *testing.T) {
 }
 
 func Test_AuthenticationKeySerialization(t *testing.T) {
+	t.Parallel()
 	bytesWithLength := []byte{
 		32,
 		0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef,
@@ -53,6 +55,7 @@ func Test_AuthenticationKeySerialization(t *testing.T) {
 }
 
 func Test_AuthenticatorSerialization(t *testing.T) {
+	t.Parallel()
 	msg := []byte{0x01, 0x02}
 	privateKey, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
@@ -73,6 +76,7 @@ func Test_AuthenticatorSerialization(t *testing.T) {
 }
 
 func Test_AuthenticatorVerification(t *testing.T) {
+	t.Parallel()
 	msg := []byte{0x01, 0x02}
 	privateKey, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
@@ -84,6 +88,7 @@ func Test_AuthenticatorVerification(t *testing.T) {
 }
 
 func Test_InvalidAuthenticatorDeserialization(t *testing.T) {
+	t.Parallel()
 	serialized := []byte{0xFF}
 	newAuthenticator := &AccountAuthenticator{}
 	err := bcs.Deserialize(newAuthenticator, serialized)
@@ -95,6 +100,7 @@ func Test_InvalidAuthenticatorDeserialization(t *testing.T) {
 }
 
 func Test_InvalidAuthenticationKeyDeserialization(t *testing.T) {
+	t.Parallel()
 	serialized := []byte{0xFF}
 	newAuthkey := AuthenticationKey{}
 	err := bcs.Deserialize(&newAuthkey, serialized)

@@ -16,6 +16,7 @@ const (
 )
 
 func TestGenerateEd25519Account(t *testing.T) {
+	t.Parallel()
 	message := []byte{0x12, 0x34}
 	account, err := NewEd25519Account()
 	require.NoError(t, err)
@@ -26,6 +27,7 @@ func TestGenerateEd25519Account(t *testing.T) {
 }
 
 func TestGenerateSingleSignerEd25519Account(t *testing.T) {
+	t.Parallel()
 	message := []byte{0x12, 0x34}
 	account, err := NewEd25519SingleSignerAccount()
 	require.NoError(t, err)
@@ -36,6 +38,7 @@ func TestGenerateSingleSignerEd25519Account(t *testing.T) {
 }
 
 func TestGenerateSecp256k1Account(t *testing.T) {
+	t.Parallel()
 	message := []byte{0x12, 0x34}
 	account, err := NewSecp256k1Account()
 	require.NoError(t, err)
@@ -46,6 +49,7 @@ func TestGenerateSecp256k1Account(t *testing.T) {
 }
 
 func TestNewAccountFromSigner(t *testing.T) {
+	t.Parallel()
 	message := []byte{0x12, 0x34}
 	key, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err)
@@ -62,6 +66,7 @@ func TestNewAccountFromSigner(t *testing.T) {
 }
 
 func TestNewAccountFromSignerWithAddress(t *testing.T) {
+	t.Parallel()
 	message := []byte{0x12, 0x34}
 	key, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err)
@@ -84,6 +89,7 @@ func TestNewAccountFromSignerWithAddress(t *testing.T) {
 }
 
 func TestNewAccountFromSignerWithAddressMulti(t *testing.T) {
+	t.Parallel()
 	key, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 
@@ -117,6 +123,7 @@ func (w *WrapperSigner) PubKey() crypto.PublicKey {
 }
 
 func TestAccount_ExtractMessageSigner(t *testing.T) {
+	t.Parallel()
 	ed25519PrivateKey, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	ed25519Account, err := NewAccountFromSigner(ed25519PrivateKey)
@@ -151,6 +158,7 @@ func TestAccount_ExtractMessageSigner(t *testing.T) {
 }
 
 func TestAccount_ExtractPrivateKeyString(t *testing.T) {
+	t.Parallel()
 	ed25519PrivateKey, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	ed25519Account, err := NewAccountFromSigner(ed25519PrivateKey)

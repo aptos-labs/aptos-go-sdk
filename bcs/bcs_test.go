@@ -57,6 +57,7 @@ func (st *TestStruct3) UnmarshalBCS(des *Deserializer) {
 }
 
 func Test_U8(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"00", "01", "ff"}
 	deserialized := []uint8{0, 1, 0xff}
 
@@ -68,6 +69,7 @@ func Test_U8(t *testing.T) {
 }
 
 func Test_U16(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"0000", "0100", "ff00", "ffff"}
 	deserialized := []uint16{0, 1, 0xff, 0xffff}
 
@@ -79,6 +81,7 @@ func Test_U16(t *testing.T) {
 }
 
 func Test_U32(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"00000000", "01000000", "ff000000", "ffffffff"}
 	deserialized := []uint32{0, 1, 0xff, 0xffffffff}
 
@@ -90,6 +93,7 @@ func Test_U32(t *testing.T) {
 }
 
 func Test_U64(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"0000000000000000", "0100000000000000", "ff00000000000000", "ffffffffffffffff"}
 	deserialized := []uint64{0, 1, 0xff, 0xffffffffffffffff}
 
@@ -101,6 +105,7 @@ func Test_U64(t *testing.T) {
 }
 
 func Test_U128(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"00000000000000000000000000000000", "01000000000000000000000000000000", "ff000000000000000000000000000000"}
 	deserialized := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
@@ -112,6 +117,7 @@ func Test_U128(t *testing.T) {
 }
 
 func Test_U256(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"0000000000000000000000000000000000000000000000000000000000000000", "0100000000000000000000000000000000000000000000000000000000000000", "ff00000000000000000000000000000000000000000000000000000000000000"}
 	deserialized := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(0xff)}
 
@@ -123,6 +129,7 @@ func Test_U256(t *testing.T) {
 }
 
 func Test_Uleb128(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"00", "01", "7f", "ff7f", "ffff03", "ffffffff0f"}
 	deserialized := []uint32{0, 1, 127, 16383, 65535, 0xffffffff}
 
@@ -134,6 +141,7 @@ func Test_Uleb128(t *testing.T) {
 }
 
 func Test_Bool(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"00", "01"}
 	deserialized := []bool{false, true}
 
@@ -145,6 +153,7 @@ func Test_Bool(t *testing.T) {
 }
 
 func Test_String(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"0461626364", "0568656c6c6f"}
 	deserialized := []string{"abcd", "hello"}
 
@@ -156,6 +165,7 @@ func Test_String(t *testing.T) {
 }
 
 func Test_FixedBytes(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"123456", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
 	deserialized := []string{"123456", "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"}
 
@@ -180,6 +190,7 @@ func Test_FixedBytes(t *testing.T) {
 }
 
 func Test_Bytes(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"03123456", "2cffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
 	deserialized := []string{"123456", "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"}
 
@@ -193,6 +204,7 @@ func Test_Bytes(t *testing.T) {
 }
 
 func Test_Struct(t *testing.T) {
+	t.Parallel()
 	serialized := []string{"0000", "0001", "FF01"}
 	deserialized := []TestStruct{{0, false}, {0, true}, {255, true}}
 
@@ -218,6 +230,7 @@ func Test_Struct(t *testing.T) {
 }
 
 func Test_DeserializeSequence(t *testing.T) {
+	t.Parallel()
 	deserialized := []TestStruct{{0, false}, {5, true}, {255, true}}
 	serialized := []byte{0x03, 0x00, 0x00, 0x05, 0x01, 0xFF, 0x01}
 
@@ -234,18 +247,21 @@ func Test_DeserializeSequence(t *testing.T) {
 }
 
 func Test_InvalidBool(t *testing.T) {
+	t.Parallel()
 	des := NewDeserializer([]byte{0x02})
 	des.Bool()
 	require.Error(t, des.Error())
 }
 
 func Test_InvalidBytes(t *testing.T) {
+	t.Parallel()
 	des := NewDeserializer([]byte{0x02})
 	des.ReadBytes()
 	require.Error(t, des.Error())
 }
 
 func Test_InvalidFixedBytesInto(t *testing.T) {
+	t.Parallel()
 	des := NewDeserializer([]byte{0x02})
 	bytes := make([]byte, 2)
 	des.ReadFixedBytesInto(bytes)
@@ -253,6 +269,7 @@ func Test_InvalidFixedBytesInto(t *testing.T) {
 }
 
 func Test_FailedStructSerialize(t *testing.T) {
+	t.Parallel()
 	str := TestStruct3{
 		num: uint16(5),
 	}
@@ -264,12 +281,14 @@ func Test_FailedStructSerialize(t *testing.T) {
 }
 
 func Test_FailedStructDeserialize(t *testing.T) {
+	t.Parallel()
 	str := TestStruct{}
 	err := Deserialize(&str, []byte{})
 	require.Error(t, err)
 }
 
 func Test_SerializeSequence(t *testing.T) {
+	t.Parallel()
 	// Test not implementing Marshal
 	ser := Serializer{}
 	SerializeSequence([]byte{0x00}, &ser)
@@ -308,6 +327,7 @@ func Test_SerializeSequence(t *testing.T) {
 }
 
 func Test_DeserializeSequenceError(t *testing.T) {
+	t.Parallel()
 	// Test no leading size byte
 	des := NewDeserializer([]byte{})
 	DeserializeSequence[TestStruct](des)
@@ -325,6 +345,7 @@ func Test_DeserializeSequenceError(t *testing.T) {
 }
 
 func Test_DeserializerErrors(t *testing.T) {
+	t.Parallel()
 	serialized, _ := hex.DecodeString("000100FF")
 	des := NewDeserializer(serialized)
 	assert.Equal(t, 4, des.Remaining())
@@ -373,6 +394,7 @@ func Test_DeserializerErrors(t *testing.T) {
 }
 
 func Test_ConvenienceFunctions(t *testing.T) {
+	t.Parallel()
 	str := TestStruct{
 		num: 10,
 		b:   true,
@@ -421,6 +443,7 @@ func Test_ConvenienceFunctions(t *testing.T) {
 }
 
 func Test_SerializeOptional(t *testing.T) {
+	t.Parallel()
 	ser := Serializer{}
 	someValue := uint8(0xFF)
 	SerializeOption(&ser, &someValue, func(ser *Serializer, val uint8) {
@@ -447,6 +470,7 @@ func Test_SerializeOptional(t *testing.T) {
 }
 
 func Test_NilStructs(t *testing.T) {
+	t.Parallel()
 	ser := Serializer{}
 	ser.Struct(nil)
 	require.Error(t, ser.Error())
@@ -457,6 +481,7 @@ func Test_NilStructs(t *testing.T) {
 }
 
 func Test_DeserializeNotEnoughBytes(t *testing.T) {
+	t.Parallel()
 	data := []byte{0x01, 0x00, 0x00}
 	testStruct := &TestStruct{}
 	err := Deserialize(testStruct, data)

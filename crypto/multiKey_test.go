@@ -10,6 +10,7 @@ import (
 )
 
 func TestMultiKey(t *testing.T) {
+	t.Parallel()
 	key1, key2, key3, _, _, _, publicKey := createMultiKey(t)
 
 	message := []byte("hello world")
@@ -52,6 +53,7 @@ func TestMultiKey(t *testing.T) {
 }
 
 func TestMultiKeySerialization(t *testing.T) {
+	t.Parallel()
 	key1, _, key3, _, _, _, publicKey := createMultiKey(t)
 
 	// Test serialization / deserialization public key
@@ -88,6 +90,7 @@ func TestMultiKeySerialization(t *testing.T) {
 }
 
 func TestMultiKey_Serialization_CrossPlatform(t *testing.T) {
+	t.Parallel()
 	serialized := "020140118d6ebe543aaf3a541453f98a5748ab5b9e3f96d781b8c0a43740af2b65c03529fdf62b7de7aad9150770e0994dc4e0714795fdebf312be66cd0550c607755e00401a90421453aa53fa5a7aa3dfe70d913823cbf087bf372a762219ccc824d3a0eeecccaa9d34f22db4366aec61fb6c204d2440f4ed288bc7cc7e407b766723a60901c0"
 	serializedBytes, err := hex.DecodeString(serialized)
 	require.NoError(t, err)

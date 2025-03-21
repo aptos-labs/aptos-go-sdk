@@ -20,6 +20,7 @@ import (
 //   - It should be able to generate keys with a specific seed, and have a deterministic outcome.
 //   - It must not be able to generate the same key twice on default input.
 func Test_Spec_Ed25519_Generation(t *testing.T) {
+	t.Parallel()
 	// It must be able to generate keys
 	key1, err := crypto.GenerateEd25519PrivateKey()
 	require.NoError(t, err, "It must be able to generate keys")
@@ -50,6 +51,7 @@ func Test_Spec_Ed25519_Generation(t *testing.T) {
 //   - It must be able to output to a byte array
 //   - It must be able to output to a 0x prefixed hex string
 func Test_Spec_Ed25519_PrivateKey(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a private key from a byte array
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromBytes(parseHex(TestEd25519PrivateKeyHex))
@@ -98,6 +100,7 @@ func Test_Spec_Ed25519_PrivateKey(t *testing.T) {
 //   - It must be able to catch an invalid byte size from BCS bytes
 //   - It must be able to generate an AuthenticationKey
 func Test_Spec_Ed25519_PublicKey(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a public key from a byte array
 	key1 := &crypto.Ed25519PublicKey{}
 	err := key1.FromBytes(parseHex(TestEd25519PublicKeyHex))
@@ -165,6 +168,7 @@ func Test_Spec_Ed25519_PublicKey(t *testing.T) {
 //   - It must be able to encode in BCS bytes and decode back to the same
 //   - It must be able to catch an invalid byte size from BCS bytes
 func Test_Spec_Ed25519_Signature(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a signature from a byte array
 	sig1 := &crypto.Ed25519Signature{}
 	err := sig1.FromBytes(parseHex(TestSecp256k1SignatureHex))
@@ -224,6 +228,7 @@ func Test_Spec_Ed25519_Signature(t *testing.T) {
 //   - It must be able to encode in BCS bytes and decode back to the same
 //   - It must be able to catch an invalid byte size from BCS bytes
 func Test_Spec_Ed25519_Authenticator(t *testing.T) {
+	t.Parallel()
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromHex(TestEd25519PrivateKeyHex)
 	require.NoError(t, err)
@@ -277,6 +282,7 @@ func Test_Spec_Ed25519_Authenticator(t *testing.T) {
 //   - It must be able to not-verify a message with the wrong signature
 
 func Test_Spec_Ed25519_Signing(t *testing.T) {
+	t.Parallel()
 	key1 := &crypto.Ed25519PrivateKey{}
 	err := key1.FromHex(TestEd25519PrivateKeyHex)
 	require.NoError(t, err)

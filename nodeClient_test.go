@@ -14,6 +14,7 @@ import (
 )
 
 func TestPollForTransaction(t *testing.T) {
+	t.Parallel()
 	// this doesn't need to actually have an aptos-node!
 	// API error on every GET is fine, poll for a few milliseconds then return error
 	client, err := NewClient(LocalnetConfig)
@@ -28,7 +29,9 @@ func TestPollForTransaction(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TODO: This test has to be rewritten, as it is not parallelizable between subtests
 func TestEventsByHandle(t *testing.T) {
+	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			// handle initial request from client

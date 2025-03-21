@@ -92,6 +92,7 @@ func init() {
 }
 
 func TestCryptoMaterial(t *testing.T) {
+	t.Parallel()
 	for name, material := range materials {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -102,6 +103,7 @@ func TestCryptoMaterial(t *testing.T) {
 }
 
 func TestStructs(t *testing.T) {
+	t.Parallel()
 	for name, str := range structs {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()

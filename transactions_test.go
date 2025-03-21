@@ -9,6 +9,7 @@ import (
 )
 
 func TestRawTransactionSign(t *testing.T) {
+	t.Parallel()
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
 
@@ -54,6 +55,7 @@ func TestRawTransactionSign(t *testing.T) {
 }
 
 func TestTPMarshal(t *testing.T) {
+	t.Parallel()
 	var wat TransactionPayload
 	var ser bcs.Serializer
 	wat.MarshalBCS(&ser)

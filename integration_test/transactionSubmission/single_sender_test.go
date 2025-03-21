@@ -10,6 +10,7 @@ import (
 )
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *testing.T) {
+	t.Parallel()
 	const (
 		numTransactions = uint32(5)
 		transferAmount  = uint64(100)

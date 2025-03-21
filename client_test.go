@@ -67,6 +67,7 @@ func initSingleSignerPayloads() {
 }
 
 func TestNamedConfig(t *testing.T) {
+	t.Parallel()
 	names := []string{"mainnet", "devnet", "testnet", "localnet"}
 	for _, name := range names {
 		assert.Equal(t, name, NamedNetworks[name].Name)
@@ -74,17 +75,21 @@ func TestNamedConfig(t *testing.T) {
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
+	t.Parallel()
 	assert.NotEmpty(t, ClientHeaderValue)
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
 func Test_SingleSignerFlows(t *testing.T) {
+	t.Parallel()
 	for name, signer := range TestSigners {
 		for payloadName, buildSingleSignerPayload := range TestSingleSignerPayloads {
 			t.Run(name+" "+payloadName, func(t *testing.T) {
+				t.Parallel()
 				testTransaction(t, signer, buildSingleSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
+				t.Parallel()
 				testTransactionSimulation(t, signer, buildSingleSignerPayload)
 			})
 		}
@@ -220,6 +225,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
+	t.Parallel()
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
 	dest, err := NewEd25519Account()
@@ -238,6 +244,7 @@ func TestAPTTransferTransaction(t *testing.T) {
 }
 
 func Test_Indexer(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -276,6 +283,7 @@ func Test_Indexer(t *testing.T) {
 }
 
 func Test_Genesis(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -289,6 +297,7 @@ func Test_Genesis(t *testing.T) {
 }
 
 func Test_Block(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 	info, err := client.Info()
@@ -325,6 +334,7 @@ func Test_Block(t *testing.T) {
 }
 
 func Test_Account(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 	account, err := client.Account(AccountOne)
@@ -338,6 +348,7 @@ func Test_Account(t *testing.T) {
 }
 
 func Test_Transactions(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -437,46 +448,54 @@ func Test_AccountTransactions(t *testing.T) {
 	// Check global transactions API
 
 	t.Run("Default transaction size, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from zero", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&zero, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 
 	t.Run("101 transactions, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start zero", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&zero, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("10 transactions, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, &ten)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
 
 	t.Run("10 transactions, start one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, &ten)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
@@ -484,6 +503,7 @@ func Test_AccountTransactions(t *testing.T) {
 }
 
 func Test_Info(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -493,6 +513,7 @@ func Test_Info(t *testing.T) {
 }
 
 func Test_AccountResources(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -539,6 +560,7 @@ func concurrentTxnWaiter(
 }
 
 func Test_Concurrent_Submission(t *testing.T) {
+	t.Parallel()
 	const numTxns = uint64(100)
 	const numWaiters = 4
 
@@ -635,6 +657,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 }
 
 func TestClient_View(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -652,6 +675,7 @@ func TestClient_View(t *testing.T) {
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -660,6 +684,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 }
 
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -722,6 +747,7 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 }
 
 func TestClient_EntryFunctionWithArgs(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
