@@ -155,7 +155,7 @@ func (des *Deserializer) U256() big.Int {
 // [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
 	const maxU32 = uint64(0xFFFFFFFF)
-	var out uint64 = 0
+	var out uint64
 	shift := 0
 
 	for out < maxU32 {

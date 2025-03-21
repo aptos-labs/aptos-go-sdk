@@ -421,9 +421,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			}
 			txn, err := rc.TransactionByHash(hash)
 			if err == nil {
-				if txn.Type == api.TransactionVariantPending {
-					// not done yet!
-				} else if txn.Type == api.TransactionVariantUser {
+				if txn.Type != api.TransactionVariantPending {
 					// done!
 					delete(hashSet, hash)
 					slog.Debug("txn done", "hash", hash)
@@ -573,20 +571,20 @@ func (rc *NodeClient) handleTransactions(
 		numTxns := uint64(len(txns))
 		if numTxns >= actualLimit {
 			return txns, nil
-		} else {
-			newStart := getNext(&txns)
-			newLength := actualLimit - numTxns
-			extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
-			if err != nil {
-				return nil, err
-			}
-
-			return append(extra, txns...), nil
 		}
-	} else {
-		// If we know the start, just pull one page
-		return getTxns(start, nil)
+
+		newStart := getNext(&txns)
+		newLength := actualLimit - numTxns
+		extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
+		if err != nil {
+			return nil, err
+		}
+
+		return append(extra, txns...), nil
 	}
+
+	// If we know the start, just pull one page
+	return getTxns(start, nil)
 }
 
 // transactionsConcurrent fetches the transactions from the node concurrently
@@ -607,7 +605,7 @@ func (rc *NodeClient) transactionsConcurrent(
 
 		// Concurrently fetch all the transactions by the page size
 		channels := make([]chan ConcResponse[[]*api.CommittedTransaction], numChannels)
-		for i := uint64(0); i*transactionsPageSize < limit; i += 1 {
+		for i := uint64(0); i*transactionsPageSize < limit; i++ {
 			channels[i] = make(chan ConcResponse[[]*api.CommittedTransaction], 1)
 			st := start + i*100 // TODO: allow page size to be configured
 			li := min(transactionsPageSize, limit-i*transactionsPageSize)
@@ -632,14 +630,14 @@ func (rc *NodeClient) transactionsConcurrent(
 			return responses[i].Version() < responses[j].Version()
 		})
 		return responses, nil
-	} else {
-		response, err := getTxns(&start, &limit)
-		if err != nil {
-			return nil, err
-		} else {
-			return response, nil
-		}
 	}
+
+	response, err := getTxns(&start, &limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 // transactionsInner fetches the transactions from the node in a single request
@@ -963,15 +961,15 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 				SecondarySigners: additionalSigners,
 			},
 		}, nil
-	} else {
-		return &RawTransactionWithData{
-			Variant: MultiAgentRawTransactionWithDataVariant,
-			Inner: &MultiAgentRawTransactionWithData{
-				RawTxn:           rawTxn,
-				SecondarySigners: additionalSigners,
-			},
-		}, nil
 	}
+
+	return &RawTransactionWithData{
+		Variant: MultiAgentRawTransactionWithDataVariant,
+		Inner: &MultiAgentRawTransactionWithData{
+			RawTxn:           rawTxn,
+			SecondarySigners: additionalSigners,
+		},
+	}, nil
 }
 
 func (rc *NodeClient) buildTransactionInner(

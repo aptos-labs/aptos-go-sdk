@@ -347,7 +347,7 @@ func ConvertToVectorU16(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint16) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint16) {
 				ser.U16(item)
 			})
 		})
@@ -365,7 +365,7 @@ func ConvertToVectorU32(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint32) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint32) {
 				ser.U32(item)
 			})
 		})
@@ -383,7 +383,7 @@ func ConvertToVectorU64(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint64) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint64) {
 				ser.U64(item)
 			})
 		})
@@ -401,7 +401,7 @@ func ConvertToVectorU128(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item big.Int) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
 				ser.U128(item)
 			})
 		})
@@ -419,7 +419,7 @@ func ConvertToVectorU256(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item big.Int) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
 				ser.U256(item)
 			})
 		})
@@ -436,7 +436,7 @@ func ConvertToVectorBool(arg any) (b []byte, err error) {
 			return nil, fmt.Errorf("cannot convert nil to bool vector")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item bool) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item bool) {
 				ser.Bool(item)
 			})
 		})

@@ -294,9 +294,9 @@ func (u *UnknownTransaction) TxnVersion() *uint64 {
 	num, err := util.StrToUint64(versionStr)
 	if err != nil {
 		return nil
-	} else {
-		return &num
 	}
+
+	return &num
 }
 
 // UserTransaction is a user submitted transaction as an entry function, script, or more.
