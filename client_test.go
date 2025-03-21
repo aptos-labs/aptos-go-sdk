@@ -92,6 +92,7 @@ func Test_SingleSignerFlows(t *testing.T) {
 }
 
 func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, TransactionSigner) {
+	t.Helper()
 	// All of these run against localnet
 	if testing.Short() {
 		t.Skip("integration test expects network connection to localnet")
@@ -127,6 +128,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 }
 
 func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Build transaction
@@ -168,6 +170,7 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 }
 
 func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Simulate transaction (no options)
@@ -362,6 +365,7 @@ func Test_Transactions(t *testing.T) {
 }
 
 func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
+	t.Helper()
 	payload, err := CoinTransferPayload(nil, AccountOne, 1)
 	require.NoError(t, err)
 	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
@@ -503,12 +507,13 @@ func Test_AccountResources(t *testing.T) {
 
 // A worker thread that reads from a chan of transactions that have been submitted and waits on their completion status
 func concurrentTxnWaiter(
+	t *testing.T,
 	results chan TransactionSubmissionResponse,
 	waitResults chan ConcResponse[*api.UserTransaction],
 	client *Client,
-	t *testing.T,
 	wg *sync.WaitGroup,
 ) {
+	t.Helper()
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -577,7 +582,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
 	for range numWaiters {
-		go concurrentTxnWaiter(results, waitResults, client, t, &wg)
+		go concurrentTxnWaiter(t, results, waitResults, client, &wg)
 	}
 
 	// Wait on all the results, recording the succeeding ones

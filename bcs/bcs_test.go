@@ -464,6 +464,7 @@ func Test_DeserializeNotEnoughBytes(t *testing.T) {
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
+	t.Helper()
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}
@@ -483,6 +484,7 @@ func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *t
 }
 
 func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, serialize func(serializer *Serializer, val *big.Int), deserialize func(deserializer *Deserializer) big.Int) {
+	t.Helper()
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}

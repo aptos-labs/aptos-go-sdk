@@ -108,6 +108,7 @@ func createMultiKey(t *testing.T) (
 	*AnyPublicKey,
 	*MultiKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	pubkey1, err := ToAnyPublicKey(key1.PubKey())
@@ -131,6 +132,7 @@ func createMultiKey(t *testing.T) (
 }
 
 func createMultiKeySignature(t *testing.T, index1 uint8, key1 *SingleSigner, index2 uint8, key2 *SingleSigner, message []byte) *MultiKeySignature {
+	t.Helper()
 	sig1, err := key1.SignMessage(message)
 	require.NoError(t, err)
 	sig2, err := key2.SignMessage(message)

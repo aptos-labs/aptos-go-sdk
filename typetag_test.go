@@ -42,6 +42,7 @@ func TestTypeTagIdentities(t *testing.T) {
 }
 
 func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagVariant, expectedString string) {
+	t.Helper()
 	assert.Equal(t, expectedType, tag.GetType())
 	assert.Equal(t, expectedString, tag.String())
 
