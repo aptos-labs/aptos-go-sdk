@@ -2,6 +2,7 @@ package aptos
 
 import (
 	"errors"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 

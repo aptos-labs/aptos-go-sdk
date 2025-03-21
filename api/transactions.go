@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
@@ -293,9 +294,9 @@ func (u *UnknownTransaction) TxnVersion() *uint64 {
 	num, err := util.StrToUint64(versionStr)
 	if err != nil {
 		return nil
-	} else {
-		return &num
 	}
+
+	return &num
 }
 
 // UserTransaction is a user submitted transaction as an entry function, script, or more.
@@ -398,7 +399,6 @@ type PendingTransaction struct {
 	ExpirationTimestampSecs uint64                // ExpirationTimestampSecs of the transaction, this is the Unix timestamp in seconds when the transaction expires.
 	Payload                 *TransactionPayload   // Payload of the transaction, this is the actual transaction data.
 	Signature               *Signature            // Signature is the AccountAuthenticator of the sender.
-
 }
 
 // TxnHash gives us the hash of the transaction.
@@ -813,7 +813,7 @@ type BatchSubmitTransactionResponse struct {
 type BatchSubmitTransactionFailure struct {
 	// Error is the error that occurred when submitting the transaction
 	Error Error
-	//TransactionIndex is the index of submitted transactions that failed
+	// TransactionIndex is the index of submitted transactions that failed
 	TransactionIndex uint32 `json:"transaction_index"`
 }
 

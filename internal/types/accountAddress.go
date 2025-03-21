@@ -3,6 +3,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
@@ -55,9 +56,9 @@ func (aa AccountAddress) IsSpecial() bool {
 func (aa AccountAddress) String() string {
 	if aa.IsSpecial() {
 		return fmt.Sprintf("0x%x", aa[31])
-	} else {
-		return util.BytesToHex(aa[:])
 	}
+
+	return util.BytesToHex(aa[:])
 }
 
 // FromAuthKey converts [crypto.AuthenticationKey] to [AccountAddress]
@@ -126,7 +127,7 @@ func (aa AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAdd
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
 func (aa AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
 	authKey := aa.AuthKey()
-	authKey.FromBytesAndScheme(append(authKey[:], seed[:]...), typeByte)
+	authKey.FromBytesAndScheme(append(authKey[:], seed...), typeByte)
 	copy(accountAddress[:], authKey[:])
 	return
 }

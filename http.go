@@ -44,12 +44,11 @@ func (he *HttpError) Error() string {
 			he.Method, he.RequestUrl.String(), he.Status,
 			string(he.Body),
 		)
-	} else {
-		// Trim if the error is too long
-		return fmt.Sprintf("HttpError %s %#v -> %#v %s %#v...[+%d]",
-			he.Method, he.RequestUrl.String(), he.Status,
-			he.Header.Get("Content-Type"),
-			string(he.Body)[:HttpErrSummaryLength-10], len(he.Body)-(HttpErrSummaryLength-10),
-		)
 	}
+	// Trim if the error is too long
+	return fmt.Sprintf("HttpError %s %#v -> %#v %s %#v...[+%d]",
+		he.Method, he.RequestUrl.String(), he.Status,
+		he.Header.Get("Content-Type"),
+		string(he.Body)[:HttpErrSummaryLength-10], len(he.Body)-(HttpErrSummaryLength-10),
+	)
 }

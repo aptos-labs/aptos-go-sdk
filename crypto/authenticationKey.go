@@ -2,11 +2,12 @@ package crypto
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-//region AuthenticationKey
+// region AuthenticationKey
 
 // DeriveScheme is the key type for deriving the AuthenticationKey.  It is used in a SHA3-256 hash.
 //
@@ -57,7 +58,7 @@ func (ak *AuthenticationKey) FromBytesAndScheme(bytes []byte, scheme DeriveSchem
 	copy((*ak)[:], authBytes)
 }
 
-//region AuthenticationKey CryptoMaterial
+// region AuthenticationKey CryptoMaterial
 
 // Bytes returns the raw bytes of the [AuthenticationKey]
 //
@@ -99,9 +100,9 @@ func (ak *AuthenticationKey) FromHex(hexStr string) (err error) {
 	return ak.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region AuthenticationKey bcs.Struct
+// region AuthenticationKey bcs.Struct
 
 // MarshalBCS serializes the [AuthenticationKey] to BCS bytes
 //
@@ -125,5 +126,5 @@ func (ak *AuthenticationKey) UnmarshalBCS(des *bcs.Deserializer) {
 	des.ReadFixedBytesInto(ak[:])
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

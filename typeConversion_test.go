@@ -502,8 +502,8 @@ func TestConvertToU8(t *testing.T) {
 				t.Errorf("ConvertToU8() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			if !tt.wantErr && *got != tt.want {
-				t.Errorf("ConvertToU8() = %v, want %v", *got, tt.want)
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("ConvertToU8() = %v, want %v", got, tt.want)
 			}
 		})
 	}

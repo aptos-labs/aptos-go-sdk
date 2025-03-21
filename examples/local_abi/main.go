@@ -3,13 +3,16 @@ package main
 
 import (
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/api"
 
 	"github.com/aptos-labs/aptos-go-sdk"
 )
 
-const FundAmount = 100_000_000
-const TransferAmount = 1_000
+const (
+	FundAmount     = 100_000_000
+	TransferAmount = 1_000
+)
 
 // example This example shows you how to make an APT transfer transaction in the simplest possible way
 func example(networkConfig aptos.NetworkConfig) {
@@ -69,7 +72,6 @@ func example(networkConfig aptos.NetworkConfig) {
 	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: payload,
 	})
-
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
 	}
@@ -137,7 +139,6 @@ func example(networkConfig aptos.NetworkConfig) {
 	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
 		Payload: payload2,
 	})
-
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())
 	}

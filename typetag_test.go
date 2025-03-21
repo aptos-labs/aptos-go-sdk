@@ -1,9 +1,12 @@
 package aptos
 
 import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestTypeTag(t *testing.T) {
@@ -13,12 +16,12 @@ func TestTypeTag(t *testing.T) {
 	assert.Equal(t, "0x1::option::Option<vector<0x1::object::Object<0x1::string::String>>>", nested.String())
 
 	bytes, err := bcs.Serialize(&nested)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	des := bcs.NewDeserializer(bytes)
 	tag := &TypeTag{}
 	des.Struct(tag)
-	assert.NoError(t, des.Error())
+	require.NoError(t, des.Error())
 
 	// Check the deserialized is correct
 	assert.Equal(t, &nested, tag)
@@ -46,10 +49,10 @@ func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagVarian
 	// Serialize and deserialize test
 	tt := NewTypeTag(tag)
 	bytes, err := bcs.Serialize(&tt)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	var newTag TypeTag
 	err = bcs.Deserialize(&newTag, bytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, tt, newTag)
 }
 
@@ -70,7 +73,7 @@ func TestStructTag(t *testing.T) {
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", st.String())
 	var aa3 AccountAddress
 	err := aa3.ParseStringRelaxed("0x3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	st.TypeParams = append(st.TypeParams, TypeTag{Value: &StructTag{
 		Address:    aa3,
 		Module:     "other",
@@ -86,7 +89,7 @@ func TestInvalidTypeTag(t *testing.T) {
 	bytes := serializer.ToBytes()
 	tag := &TypeTag{}
 	err := bcs.Deserialize(tag, bytes)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestParseTypeTag(t *testing.T) {

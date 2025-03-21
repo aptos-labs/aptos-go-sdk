@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // Serializer is a holding type to serialize a set of items into one shared buffer
@@ -57,16 +59,16 @@ func (ser *Serializer) Bool(v bool) {
 
 func serializeUInt[T uint16 | uint32 | uint64](ser *Serializer, size uint, v T, serialize func(slice []byte, num T)) {
 	ub := make([]byte, size)
-	serialize(ub[:], v)
-	ser.out.Write(ub[:])
+	serialize(ub, v)
+	ser.out.Write(ub)
 }
 
 func (ser *Serializer) serializeUBigInt(size uint, v *big.Int) {
 	ub := make([]byte, size)
-	v.FillBytes(ub[:])
+	v.FillBytes(ub)
 	// Reverse, since big.Int outputs bytes in BigEndian
-	slices.Reverse(ub[:])
-	ser.out.Write(ub[:])
+	slices.Reverse(ub)
+	ser.out.Write(ub)
 }
 
 // U8 serialize a byte
@@ -102,15 +104,30 @@ func (ser *Serializer) U256(v big.Int) {
 // Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths, and enums.
 func (ser *Serializer) Uleb128(val uint32) {
 	for val>>7 != 0 {
-		ser.out.WriteByte(uint8(val) | 0x80)
+		b, err := util.Uint32ToU8(val & 0xFF)
+		if err != nil {
+			ser.SetError(err)
+			return
+		}
+		ser.out.WriteByte(b | 0x80)
 		val >>= 7
 	}
-	ser.out.WriteByte(uint8(val))
+	b, err := util.Uint32ToU8(val & 0xFF)
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.out.WriteByte(b)
 }
 
 // WriteBytes serialize an array of bytes with its length first as an Uleb128.
 func (ser *Serializer) WriteBytes(v []byte) {
-	ser.Uleb128(uint32(len(v)))
+	length, err := util.IntToU32(len(v))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	ser.out.Write(v)
 }
 
@@ -182,7 +199,6 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 		}
 		// If neither works, let's pass an error up
 		ser.SetError(fmt.Errorf("type or reference of type is not Marshaler"))
-		return
 	})
 }
 
@@ -194,7 +210,12 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 //		ser.WriteString(item)
 //	}
 func SerializeSequenceWithFunction[AT []T, T any](array AT, ser *Serializer, serialize func(ser *Serializer, item T)) {
-	ser.Uleb128(uint32(len(array)))
+	length, err := util.IntToU32(len(array))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	for i, v := range array {
 		serialize(ser, v)
 		// Exit early if there's an error

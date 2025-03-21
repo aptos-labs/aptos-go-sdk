@@ -27,20 +27,20 @@ func CoinTransferPayload(coinType *TypeTag, dest AccountAddress, amount uint64) 
 				amountBytes,
 			},
 		}, nil
-	} else {
-		return &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer_coins",
-			ArgTypes: []TypeTag{*coinType},
-			Args: [][]byte{
-				dest[:],
-				amountBytes,
-			},
-		}, nil
 	}
+
+	return &EntryFunction{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "aptos_account",
+		},
+		Function: "transfer_coins",
+		ArgTypes: []TypeTag{*coinType},
+		Args: [][]byte{
+			dest[:],
+			amountBytes,
+		},
+	}, nil
 }
 
 // CoinBatchTransferPayload builds an EntryFunction payload for transferring coins to multiple receivers
@@ -76,18 +76,18 @@ func CoinBatchTransferPayload(coinType *TypeTag, dests []AccountAddress, amounts
 				amountsBytes,
 			},
 		}, nil
-	} else {
-		return &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "batch_transfer_coins",
-			ArgTypes: []TypeTag{*coinType},
-			Args: [][]byte{
-				destBytes,
-				amountsBytes,
-			},
-		}, nil
 	}
+
+	return &EntryFunction{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "aptos_account",
+		},
+		Function: "batch_transfer_coins",
+		ArgTypes: []TypeTag{*coinType},
+		Args: [][]byte{
+			destBytes,
+			amountsBytes,
+		},
+	}, nil
 }

@@ -2,12 +2,13 @@ package crypto
 
 import (
 	"fmt"
+	"sort"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-	"sort"
 )
 
-//region MultiKey
+// region MultiKey
 
 // MultiKey is an off-chain multi-sig, where multiple different keys can be used together to create an account
 //
@@ -23,7 +24,7 @@ type MultiKey struct {
 	SignaturesRequired uint8           // The number of signatures required to pass verification
 }
 
-//region MultiKey VerifyingKey implementation
+// region MultiKey VerifyingKey implementation
 
 // Verify verifies the signature against the message
 // This function will return true if the number of verified signatures is greater than or equal to the number of required signatures
@@ -33,7 +34,11 @@ type MultiKey struct {
 func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 	switch sig := signature.(type) {
 	case *MultiKeySignature:
-		if key.SignaturesRequired > uint8(len(sig.Signatures)) {
+		num, err := util.IntToU8(len(sig.Signatures))
+		if err != nil {
+			return false
+		}
+		if key.SignaturesRequired > num {
 			return false
 		}
 
@@ -55,9 +60,9 @@ func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 	}
 }
 
-//endregion
+// endregion
 
-//region MultiKey PublicKey implementation
+// region MultiKey PublicKey implementation
 
 // AuthKey converts the public key to an authentication key
 //
@@ -77,9 +82,9 @@ func (key *MultiKey) Scheme() uint8 {
 	return MultiKeyScheme
 }
 
-//endregion
+// endregion
 
-//region MultiKey CryptoMaterial implementation
+// region MultiKey CryptoMaterial implementation
 
 // Bytes converts the public key to bytes
 //
@@ -118,9 +123,9 @@ func (key *MultiKey) FromHex(hexStr string) (err error) {
 	return key.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region MultiKey bcs.Struct implementation
+// region MultiKey bcs.Struct implementation
 
 // MarshalBCS converts the public key to BCS
 //
@@ -146,11 +151,10 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 	key.SignaturesRequired = des.U8()
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiKeySignature
-
+// region MultiKeySignature
 type IndexedAnySignature struct {
 	Index     uint8
 	Signature *AnySignature
@@ -204,7 +208,7 @@ func NewMultiKeySignature(signatures []IndexedAnySignature) (*MultiKeySignature,
 	return multiKeySig, nil
 }
 
-//region MultiKeySignature CryptoMaterial implementation
+// region MultiKeySignature CryptoMaterial implementation
 
 // Bytes converts the signature to bytes
 //
@@ -243,9 +247,9 @@ func (e *MultiKeySignature) FromHex(hexStr string) (err error) {
 	return e.FromBytes(bytes)
 }
 
-//endregion
+// endregion
 
-//region MultiKeySignature bcs.Struct implementation
+// region MultiKeySignature bcs.Struct implementation
 
 // MarshalBCS converts the signature to BCS
 //
@@ -272,11 +276,11 @@ func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
 	e.Bitmap.UnmarshalBCS(des)
 }
 
-//endregion
+// endregion
 
-//endregion
+// endregion
 
-//region MultiKeyAuthenticator
+// region MultiKeyAuthenticator
 
 // MultiKeyAuthenticator is an on-chain authenticator for a MultiKeySignature
 //
@@ -290,7 +294,7 @@ type MultiKeyAuthenticator struct {
 	Sig    *MultiKeySignature // The signature of the authenticator
 }
 
-//region MultiKeyAuthenticator AccountAuthenticatorImpl implementation
+// region MultiKeyAuthenticator AccountAuthenticatorImpl implementation
 
 // PublicKey returns the public key of the authenticator
 //
@@ -316,9 +320,9 @@ func (ea *MultiKeyAuthenticator) Verify(msg []byte) bool {
 	return ea.PubKey.Verify(msg, ea.Sig)
 }
 
-//endregion
+// endregion
 
-//region MultiKeyAuthenticator bcs.Struct implementation
+// region MultiKeyAuthenticator bcs.Struct implementation
 
 // MarshalBCS serializes the authenticator to bytes
 //
@@ -344,14 +348,16 @@ func (ea *MultiKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(ea.Sig)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiKeyBitmap
+// region MultiKeyBitmap
 
 // MaxMultiKeySignatures is the maximum number supported here for ease of use
-const MaxMultiKeySignatures = uint8(32)
-const MaxMultiKeyBitmapBytes = MaxMultiKeySignatures / 8
+const (
+	MaxMultiKeySignatures  = uint8(32)
+	MaxMultiKeyBitmapBytes = MaxMultiKeySignatures / 8
+)
 
 // MultiKeyBitmap represents a bitmap of signatures in a MultiKey public key that signed the transaction
 // There is a variable length to the possible signers, starting from the leftmost bit representing
@@ -388,11 +394,11 @@ func (bm *MultiKeyBitmap) AddKey(index uint8) error {
 	curLength := len(bm.inner)
 	if int(numByte) >= curLength {
 		newInner := make([]byte, numByte+1)
-		copy(newInner[0:curLength], bm.inner[:])
+		copy(newInner[0:curLength], bm.inner)
 		bm.inner = newInner
 	}
 
-	bm.inner[numByte] = bm.inner[numByte] | (128 >> numBit)
+	bm.inner[numByte] |= 128 >> numBit
 	return nil
 }
 
@@ -412,14 +418,14 @@ func KeyIndices(index uint8) (numByte uint8, numBit uint8) {
 	return index / 8, index % 8
 }
 
-//region MultiKeyBitmap bcs.Struct
+// region MultiKeyBitmap bcs.Struct
 
 // MarshalBCS serializes the bitmap to bytes
 //
 // Implements:
 //   - [bcs.Marshaler]
 func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
-	ser.WriteBytes(bm.inner[:])
+	ser.WriteBytes(bm.inner)
 }
 
 // UnmarshalBCS deserializes the bitmap from bytes
@@ -433,8 +439,8 @@ func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
 		return
 	}
 	bm.inner = make([]byte, length)
-	des.ReadFixedBytesInto(bm.inner[:])
+	des.ReadFixedBytesInto(bm.inner)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

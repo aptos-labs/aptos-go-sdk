@@ -3,9 +3,12 @@ package bcs
 import (
 	"encoding/hex"
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/stretchr/testify/assert"
 )
 
 type TestStruct struct {
@@ -17,6 +20,7 @@ func (st *TestStruct) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
+
 func (st *TestStruct) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
@@ -27,11 +31,12 @@ type TestStruct2 struct {
 	b   bool
 }
 
-func (st TestStruct2) MarshalBCS(ser *Serializer) {
+func (st *TestStruct2) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
-func (st TestStruct2) UnmarshalBCS(des *Deserializer) {
+
+func (st *TestStruct2) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
 }
@@ -40,14 +45,15 @@ type TestStruct3 struct {
 	num uint16
 }
 
-func (st TestStruct3) MarshalBCS(ser *Serializer) {
+func (st *TestStruct3) MarshalBCS(ser *Serializer) {
 	if st.num > 255 {
 		ser.SetError(errors.New("value is greater than 255"))
 		return
 	}
 	ser.U8(uint8(st.num))
 }
-func (st TestStruct3) UnmarshalBCS(des *Deserializer) {
+
+func (st *TestStruct3) UnmarshalBCS(des *Deserializer) {
 	st.num = uint16(des.U8())
 }
 
@@ -161,7 +167,7 @@ func Test_FixedBytes(t *testing.T) {
 		expect, _ := hex.DecodeString(deserialized[i])
 		serializer.FixedBytes(bytes)
 		assert.Equal(t, expect, serializer.ToBytes())
-		assert.NoError(t, serializer.Error())
+		require.NoError(t, serializer.Error())
 	}
 
 	// Deserialize
@@ -170,7 +176,7 @@ func Test_FixedBytes(t *testing.T) {
 		deserializer := Deserializer{source: bytes}
 		expect, _ := hex.DecodeString(deserialized[i])
 		assert.Equal(t, expect, deserializer.ReadFixedBytes(len(bytes)))
-		assert.NoError(t, deserializer.Error())
+		require.NoError(t, deserializer.Error())
 	}
 }
 
@@ -195,9 +201,9 @@ func Test_Struct(t *testing.T) {
 	for i, input := range deserialized {
 		serializer := &Serializer{}
 		serializer.Struct(&input)
-		assert.NoError(t, serializer.Error())
+		require.NoError(t, serializer.Error())
 		expected, err := hex.DecodeString(serialized[i])
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected, serializer.ToBytes())
 	}
 
@@ -208,7 +214,7 @@ func Test_Struct(t *testing.T) {
 		st := TestStruct{}
 		deserializer.Struct(&st)
 		assert.Equal(t, deserialized[i], st)
-		assert.NoError(t, deserializer.Error())
+		require.NoError(t, deserializer.Error())
 	}
 }
 
@@ -219,32 +225,32 @@ func Test_DeserializeSequence(t *testing.T) {
 	actualSerialized, err := SerializeSingle(func(ser *Serializer) {
 		SerializeSequence(deserialized, ser)
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, serialized, actualSerialized)
 
 	des := NewDeserializer(actualSerialized)
 	actualDeserialized := DeserializeSequence[TestStruct](des)
-	assert.NoError(t, des.Error())
+	require.NoError(t, des.Error())
 	assert.Equal(t, deserialized, actualDeserialized)
 }
 
 func Test_InvalidBool(t *testing.T) {
 	des := NewDeserializer([]byte{0x02})
 	des.Bool()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_InvalidBytes(t *testing.T) {
 	des := NewDeserializer([]byte{0x02})
 	des.ReadBytes()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_InvalidFixedBytesInto(t *testing.T) {
 	des := NewDeserializer([]byte{0x02})
 	bytes := make([]byte, 2)
 	des.ReadFixedBytesInto(bytes)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_FailedStructSerialize(t *testing.T) {
@@ -252,23 +258,23 @@ func Test_FailedStructSerialize(t *testing.T) {
 		num: uint16(5),
 	}
 	_, err := Serialize(&str)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	str.num = uint16(256)
 	_, err = Serialize(&str)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_FailedStructDeserialize(t *testing.T) {
 	str := TestStruct{}
 	err := Deserialize(&str, []byte{})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func Test_SerializeSequence(t *testing.T) {
 	// Test not implementing Marshal
 	ser := Serializer{}
 	SerializeSequence([]byte{0x00}, &ser)
-	assert.Error(t, ser.Error())
+	require.Error(t, ser.Error())
 
 	// Test by reference
 	testStruct := TestStruct{
@@ -278,12 +284,12 @@ func Test_SerializeSequence(t *testing.T) {
 	data := []TestStruct{testStruct}
 	ser = Serializer{}
 	SerializeSequence(data, &ser)
-	assert.NoError(t, ser.Error())
-	assert.True(t, len(ser.ToBytes()) != 0)
+	require.NoError(t, ser.Error())
+	assert.NotEmpty(t, ser.ToBytes())
 
 	// Test reset
 	ser.Reset()
-	assert.True(t, len(ser.ToBytes()) == 0)
+	assert.Empty(t, ser.ToBytes())
 
 	// Test by value
 	testStruct2 := TestStruct2{
@@ -292,13 +298,13 @@ func Test_SerializeSequence(t *testing.T) {
 	}
 	data2 := []TestStruct2{testStruct2}
 	SerializeSequence(data2, &ser)
-	assert.NoError(t, ser.Error())
+	require.NoError(t, ser.Error())
 
 	bytes := ser.ToBytes()
 
 	// Test only by self
 	onlyBytes, err := SerializeSequenceOnly(data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, bytes, onlyBytes)
 }
 
@@ -306,17 +312,17 @@ func Test_DeserializeSequenceError(t *testing.T) {
 	// Test no leading size byte
 	des := NewDeserializer([]byte{})
 	DeserializeSequence[TestStruct](des)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 
 	// Test no bytes for struct
 	des = NewDeserializer([]byte{0x01})
 	DeserializeSequence[TestStruct](des)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 
 	// Test not a struct type to deserialize
 	des = NewDeserializer([]byte{0x01})
 	DeserializeSequence[uint8](des)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_DeserializerErrors(t *testing.T) {
@@ -328,43 +334,43 @@ func Test_DeserializerErrors(t *testing.T) {
 	assert.Equal(t, uint16(1), des.U16())
 	assert.Equal(t, 1, des.Remaining())
 	des.U16()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	assert.Equal(t, uint8(0xff), des.U8())
-	assert.NoError(t, des.Error())
+	require.NoError(t, des.Error())
 
 	des.Bool()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.ReadFixedBytes(2)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U16()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U32()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U64()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U128()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U256()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U256()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.Uleb128()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.ReadBytes()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	des.SetError(nil)
 	des.U8()
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_ConvenienceFunctions(t *testing.T) {
@@ -374,44 +380,44 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	}
 
 	bytes, err := Serialize(&str)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	str2 := TestStruct{}
 	err = Deserialize(&str2, bytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, str, str2)
 
 	serializedBool, err := SerializeBool(true)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x01}, serializedBool)
 
 	serializedU8, err := SerializeU8(1)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x01}, serializedU8)
 
 	serializedU16, err := SerializeU16(2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x02, 0x00}, serializedU16)
 
 	serializedU32, err := SerializeU32(3)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x03, 0x00, 0x00, 0x00}, serializedU32)
 
 	serializedU64, err := SerializeU64(4)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU64)
 
 	serializedU128, err := SerializeU128(*big.NewInt(5))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU128)
 
 	serializedU256, err := SerializeU256(*big.NewInt(6))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, serializedU256)
 
 	serializedBytes, err := SerializeBytes([]byte{0x05})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, []byte{0x01, 0x05}, serializedBytes)
 }
 
@@ -444,29 +450,28 @@ func Test_SerializeOptional(t *testing.T) {
 func Test_NilStructs(t *testing.T) {
 	ser := Serializer{}
 	ser.Struct(nil)
-	assert.Error(t, ser.Error())
+	require.Error(t, ser.Error())
 
 	des := NewDeserializer([]byte{})
 	des.Struct(nil)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 }
 
 func Test_DeserializeNotEnoughBytes(t *testing.T) {
 	data := []byte{0x01, 0x00, 0x00}
 	testStruct := &TestStruct{}
 	err := Deserialize(testStruct, data)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}
 		serialize(serializer, input)
 		expected, _ := hex.DecodeString(serialized[i])
 		assert.Equal(t, expected, serializer.ToBytes())
-		assert.NoError(t, serializer.Error())
+		require.NoError(t, serializer.Error())
 	}
 
 	// Deserializer
@@ -474,12 +479,11 @@ func helper[TYPE uint8 | uint16 | uint32 | uint64 | bool | []byte | string](t *t
 		bytes, _ := hex.DecodeString(input)
 		deserializer := NewDeserializer(bytes)
 		assert.Equal(t, deserialized[i], deserialize(deserializer))
-		assert.NoError(t, deserializer.Error())
+		require.NoError(t, deserializer.Error())
 	}
 }
 
 func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, serialize func(serializer *Serializer, val *big.Int), deserialize func(deserializer *Deserializer) big.Int) {
-
 	// Serializer
 	for i, input := range deserialized {
 		serializer := &Serializer{}
@@ -487,7 +491,7 @@ func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, se
 		expected, _ := hex.DecodeString(serialized[i])
 		bytes := serializer.ToBytes()
 		assert.Equal(t, expected, bytes)
-		assert.NoError(t, serializer.Error())
+		require.NoError(t, serializer.Error())
 	}
 
 	// Deserializer
@@ -495,7 +499,7 @@ func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, se
 		bytes, _ := hex.DecodeString(input)
 		deserializer := NewDeserializer(bytes)
 		actual := deserialize(deserializer)
-		assert.NoError(t, deserializer.Error())
+		require.NoError(t, deserializer.Error())
 		assert.Equal(t, 0, deserialized[i].Cmp(&actual))
 	}
 }

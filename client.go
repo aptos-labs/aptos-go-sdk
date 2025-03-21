@@ -405,7 +405,6 @@ type AptosFaucetClient interface {
 // AptosIndexerClient is an interface for all functionality on the Client that is Indexer related.  Its main implementation
 // is [IndexerClient]
 type AptosIndexerClient interface {
-
 	// QueryIndexer queries the indexer using GraphQL to fill the `query` struct with data.  See examples in the indexer client on how to make queries
 	//
 	//	var out []CoinBalance
@@ -457,18 +456,16 @@ type Client struct {
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig, options ...any) (client *Client, err error) {
-	var httpClient *http.Client = nil
+	var httpClient *http.Client
 	for i, arg := range options {
 		switch value := arg.(type) {
 		case *http.Client:
 			if httpClient != nil {
-				err = fmt.Errorf("NewClient only accepts one http.Client")
-				return
+				return nil, fmt.Errorf("NewClient only accepts one http.Client")
 			}
 			httpClient = value
 		default:
-			err = fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
-			return
+			return nil, fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
 		}
 	}
 	var nodeClient *NodeClient
@@ -481,13 +478,13 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		return nil, err
 	}
 	// Indexer may not be present
-	var indexerClient *IndexerClient = nil
+	var indexerClient *IndexerClient
 	if config.IndexerUrl != "" {
 		indexerClient = NewIndexerClient(nodeClient.client, config.IndexerUrl)
 	}
 
 	// Faucet may not be present
-	var faucetClient *FaucetClient = nil
+	var faucetClient *FaucetClient
 	if config.FaucetUrl != "" {
 		faucetClient, err = NewFaucetClient(nodeClient, config.FaucetUrl)
 		if err != nil {
@@ -500,12 +497,11 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		_, _ = nodeClient.GetChainId()
 	}
 
-	client = &Client{
+	return &Client{
 		nodeClient,
 		faucetClient,
 		indexerClient,
-	}
-	return
+	}, nil
 }
 
 // SetTimeout adjusts the HTTP client timeout

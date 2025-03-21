@@ -109,11 +109,11 @@ func (des *Deserializer) deserializeUBigint(typeName string, size int) big.Int {
 		return *big.NewInt(-1)
 	}
 	bytesBigEndian := make([]byte, size)
-	copy(bytesBigEndian[:], des.source[des.pos:end])
+	copy(bytesBigEndian, des.source[des.pos:end])
 	des.pos = end
-	slices.Reverse(bytesBigEndian[:])
+	slices.Reverse(bytesBigEndian)
 	var out big.Int
-	out.SetBytes(bytesBigEndian[:])
+	out.SetBytes(bytesBigEndian)
 	return out
 }
 
@@ -155,7 +155,7 @@ func (des *Deserializer) U256() big.Int {
 // [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
 	const maxU32 = uint64(0xFFFFFFFF)
-	var out uint64 = 0
+	var out uint64
 	shift := 0
 
 	for out < maxU32 {

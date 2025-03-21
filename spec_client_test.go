@@ -1,8 +1,9 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // Test_Spec_ClientConfig tests the client configuration
@@ -16,19 +17,19 @@ import (
 func Test_Spec_ClientConfig(t *testing.T) {
 	// It must be able to create a devnet client
 	_, err := NewClient(DevnetConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to create a testnet client
 	_, err = NewClient(TestnetConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to create a mainnet client
 	_, err = NewClient(MainnetConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to create a localnet client
 	_, err = NewClient(LocalnetConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to create a client with a custom configuration
 	_, err = NewClient(NetworkConfig{
@@ -38,7 +39,7 @@ func Test_Spec_ClientConfig(t *testing.T) {
 		FaucetUrl:  "http://localhost:8081",
 		ChainId:    4,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// It must be able to create a client with a custom configuration and custom headers
 	// TODO: Do we put this in the setup directly rather than adding later?
@@ -49,6 +50,6 @@ func Test_Spec_ClientConfig(t *testing.T) {
 		FaucetUrl:  "http://localhost:8081",
 		ChainId:    4,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	client.SetHeader("Authorization", "Bearer abcdefg")
 }

@@ -2,9 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestPayload_EntryFunction(t *testing.T) {
@@ -23,8 +26,8 @@ func TestPayload_EntryFunction(t *testing.T) {
     }`
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantEntryFunction)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionPayloadVariantEntryFunction, data.Type)
 	payload := data.Inner.(*TransactionPayloadEntryFunction)
 
 	assert.Equal(t, "0x1::object::transfer", payload.Function)
@@ -60,13 +63,13 @@ func TestPayload_Script(t *testing.T) {
 }`
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantScript)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionPayloadVariantScript, data.Type)
 	payload := data.Inner.(*TransactionPayloadScript)
 
 	assert.Len(t, payload.Code.Bytecode, 263)
 	assert.Equal(t, "main", payload.Code.Abi.Name)
-	assert.Len(t, payload.TypeArguments, 0)
+	assert.Empty(t, payload.TypeArguments)
 	assert.Len(t, payload.Arguments, 2)
 }
 
@@ -90,8 +93,8 @@ func TestPayload_Multisig(t *testing.T) {
 }`
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantMultisig)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionPayloadVariantMultisig, data.Type)
 	payload := data.Inner.(*TransactionPayloadMultisig)
 	assert.Equal(t, types.AccountOne, *payload.MultisigAddress)
 }
@@ -102,8 +105,8 @@ func TestPayload_ModuleBundle(t *testing.T) {
 }`
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantModuleBundle)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionPayloadVariantModuleBundle, data.Type)
 }
 
 func TestPayload_Unknown(t *testing.T) {
@@ -113,10 +116,10 @@ func TestPayload_Unknown(t *testing.T) {
 }`
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantUnknown)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionPayloadVariantUnknown, data.Type)
 	payload := data.Inner.(*TransactionPayloadUnknown)
 
-	assert.Equal(t, payload.Type, "new_payload")
-	assert.Equal(t, payload.Payload["something"].(bool), true)
+	assert.Equal(t, "new_payload", payload.Type)
+	assert.True(t, payload.Payload["something"].(bool))
 }

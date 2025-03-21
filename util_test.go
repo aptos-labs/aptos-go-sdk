@@ -1,9 +1,12 @@
 package aptos
 
 import (
-	"github.com/stretchr/testify/assert"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var testConfig = LocalnetConfig
@@ -17,7 +20,7 @@ func createTestClient() (*Client, error) {
 func TestSHA3_256Hash(t *testing.T) {
 	input := [][]byte{{0x1}, {0x2}, {0x3}}
 	expected, err := ParseHex("fd1780a6fc9ee0dab26ceb4b3941ab03e66ccd970d1db91612c66df4515b0a0a")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expected, Sha3256Hash(input))
 }
 
@@ -28,7 +31,7 @@ func TestParseHex(t *testing.T) {
 
 	for i, input := range inputs {
 		val, err := ParseHex(input)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected[i], val)
 	}
 }
@@ -49,7 +52,7 @@ func TestStrToUint64(t *testing.T) {
 
 	for i, input := range inputs {
 		val, err := StrToUint64(input)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected[i], val)
 	}
 }
@@ -60,7 +63,7 @@ func TestStrToBigInt(t *testing.T) {
 
 	for i, input := range inputs {
 		val, err := StrToBigInt(input)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, expected[i], val)
 	}
 }
@@ -70,6 +73,6 @@ func TestStrToBigIntError(t *testing.T) {
 
 	for _, input := range inputs {
 		_, err := StrToBigInt(input)
-		assert.Error(t, err)
+		require.Error(t, err)
 	}
 }

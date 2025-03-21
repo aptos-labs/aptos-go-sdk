@@ -2,9 +2,12 @@ package api
 
 import (
 	"encoding/json"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestTransaction_GenesisTransaction(t *testing.T) {
@@ -288,17 +291,17 @@ func TestTransaction_GenesisTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantGenesis, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantGenesis, data2.Type)
 
 	txn, err := data.GenesisTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.GenesisTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, uint64(0), txn.Version)
@@ -340,16 +343,16 @@ func TestTransaction_PendingTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantPending, data.Type)
 
 	// Pending isn't committed
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	txn, err := data.PendingTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, "0xae3f1f751c6cacd61f46054a5e9e39ca9f094802875befbc54ceecbcdf6eff69", txn.Hash)
 	assert.Equal(t, uint64(242217), txn.SequenceNumber)
@@ -540,17 +543,17 @@ func TestTransaction_UserTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantUser, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantUser, data2.Type)
 
 	txn, err := data.UserTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.UserTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, uint64(1010733903), txn.Version)
@@ -644,17 +647,17 @@ func TestTransaction_BlockMetadataTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantBlockMetadata, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantBlockMetadata, data2.Type)
 
 	txn, err := data.BlockMetadataTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.BlockMetadataTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, uint64(1), txn.Version)
@@ -665,7 +668,7 @@ func TestTransaction_BlockMetadataTransaction(t *testing.T) {
 
 	address := &types.AccountAddress{}
 	err = address.ParseStringRelaxed("0x90693588b138a37dbb37cb96c42ffb02bf48611fc9e78adeb57c8708ee3ac03e")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, address, txn.Proposer)
 	assert.Equal(t, []uint32{1, 2}, txn.FailedProposerIndices)
 	assert.Equal(t, []uint8{0}, txn.PreviousBlockVotesBitvec)
@@ -693,17 +696,17 @@ func TestTransaction_StateCheckpointTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantStateCheckpoint, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantStateCheckpoint, data2.Type)
 
 	txn, err := data.StateCheckpointTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.StateCheckpointTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, uint64(3), txn.Version)
@@ -747,17 +750,17 @@ func TestTransaction_BlockEpilogueTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantBlockEpilogue, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantBlockEpilogue, data2.Type)
 
 	txn, err := data.BlockEpilogueTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.BlockEpilogueTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, uint64(2), txn.Version)
@@ -783,9 +786,9 @@ func TestTransaction_BlockEpilogueTransaction(t *testing.T) {
 
 	// Check invalid cases
 	_, err = data.UnknownTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.UnknownTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestTransaction_UnknownTransaction(t *testing.T) {
@@ -797,17 +800,17 @@ func TestTransaction_UnknownTransaction(t *testing.T) {
 }`
 	data := &Transaction{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantUnknown, data.Type)
 	data2 := &CommittedTransaction{}
 	err = json.Unmarshal([]byte(testJson), &data2)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, TransactionVariantUnknown, data2.Type)
 
 	txn, err := data.UnknownTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	txn2, err := data2.UnknownTransaction()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, txn, txn2)
 
 	assert.Equal(t, "block_imaginary_transaction", txn.Type)
@@ -822,29 +825,29 @@ func TestTransaction_UnknownTransaction(t *testing.T) {
 
 	// Check invalid cases
 	_, err = data.GenesisTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.BlockMetadataTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.StateCheckpointTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.BlockEpilogueTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.UserTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.ValidatorTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data.PendingTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.GenesisTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.BlockMetadataTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.StateCheckpointTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.BlockEpilogueTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.UserTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 	_, err = data2.ValidatorTransaction()
-	assert.Error(t, err)
+	require.Error(t, err)
 }

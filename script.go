@@ -2,11 +2,12 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"math/big"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-//region Script
+// region Script
 
 // Script A Move script as compiled code as a transaction
 type Script struct {
@@ -15,16 +16,14 @@ type Script struct {
 	Args     []ScriptArgument // The arguments
 }
 
-//region Script TransactionPayloadImpl
-
+// region Script TransactionPayloadImpl
 func (s *Script) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantScript
 }
 
-//endregion
+// endregion
 
-//region Script bcs.Struct
-
+// region Script bcs.Struct
 func (s *Script) MarshalBCS(ser *bcs.Serializer) {
 	ser.WriteBytes(s.Code)
 	bcs.SerializeSequence(s.ArgTypes, ser)
@@ -37,10 +36,10 @@ func (s *Script) UnmarshalBCS(des *bcs.Deserializer) {
 	s.Args = bcs.DeserializeSequence[ScriptArgument](des)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region ScriptArgument
+// region ScriptArgument
 
 // ScriptArgumentVariant the type of the script argument.  If there isn't a value here, it is not supported.
 //
@@ -66,7 +65,7 @@ type ScriptArgument struct {
 	Value   any                   // The value of the argument
 }
 
-//region ScriptArgument bcs.Struct
+// region ScriptArgument bcs.Struct
 // TODO: consider making a separate function to parse the value at input time rather than build time
 
 func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
@@ -163,5 +162,5 @@ func (sa *ScriptArgument) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

@@ -3,7 +3,9 @@ package crypto
 import (
 	"errors"
 	"fmt"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // AccountAuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types.
@@ -28,7 +30,7 @@ type AccountAuthenticatorImpl interface {
 	Verify(data []byte) bool
 }
 
-//region AccountAuthenticator
+// region AccountAuthenticator
 
 // AccountAuthenticatorType single byte representing the spot in the enum from the Rust implementation
 type AccountAuthenticatorType uint8
@@ -53,7 +55,7 @@ type AccountAuthenticator struct {
 	Auth    AccountAuthenticatorImpl // Auth is the actual authenticator
 }
 
-//region AccountAuthenticator AccountAuthenticatorImpl implementation
+// region AccountAuthenticator AccountAuthenticatorImpl implementation
 
 // PubKey returns the public key of the authenticator
 func (ea *AccountAuthenticator) PubKey() PublicKey {
@@ -70,9 +72,9 @@ func (ea *AccountAuthenticator) Verify(data []byte) bool {
 	return ea.Auth.Verify(data)
 }
 
-//endregion
+// endregion
 
-//region AccountAuthenticator bcs.Struct implementation
+// region AccountAuthenticator bcs.Struct implementation
 
 // MarshalBCS serializes the [AccountAuthenticator] to the BCS format
 //
@@ -92,7 +94,12 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
-	ea.Variant = AccountAuthenticatorType(kindNum)
+	index, err := util.Uint32ToU8(kindNum)
+	if err != nil {
+		des.SetError(err)
+		return
+	}
+	ea.Variant = AccountAuthenticatorType(index)
 	switch ea.Variant {
 	case AccountAuthenticatorEd25519:
 		ea.Auth = &Ed25519Authenticator{}
@@ -110,56 +117,56 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 }
 
 func (ea *AccountAuthenticator) FromKeyAndSignature(key PublicKey, sig Signature) error {
-	switch key.(type) {
+	switch key := key.(type) {
 	case *Ed25519PublicKey:
-		switch sig.(type) {
+		switch sig := sig.(type) {
 		case *Ed25519Signature:
 			ea.Variant = AccountAuthenticatorEd25519
 			ea.Auth = &Ed25519Authenticator{
-				PubKey: key.(*Ed25519PublicKey),
-				Sig:    sig.(*Ed25519Signature),
+				PubKey: key,
+				Sig:    sig,
 			}
 		default:
 			return errors.New("invalid signature type for Ed25519PublicKey")
 		}
 	case *MultiEd25519PublicKey:
-		switch sig.(type) {
+		switch sig := sig.(type) {
 		case *MultiEd25519Signature:
 			ea.Variant = AccountAuthenticatorMultiEd25519
 			ea.Auth = &MultiEd25519Authenticator{
-				PubKey: key.(*MultiEd25519PublicKey),
-				Sig:    sig.(*MultiEd25519Signature),
+				PubKey: key,
+				Sig:    sig,
 			}
 		default:
 			return errors.New("invalid signature type for MultiEd25519PublicKey")
 		}
 	case *AnyPublicKey:
-		switch sig.(type) {
+		switch sig := sig.(type) {
 		case *AnySignature:
 			ea.Variant = AccountAuthenticatorSingleSender
 			ea.Auth = &SingleKeyAuthenticator{
-				PubKey: key.(*AnyPublicKey),
-				Sig:    sig.(*AnySignature),
+				PubKey: key,
+				Sig:    sig,
 			}
 		default:
 			return errors.New("invalid signature type for AnyPublicKey")
 		}
 	case *MultiKey:
-		switch sig.(type) {
+		switch sig := sig.(type) {
 		case *MultiKeySignature:
 			ea.Variant = AccountAuthenticatorMultiKey
 			ea.Auth = &MultiKeyAuthenticator{
-				PubKey: key.(*MultiKey),
-				Sig:    sig.(*MultiKeySignature),
+				PubKey: key,
+				Sig:    sig,
 			}
 		default:
 			return errors.New("invalid signature type for MultiKey")
 		}
 	default:
-		return errors.New("Invalid key type")
+		return errors.New("invalid key type")
 	}
 	return nil
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

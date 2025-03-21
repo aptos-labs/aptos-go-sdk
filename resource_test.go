@@ -2,11 +2,14 @@ package aptos
 
 import (
 	"encoding/base64"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/stretchr/testify/assert"
 )
 
 func decodeB64(x string) ([]byte, error) {
@@ -21,13 +24,13 @@ func TestMoveResourceBCS(t *testing.T) {
 	// base64 < /tmp/ar_bcs
 	b64text := "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBGNvaW4JQ29pblN0b3JlAQcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQphcHRvc19jb2luCUFwdG9zQ29pbgBpKsLrCwAAAAAAAgAAAAAAAAACAAAAAAAAANGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAADAAAAAAAAANGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEHYWNjb3VudAdBY2NvdW50AJMBINGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAAEAAAAAAAAAAEAAAAAAAAAAAAAAAAAAADRnQOkcqsIwBT9nF0aJHz92CahxzW+eZTNhkBWMHemuwAAAAAAAAAAAQAAAAAAAADRnQOkcqsIwBT9nF0aJHz92CahxzW+eZTNhkBWMHemuwAA"
 	blob, err := decodeB64(b64text)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.NotNil(t, blob)
 
 	deserializer := bcs.NewDeserializer(blob)
 	resources := bcs.DeserializeSequence[AccountResourceRecord](deserializer)
-	assert.NoError(t, deserializer.Error())
-	assert.Equal(t, 2, len(resources))
+	require.NoError(t, deserializer.Error())
+	assert.Len(t, resources, 2)
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", resources[0].Tag.String())
 	assert.Equal(t, "0x1::account::Account", resources[1].Tag.String())
 }

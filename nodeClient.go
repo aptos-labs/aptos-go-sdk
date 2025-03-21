@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"io"
 	"log/slog"
 	"net/http"
@@ -16,6 +15,10 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
+
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
@@ -23,7 +26,7 @@ import (
 const (
 	DefaultMaxGasAmount      = uint64(100_000) // Default to 0.001 APT max gas amount
 	DefaultGasUnitPrice      = uint64(100)     // Default to min gas price
-	DefaultExpirationSeconds = int64(300)      // Default to 5 minutes
+	DefaultExpirationSeconds = uint64(300)     // Default to 5 minutes
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -283,7 +286,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 	}
 
 	// Return early if we don't need transactions
-	if withTransactions == false {
+	if !withTransactions {
 		return block, nil
 	}
 
@@ -313,7 +316,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 		retrievedTransactions = uint64(len(block.Transactions))
 		cursor = block.Transactions[len(block.Transactions)-1].Version()
 	}
-	return
+	return block, nil
 }
 
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
@@ -418,9 +421,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			}
 			txn, err := rc.TransactionByHash(hash)
 			if err == nil {
-				if txn.Type == api.TransactionVariantPending {
-					// not done yet!
-				} else if txn.Type == api.TransactionVariantUser {
+				if txn.Type != api.TransactionVariantPending {
 					// done!
 					delete(hashSet, hash)
 					slog.Debug("txn done", "hash", hash)
@@ -570,20 +571,20 @@ func (rc *NodeClient) handleTransactions(
 		numTxns := uint64(len(txns))
 		if numTxns >= actualLimit {
 			return txns, nil
-		} else {
-			newStart := getNext(&txns)
-			newLength := actualLimit - numTxns
-			extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
-			if err != nil {
-				return nil, err
-			}
-
-			return append(extra, txns...), nil
 		}
-	} else {
-		// If we know the start, just pull one page
-		return getTxns(start, nil)
+
+		newStart := getNext(&txns)
+		newLength := actualLimit - numTxns
+		extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
+		if err != nil {
+			return nil, err
+		}
+
+		return append(extra, txns...), nil
 	}
+
+	// If we know the start, just pull one page
+	return getTxns(start, nil)
 }
 
 // transactionsConcurrent fetches the transactions from the node concurrently
@@ -595,12 +596,6 @@ func (rc *NodeClient) transactionsConcurrent(
 	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
 ) (data []*api.CommittedTransaction, err error) {
 	const transactionsPageSize = 100
-	// If we know both, we can fetch all concurrently
-	type Pair struct {
-		start uint64 // inclusive
-		end   uint64 // exclusive
-	}
-
 	// If the limit is  greater than the page size, we need to fetch concurrently, otherwise not
 	if limit > transactionsPageSize {
 		numChannels := limit / transactionsPageSize
@@ -610,7 +605,7 @@ func (rc *NodeClient) transactionsConcurrent(
 
 		// Concurrently fetch all the transactions by the page size
 		channels := make([]chan ConcResponse[[]*api.CommittedTransaction], numChannels)
-		for i := uint64(0); i*transactionsPageSize < limit; i += 1 {
+		for i := uint64(0); i*transactionsPageSize < limit; i++ {
 			channels[i] = make(chan ConcResponse[[]*api.CommittedTransaction], 1)
 			st := start + i*100 // TODO: allow page size to be configured
 			li := min(transactionsPageSize, limit-i*transactionsPageSize)
@@ -635,14 +630,14 @@ func (rc *NodeClient) transactionsConcurrent(
 			return responses[i].Version() < responses[j].Version()
 		})
 		return responses, nil
-	} else {
-		response, err := getTxns(&start, &limit)
-		if err != nil {
-			return nil, err
-		} else {
-			return response, nil
-		}
 	}
+
+	response, err := getTxns(&start, &limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return response, nil
 }
 
 // transactionsInner fetches the transactions from the node in a single request
@@ -744,19 +739,11 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 
 // SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
 func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
-	expirationSeconds := DefaultExpirationSeconds
-
 	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
 
 	for opti, option := range options {
 		switch ovalue := option.(type) {
-		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
 		case FeePayer:
 			feePayer = ovalue
 		case AdditionalSigners:
@@ -798,7 +785,7 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 func (rc *NodeClient) simulateTransactionInner(signedTxn *SignedTransaction, options ...any) (data []*api.UserTransaction, err error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
-		return
+		return nil, err
 	}
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions/simulate")
@@ -849,7 +836,7 @@ type MaxGasAmount uint64
 type GasUnitPrice uint64
 
 // ExpirationSeconds will set the number of seconds from the current time to expire a transaction
-type ExpirationSeconds int64
+type ExpirationSeconds uint64
 
 // FeePayer will set the fee payer for a transaction
 type FeePayer *AccountAddress
@@ -875,7 +862,6 @@ type ChainIdOption uint8
 //   - [SequenceNumber]
 //   - [ChainIdOption]
 func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -893,11 +879,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -926,7 +908,6 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 //   - [FeePayer]
 //   - [AdditionalSigners]
 func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
-
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
 	expirationSeconds := DefaultExpirationSeconds
@@ -947,11 +928,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -984,15 +961,15 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 				SecondarySigners: additionalSigners,
 			},
 		}, nil
-	} else {
-		return &RawTransactionWithData{
-			Variant: MultiAgentRawTransactionWithDataVariant,
-			Inner: &MultiAgentRawTransactionWithData{
-				RawTxn:           rawTxn,
-				SecondarySigners: additionalSigners,
-			},
-		}, nil
 	}
+
+	return &RawTransactionWithData{
+		Variant: MultiAgentRawTransactionWithDataVariant,
+		Inner: &MultiAgentRawTransactionWithData{
+			RawTxn:           rawTxn,
+			SecondarySigners: additionalSigners,
+		},
+	}, nil
 }
 
 func (rc *NodeClient) buildTransactionInner(
@@ -1001,7 +978,7 @@ func (rc *NodeClient) buildTransactionInner(
 	maxGasAmount uint64,
 	gasUnitPrice uint64,
 	haveGasUnitPrice bool,
-	expirationSeconds int64,
+	expirationSeconds uint64,
 	sequenceNumber uint64,
 	haveSequenceNumber bool,
 	chainId uint8,
@@ -1089,7 +1066,11 @@ func (rc *NodeClient) buildTransactionInner(
 		}
 	}
 
-	expirationTimestampSeconds := uint64(time.Now().Unix() + expirationSeconds)
+	now, err := util.IntToU64(int(time.Now().Unix()))
+	if err != nil {
+		return nil, err
+	}
+	expirationTimestampSeconds := now + expirationSeconds
 
 	// Base raw transaction used for all requests
 	rawTxn = &RawTransaction{
@@ -1116,7 +1097,12 @@ func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
 	vp.Module.MarshalBCS(ser)
 	ser.WriteString(vp.Function)
 	bcs.SerializeSequence(vp.ArgTypes, ser)
-	ser.Uleb128(uint32(len(vp.Args)))
+	length, err := util.IntToU32(len(vp.Args))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	for _, a := range vp.Args {
 		ser.WriteBytes(a)
 	}
@@ -1163,10 +1149,11 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ..
 	if err != nil {
 		return 0, err
 	}
-	values, err := rc.View(&ViewPayload{Module: ModuleId{
-		Address: AccountOne,
-		Name:    "coin",
-	},
+	values, err := rc.View(&ViewPayload{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "coin",
+		},
 		Function: "balance",
 		ArgTypes: []TypeTag{AptosCoinTypeTag},
 		Args:     [][]byte{accountBytes},

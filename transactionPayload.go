@@ -3,11 +3,13 @@ package aptos
 import (
 	"errors"
 	"fmt"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-//region TransactionPayload
-
+// region TransactionPayload
 type TransactionPayloadVariant uint32
 
 const (
@@ -27,8 +29,7 @@ type TransactionPayload struct {
 	Payload TransactionPayloadImpl
 }
 
-//region TransactionPayload bcs.Struct
-
+// region TransactionPayload bcs.Struct
 func (txn *TransactionPayload) MarshalBCS(ser *bcs.Serializer) {
 	if txn == nil || txn.Payload == nil {
 		ser.SetError(fmt.Errorf("nil transaction payload"))
@@ -37,6 +38,7 @@ func (txn *TransactionPayload) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(txn.Payload.PayloadType()))
 	txn.Payload.MarshalBCS(ser)
 }
+
 func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	payloadType := TransactionPayloadVariant(des.Uleb128())
 	switch payloadType {
@@ -58,10 +60,10 @@ func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	txn.Payload.UnmarshalBCS(des)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region ModuleBundle
+// region ModuleBundle
 
 // ModuleBundle is long deprecated and no longer used, but exist as an enum position in TransactionPayload
 type ModuleBundle struct{}
@@ -73,13 +75,14 @@ func (txn *ModuleBundle) PayloadType() TransactionPayloadVariant {
 func (txn *ModuleBundle) MarshalBCS(ser *bcs.Serializer) {
 	ser.SetError(errors.New("ModuleBundle unimplemented"))
 }
+
 func (txn *ModuleBundle) UnmarshalBCS(des *bcs.Deserializer) {
 	des.SetError(errors.New("ModuleBundle unimplemented"))
 }
 
-//endregion ModuleBundle
+// endregion ModuleBundle
 
-//region EntryFunction
+// region EntryFunction
 
 // EntryFunction call a single published entry function arguments are ordered BCS encoded bytes
 type EntryFunction struct {
@@ -89,25 +92,29 @@ type EntryFunction struct {
 	Args     [][]byte
 }
 
-//region EntryFunction TransactionPayloadImpl
-
+// region EntryFunction TransactionPayloadImpl
 func (sf *EntryFunction) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantEntryFunction
 }
 
-//endregion
+// endregion
 
-//region EntryFunction bcs.Struct
-
+// region EntryFunction bcs.Struct
 func (sf *EntryFunction) MarshalBCS(ser *bcs.Serializer) {
 	sf.Module.MarshalBCS(ser)
 	ser.WriteString(sf.Function)
 	bcs.SerializeSequence(sf.ArgTypes, ser)
-	ser.Uleb128(uint32(len(sf.Args)))
+	length, err := util.IntToU32(len(sf.Args))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	for _, a := range sf.Args {
 		ser.WriteBytes(a)
 	}
 }
+
 func (sf *EntryFunction) UnmarshalBCS(des *bcs.Deserializer) {
 	sf.Module.UnmarshalBCS(des)
 	sf.Function = des.ReadString()
@@ -119,10 +126,10 @@ func (sf *EntryFunction) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region Multisig
+// region Multisig
 
 // Multisig is an on-chain multisig transaction, that calls an entry function associated
 type Multisig struct {
@@ -130,16 +137,14 @@ type Multisig struct {
 	Payload         *MultisigTransactionPayload // Optional
 }
 
-//region Multisig TransactionPayloadImpl
-
+// region Multisig TransactionPayloadImpl
 func (sf *Multisig) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantMultisig
 }
 
-//endregion
+// endregion
 
-//region Multisig bcs.Struct
-
+// region Multisig bcs.Struct
 func (sf *Multisig) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(&sf.MultisigAddress)
 	if sf.Payload == nil {
@@ -149,6 +154,7 @@ func (sf *Multisig) MarshalBCS(ser *bcs.Serializer) {
 		ser.Struct(sf.Payload)
 	}
 }
+
 func (sf *Multisig) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(&sf.MultisigAddress)
 	if des.Bool() {
@@ -157,11 +163,10 @@ func (sf *Multisig) UnmarshalBCS(des *bcs.Deserializer) {
 	}
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultisigTransactionPayload
-
+// region MultisigTransactionPayload
 type MultisigTransactionPayloadVariant uint32
 
 const (
@@ -180,12 +185,12 @@ type MultisigTransactionPayload struct {
 	Payload MultisigTransactionImpl
 }
 
-//region MultisigTransactionPayload bcs.Struct
-
+// region MultisigTransactionPayload bcs.Struct
 func (sf *MultisigTransactionPayload) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(sf.Variant))
 	ser.Struct(sf.Payload)
 }
+
 func (sf *MultisigTransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	variant := MultisigTransactionPayloadVariant(des.Uleb128())
 	switch variant {
@@ -198,5 +203,5 @@ func (sf *MultisigTransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(sf.Payload)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

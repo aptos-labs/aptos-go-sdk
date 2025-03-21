@@ -2,16 +2,18 @@ package aptos
 
 import (
 	"fmt"
+	"sync"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/sha3"
-	"sync"
 )
 
-//region RawTransaction
-
-var rawTransactionPrehash []byte
-var rawTransactionWithPrehashOnce sync.Once
+// region RawTransaction
+var (
+	rawTransactionPrehash         []byte
+	rawTransactionWithPrehashOnce sync.Once
+)
 
 const rawTransactionPrehashStr = "APTOS::RawTransaction"
 
@@ -72,8 +74,7 @@ func (txn *RawTransaction) SignedTransactionWithAuthenticator(auth *crypto.Accou
 	}, nil
 }
 
-//region RawTransaction bcs.Struct
-
+// region RawTransaction bcs.Struct
 func (txn *RawTransaction) MarshalBCS(ser *bcs.Serializer) {
 	txn.Sender.MarshalBCS(ser)
 	ser.U64(txn.SequenceNumber)
@@ -94,9 +95,9 @@ func (txn *RawTransaction) UnmarshalBCS(des *bcs.Deserializer) {
 	txn.ChainId = des.U8()
 }
 
-//endregion
+// endregion
 
-//region RawTransaction MessageSigner
+// region RawTransaction MessageSigner
 
 // SigningMessage generates the bytes needed to be signed by a signer
 func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
@@ -111,10 +112,9 @@ func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
 	return message, nil
 }
 
-//endregion
+// endregion
 
-//region RawTransaction Signer
-
+// region RawTransaction Signer
 func (txn *RawTransaction) Sign(signer crypto.Signer) (authenticator *crypto.AccountAuthenticator, err error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
@@ -123,13 +123,14 @@ func (txn *RawTransaction) Sign(signer crypto.Signer) (authenticator *crypto.Acc
 	return signer.Sign(message)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region RawTransactionWithData
-
-var rawTransactionWithDataPrehash []byte
-var rawTransactionWithDataPrehashOnce sync.Once
+// region RawTransactionWithData
+var (
+	rawTransactionWithDataPrehash     []byte
+	rawTransactionWithDataPrehashOnce sync.Once
+)
 
 const rawTransactionWithDataPrehashStr = "APTOS::RawTransactionWithData"
 
@@ -142,7 +143,6 @@ func RawTransactionWithDataPrehash() []byte {
 		rawTransactionWithDataPrehash = b32[:]
 	})
 	return rawTransactionWithDataPrehash
-
 }
 
 type RawTransactionWithDataVariant uint32
@@ -170,9 +170,9 @@ func (txn *RawTransactionWithData) SetFeePayer(
 		inner := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
 		inner.FeePayer = &feePayer
 		return true
-	} else {
-		return false
 	}
+
+	return false
 }
 
 func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(
@@ -221,8 +221,7 @@ func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 	}, true
 }
 
-//region RawTransactionWithData Signer
-
+// region RawTransactionWithData Signer
 func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (authenticator *crypto.AccountAuthenticator, err error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
@@ -231,10 +230,9 @@ func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (authenticator *cr
 	return signer.Sign(message)
 }
 
-//endregion
+// endregion
 
-//region RawTransactionWithData MessageSigner
-
+// region RawTransactionWithData MessageSigner
 func (txn *RawTransactionWithData) SigningMessage() (message []byte, err error) {
 	txnBytes, err := bcs.Serialize(txn)
 	if err != nil {
@@ -247,10 +245,9 @@ func (txn *RawTransactionWithData) SigningMessage() (message []byte, err error) 
 	return message, nil
 }
 
-//endregion
+// endregion
 
-//region RawTransactionWithData bcs.Struct
-
+// region RawTransactionWithData bcs.Struct
 func (txn *RawTransactionWithData) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(txn.Variant))
 	ser.Struct(txn.Inner)
@@ -270,18 +267,16 @@ func (txn *RawTransactionWithData) UnmarshalBCS(des *bcs.Deserializer) {
 	des.Struct(txn.Inner)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiAgentRawTransactionWithData
-
+// region MultiAgentRawTransactionWithData
 type MultiAgentRawTransactionWithData struct {
 	RawTxn           *RawTransaction
 	SecondarySigners []AccountAddress
 }
 
-//region MultiAgentRawTransactionWithData bcs.Struct
-
+// region MultiAgentRawTransactionWithData bcs.Struct
 func (txn *MultiAgentRawTransactionWithData) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(txn.RawTxn)
 	bcs.SerializeSequence(txn.SecondarySigners, ser)
@@ -293,19 +288,17 @@ func (txn *MultiAgentRawTransactionWithData) UnmarshalBCS(des *bcs.Deserializer)
 	txn.SecondarySigners = bcs.DeserializeSequence[AccountAddress](des)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion
 
-//region MultiAgentWithFeePayerRawTransactionWithData
-
+// region MultiAgentWithFeePayerRawTransactionWithData
 type MultiAgentWithFeePayerRawTransactionWithData struct {
 	RawTxn           *RawTransaction
 	SecondarySigners []AccountAddress
 	FeePayer         *AccountAddress
 }
 
-//region MultiAgentWithFeePayerRawTransactionWithData bcs.Struct
-
+// region MultiAgentWithFeePayerRawTransactionWithData bcs.Struct
 func (txn *MultiAgentWithFeePayerRawTransactionWithData) MarshalBCS(ser *bcs.Serializer) {
 	ser.Struct(txn.RawTxn)
 	bcs.SerializeSequence(txn.SecondarySigners, ser)
@@ -320,5 +313,5 @@ func (txn *MultiAgentWithFeePayerRawTransactionWithData) UnmarshalBCS(des *bcs.D
 	des.Struct(txn.FeePayer)
 }
 
-//endregion
-//endregion
+// endregion
+// endregion

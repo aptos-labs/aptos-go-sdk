@@ -9,6 +9,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,15 +18,15 @@ func TestPollForTransaction(t *testing.T) {
 	// this doesn't need to actually have an aptos-node!
 	// API error on every GET is fine, poll for a few milliseconds then return error
 	client, err := NewClient(LocalnetConfig)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	start := time.Now()
 	err = client.PollForTransactions([]string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
-	dt := time.Now().Sub(start)
+	dt := time.Since(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)
 	assert.Less(t, dt, 20*time.Millisecond)
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEventsByHandle(t *testing.T) {
@@ -58,7 +60,10 @@ func TestEventsByHandle(t *testing.T) {
 			})
 		}
 
-		json.NewEncoder(w).Encode(events)
+		err := json.NewEncoder(w).Encode(events)
+		if err != nil {
+			return
+		}
 	}))
 	defer mockServer.Close()
 
@@ -66,7 +71,7 @@ func TestEventsByHandle(t *testing.T) {
 		Name:    "mocknet",
 		NodeUrl: mockServer.URL,
 	})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("pagination with concurrent fetching", func(t *testing.T) {
 		start := uint64(0)
@@ -79,7 +84,7 @@ func TestEventsByHandle(t *testing.T) {
 			&limit,
 		)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, events, 150)
 	})
 
@@ -92,7 +97,7 @@ func TestEventsByHandle(t *testing.T) {
 			nil,
 		)
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, events, 100)
 		assert.Equal(t, uint64(99), events[99].SequenceNumber)
 	})
@@ -111,7 +116,7 @@ func TestEventsByHandle(t *testing.T) {
 		jsonBytes, _ := json.MarshalIndent(events, "", "  ")
 		t.Logf("JSON Response: %s", string(jsonBytes))
 
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Len(t, events, 5)
 		assert.Equal(t, uint64(50), events[0].SequenceNumber)
 		assert.Equal(t, uint64(54), events[4].SequenceNumber)

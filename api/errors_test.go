@@ -3,8 +3,11 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_Error(t *testing.T) {
@@ -18,7 +21,7 @@ func Test_Error(t *testing.T) {
 	}`, errorMessage, errorCode)
 	data := &Error{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, errorMessage, data.Message)
 	assert.Equal(t, errorCode, data.ErrorCode)
 	assert.Equal(t, vmErrorCode, data.VmErrorCode)
@@ -36,7 +39,7 @@ func Test_ErrorWithVm(t *testing.T) {
 	}`, errorMessage, errorCode, vmErrorCode)
 	data := &Error{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, errorMessage, data.Message)
 	assert.Equal(t, errorCode, data.ErrorCode)
 	assert.Equal(t, vmErrorCode, data.VmErrorCode)

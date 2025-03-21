@@ -1,8 +1,9 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"math/big"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // -- Note these are copied from internal/util/util.go to prevent package loops, but still allow devs to use it
