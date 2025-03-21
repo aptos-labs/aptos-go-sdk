@@ -72,7 +72,6 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 	// Iterate through characters, handling border conditions, we don't use a range because we sometimes skip ahead
 	for cur < len(inputRunes) {
 		r := inputRunes[cur]
-		// println(fmt.Printf("%c | %s | %s\n", r, currentStr, util.PrettyJson(saved)))
 
 		switch r {
 		case '<':
@@ -193,7 +192,6 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 	str := strings.TrimSpace(input)
 
-	// println(fmt.Printf("-- %s | %s\n", input, util.PrettyJson(types)))
 	// TODO: for now we aren't going to lowercase this
 
 	// Handle primitive types
@@ -277,7 +275,6 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 
 		// Validate struct address
 		address := &AccountAddress{}
-		// println("PARTS:", util.PrettyJson(parts))
 		err := address.ParseStringWithPrefixRelaxed(parts[0])
 		if err != nil {
 			return nil, errors.New("invalid type tag struct address")
