@@ -9,6 +9,7 @@ import (
 )
 
 func TestTypeTag(t *testing.T) {
+	t.Parallel()
 	// This is unfortunate with references
 	nested := NewTypeTag(NewOptionTag(NewVectorTag(NewObjectTag(NewStringTag()))))
 
@@ -27,6 +28,7 @@ func TestTypeTag(t *testing.T) {
 }
 
 func TestTypeTagIdentities(t *testing.T) {
+	t.Parallel()
 	checkVariant(t, &AddressTag{}, TypeTagAddress, "address")
 	checkVariant(t, &SignerTag{}, TypeTagSigner, "signer")
 	checkVariant(t, &BoolTag{}, TypeTagBool, "bool")
@@ -57,6 +59,7 @@ func checkVariant[T TypeTagImpl](t *testing.T, tag T, expectedType TypeTagVarian
 }
 
 func TestStructTag(t *testing.T) {
+	t.Parallel()
 	st := StructTag{
 		Address: AccountOne,
 		Module:  "coin",
@@ -84,6 +87,7 @@ func TestStructTag(t *testing.T) {
 }
 
 func TestInvalidTypeTag(t *testing.T) {
+	t.Parallel()
 	serializer := &bcs.Serializer{}
 	serializer.Uleb128(uint32(65535))
 	bytes := serializer.ToBytes()
@@ -93,6 +97,7 @@ func TestInvalidTypeTag(t *testing.T) {
 }
 
 func TestParseTypeTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    string
@@ -194,6 +199,7 @@ func TestParseTypeTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ParseTypeTag(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ParseTypeTag() error = %v, wantErr %v", err, tt.wantErr)

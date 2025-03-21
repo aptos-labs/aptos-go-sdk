@@ -9,6 +9,7 @@ import (
 )
 
 func Test_HealthCheckResponse(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"message": "aptos-node:ok"
 	}`

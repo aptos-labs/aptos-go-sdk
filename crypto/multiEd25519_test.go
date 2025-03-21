@@ -9,6 +9,7 @@ import (
 )
 
 func TestMultiEd25519Keys(t *testing.T) {
+	t.Parallel()
 	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
 
 	message := []byte("hello world")
@@ -27,6 +28,7 @@ func TestMultiEd25519Keys(t *testing.T) {
 }
 
 func TestMultiEd25519KeySerialization(t *testing.T) {
+	t.Parallel()
 	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
 
 	// Test serialization / deserialization public key

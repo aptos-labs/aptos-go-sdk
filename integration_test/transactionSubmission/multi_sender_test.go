@@ -10,6 +10,7 @@ import (
 )
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSenders(t *testing.T) {
+	t.Parallel()
 	const (
 		numSenders     = uint64(3)
 		txPerSender    = uint64(5)

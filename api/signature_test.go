@@ -10,6 +10,7 @@ import (
 )
 
 func TestAccountAuthenticator_Unknown(t *testing.T) {
+	t.Parallel()
 	testJson := `{
       "type": "something"
 	}`
@@ -23,6 +24,7 @@ func TestAccountAuthenticator_Unknown(t *testing.T) {
 }
 
 func TestAccountAuthenticator_Ed25519(t *testing.T) {
+	t.Parallel()
 	testJson := `{
       "public_key": "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",
       "signature": "0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609",
@@ -45,6 +47,7 @@ func TestAccountAuthenticator_Ed25519(t *testing.T) {
 }
 
 func TestAccountAuthenticator_FeePayer(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "sender": {
     "public_key": "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",

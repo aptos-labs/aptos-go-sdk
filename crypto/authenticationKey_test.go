@@ -11,6 +11,7 @@ import (
 const testAuthKey = "0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef"
 
 func TestAuthenticationKey_CryptoMaterial(t *testing.T) {
+	t.Parallel()
 	authKeyBytes, err := util.ParseHex(testAuthKey)
 	require.NoError(t, err)
 
@@ -31,6 +32,7 @@ func TestAuthenticationKey_CryptoMaterial(t *testing.T) {
 }
 
 func TestAuthenticationKey_CryptoMaterialError(t *testing.T) {
+	t.Parallel()
 	authKey := &AuthenticationKey{}
 	err := authKey.FromHex("0x123456")
 	require.Error(t, err) // Not long enough

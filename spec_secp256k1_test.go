@@ -21,6 +21,7 @@ import (
 //   - (Not covered) It should be able to generate keys with a specific seed, and have a deterministic outcome.
 //   - It must not be able to generate the same key twice on default input.
 func Test_Spec_Secp256k1_Generation(t *testing.T) {
+	t.Parallel()
 	// It must be able to generate keys
 	key1, err := crypto.GenerateSecp256k1Key()
 	require.NoError(t, err, "It must be able to generate keys")
@@ -42,6 +43,7 @@ func Test_Spec_Secp256k1_Generation(t *testing.T) {
 //   - It must be able to output to a byte array
 //   - It must be able to output to a 0x prefixed hex string
 func Test_Spec_Secp256k1_PrivateKey(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a private key from a byte array
 	key1 := &crypto.Secp256k1PrivateKey{}
 	err := key1.FromBytes(parseHex(TestSecp256k1PrivateKeyHex))
@@ -90,6 +92,7 @@ func Test_Spec_Secp256k1_PrivateKey(t *testing.T) {
 //   - It must be able to catch an invalid byte size from BCS bytes
 //   - It must be able to generate an AuthenticationKey
 func Test_Spec_Secp256k1_PublicKey(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a public key from a byte array
 	key1 := &crypto.Secp256k1PublicKey{}
 	err := key1.FromBytes(parseHex(TestSecp256k1PublicKeyHex))
@@ -160,6 +163,7 @@ func Test_Spec_Secp256k1_PublicKey(t *testing.T) {
 //   - It must be able to encode in BCS bytes and decode back to the same
 //   - It must be able to catch an invalid byte size from BCS bytes
 func Test_Spec_Secp256k1_Signature(t *testing.T) {
+	t.Parallel()
 	// It must be able to load a signature from a byte array
 	sig1 := &crypto.Secp256k1Signature{}
 	err := sig1.FromBytes(parseHex(TestSecp256k1SignatureHex))
@@ -219,6 +223,7 @@ func Test_Spec_Secp256k1_Signature(t *testing.T) {
 //   - It must be able to encode in BCS bytes and decode back to the same
 //   - It must be able to catch an invalid byte size from BCS bytes
 func Test_Spec_Secp256k1_Authenticator(t *testing.T) {
+	t.Parallel()
 	innerKey1 := &crypto.Secp256k1PrivateKey{}
 	err := innerKey1.FromHex(TestSecp256k1PrivateKeyHex)
 	require.NoError(t, err)
@@ -279,6 +284,7 @@ func Test_Spec_Secp256k1_Authenticator(t *testing.T) {
 //   - It must be able to not-verify a message with the wrong signature
 
 func Test_Spec_Secp256k1_Signing(t *testing.T) {
+	t.Parallel()
 	innerKey1 := &crypto.Secp256k1PrivateKey{}
 	err := innerKey1.FromHex(TestSecp256k1PrivateKeyHex)
 	require.NoError(t, err)
