@@ -456,7 +456,7 @@ type Client struct {
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
 func NewClient(config NetworkConfig, options ...any) (client *Client, err error) {
-	var httpClient *http.Client = nil
+	var httpClient *http.Client
 	for i, arg := range options {
 		switch value := arg.(type) {
 		case *http.Client:
@@ -480,13 +480,13 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		return nil, err
 	}
 	// Indexer may not be present
-	var indexerClient *IndexerClient = nil
+	var indexerClient *IndexerClient
 	if config.IndexerUrl != "" {
 		indexerClient = NewIndexerClient(nodeClient.client, config.IndexerUrl)
 	}
 
 	// Faucet may not be present
-	var faucetClient *FaucetClient = nil
+	var faucetClient *FaucetClient
 	if config.FaucetUrl != "" {
 		faucetClient, err = NewFaucetClient(nodeClient, config.FaucetUrl)
 		if err != nil {

@@ -53,10 +53,10 @@ func StrToBigInt(val string) (num *big.Int, err error) {
 func UintToU8(u uint) (uint8, error) {
 	if u > math.MaxUint8 {
 		return 0, fmt.Errorf("u %d is greater than %d", u, math.MaxUint8)
-	} else {
-		val := uint8(u)
-		return val, nil
 	}
+
+	val := uint8(u)
+	return val, nil
 }
 
 func UintToU16(u uint) (uint16, error) {

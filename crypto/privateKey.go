@@ -51,14 +51,14 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedStrin
 	return fmt.Sprintf("%s%s", aip80Prefix, hexStr), nil
 }
 
-// ParseHexInput parses a hex input that may be bytes, hex string, or an AIP-80 compliant string to bytes.
+// ParsePrivateKey parses a hex input that may be bytes, hex string, or an AIP-80 compliant string to bytes.
 //
 // You may optionally pass in a boolean to strictly enforce AIP-80 compliance.
 func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (bytes []byte, err error) {
 	aip80Prefix := AIP80Prefixes[keyType]
 
 	// Get the first boolean if it exists, otherwise nil
-	var strictness *bool = nil
+	var strictness *bool
 	if len(strict) > 1 {
 		return nil, fmt.Errorf("strictness must be a single boolean")
 	} else if len(strict) == 1 {

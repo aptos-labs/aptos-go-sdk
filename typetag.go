@@ -132,7 +132,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			innerTypes = make([]TypeTag, 0)
 			curTypes = append(curTypes, *newType)
 			currentStr = ""
-			expectedTypes += 1
+			expectedTypes++
 		case ' ':
 			// TODO whitespace, do we include tabs, etc.
 			parsedTypeTag := false
@@ -155,7 +155,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 				if inputRunes[cur] != ' ' {
 					break
 				}
-				cur += 1
+				cur++
 			}
 
 			// Next char must be a comma or a closing > if something was parsed before it
@@ -170,7 +170,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			currentStr += string(r)
 		}
 
-		cur += 1
+		cur++
 	}
 
 	if len(saved) > 0 {
