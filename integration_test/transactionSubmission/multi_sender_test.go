@@ -11,17 +11,17 @@ import (
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSenders(t *testing.T) {
 	const (
-		numSenders      = 3
-		txPerSender     = 5
-		initialFunding  = uint64(100_000_000)
-		transfer_amount = uint64(100)
+		numSenders     = uint64(3)
+		txPerSender    = uint64(5)
+		initialFunding = uint64(100_000_000)
+		transferAmount = uint64(100)
 	)
 
 	clients := testutil.SetupTestClients(t)
 
 	// Create and fund senders
 	senders := make([]testutil.TestAccount, numSenders)
-	for i := 0; i < numSenders; i++ {
+	for i := uint64(0); i < numSenders; i++ {
 		senders[i] = testutil.SetupTestAccount(t, clients.Client, initialFunding)
 	}
 
@@ -32,8 +32,8 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 	// Process transactions for each sender
 	doneCh := make(chan struct{})
 
-	for senderIdx := 0; senderIdx < numSenders; senderIdx++ {
-		go func(senderIdx int) {
+	for senderIdx := uint64(0); senderIdx < numSenders; senderIdx++ {
+		go func(senderIdx uint64) {
 			defer func() {
 				doneCh <- struct{}{}
 			}()
@@ -58,8 +58,9 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 			)
 
 			workerStartTime := time.Now()
-			for txNum := 0; txNum < txPerSender; txNum++ {
-				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transfer_amount)
+			for txNum := uint64(0); txNum < txPerSender; txNum++ {
+				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transferAmount)
+
 				payloads <- aptos.TransactionBuildPayload{
 					Id:    uint64(txNum),
 					Inner: payload,
@@ -68,7 +69,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 			}
 			close(payloads)
 
-			for i := 0; i < txPerSender; i++ {
+			for i := uint64(0); i < txPerSender; i++ {
 				resp := <-responses
 				if resp.Err != nil {
 					t.Errorf("Transaction failed: %v", resp.Err)
@@ -88,7 +89,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 	}
 
 	// Wait for all senders to complete
-	for i := 0; i < numSenders; i++ {
+	for i := uint64(0); i < numSenders; i++ {
 		<-doneCh
 	}
 

@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/cucumber/godog"
 )
@@ -821,7 +823,11 @@ func boolResult(ctx context.Context, expected string) error {
 }
 
 func u8Result(ctx context.Context, expected int) error {
-	expectedU8 := uint8(expected)
+	expectedU8, err := util.IntToU8(expected)
+	if err != nil {
+		return errors.New("invalid value for U8")
+	}
+
 	result, ok := ctx.Value(godogsCtxKey{}).(uint8)
 	if !ok {
 		return errors.New("no result available")
@@ -835,7 +841,10 @@ func u8Result(ctx context.Context, expected int) error {
 }
 
 func u16Result(ctx context.Context, expected int) error {
-	expectedU16 := uint16(expected)
+	expectedU16, err := util.IntToU16(expected)
+	if err != nil {
+		return errors.New("invalid value for U16")
+	}
 
 	result, ok := ctx.Value(godogsCtxKey{}).(uint16)
 	if !ok {
@@ -849,7 +858,10 @@ func u16Result(ctx context.Context, expected int) error {
 }
 
 func u32Result(ctx context.Context, expected int) error {
-	expectedU32 := uint32(expected)
+	expectedU32, err := util.IntToU32(expected)
+	if err != nil {
+		return errors.New("invalid value for U32")
+	}
 
 	result, ok := ctx.Value(godogsCtxKey{}).(uint32)
 	if !ok {

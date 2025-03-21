@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
@@ -102,7 +104,12 @@ func (sf *EntryFunction) MarshalBCS(ser *bcs.Serializer) {
 	sf.Module.MarshalBCS(ser)
 	ser.WriteString(sf.Function)
 	bcs.SerializeSequence(sf.ArgTypes, ser)
-	ser.Uleb128(uint32(len(sf.Args)))
+	length, err := util.IntToU32(len(sf.Args))
+	if err != nil {
+		ser.SetError(err)
+		return
+	}
+	ser.Uleb128(length)
 	for _, a := range sf.Args {
 		ser.WriteBytes(a)
 	}

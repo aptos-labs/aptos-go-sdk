@@ -5,6 +5,7 @@ import (
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // region TransactionAuthenticator
@@ -79,7 +80,13 @@ func (ea *TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	if des.Error() != nil {
 		return
 	}
-	ea.Variant = TransactionAuthenticatorVariant(kindNum)
+
+	index, err := util.Uint32ToU8(kindNum)
+	if err != nil {
+		des.SetError(err)
+		return
+	}
+	ea.Variant = TransactionAuthenticatorVariant(index)
 	switch ea.Variant {
 	case TransactionAuthenticatorEd25519:
 		ea.Auth = &Ed25519TransactionAuthenticator{}
