@@ -2,9 +2,10 @@ package aptos
 
 import (
 	"fmt"
-	"github.com/aptos-labs/aptos-go-sdk/api"
 	"math/big"
 	"strconv"
+
+	"github.com/aptos-labs/aptos-go-sdk/api"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
