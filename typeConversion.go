@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )

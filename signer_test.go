@@ -3,9 +3,8 @@ package aptos
 import (
 	"math/rand/v2"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 /* This is a collection of test signers, that don't make sense in the real world, but are used for testing */
@@ -161,7 +160,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 		index := 0
 		for {
 			// Note, this is just for testing, no reason to bring a crypto randomness in here
-			// nolint:golint,gosec
+			//nolint:golint,gosec
 			index = rand.IntN(len(s.Signers))
 			_, present := alreadyUsed[index]
 			if !present {

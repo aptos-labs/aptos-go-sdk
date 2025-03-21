@@ -15,12 +15,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 const (
