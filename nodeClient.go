@@ -316,7 +316,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 		retrievedTransactions = uint64(len(block.Transactions))
 		cursor = block.Transactions[len(block.Transactions)-1].Version()
 	}
-	return
+	return block, nil
 }
 
 // WaitForTransaction does a long-GET for one transaction and wait for it to complete.
@@ -785,7 +785,7 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 func (rc *NodeClient) simulateTransactionInner(signedTxn *SignedTransaction, options ...any) (data []*api.UserTransaction, err error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
-		return
+		return nil, err
 	}
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions/simulate")
