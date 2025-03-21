@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
@@ -17,7 +19,7 @@ func TestAccountSpecialString(t *testing.T) {
 
 	var aa2 AccountAddress
 	err := aa2.ParseStringRelaxed("0x3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, aa, aa2)
 }
 
@@ -31,19 +33,19 @@ func TestAccountAddress_AuthKey(t *testing.T) {
 func TestSpecialAddresses(t *testing.T) {
 	var addr AccountAddress
 	err := addr.ParseStringRelaxed("0x0")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountZero, addr)
 	err = addr.ParseStringRelaxed("0x1")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountOne, addr)
 	err = addr.ParseStringRelaxed("0x2")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountTwo, addr)
 	err = addr.ParseStringRelaxed("0x3")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountThree, addr)
 	err = addr.ParseStringRelaxed("0x4")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, AccountFour, addr)
 }
 
@@ -62,12 +64,12 @@ func TestSerialize(t *testing.T) {
 	for i := 0; i < len(inputs); i++ {
 		addr := AccountAddress(inputs[i])
 		bytes, err := bcs.Serialize(&addr)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, bytes, inputs[i])
 
 		newAddr := AccountAddress{}
 		err = bcs.Deserialize(&newAddr, bytes)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		assert.Equal(t, addr, newAddr)
 	}
 }
@@ -113,28 +115,28 @@ func TestStringOutput(t *testing.T) {
 func TestAccountAddress_ParseStringRelaxed_Error(t *testing.T) {
 	var owner AccountAddress
 	err := owner.ParseStringRelaxed("0x")
-	assert.Error(t, err)
+	require.Error(t, err)
 	err = owner.ParseStringRelaxed("0xF1234567812345678123456781234567812345678123456781234567812345678")
-	assert.Error(t, err)
+	require.Error(t, err)
 	err = owner.ParseStringRelaxed("NotHex")
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestAccountAddress_ObjectAddressFromObject(t *testing.T) {
 	var owner AccountAddress
 	err := owner.ParseStringRelaxed(defaultOwner)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var objectAddress AccountAddress
 	err = objectAddress.ParseStringRelaxed(defaultMetadata)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var expectedDerivedAddress AccountAddress
 	err = expectedDerivedAddress.ParseStringRelaxed(defaultStore)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	derivedAddress := owner.ObjectAddressFromObject(&objectAddress)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, expectedDerivedAddress, derivedAddress)
 }
@@ -147,10 +149,10 @@ func TestAccountAddress_JSON(t *testing.T) {
 	str := "{\"address\":\"0x1\"}"
 	var test testStruct
 	err := json.Unmarshal([]byte(str), &test)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, &AccountOne, test.Address)
 
 	b, err := json.Marshal(test)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, str, string(b))
 }

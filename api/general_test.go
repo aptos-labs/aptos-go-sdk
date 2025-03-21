@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,6 +15,6 @@ func Test_HealthCheckResponse(t *testing.T) {
 	}`
 	data := &HealthCheckResponse{}
 	err := json.Unmarshal([]byte(testJson), &data)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, "aptos-node:ok", data.Message)
 }

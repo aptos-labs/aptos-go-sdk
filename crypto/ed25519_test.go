@@ -4,6 +4,8 @@ import (
 	"crypto/ed25519"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
@@ -23,33 +25,33 @@ func TestEd25519Keys(t *testing.T) {
 
 	// First ensure bytes and hex are the same
 	readBytes, err := util.ParseHex(testEd25519PrivateKeyHex)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, testEd25519PrivateKeyBytes, readBytes)
 
 	// Either bytes or hex should work
 	privateKey := &Ed25519PrivateKey{}
 	err = privateKey.FromHex(testEd25519PrivateKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	privateKey2 := &Ed25519PrivateKey{}
 	err = privateKey2.FromBytes(testEd25519PrivateKeyBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, privateKey, privateKey2)
 
 	// The outputs should match as well
-	assert.Equal(t, privateKey.Bytes(), testEd25519PrivateKeyBytes)
-	assert.Equal(t, privateKey.ToHex(), testEd25519PrivateKeyHex)
+	assert.Equal(t, testEd25519PrivateKeyBytes, privateKey.Bytes())
+	assert.Equal(t, testEd25519PrivateKeyHex, privateKey.ToHex())
 	formattedString, err := privateKey.ToAIP80()
-	assert.NoError(t, err)
-	assert.Equal(t, formattedString, testEd25519PrivateKey)
+	require.NoError(t, err)
+	assert.Equal(t, testEd25519PrivateKey, formattedString)
 
 	// Auth key should match
 	assert.Equal(t, testEd25519Address, privateKey.AuthKey().ToHex())
 
 	// Test signature
 	message, err := util.ParseHex(testEd25519Message)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	authenticator, err := privateKey.Sign(message)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	// Check public keys
 	publicKey := authenticator.PubKey()
@@ -58,7 +60,7 @@ func TestEd25519Keys(t *testing.T) {
 
 	// Check signature
 	expectedSignature, err := util.ParseHex(testEd25519Signature)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, expectedSignature, authenticator.Signature().Bytes())
 
 	// Verify signature with the key and the authenticator directly
@@ -67,9 +69,9 @@ func TestEd25519Keys(t *testing.T) {
 
 	// Verify serialization of public key
 	publicKeyBytes, err := bcs.Serialize(publicKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	expectedPublicKeyBytes, err := util.ParseHex(testEd25519PublicKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	// Need to prepend the length
 	expectedBcsPublicKeyBytes := []byte{ed25519.PublicKeySize}
 	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, expectedPublicKeyBytes...)
@@ -77,43 +79,43 @@ func TestEd25519Keys(t *testing.T) {
 
 	publicKey2 := &Ed25519PublicKey{}
 	err = bcs.Deserialize(publicKey2, publicKeyBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, publicKey, publicKey2)
 
 	// Check from bytes and from hex
 	publicKey3 := &Ed25519PublicKey{}
 	err = publicKey3.FromHex(testEd25519PublicKey)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	publicKey4 := &Ed25519PublicKey{}
 	err = publicKey4.FromBytes(expectedPublicKeyBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	assert.Equal(t, publicKey, publicKey3)
 	assert.Equal(t, publicKey, publicKey4)
 
 	// Test serialization and deserialization of authenticator
 	authenticatorBytes, err := bcs.Serialize(authenticator)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	authenticator2 := &AccountAuthenticator{}
 	err = bcs.Deserialize(authenticator2, authenticatorBytes)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, authenticator, authenticator2)
 }
 
 func TestEd25519PrivateKeyWrongLength(t *testing.T) {
 	privateKey := &Ed25519PrivateKey{}
 	err := privateKey.FromBytes([]byte{0x01})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEd25519PublicKeyWrongLength(t *testing.T) {
 	key := &Ed25519PublicKey{}
 	err := key.FromBytes([]byte{0x01})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestEd25519SignatureWrongLength(t *testing.T) {
 	sig := &Ed25519Signature{}
 	err := sig.FromBytes([]byte{0x01})
-	assert.Error(t, err)
+	require.Error(t, err)
 }
