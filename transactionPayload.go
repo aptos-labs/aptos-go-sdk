@@ -4,9 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // region TransactionPayload
