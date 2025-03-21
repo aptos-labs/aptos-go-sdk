@@ -21,6 +21,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   TypeTag{Value: &U8Tag{}},
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -31,6 +32,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   &TypeTag{Value: &U8Tag{}},
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -46,6 +48,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "u8",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -56,6 +59,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "vector<u8>",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				vecTag, ok := tag.Value.(*VectorTag)
 				if !ok {
 					t.Error("Expected VectorTag")
@@ -70,6 +74,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "&u8",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				refTag, ok := tag.Value.(*ReferenceTag)
 				if !ok {
 					t.Error("Expected ReferenceTag")
@@ -84,6 +89,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "T0",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				genTag, ok := tag.Value.(*GenericTag)
 				if !ok {
 					t.Error("Expected GenericTag")
@@ -98,6 +104,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "0x1::string::String",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				structTag, ok := tag.Value.(*StructTag)
 				if !ok {
 					t.Error("Expected StructTag")

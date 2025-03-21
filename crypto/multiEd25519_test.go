@@ -69,6 +69,7 @@ func createMultiEd25519Key(t *testing.T) (
 	*Ed25519PublicKey,
 	*MultiEd25519PublicKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	// TODO: Maybe we should have a typed function for the public keys
@@ -86,6 +87,7 @@ func createMultiEd25519Key(t *testing.T) (
 }
 
 func createMultiEd25519Signature(t *testing.T, key1 *Ed25519PrivateKey, key2 *Ed25519PrivateKey, message []byte) *MultiEd25519Signature {
+	t.Helper()
 	sig1, err := key1.SignMessage(message)
 	require.NoError(t, err)
 	sig2, err := key2.SignMessage(message)

@@ -92,6 +92,7 @@ func setupTestLogging() *testSlogContext {
 }
 
 func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
+	t.Helper()
 	if t.Failed() {
 		t.Log(logContext.logbuf.String())
 	}
