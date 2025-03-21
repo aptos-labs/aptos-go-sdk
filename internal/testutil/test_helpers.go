@@ -6,7 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk"
 )
 
-// TestClients holds the clients needed for testing
+// TestClients holds the clients needed for testing.
 type TestClients struct {
 	NodeClient *aptos.NodeClient
 	Client     *aptos.Client
@@ -21,6 +21,8 @@ func CreateTestNodeClient() (*aptos.NodeClient, error) {
 }
 
 func SetupTestClients(t *testing.T) *TestClients {
+	t.Helper()
+
 	nodeClient, err := CreateTestNodeClient()
 	if err != nil {
 		t.Fatalf("Failed to create NodeClient: %v", err)
@@ -38,20 +40,24 @@ func SetupTestClients(t *testing.T) *TestClients {
 }
 
 func CreateTransferPayload(t *testing.T, receiver aptos.AccountAddress, amount uint64) aptos.TransactionPayload {
+	t.Helper()
+
 	p, err := aptos.CoinTransferPayload(nil, receiver, amount)
 	if err != nil {
 		t.Fatalf("Failed to create transfer payload: %v", err)
 	}
+
 	return aptos.TransactionPayload{Payload: p}
 }
 
-// TestAccount represents a funded account for testing
+// TestAccount represents a funded account for testing.
 type TestAccount struct {
 	Account        *aptos.Account
 	InitialBalance uint64
 }
 
 func SetupTestAccount(t *testing.T, client *aptos.Client, funding uint64) TestAccount {
+	t.Helper()
 	account, err := aptos.NewEd25519Account()
 	if err != nil {
 		t.Fatalf("Failed to create account: %v", err)

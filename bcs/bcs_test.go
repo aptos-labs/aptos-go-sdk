@@ -177,6 +177,7 @@ func Test_FixedBytes(t *testing.T) {
 		bytes, _ := hex.DecodeString(input)
 		serializer := Serializer{}
 		expect, _ := hex.DecodeString(deserialized[i])
+
 		serializer.FixedBytes(bytes)
 		assert.Equal(t, expect, serializer.ToBytes())
 		assert.NoError(t, serializer.Error())
@@ -303,11 +304,11 @@ func Test_SerializeSequence(t *testing.T) {
 	ser = Serializer{}
 	SerializeSequence(data, &ser)
 	assert.NoError(t, ser.Error())
-	assert.True(t, len(ser.ToBytes()) != 0)
+	assert.NotEmpty(t, ser.ToBytes())
 
 	// Test reset
 	ser.Reset()
-	assert.True(t, len(ser.ToBytes()) == 0)
+	assert.Empty(t, ser.ToBytes())
 
 	// Test by value
 	testStruct2 := &TestStruct2{

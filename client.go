@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -455,38 +456,41 @@ type Client struct {
 }
 
 // NewClient Creates a new client with a specific network config that can be extended in the future
-func NewClient(config NetworkConfig, options ...any) (client *Client, err error) {
-	var httpClient *http.Client = nil
+func NewClient(config NetworkConfig, options ...any) (*Client, error) {
+	var httpClient *http.Client
 	for i, arg := range options {
 		switch value := arg.(type) {
 		case *http.Client:
 			if httpClient != nil {
-				err = fmt.Errorf("NewClient only accepts one http.Client")
-				return
+				return nil, errors.New("NewClient only accepts one http.Client")
 			}
 			httpClient = value
 		default:
-			err = fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
-			return
+			return nil, fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
 		}
 	}
+
 	var nodeClient *NodeClient
+	var err error
+
 	if httpClient == nil {
 		nodeClient, err = NewNodeClient(config.NodeUrl, config.ChainId)
 	} else {
 		nodeClient, err = NewNodeClientWithHttpClient(config.NodeUrl, config.ChainId, httpClient)
 	}
+
 	if err != nil {
 		return nil, err
 	}
+
 	// Indexer may not be present
-	var indexerClient *IndexerClient = nil
+	var indexerClient *IndexerClient
 	if config.IndexerUrl != "" {
 		indexerClient = NewIndexerClient(nodeClient.client, config.IndexerUrl)
 	}
 
 	// Faucet may not be present
-	var faucetClient *FaucetClient = nil
+	var faucetClient *FaucetClient
 	if config.FaucetUrl != "" {
 		faucetClient, err = NewFaucetClient(nodeClient, config.FaucetUrl)
 		if err != nil {
@@ -499,12 +503,11 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		_, _ = nodeClient.GetChainId()
 	}
 
-	client = &Client{
+	return &Client{
 		nodeClient,
 		faucetClient,
 		indexerClient,
-	}
-	return
+	}, nil
 }
 
 // SetTimeout adjusts the HTTP client timeout

@@ -2,7 +2,6 @@ package aptos
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -53,7 +52,7 @@ func TestEventsByHandle(t *testing.T) {
 				},
 				"sequence_number": strconv.FormatUint(startInt+i, 10),
 				"data": map[string]interface{}{
-					"amount": fmt.Sprintf("%d", (startInt+i)*100),
+					"amount": strconv.FormatUint((startInt+i)*100, 10),
 				},
 			})
 		}

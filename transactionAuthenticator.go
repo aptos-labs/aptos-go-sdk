@@ -174,6 +174,7 @@ func (ea *MultiAgentTransactionAuthenticator) Verify(msg []byte) bool {
 	if !sender {
 		return false
 	}
+
 	for _, sa := range ea.SecondarySigners {
 		verified := sa.Verify(msg)
 		if !verified {
@@ -217,6 +218,7 @@ func (ea *FeePayerTransactionAuthenticator) Verify(msg []byte) bool {
 	if !sender {
 		return false
 	}
+
 	for _, sa := range ea.SecondarySigners {
 		verified := sa.Verify(msg)
 		if !verified {

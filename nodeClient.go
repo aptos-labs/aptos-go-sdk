@@ -24,7 +24,7 @@ import (
 const (
 	DefaultMaxGasAmount      = uint64(100_000) // Default to 0.001 APT max gas amount
 	DefaultGasUnitPrice      = uint64(100)     // Default to min gas price
-	DefaultExpirationSeconds = int64(300)      // Default to 5 minutes
+	DefaultExpirationSeconds = uint64(300)     // Default to 5 minutes
 )
 
 // For Content-Type header when POST-ing a Transaction
@@ -181,13 +181,13 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 
 // AccountModule
 func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error) {
-	au := rc.baseUrl.JoinPath("accounts", address.String(), "module", moduleName)
+	requestUrl := rc.baseUrl.JoinPath("accounts", address.String(), "module", moduleName)
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
-		au.RawQuery = params.Encode()
+		requestUrl.RawQuery = params.Encode()
 	}
-	data, err = Get[*api.MoveBytecode](rc, au.String())
+	data, err = Get[*api.MoveBytecode](rc, requestUrl.String())
 	if err != nil {
 		return nil, fmt.Errorf("get module api err: %w", err)
 	}
@@ -229,11 +229,11 @@ func (rc *NodeClient) TransactionByHash(txnHash string) (*api.Transaction, error
 	return data, nil
 }
 
-// Waits for a transaction to be confirmed by its hash.
+// WaitTransactionByHash waits for a transaction to be confirmed by its hash.
 // This function allows you to monitor the status of a transaction until it is finalized.
-func (rc *NodeClient) WaitTransactionByHash(txnHash string) (data *api.Transaction, err error) {
+func (rc *NodeClient) WaitTransactionByHash(txnHash string) (*api.Transaction, error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/wait_by_hash", txnHash)
-	data, err = Get[*api.Transaction](rc, restUrl.String())
+	data, err := Get[*api.Transaction](rc, restUrl.String())
 	if err != nil {
 		return data, fmt.Errorf("get transaction api err: %w", err)
 	}
@@ -385,7 +385,7 @@ func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.User
 			case api.TransactionVariantPending:
 				// not done yet!
 				continue
-			case api.TransactionVariantUser:
+			default:
 				// done!
 				slog.Debug("txn done", "hash", hash)
 				return txn.UserTransaction()
@@ -402,6 +402,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 		return err
 	}
 	hashSet := make(map[string]bool, len(txnHashes))
+
 	for _, hash := range txnHashes {
 		hashSet[hash] = true
 	}
@@ -413,6 +414,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			return errors.New("PollForTransactions timeout")
 		}
 		time.Sleep(period)
+
 		for _, hash := range txnHashes {
 			if !hashSet[hash] {
 				// already done
@@ -422,7 +424,7 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 			if err == nil {
 				if txn.Type == api.TransactionVariantPending {
 					// not done yet!
-				} else if txn.Type == api.TransactionVariantUser {
+				} else {
 					// done!
 					delete(hashSet, hash)
 					slog.Debug("txn done", "hash", hash)
@@ -509,8 +511,9 @@ func (rc *NodeClient) EventsByHandle(
 	pages := (effectiveLimit + eventsPageSize - 1) / eventsPageSize
 	channels := make([]chan ConcResponse[[]*api.Event], pages)
 
-	for i := uint64(0); i < pages; i++ {
-		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
+	for index, concChan := range channels {
+		i := uint64(index)
+		concChan = make(chan ConcResponse[[]*api.Event], 1)
 		pageStart := effectiveStart + (i * eventsPageSize)
 		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
 
@@ -527,7 +530,7 @@ func (rc *NodeClient) EventsByHandle(
 				return nil, fmt.Errorf("get events api err: %w", err)
 			}
 			return events, nil
-		}, channels[i])
+		}, concChan)
 	}
 
 	events := make([]*api.Event, 0, effectiveLimit)
@@ -574,16 +577,15 @@ func (rc *NodeClient) handleTransactions(
 		numTxns := uint64(len(txns))
 		if numTxns >= actualLimit {
 			return txns, nil
-		} else {
-			newStart := getNext(&txns)
-			newLength := actualLimit - numTxns
-			extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
-			if err != nil {
-				return nil, err
-			}
-
-			return append(extra, txns...), nil
 		}
+		newStart := getNext(&txns)
+		newLength := actualLimit - numTxns
+		extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
+		if err != nil {
+			return nil, err
+		}
+
+		return append(extra, txns...), nil
 	} else {
 		// If we know the start, just pull one page
 		return getTxns(start, nil)
@@ -641,9 +643,8 @@ func (rc *NodeClient) transactionsConcurrent(
 		response, err := getTxns(&start, &limit)
 		if err != nil {
 			return nil, err
-		} else {
-			return response, nil
 		}
+		return response, nil
 	}
 }
 
@@ -746,19 +747,11 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 
 // SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
 func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
-	expirationSeconds := DefaultExpirationSeconds
-
 	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
 
 	for opti, option := range options {
 		switch ovalue := option.(type) {
-		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
 		case FeePayer:
 			feePayer = ovalue
 		case AdditionalSigners:
@@ -775,22 +768,24 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 		senderAuth := sender.SimulationAuthenticator()
 		feePayerAuth := crypto.NoAccountAuthenticator()
 		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
+
 		for i := range additionalSigners {
 			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
 		}
 		signedTxn, ok = rawTxn.ToFeePayerSignedTransaction(senderAuth, feePayerAuth, additionalSignersAuth)
 		if !ok {
-			return nil, fmt.Errorf("failed to convert fee payer signer to signed transaction")
+			return nil, errors.New("failed to convert fee payer signer to signed transaction")
 		}
 	} else {
 		senderAuth := sender.SimulationAuthenticator()
 		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
+
 		for i := range additionalSigners {
 			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
 		}
 		signedTxn, ok = rawTxn.ToMultiAgentSignedTransaction(senderAuth, additionalSignersAuth)
 		if !ok {
-			return nil, fmt.Errorf("failed to convert multi agent signer to signed transaction")
+			return nil, errors.New("failed to convert multi agent signer to signed transaction")
 		}
 	}
 
@@ -807,6 +802,7 @@ func (rc *NodeClient) simulateTransactionInner(signedTxn *SignedTransaction, opt
 
 	// parse simulate tx options
 	params := url.Values{}
+
 	for _, arg := range options {
 		switch value := arg.(type) {
 		case EstimateGasUnitPrice:
@@ -823,7 +819,7 @@ func (rc *NodeClient) simulateTransactionInner(signedTxn *SignedTransaction, opt
 		requestUrl.RawQuery = params.Encode()
 	}
 
-	data, err := Post[[]*api.UserTransaction](rc, requestUrl.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = Post[[]*api.UserTransaction](rc, requestUrl.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("simulate transaction api err: %w", err)
 	}
@@ -851,7 +847,7 @@ type MaxGasAmount uint64
 type GasUnitPrice uint64
 
 // ExpirationSeconds will set the number of seconds from the current time to expire a transaction
-type ExpirationSeconds int64
+type ExpirationSeconds uint64
 
 // FeePayer will set the fee payer for a transaction
 type FeePayer *AccountAddress
@@ -894,11 +890,7 @@ func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload Transactio
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -947,11 +939,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			gasUnitPrice = uint64(ovalue)
 			haveGasUnitPrice = true
 		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
+			expirationSeconds = uint64(ovalue)
 		case SequenceNumber:
 			sequenceNumber = uint64(ovalue)
 			haveSequenceNumber = true
@@ -1001,7 +989,7 @@ func (rc *NodeClient) buildTransactionInner(
 	maxGasAmount uint64,
 	gasUnitPrice uint64,
 	haveGasUnitPrice bool,
-	expirationSeconds int64,
+	expirationSeconds uint64,
 	sequenceNumber uint64,
 	haveSequenceNumber bool,
 	chainId uint8,
@@ -1088,7 +1076,7 @@ func (rc *NodeClient) buildTransactionInner(
 		}
 	}
 
-	expirationTimestampSeconds := uint64(time.Now().Unix()) + uint64(expirationSeconds)
+	expirationTimestampSeconds := uint64(time.Now().Unix()) + expirationSeconds
 
 	// Base raw transaction used for all requests
 	rawTxn = &RawTransaction{
@@ -1214,11 +1202,13 @@ func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckRe
 }
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
-func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
+func Get[T any](rc *NodeClient, getUrl string) (T, error) {
+	var out T
 	req, err := http.NewRequest("GET", getUrl, nil)
 	if err != nil {
 		return out, err
 	}
+
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
 	// Set all preset headers
@@ -1241,6 +1231,7 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 	if err != nil {
 		return out, fmt.Errorf("error getting response data, %w", err)
 	}
+
 	err = json.Unmarshal(blob, &out)
 	if err != nil {
 		return out, err

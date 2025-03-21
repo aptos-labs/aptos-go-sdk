@@ -23,7 +23,7 @@ func TestAuthenticationKey_FromPublicKey(t *testing.T) {
 		{Ed25519Scheme},
 	})
 
-	assert.Equal(t, hash[:], authKey[:])
+	assert.Equal(t, hash, authKey[:])
 }
 
 func Test_AuthenticationKeySerialization(t *testing.T) {

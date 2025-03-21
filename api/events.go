@@ -63,6 +63,7 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 		o.Guid = data.Guid
 		o.SequenceNumber = data.SequenceNumber.ToUint64()
 		o.Data = data.Data
+
 		return nil
 	}
 
@@ -79,6 +80,7 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+
 	dataMap := make(map[string]any)
 	dataMap[AnyDataName] = dataAny.Data
 

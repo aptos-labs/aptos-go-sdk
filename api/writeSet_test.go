@@ -154,7 +154,7 @@ func TestWriteSet_DeleteResource(t *testing.T) {
 }
 
 func TestWriteSet_WriteTableItem(t *testing.T) {
-	testJson := `{
+	testJSON := `{
   "state_key_hash": "0x6e4b28d40f98a106a65163530924c0dcb40c1349d3aa915d108b4d6cfc1ddb19",
   "handle": "0x1b854694ae746cdbd8d44186ca4929b2b337df21d1c74633be19b2710552fdca",
   "key": "0x0619dc29a0aac8fa146714058e8dd6d2d0f3bdf5f6331907bf91f3acd81e6935",
@@ -163,7 +163,7 @@ func TestWriteSet_WriteTableItem(t *testing.T) {
   "type": "write_table_item"
 }`
 	data := &WriteSetChange{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteTableItem, data.Type)

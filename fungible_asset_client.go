@@ -73,8 +73,14 @@ func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (*
 	if err != nil {
 		return nil, err
 	}
+
+	str, ok := val.(string)
+	if !ok {
+		return nil, errors.New("primary_store_address is not a string")
+	}
+
 	address := &AccountAddress{}
-	err = address.ParseStringRelaxed(val.(string))
+	err = address.ParseStringRelaxed(str)
 	if err != nil {
 		return nil, err
 	}
@@ -87,8 +93,12 @@ func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (bo
 	if err != nil {
 		return false, err
 	}
+	bVal, ok := val.(bool)
+	if !ok {
+		return false, errors.New("primary_store_exists is not a bool")
+	}
 
-	return val.(bool), nil
+	return bVal, nil
 }
 
 // PrimaryBalance returns the balance of the primary store for the owner
@@ -97,7 +107,10 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerV
 	if err != nil {
 		return
 	}
-	balanceStr := val.(string)
+	balanceStr, ok := val.(string)
+	if !ok {
+		err = errors.New("primary_store_address is not a string")
+	}
 	return StrToUint64(balanceStr)
 }
 

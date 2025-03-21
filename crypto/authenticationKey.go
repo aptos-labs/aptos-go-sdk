@@ -72,7 +72,7 @@ func (ak *AuthenticationKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (ak *AuthenticationKey) FromBytes(bytes []byte) (err error) {
+func (ak *AuthenticationKey) FromBytes(bytes []byte) error {
 	if len(bytes) != AuthenticationKeyLength {
 		return fmt.Errorf("invalid authentication key, not 32 bytes")
 	}
@@ -92,7 +92,7 @@ func (ak *AuthenticationKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (ak *AuthenticationKey) FromHex(hexStr string) (err error) {
+func (ak *AuthenticationKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err

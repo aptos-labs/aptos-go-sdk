@@ -11,10 +11,10 @@ import (
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSenders(t *testing.T) {
 	const (
-		numSenders      = 3
-		txPerSender     = 5
-		initialFunding  = uint64(100_000_000)
-		transfer_amount = uint64(100)
+		numSenders     = 3
+		txPerSender    = 5
+		initialFunding = uint64(100_000_000)
+		transferAmount = uint64(100)
 	)
 
 	clients := testutil.SetupTestClients(t)
@@ -59,7 +59,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 
 			workerStartTime := time.Now()
 			for txNum := 0; txNum < txPerSender; txNum++ {
-				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transfer_amount)
+				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transferAmount)
 				payloads <- aptos.TransactionBuildPayload{
 					Id:    uint64(txNum),
 					Inner: payload,
@@ -72,6 +72,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 				resp := <-responses
 				if resp.Err != nil {
 					t.Errorf("Transaction failed: %v", resp.Err)
+
 					continue
 				}
 				fmt.Printf("[%s] Worker %d → hash: %s\n",

@@ -22,7 +22,7 @@ var AIP80Prefixes = map[PrivateKeyVariant]string{
 }
 
 // FormatPrivateKey formats a hex input to an AIP-80 compliant string
-func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedString string, err error) {
+func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (string, error) {
 	aip80Prefix := AIP80Prefixes[keyType]
 
 	var hexStr string
@@ -75,7 +75,7 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (byte
 
 			// If strictness is not explicitly false, warn about non-AIP-80 compliance
 			if strictness == nil {
-				fmt.Printf("[Aptos SDK] It is recommended that private keys are AIP-80 compliant (https://github.com/aptos-foundation/AIPs/blob/main/aips/aip-80.md). You can fix the private key by formatting it with crypto.FormatPrivateKey")
+				println("[Aptos SDK] It is recommended that private keys are AIP-80 compliant (https://github.com/aptos-foundation/AIPs/blob/main/aips/aip-80.md). You can fix the private key by formatting it with crypto.FormatPrivateKey")
 			}
 
 			return bytes, nil

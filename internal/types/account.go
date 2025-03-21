@@ -20,11 +20,12 @@ type Account struct {
 // NewAccountFromSigner creates an account from a [crypto.Signer] with an optional [crypto.AuthenticationKey]
 func NewAccountFromSigner(signer crypto.Signer, address ...AccountAddress) (*Account, error) {
 	out := &Account{}
-	switch len(authKey) {
+
+	switch len(address) {
 	case 0:
 		copy(out.Address[:], signer.AuthKey()[:])
 	case 1:
-		copy(out.Address[:], authKey[0][:])
+		copy(out.Address[:], address[0][:])
 	default:
 		return nil, errors.New("must only provide one auth key")
 	}
@@ -85,12 +86,11 @@ func (account *Account) PrivateKeyString() (string, error) {
 	// Handle key in single signer
 	singleSigner, ok := account.Signer.(*crypto.SingleSigner)
 	if ok {
-		innerSigner := singleSigner.Signer
-		switch innerSigner.(type) {
+		switch innerSigner := singleSigner.Signer.(type) {
 		case *crypto.Ed25519PrivateKey:
-			return innerSigner.(*crypto.Ed25519PrivateKey).ToAIP80()
+			return innerSigner.ToAIP80()
 		case *crypto.Secp256k1PrivateKey:
-			return innerSigner.(*crypto.Secp256k1PrivateKey).ToAIP80()
+			return innerSigner.ToAIP80()
 		}
 	}
 
@@ -98,12 +98,12 @@ func (account *Account) PrivateKeyString() (string, error) {
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
-func (account *Account) Sign(message []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (account *Account) Sign(message []byte) (*crypto.AccountAuthenticator, error) {
 	return account.Signer.Sign(message)
 }
 
 // SignMessage signs a message and returns the raw signature without a public key for verification
-func (account *Account) SignMessage(message []byte) (signature crypto.Signature, err error) {
+func (account *Account) SignMessage(message []byte) (crypto.Signature, error) {
 	return account.Signer.SignMessage(message)
 }
 

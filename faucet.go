@@ -51,7 +51,7 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	if len(txnHashes) == 1 {
 		_, err = faucetClient.nodeClient.WaitForTransaction(txnHashes[0])
 		return err
-	} else {
-		return faucetClient.nodeClient.PollForTransactions(txnHashes)
 	}
+
+	return faucetClient.nodeClient.PollForTransactions(txnHashes)
 }

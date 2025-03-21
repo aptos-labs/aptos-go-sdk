@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -68,13 +67,16 @@ func initSingleSignerPayloads() {
 }
 
 func TestNamedConfig(t *testing.T) {
+	t.Parallel()
 	names := []string{"mainnet", "devnet", "testnet", "localnet"}
+
 	for _, name := range names {
 		assert.Equal(t, name, NamedNetworks[name].Name)
 	}
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
+	t.Parallel()
 	assert.NotEmpty(t, ClientHeaderValue)
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
@@ -83,9 +85,11 @@ func Test_SingleSignerFlows(t *testing.T) {
 	for name, signer := range TestSigners {
 		for payloadName, buildSingleSignerPayload := range TestSingleSignerPayloads {
 			t.Run(name+" "+payloadName, func(t *testing.T) {
+				t.Parallel()
 				testTransaction(t, signer, buildSingleSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
+				t.Parallel()
 				testTransactionSimulation(t, signer, buildSingleSignerPayload)
 			})
 		}
@@ -221,6 +225,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
+	t.Parallel()
 	sender, err := NewEd25519Account()
 	assert.NoError(t, err)
 	dest, err := NewEd25519Account()
@@ -336,7 +341,7 @@ func Test_Account(t *testing.T) {
 	assert.Equal(t, uint64(0), sequenceNumber)
 	authKey, err := account.AuthenticationKey()
 	assert.NoError(t, err)
-	assert.Equal(t, AccountOne[:], authKey[:])
+	assert.Equal(t, AccountOne[:], authKey)
 }
 
 func Test_Transactions(t *testing.T) {
@@ -654,7 +659,10 @@ func TestClient_View(t *testing.T) {
 	vals, err := client.View(payload)
 	assert.NoError(t, err)
 	assert.Len(t, vals, 1)
-	_, err = StrToUint64(vals[0].(string))
+
+	val, ok := vals[0].(string)
+	assert.True(t, ok)
+	_, err = StrToUint64(val)
 	assert.NoError(t, err)
 }
 

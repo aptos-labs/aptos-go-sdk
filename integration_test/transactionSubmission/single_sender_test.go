@@ -60,6 +60,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *t
 		resp := <-responses
 		if resp.Err != nil {
 			t.Errorf("Transaction failed: %v", resp.Err)
+
 			continue
 		}
 		fmt.Printf("[%s] hash: %s\n",

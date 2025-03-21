@@ -60,7 +60,7 @@ func (key *SingleSigner) EmptySignature() *AnySignature {
 //
 // Implements:
 //   - [Signer]
-func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
+func (key *SingleSigner) Sign(msg []byte) (*AccountAuthenticator, error) {
 	signature, err := key.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -103,6 +103,7 @@ func (key *SingleSigner) AuthKey() *AuthenticationKey {
 func (key *SingleSigner) PubKey() PublicKey {
 	innerPubKey := key.Signer.VerifyingKey()
 	keyType := AnyPublicKeyVariantEd25519
+
 	switch key.Signer.(type) {
 	case *Ed25519PrivateKey:
 		keyType = AnyPublicKeyVariantEd25519

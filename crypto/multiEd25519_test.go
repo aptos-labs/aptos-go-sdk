@@ -68,6 +68,7 @@ func createMultiEd25519Key(t *testing.T) (
 	*Ed25519PublicKey,
 	*MultiEd25519PublicKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
 	// TODO: Maybe we should have a typed function for the public keys

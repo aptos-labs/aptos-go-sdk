@@ -30,7 +30,7 @@ type Serializer struct {
 //
 //	struct := &MyStruct{ num: 100 }
 //	bytes, _ := Serialize(struct)
-func Serialize(value Marshaler) (bytes []byte, err error) {
+func Serialize(value Marshaler) ([]byte, error) {
 	return SerializeSingle(func(ser *Serializer) {
 		value.MarshalBCS(ser)
 	})
@@ -132,6 +132,7 @@ func (ser *Serializer) Struct(v Marshaler) {
 		ser.SetError(fmt.Errorf("cannot marshal nil"))
 		return
 	}
+
 	v.MarshalBCS(ser)
 }
 
@@ -195,6 +196,7 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 //	}
 func SerializeSequenceWithFunction[AT []T, T any](array AT, ser *Serializer, serialize func(ser *Serializer, item T)) {
 	ser.Uleb128(uint32(len(array)))
+
 	for i, v := range array {
 		serialize(ser, v)
 		// Exit early if there's an error
@@ -321,15 +323,14 @@ func SerializeBytes(input []byte) ([]byte, error) {
 //			ser.WriteBytes(list)
 //		}
 //	})
-func SerializeSingle(marshal func(ser *Serializer)) (bytes []byte, err error) {
+func SerializeSingle(marshal func(ser *Serializer)) ([]byte, error) {
 	ser := &Serializer{}
 	marshal(ser)
-	err = ser.Error()
+	err := ser.Error()
 	if err != nil {
 		return nil, err
 	}
-	bytes = ser.ToBytes()
-	return bytes, nil
+	return ser.ToBytes(), nil
 }
 
 // SerializeOption serializes an optional value

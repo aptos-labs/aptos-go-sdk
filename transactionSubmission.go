@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -141,6 +142,7 @@ func (client *Client) SubmitTransactions(requests chan TransactionSubmissionRequ
 // closes output chan `responses` when input chan `signedTxns` is closed.
 func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
+
 	for request := range requests {
 		response, err := rc.SubmitTransaction(request.SignedTxn)
 		if err != nil {
@@ -173,8 +175,8 @@ func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissio
 			// Process the responses
 			if err != nil {
 				// Error, means all failed
-				for j := uint32(0); j < i; j++ {
-					responses <- TransactionSubmissionResponse{Id: ids[j], Err: err}
+				for _, id := range ids {
+					responses <- TransactionSubmissionResponse{Id: id, Err: err}
 				}
 			} else {
 				// Partial failure, means we need to send errors for those that failed
@@ -226,14 +228,14 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 		case *RawTransactionWithData:
 			switch rawTxn.Variant {
 			case MultiAgentRawTransactionWithDataVariant:
-				return nil, fmt.Errorf("multi agent not supported, please provide a signer function")
+				return nil, errors.New("multi agent not supported, please provide a signer function")
 			case MultiAgentWithFeePayerRawTransactionWithDataVariant:
-				return nil, fmt.Errorf("fee payer not supported, please provide a signer function")
+				return nil, errors.New("fee payer not supported, please provide a signer function")
 			default:
-				return nil, fmt.Errorf("unsupported rawTransactionWithData type")
+				return nil, errors.New("unsupported rawTransactionWithData type")
 			}
 		default:
-			return nil, fmt.Errorf("unsupported rawTransactionImpl type")
+			return nil, errors.New("unsupported rawTransactionImpl type")
 		}
 	}
 
@@ -401,18 +403,18 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	close(submissionRequests)
 }
 
-func (cfg WorkerPoolConfig) getBufferSizes() (build, submission uint32) {
+func (cfg WorkerPoolConfig) getBufferSizes() (uint32, uint32) {
 	workers := defaultWorkerCount
 	if cfg.NumWorkers > 0 {
 		workers = cfg.NumWorkers
 	}
 
-	build = workers
+	build := workers
 	if cfg.BuildResponseBuffer > 0 {
 		build = cfg.BuildResponseBuffer
 	}
 
-	submission = workers
+	submission := workers
 	if cfg.SubmissionBuffer > 0 {
 		submission = cfg.SubmissionBuffer
 	}
@@ -435,6 +437,7 @@ func startSigningWorkers(
 	for i := uint32(0); i < numWorkers; i++ {
 		go func() {
 			defer signingWg.Done()
+
 			for buildResponse := range transactionsToSign {
 				signedTxn, err := sign(buildResponse.Response)
 				if err != nil {
@@ -474,6 +477,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFnAndWorkerPool(
 
 	buildResponses := make(chan TransactionBuildResponse, buildBuffer)
 	setSequenceNumber := make(chan uint64)
+
 	go rc.BuildTransactions(sender, payloads, buildResponses, setSequenceNumber, buildOptions...)
 
 	submissionRequests := make(chan TransactionSubmissionRequest, submissionBuffer)
@@ -487,6 +491,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFnAndWorkerPool(
 	for buildResponse := range buildResponses {
 		if buildResponse.Err != nil {
 			responses <- TransactionSubmissionResponse{Id: buildResponse.Id, Err: buildResponse.Err}
+
 			continue
 		}
 		transactionWg.Add(1)

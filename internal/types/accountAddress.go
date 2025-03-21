@@ -110,24 +110,23 @@ func (aa *AccountAddress) UnmarshalJSON(b []byte) error {
 }
 
 // NamedObjectAddress derives a named object address based on the input address as the creator
-func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
+func (aa *AccountAddress) NamedObjectAddress(seed []byte) AccountAddress {
 	return aa.DerivedAddress(seed, crypto.NamedObjectScheme)
 }
 
 // ObjectAddressFromObject derives an object address based on the input address as the creator object
-func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
+func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) AccountAddress {
 	return aa.DerivedAddress(objectAddress[:], crypto.DeriveObjectScheme)
 }
 
 // ResourceAccount derives an object address based on the input address as the creator
-func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
+func (aa *AccountAddress) ResourceAccount(seed []byte) AccountAddress {
 	return aa.DerivedAddress(seed, crypto.ResourceAccountScheme)
 }
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
-func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
+func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) AccountAddress {
 	authKey := aa.AuthKey()
 	authKey.FromBytesAndScheme(append(authKey[:], seed...), typeByte)
-	copy(accountAddress[:], authKey[:])
-	return
+	return AccountAddress(authKey[:])
 }

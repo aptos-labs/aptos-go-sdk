@@ -30,7 +30,7 @@ type TransactionPayload struct {
 // region TransactionPayload bcs.Struct
 func (txn *TransactionPayload) MarshalBCS(ser *bcs.Serializer) {
 	if txn == nil || txn.Payload == nil {
-		ser.SetError(fmt.Errorf("nil transaction payload"))
+		ser.SetError(errors.New("nil transaction payload"))
 		return
 	}
 	ser.Uleb128(uint32(txn.Payload.PayloadType()))
@@ -44,7 +44,7 @@ func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Payload = &Script{}
 	case TransactionPayloadVariantModuleBundle:
 		// Deprecated, should never be in production
-		des.SetError(fmt.Errorf("module bundle is not supported as a transaction payload"))
+		des.SetError(errors.New("module bundle is not supported as a transaction payload"))
 		return
 	case TransactionPayloadVariantEntryFunction:
 		txn.Payload = &EntryFunction{}
@@ -103,6 +103,7 @@ func (sf *EntryFunction) MarshalBCS(ser *bcs.Serializer) {
 	ser.WriteString(sf.Function)
 	bcs.SerializeSequence(sf.ArgTypes, ser)
 	ser.Uleb128(uint32(len(sf.Args)))
+
 	for _, a := range sf.Args {
 		ser.WriteBytes(a)
 	}
@@ -114,6 +115,7 @@ func (sf *EntryFunction) UnmarshalBCS(des *bcs.Deserializer) {
 	sf.ArgTypes = bcs.DeserializeSequence[TypeTag](des)
 	alen := des.Uleb128()
 	sf.Args = make([][]byte, alen)
+
 	for i := range alen {
 		sf.Args[i] = des.ReadBytes()
 	}

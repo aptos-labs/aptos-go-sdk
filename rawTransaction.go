@@ -170,9 +170,8 @@ func (txn *RawTransactionWithData) SetFeePayer(
 		inner := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
 		inner.FeePayer = &feePayer
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(

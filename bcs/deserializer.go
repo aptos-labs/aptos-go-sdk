@@ -43,9 +43,11 @@ func Deserialize(dest Unmarshaler, bytes []byte) error {
 		err:    nil,
 	}
 	des.Struct(dest)
+
 	if des.err != nil {
 		return des.err
 	}
+
 	if des.Remaining() > 0 {
 		return fmt.Errorf("deserialize failed: remaining %d byte(s)", des.Remaining())
 	}
@@ -80,6 +82,7 @@ func (des *Deserializer) Bool() bool {
 	}
 
 	out := false
+
 	switch des.U8() {
 	case 0:
 		out = false
@@ -116,7 +119,9 @@ func (des *Deserializer) deserializeUBigint(typeName string, size int) big.Int {
 	bytesBigEndian := make([]byte, size)
 	copy(bytesBigEndian, des.source[des.pos:end])
 	des.pos = end
+
 	slices.Reverse(bytesBigEndian)
+
 	var out big.Int
 	out.SetBytes(bytesBigEndian)
 	return out
@@ -159,6 +164,7 @@ func (des *Deserializer) U256() big.Int {
 // [Unsigned LEB128]: https://en.wikipedia.org/wiki/LEB128#Unsigned_LEB128
 func (des *Deserializer) Uleb128() uint32 {
 	const maxU32 = uint64(0xFFFFFFFF)
+
 	var out uint64
 	shift := 0
 
@@ -194,6 +200,7 @@ func (des *Deserializer) Uleb128() uint32 {
 // ReadBytes reads bytes prefixed with a length
 func (des *Deserializer) ReadBytes() []byte {
 	length := des.Uleb128()
+
 	if des.err != nil {
 		return nil
 	}
@@ -227,6 +234,7 @@ func (des *Deserializer) readBytes(typeName string, length int, dest []byte) {
 		des.setError("not enough bytes remaining to deserialize %s", typeName)
 		return
 	}
+
 	copy(dest, des.source[des.pos:end])
 	des.pos = end
 }
@@ -239,6 +247,7 @@ func (des *Deserializer) Struct(v Unmarshaler) {
 		des.setError("cannot deserialize into nil")
 		return
 	}
+
 	v.UnmarshalBCS(des)
 }
 
@@ -264,10 +273,12 @@ func DeserializeSequence[T any](des *Deserializer) []T {
 // All sequences are prefixed with an Uleb128 length.
 func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(des *Deserializer, out *T)) []T {
 	length := des.Uleb128()
+
 	if des.Error() != nil {
 		return nil
 	}
 	out := make([]T, length)
+
 	for i, entry := range out {
 		deserialize(des, &entry)
 

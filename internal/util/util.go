@@ -53,16 +53,3 @@ func StrToBigInt(val string) (*big.Int, error) {
 
 	return num, nil
 }
-
-// PrettyJSON a simple pretty print for JSON examples.
-func PrettyJSON(x any) string {
-	out := strings.Builder{}
-	enc := json.NewEncoder(&out)
-	enc.SetIndent("", "  ")
-	err := enc.Encode(x)
-	if err != nil {
-		return ""
-	}
-
-	return out.String()
-}

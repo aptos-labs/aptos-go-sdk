@@ -76,18 +76,17 @@ func CoinBatchTransferPayload(coinType *TypeTag, dests []AccountAddress, amounts
 				amountsBytes,
 			},
 		}, nil
-	} else {
-		return &EntryFunction{
-			Module: ModuleId{
-				Address: AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "batch_transfer_coins",
-			ArgTypes: []TypeTag{*coinType},
-			Args: [][]byte{
-				destBytes,
-				amountsBytes,
-			},
-		}, nil
 	}
+	return &EntryFunction{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "aptos_account",
+		},
+		Function: "batch_transfer_coins",
+		ArgTypes: []TypeTag{*coinType},
+		Args: [][]byte{
+			destBytes,
+			amountsBytes,
+		},
+	}, nil
 }

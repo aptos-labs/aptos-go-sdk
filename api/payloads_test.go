@@ -25,7 +25,7 @@ func TestPayload_EntryFunction(t *testing.T) {
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
 	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantEntryFunction)
+	assert.Equal(t, TransactionPayloadVariantEntryFunction, data.Type)
 	payload := data.Inner.(*TransactionPayloadEntryFunction)
 
 	assert.Equal(t, "0x1::object::transfer", payload.Function)
@@ -62,12 +62,12 @@ func TestPayload_Script(t *testing.T) {
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
 	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantScript)
+	assert.Equal(t, TransactionPayloadVariantScript, data.Type)
 	payload := data.Inner.(*TransactionPayloadScript)
 
 	assert.Len(t, payload.Code.Bytecode, 263)
 	assert.Equal(t, "main", payload.Code.Abi.Name)
-	assert.Len(t, payload.TypeArguments, 0)
+	assert.Empty(t, payload.TypeArguments)
 	assert.Len(t, payload.Arguments, 2)
 }
 
@@ -92,7 +92,7 @@ func TestPayload_Multisig(t *testing.T) {
 	data := &TransactionPayload{}
 	err := json.Unmarshal([]byte(testJson), &data)
 	assert.NoError(t, err)
-	assert.Equal(t, data.Type, TransactionPayloadVariantMultisig)
+	assert.Equal(t, TransactionPayloadVariantMultisig, data.Type)
 	payload := data.Inner.(*TransactionPayloadMultisig)
 	assert.Equal(t, types.AccountOne, *payload.MultisigAddress)
 }

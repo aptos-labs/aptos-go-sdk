@@ -135,7 +135,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			curTypes = append(curTypes, *newType)
 
 			currentStr = ""
-			expectedTypes += 1
+			expectedTypes++
 		case ' ':
 			// TODO whitespace, do we include tabs, etc.
 			parsedTypeTag := false
@@ -356,6 +356,10 @@ func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
 		tt.Value = &VectorTag{}
 	case TypeTagStruct:
 		tt.Value = &StructTag{}
+	case TypeTagReference:
+		tt.Value = &ReferenceTag{}
+	case TypeTagGeneric:
+		tt.Value = &GenericTag{}
 	default:
 		des.SetError(fmt.Errorf("unknown TypeTag enum %d", variant))
 		return

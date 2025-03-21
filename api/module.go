@@ -64,7 +64,7 @@ type MoveBytecode struct {
 	Abi      *MoveModule `json:"abi,omitempty"` // Abi is the ABI for the module, and is optional
 }
 
-// MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin
+// MoveComponentId is an id for a struct, function, or other type e.g. 0x1::aptos_coin::AptosCoin.
 type MoveComponentId = string
 
 // MoveModule describes the abilities and types associated with a specific module.

@@ -1,6 +1,10 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import (
+	"errors"
+
+	"github.com/aptos-labs/aptos-go-sdk/bcs"
+)
 
 // FetchNextMultisigAddress retrieves the next multisig address to be created from the given account
 func (client *Client) FetchNextMultisigAddress(address AccountAddress) (*AccountAddress, error) {
@@ -16,8 +20,14 @@ func (client *Client) FetchNextMultisigAddress(address AccountAddress) (*Account
 	if err != nil {
 		return nil, err
 	}
+
+	str, ok := viewResponse[0].(string)
+	if !ok {
+		return nil, errors.New("next_multisig_address is not a string")
+	}
+
 	multisigAddress := &AccountAddress{}
-	err = multisigAddress.ParseStringRelaxed(viewResponse[0].(string))
+	err = multisigAddress.ParseStringRelaxed(str)
 	if err != nil {
 		return nil, err
 	}

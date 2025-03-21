@@ -8,11 +8,11 @@ import (
 )
 
 func Test_HealthCheckResponse(t *testing.T) {
-	testJson := `{
+	testJSON := `{
 		"message": "aptos-node:ok"
 	}`
 	data := &HealthCheckResponse{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 	assert.Equal(t, "aptos-node:ok", data.Message)
 }

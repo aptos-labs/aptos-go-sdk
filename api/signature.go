@@ -37,7 +37,9 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+
 	o.Type = SignatureVariant(data.Type)
+
 	switch o.Type {
 	case SignatureVariantEd25519:
 		o.Inner = &Ed25519Signature{}
@@ -146,6 +148,7 @@ func (o *MultiEd25519Signature) UnmarshalJSON(b []byte) error {
 			return err
 		}
 	}
+
 	o.Signatures = make([]*crypto.Ed25519Signature, len(data.Signatures))
 	for i, signature := range data.Signatures {
 		o.Signatures[i] = &crypto.Ed25519Signature{}

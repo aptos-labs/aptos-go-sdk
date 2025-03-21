@@ -107,6 +107,7 @@ func createMultiKey(t *testing.T) (
 	*AnyPublicKey,
 	*MultiKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	assert.NoError(t, err)
 	pubkey1, err := ToAnyPublicKey(key1.PubKey())

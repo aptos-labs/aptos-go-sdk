@@ -53,6 +53,7 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 	o.FirstVersion = data.FirstVersion.ToUint64()
 	o.LastVersion = data.LastVersion.ToUint64()
 	o.Transactions = make([]*CommittedTransaction, len(data.Transactions))
+
 	for i, tx := range data.Transactions {
 		// TODO: Do I just save transactions as "unknown" if I can't parse them?
 		err = json.Unmarshal(tx, &o.Transactions[i])
@@ -60,6 +61,7 @@ func (o *Block) UnmarshalJSON(b []byte) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

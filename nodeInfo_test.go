@@ -18,7 +18,7 @@ type levelCounts struct {
 func (lc *levelCounts) inc(level slog.Level) {
 	lc.lock.Lock()
 	defer lc.lock.Unlock()
-	lc.counts[level] = lc.counts[level] + 1
+	lc.counts[level]++
 }
 
 func (lc *levelCounts) get(level slog.Level) int {
@@ -92,6 +92,7 @@ func setupTestLogging() *testSlogContext {
 }
 
 func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
+	t.Helper()
 	if t.Failed() {
 		t.Log(logContext.logbuf.String())
 	}

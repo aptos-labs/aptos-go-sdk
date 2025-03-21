@@ -11,7 +11,7 @@ import (
 // It can represent an Object, an Account, and much more.
 type AccountAddress = types.AccountAddress
 
-// Account is a wrapper for a signer, handling the AccountAddress and signing
+// Account is a wrapper for a signer, handling the AccountAddress and signing.
 type Account = types.Account
 
 // AccountZero represents the 0x0 address

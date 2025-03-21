@@ -29,7 +29,7 @@ func TestBlock(t *testing.T) {
 }
 
 func TestBlockWithNoTransactions(t *testing.T) {
-	testJson := `{
+	testJSON := `{
 		"block_height": "1",
 		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",
 		"block_timestamp": "1665609760857472",
@@ -38,7 +38,7 @@ func TestBlockWithNoTransactions(t *testing.T) {
 		"transactions": []
 	}`
 	data := &Block{}
-	err := json.Unmarshal([]byte(testJson), &data)
+	err := json.Unmarshal([]byte(testJSON), &data)
 	assert.NoError(t, err)
 
 	assert.Equal(t, "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80", data.BlockHash)

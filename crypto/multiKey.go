@@ -390,11 +390,11 @@ func (bm *MultiKeyBitmap) AddKey(index uint8) error {
 	curLength := len(bm.inner)
 	if int(numByte) >= curLength {
 		newInner := make([]byte, numByte+1)
-		copy(newInner[0:curLength], bm.inner[:])
+		copy(newInner[0:curLength], bm.inner)
 		bm.inner = newInner
 	}
 
-	bm.inner[numByte] = bm.inner[numByte] | (128 >> numBit)
+	bm.inner[numByte] |= (128 >> numBit)
 	return nil
 }
 
@@ -421,7 +421,7 @@ func KeyIndices(index uint8) (uint8, uint8) {
 // Implements:
 //   - [bcs.Marshaler]
 func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
-	ser.WriteBytes(bm.inner[:])
+	ser.WriteBytes(bm.inner)
 }
 
 // UnmarshalBCS deserializes the bitmap from bytes
@@ -435,7 +435,7 @@ func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
 		return
 	}
 	bm.inner = make([]byte, length)
-	des.ReadFixedBytesInto(bm.inner[:])
+	des.ReadFixedBytesInto(bm.inner)
 }
 
 // endregion

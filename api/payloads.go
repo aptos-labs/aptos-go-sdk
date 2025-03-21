@@ -6,7 +6,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 )
 
-// TransactionPayloadVariant is the type of payload represented in JSON
+// TransactionPayloadVariant is the type of payload represented in JSON.
 type TransactionPayloadVariant string
 
 const (
@@ -18,7 +18,7 @@ const (
 	TransactionPayloadVariantUnknown       TransactionPayloadVariant = "unknown"                // TransactionPayloadVariantUnknown maps to TransactionPayloadUnknown for unknown types
 )
 
-// TransactionPayload is an enum of all possible transaction payloads
+// TransactionPayload is an enum of all possible transaction payloads.
 //
 // Unknown types will have the Type set to [TransactionPayloadVariantUnknown] and the Inner set to [TransactionPayloadUnknown]
 type TransactionPayload struct {
@@ -36,7 +36,9 @@ func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 	if err != nil {
 		return err
 	}
+
 	o.Type = TransactionPayloadVariant(data.Type)
+
 	switch o.Type {
 	case TransactionPayloadVariantEntryFunction:
 		o.Inner = &TransactionPayloadEntryFunction{}
@@ -54,6 +56,7 @@ func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 		o.Type = TransactionPayloadVariantUnknown
 		return json.Unmarshal(b, &o.Inner.(*TransactionPayloadUnknown).Payload)
 	}
+
 	return json.Unmarshal(b, o.Inner)
 }
 

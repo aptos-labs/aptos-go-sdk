@@ -87,6 +87,7 @@ func (ic *IndexerClient) WaitOnIndexer(processorName string, requestedVersion ui
 	// TODO: add customizable timeout and sleep time
 	const sleepTime = 100 * time.Millisecond
 	const timeout = 5 * time.Second
+
 	startTime := time.Now()
 
 	for {

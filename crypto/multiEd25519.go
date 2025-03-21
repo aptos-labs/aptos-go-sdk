@@ -84,10 +84,11 @@ func (key *MultiEd25519PublicKey) Scheme() uint8 {
 //   - [CryptoMaterial]
 func (key *MultiEd25519PublicKey) Bytes() []byte {
 	keyBytes := make([]byte, len(key.PubKeys)*ed25519.PublicKeySize+1)
+
 	for i, publicKey := range key.PubKeys {
 		start := i * ed25519.PublicKeySize
 		end := start + ed25519.PublicKeySize
-		copy(keyBytes[start:end], publicKey.Bytes()[:])
+		copy(keyBytes[start:end], publicKey.Bytes())
 	}
 	keyBytes[len(keyBytes)-1] = key.SignaturesRequired
 	return keyBytes
@@ -274,10 +275,11 @@ type MultiEd25519Signature struct {
 func (e *MultiEd25519Signature) Bytes() []byte {
 	// This is a weird one, we need to serialize in set bytes
 	sigBytes := make([]byte, len(e.Signatures)*ed25519.SignatureSize+MultiEd25519BitmapLen)
+
 	for i, signature := range e.Signatures {
 		start := i * ed25519.SignatureSize
 		end := start + ed25519.SignatureSize
-		copy(sigBytes[start:end], signature.Bytes()[:])
+		copy(sigBytes[start:end], signature.Bytes())
 	}
 	copy(sigBytes[len(sigBytes)-MultiEd25519BitmapLen:], e.Bitmap[:])
 	return sigBytes

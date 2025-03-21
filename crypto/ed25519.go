@@ -32,8 +32,9 @@ type Ed25519PrivateKey struct {
 // The [io.Reader] must provide 32 bytes of input.
 //
 // Returns an error if the key generation fails.
-func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey, err error) {
+func GenerateEd25519PrivateKey(rand ...io.Reader) (*Ed25519PrivateKey, error) {
 	var priv ed25519.PrivateKey
+	var err error
 	if len(rand) > 0 {
 		_, priv, err = ed25519.GenerateKey(rand[0])
 	} else {
@@ -53,7 +54,7 @@ func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey
 //
 // Implements:
 //   - [Signer]
-func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
+func (key *Ed25519PrivateKey) Sign(msg []byte) (*AccountAuthenticator, error) {
 	// Can't error
 	signature, _ := key.SignMessage(msg)
 	publicKeyBytes := key.PubKey().Bytes()
@@ -112,7 +113,7 @@ func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
 //
 // Implements:
 //   - [MessageSigner]
-func (key *Ed25519PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
+func (key *Ed25519PrivateKey) SignMessage(msg []byte) (Signature, error) {
 	sigBytes := ed25519.Sign(key.Inner, msg)
 	return &Ed25519Signature{Inner: [64]byte(sigBytes)}, nil
 }
@@ -151,11 +152,12 @@ func (key *Ed25519PrivateKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Ed25519PrivateKey) FromBytes(bytes []byte) (err error) {
-	bytes, err = ParsePrivateKey(bytes, PrivateKeyVariantEd25519, false)
+func (key *Ed25519PrivateKey) FromBytes(bytes []byte) error {
+	bytes, err := ParsePrivateKey(bytes, PrivateKeyVariantEd25519, false)
 	if err != nil {
 		return err
 	}
+
 	if len(bytes) != ed25519.SeedSize {
 		return fmt.Errorf("invalid ed25519 private key size %d", len(bytes))
 	}
@@ -182,7 +184,7 @@ func (key *Ed25519PrivateKey) ToAIP80() (string, error) {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Ed25519PrivateKey) FromHex(hexStr string) (err error) {
+func (key *Ed25519PrivateKey) FromHex(hexStr string) error {
 	bytes, err := ParsePrivateKey(hexStr, PrivateKeyVariantEd25519)
 	if err != nil {
 		return err
@@ -266,7 +268,7 @@ func (key *Ed25519PublicKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Ed25519PublicKey) FromBytes(bytes []byte) (err error) {
+func (key *Ed25519PublicKey) FromBytes(bytes []byte) error {
 	if len(bytes) != ed25519.PublicKeySize {
 		return errors.New("invalid ed25519 public key size")
 	}
@@ -288,7 +290,7 @@ func (key *Ed25519PublicKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Ed25519PublicKey) FromHex(hexStr string) (err error) {
+func (key *Ed25519PublicKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err

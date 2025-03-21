@@ -163,6 +163,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 			_, present := alreadyUsed[index]
 			if !present {
 				alreadyUsed[index] = true
+
 				break
 			}
 		}

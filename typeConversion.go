@@ -6,29 +6,29 @@ import (
 	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
 	var function *api.MoveFunction
-	switch abi.(type) {
+
+	switch abi := abi.(type) {
 	case *api.MoveModule:
-		moduleAbi := abi.(*api.MoveModule)
 		// Find function
-		for _, fun := range moduleAbi.ExposedFunctions {
+		for _, fun := range abi.ExposedFunctions {
 			if fun.Name == functionName {
-				if fun.IsEntry == false {
-					return nil, fmt.Errorf("function %s is not a entry function in module %s", functionName, moduleAbi.Name)
+				if !fun.IsEntry {
+					return nil, fmt.Errorf("function %s is not a entry function in module %s", functionName, abi.Name)
 				}
 
 				function = fun
+
 				break
 			}
 		}
 	case *api.MoveFunction:
-		function = abi.(*api.MoveFunction)
+		function = abi
 	default:
 		return nil, fmt.Errorf("unknown abi type: %T", abi)
 	}
@@ -63,12 +63,11 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 
 		// If it's `signer` or `&signer` need to skip
 		// TODO: only skip at the beginning
-		switch typeArg.Value.(type) {
+		switch innerArg := typeArg.Value.(type) {
 		case *SignerTag:
 			// Skip
 			continue
 		case *ReferenceTag:
-			innerArg := typeArg.Value.(*ReferenceTag)
 			switch innerArg.TypeParam.Value.(type) {
 			case *SignerTag:
 				// Skip
@@ -109,19 +108,18 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 }
 
 func ConvertTypeTag(typeArg any) (*TypeTag, error) {
-	switch typeArg.(type) {
+	switch typeArg := typeArg.(type) {
 	case TypeTag:
-		tag := typeArg.(TypeTag)
+		tag := typeArg
 		return &tag, nil
 	case *TypeTag:
-		tag := typeArg.(*TypeTag)
+		tag := typeArg
 		if tag == nil {
 			return nil, fmt.Errorf("invalid type tag %s, cannot be nil", typeArg)
 		}
 		return tag, nil
 	case string:
-		strTypeTag := typeArg.(string)
-		return ParseTypeTag(strTypeTag)
+		return ParseTypeTag(typeArg)
 	default:
 		return nil, fmt.Errorf("invalid type tag type")
 	}
@@ -129,25 +127,23 @@ func ConvertTypeTag(typeArg any) (*TypeTag, error) {
 
 func ConvertToU8(arg any) (*uint8, error) {
 	var num uint8
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case int:
-		num = uint8(arg.(int))
+		num = uint8(arg)
 	case uint:
-		num = uint8(arg.(uint))
+		num = uint8(arg)
 	case uint8:
-		num = arg.(uint8)
+		num = arg
 	case big.Int:
-		b := arg.(big.Int)
-		num = uint8(b.Uint64())
+		num = uint8(arg.Uint64())
 	case *big.Int:
-		b := arg.(*big.Int)
-		if b == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint8, input is nil")
 		}
-		num = uint8(b.Uint64())
+		num = uint8(arg.Uint64())
 	case string:
 		// Convert the number
-		u64, err := strconv.ParseUint(arg.(string), 10, 8)
+		u64, err := strconv.ParseUint(arg, 10, 8)
 		if err != nil {
 			return nil, err
 		}
@@ -161,25 +157,23 @@ func ConvertToU8(arg any) (*uint8, error) {
 
 func ConvertToU16(arg any) (*uint16, error) {
 	var num uint16
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case int:
-		num = uint16(arg.(int))
+		num = uint16(arg)
 	case uint:
-		num = uint16(arg.(uint))
+		num = uint16(arg)
 	case uint16:
-		num = arg.(uint16)
+		num = arg
 	case big.Int:
-		b := arg.(big.Int)
-		num = uint16(b.Uint64())
+		num = uint16(arg.Uint64())
 	case *big.Int:
-		b := arg.(*big.Int)
-		if b == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint16, input is nil")
 		}
-		num = uint16(b.Uint64())
+		num = uint16(arg.Uint64())
 	case string:
 		// Convert the number
-		u64, err := strconv.ParseUint(arg.(string), 10, 16)
+		u64, err := strconv.ParseUint(arg, 10, 16)
 		if err != nil {
 			return nil, err
 		}
@@ -193,25 +187,23 @@ func ConvertToU16(arg any) (*uint16, error) {
 
 func ConvertToU32(arg any) (*uint32, error) {
 	var num uint32
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case int:
-		num = uint32(arg.(int))
+		num = uint32(arg)
 	case uint:
-		num = uint32(arg.(uint))
+		num = uint32(arg)
 	case uint32:
-		num = arg.(uint32)
+		num = arg
 	case big.Int:
-		b := arg.(big.Int)
-		num = uint32(b.Uint64())
+		num = uint32(arg.Uint64())
 	case *big.Int:
-		b := arg.(*big.Int)
-		if b == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint32, input is nil")
 		}
-		num = uint32(b.Uint64())
+		num = uint32(arg.Uint64())
 	case string:
 		// Convert the number
-		u64, err := strconv.ParseUint(arg.(string), 10, 32)
+		u64, err := strconv.ParseUint(arg, 10, 32)
 		if err != nil {
 			return nil, err
 		}
@@ -225,25 +217,23 @@ func ConvertToU32(arg any) (*uint32, error) {
 
 func ConvertToU64(arg any) (*uint64, error) {
 	var num uint64
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case int:
-		num = uint64(arg.(int))
+		num = uint64(arg)
 	case uint:
-		num = uint64(arg.(uint))
+		num = uint64(arg)
 	case uint64:
-		num = arg.(uint64)
+		num = arg
 	case big.Int:
-		b := arg.(big.Int)
-		num = b.Uint64()
+		num = arg.Uint64()
 	case *big.Int:
-		b := arg.(*big.Int)
-		if b == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint64, input is nil")
 		}
-		num = b.Uint64()
+		num = arg.Uint64()
 	case string:
 		// Convert the number
-		u64, err := strconv.ParseUint(arg.(string), 10, 64)
+		u64, err := strconv.ParseUint(arg, 10, 64)
 		if err != nil {
 			return nil, err
 		}
@@ -255,135 +245,123 @@ func ConvertToU64(arg any) (*uint64, error) {
 	return &num, nil
 }
 
-func ConvertToU128(arg any) (num *big.Int, err error) {
-	switch arg.(type) {
+func ConvertToU128(arg any) (*big.Int, error) {
+	switch arg := arg.(type) {
 	case int:
-		num = big.NewInt(int64(arg.(int)))
+		return big.NewInt(int64(arg)), nil
 	case uint:
-		num = big.NewInt(int64(arg.(uint)))
+		return big.NewInt(int64(arg)), nil
 	case big.Int:
-		b := arg.(big.Int)
-		num = &b
+		return &arg, nil
 	case *big.Int:
-		num = arg.(*big.Int)
-		if num == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint128, input is nil")
 		}
+		return arg, nil
 	case string:
 		// Convert the number
-		num, err = util.StrToBigInt(arg.(string))
+		num, err := util.StrToBigInt(arg)
 		if err != nil {
 			return nil, err
 		}
+		return num, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for uint128")
 	}
-
-	return num, nil
 }
 
-func ConvertToU256(arg any) (num *big.Int, err error) {
-	switch arg.(type) {
+func ConvertToU256(arg any) (*big.Int, error) {
+	switch arg := arg.(type) {
 	case int:
-		num = big.NewInt(int64(arg.(int)))
+		return big.NewInt(int64(arg)), nil
 	case uint:
-		num = big.NewInt(int64(arg.(uint)))
+		return big.NewInt(int64(arg)), nil
 	case big.Int:
-		b := arg.(big.Int)
-		num = &b
+		return &arg, nil
 	case *big.Int:
-		num = arg.(*big.Int)
-		if num == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert to uint256, input is nil")
 		}
+		return arg, nil
 	case string:
 		// Convert the number
-		num, err = util.StrToBigInt(arg.(string))
-		if err != nil {
-			return nil, err
-		}
+		return util.StrToBigInt(arg)
 	default:
 		return nil, fmt.Errorf("invalid input type for uint256")
 	}
-
-	return num, nil
 }
 
-func ConvertToBool(arg any) (b bool, err error) {
-	switch arg.(type) {
+func ConvertToBool(arg any) (bool, error) {
+	switch arg := arg.(type) {
 	case bool:
-		b = arg.(bool)
+		return arg, nil
 	case string:
-		switch arg.(string) {
+		switch arg {
 		case "true":
-			b = true
+			return true, nil
 		case "false":
-			b = false
+			return false, nil
 		default:
-			err = fmt.Errorf("invalid boolean input for bool")
+			return false, fmt.Errorf("invalid boolean input for bool")
 		}
 	default:
-		err = fmt.Errorf("invalid input type for bool")
+		return false, fmt.Errorf("invalid input type for bool")
 	}
-	return b, err
 }
 
-func ConvertToAddress(arg any) (a *AccountAddress, err error) {
-	switch arg.(type) {
+func ConvertToAddress(arg any) (*AccountAddress, error) {
+	switch arg := arg.(type) {
 	case AccountAddress:
-		addr := arg.(AccountAddress)
+		addr := arg
 		return &addr, nil
 	case *AccountAddress:
-		a = arg.(*AccountAddress)
-		if a == nil {
-			err = fmt.Errorf("invalid account address, nil")
+		if arg == nil {
+			return nil, fmt.Errorf("invalid account address, nil")
 		}
+		return arg, nil
 	case string:
 		addr := AccountAddress{}
-		err = addr.ParseStringRelaxed(arg.(string))
+		err := addr.ParseStringRelaxed(arg)
 		if err != nil {
 			return nil, err
 		}
-		a = &addr
+		return &addr, nil
 	default:
-		err = fmt.Errorf("invalid input type for address")
+		return nil, fmt.Errorf("invalid input type for address")
 	}
-	return a, err
 }
 
 // ConvertToVectorU8 returns the BCS encoded version of the bytes
-func ConvertToVectorU8(arg any) (b []byte, err error) {
+func ConvertToVectorU8(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case string:
-		bytes, err := util.ParseHex(arg.(string))
+		bytes, err := util.ParseHex(arg)
 		if err != nil {
 			return nil, err
 		}
 		// Serialize the bytes
 		return bcs.SerializeBytes(bytes)
 	case []byte:
-		convertedArg := arg.([]byte)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
-		return bcs.SerializeBytes(convertedArg)
+		return bcs.SerializeBytes(arg)
 	default:
 		return nil, fmt.Errorf("invalid input type for vector<u8>")
 	}
 }
 
 // ConvertToVectorU16 returns the BCS encoded version of the bytes
-func ConvertToVectorU16(arg any) (b []byte, err error) {
+func ConvertToVectorU16(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []uint16:
-		convertedArg := arg.([]uint16)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item uint16) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint16) {
 				ser.U16(item)
 			})
 		})
@@ -393,16 +371,15 @@ func ConvertToVectorU16(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU32 returns the BCS encoded version of the bytes
-func ConvertToVectorU32(arg any) (b []byte, err error) {
+func ConvertToVectorU32(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []uint32:
-		convertedArg := arg.([]uint32)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item uint32) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint32) {
 				ser.U32(item)
 			})
 		})
@@ -412,16 +389,15 @@ func ConvertToVectorU32(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU64 returns the BCS encoded version of the bytes
-func ConvertToVectorU64(arg any) (b []byte, err error) {
+func ConvertToVectorU64(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []uint64:
-		convertedArg := arg.([]uint64)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item uint64) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item uint64) {
 				ser.U64(item)
 			})
 		})
@@ -431,16 +407,15 @@ func ConvertToVectorU64(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU128 returns the BCS encoded version of the bytes
-func ConvertToVectorU128(arg any) (b []byte, err error) {
+func ConvertToVectorU128(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []big.Int:
-		convertedArg := arg.([]big.Int)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item big.Int) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item big.Int) {
 				ser.U128(item)
 			})
 		})
@@ -450,16 +425,15 @@ func ConvertToVectorU128(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU256 returns the BCS encoded version of the bytes
-func ConvertToVectorU256(arg any) (b []byte, err error) {
+func ConvertToVectorU256(arg any) ([]byte, error) {
 	// Special case, handle hex string
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []big.Int:
-		convertedArg := arg.([]big.Int)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item big.Int) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item big.Int) {
 				ser.U256(item)
 			})
 		})
@@ -469,15 +443,14 @@ func ConvertToVectorU256(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorBool returns the BCS encoded version of the boolean vector
-func ConvertToVectorBool(arg any) (b []byte, err error) {
-	switch arg.(type) {
+func ConvertToVectorBool(arg any) ([]byte, error) {
+	switch arg := arg.(type) {
 	case []bool:
-		convertedArg := arg.([]bool)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to bool vector")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(convertedArg, ser, func(serializer *bcs.Serializer, item bool) {
+			bcs.SerializeSequenceWithFunction(arg, ser, func(serializer *bcs.Serializer, item bool) {
 				ser.Bool(item)
 			})
 		})
@@ -487,22 +460,20 @@ func ConvertToVectorBool(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorAddress returns the BCS encoded version of the address vector
-func ConvertToVectorAddress(arg any) (b []byte, err error) {
-	switch arg.(type) {
+func ConvertToVectorAddress(arg any) ([]byte, error) {
+	switch arg := arg.(type) {
 	case []AccountAddress:
-		convertedArg := arg.([]AccountAddress)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to address vector")
 		}
-		return bcs.SerializeSequenceOnly(convertedArg)
+		return bcs.SerializeSequenceOnly(arg)
 	case []*AccountAddress:
-		convertedArg := arg.([]*AccountAddress)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to address vector")
 		}
 		// Convert []*AccountAddress to []AccountAddress
-		addresses := make([]AccountAddress, len(convertedArg))
-		for i, addr := range convertedArg {
+		addresses := make([]AccountAddress, len(arg))
+		for i, addr := range arg {
 			if addr == nil {
 				return nil, fmt.Errorf("cannot convert nil address in vector")
 			}
@@ -515,7 +486,7 @@ func ConvertToVectorAddress(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorGeneric returns the BCS encoded version of the generic vector
-func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
+func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	genericTag, ok := typeArg.Value.(*GenericTag)
 	if !ok {
 		return nil, fmt.Errorf("invalid type tag for generic vector")
@@ -527,36 +498,35 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 
 	innerType := generics[genericTag.Num]
 
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []any:
-		convertedArg := arg.([]any)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to generic vector")
 		}
 
 		// Serialize length
-		lengthBytes, err := bcs.SerializeUleb128(uint32(len(convertedArg)))
+		bytes, err := bcs.SerializeUleb128(uint32(len(arg)))
 		if err != nil {
 			return nil, err
 		}
-		b = lengthBytes
 
 		// Serialize each element
-		for _, item := range convertedArg {
+		for _, item := range arg {
 			val, err := ConvertArg(innerType, item, generics)
 			if err != nil {
 				return nil, err
 			}
-			b = append(b, val...)
+
+			bytes = append(bytes, val...)
 		}
-		return b, nil
+		return bytes, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for generic vector")
 	}
 }
 
 // ConvertToVectorReference returns the BCS encoded version of the reference vector
-func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
+func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	refTag, ok := typeArg.Value.(*ReferenceTag)
 	if !ok {
 		return nil, fmt.Errorf("invalid type tag for reference vector")
@@ -564,29 +534,28 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b [
 
 	innerType := refTag.TypeParam
 
-	switch arg.(type) {
+	switch arg := arg.(type) {
 	case []any:
-		convertedArg := arg.([]any)
-		if convertedArg == nil {
+		if arg == nil {
 			return nil, fmt.Errorf("cannot convert nil to reference vector")
 		}
 
 		// Serialize length
-		lengthBytes, err := bcs.SerializeUleb128(uint32(len(convertedArg)))
+		bytes, err := bcs.SerializeUleb128(uint32(len(arg)))
 		if err != nil {
 			return nil, err
 		}
-		b = lengthBytes
 
 		// Serialize each element
-		for _, item := range convertedArg {
+		for _, item := range arg {
 			val, err := ConvertArg(innerType, item, generics)
 			if err != nil {
 				return nil, err
 			}
-			b = append(b, val...)
+
+			bytes = append(bytes, val...)
 		}
-		return b, nil
+		return bytes, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for reference vector")
 	}
@@ -624,7 +593,7 @@ func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) (out []byte, 
 }
 
 func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
-	switch typeArg.Value.(type) {
+	switch innerArg := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
 		if err != nil {
@@ -675,37 +644,33 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 		return bcs.Serialize(a)
 	case *GenericTag:
 		// Convert based on number
-		genericTag := typeArg.Value.(*GenericTag)
-		genericNum := genericTag.Num
+		genericNum := innerArg.Num
 		if genericNum >= uint64(len(generics)) {
 			return nil, fmt.Errorf("generic number out of bounds")
 		}
 
-		tag := generics[genericTag.Num]
+		tag := generics[innerArg.Num]
 		return ConvertArg(tag, arg, generics)
 	case *ReferenceTag:
 		// Convert based on inner type
-		refTag := typeArg.Value.(*ReferenceTag)
-		return ConvertArg(refTag.TypeParam, arg, generics)
+		return ConvertArg(innerArg.TypeParam, arg, generics)
 	case *VectorTag:
 		// This has two paths:
 		// 1. Hex strings are allowed for vector<u8>
 		// 2. Otherwise, everything is just parsed as an array of the inner type
-		vecTag := typeArg.Value.(*VectorTag)
-		switch vecTag.TypeParam.Value.(type) {
+		switch innerArg.TypeParam.Value.(type) {
 		case *U8Tag:
 			return ConvertToVectorU8(arg)
 		default:
-			return ConvertToVector(vecTag.TypeParam, arg, generics)
+			return ConvertToVector(innerArg.TypeParam, arg, generics)
 		}
 	case *StructTag:
-		structTag := typeArg.Value.(*StructTag)
 		// TODO: We should be able to support custom structs, but for now only support known
-		switch structTag.Address {
+		switch innerArg.Address {
 		case AccountOne:
-			switch structTag.Module {
+			switch innerArg.Module {
 			case "object":
-				switch structTag.Name {
+				switch innerArg.Name {
 				case "Object":
 					// TODO: Move to function
 					// Handle as address, inner type doesn't matter
@@ -713,25 +678,25 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics)
 				}
 			case "string":
-				switch structTag.Name {
+				switch innerArg.Name {
 				case "String":
 					// Handle as string, we won't let bytes as an input for now here
-					switch arg.(type) {
+					switch arg := arg.(type) {
 					case string:
-						return bcs.SerializeBytes([]byte(arg.(string)))
+						return bcs.SerializeBytes([]byte(arg))
 					default:
 						return nil, fmt.Errorf("invalid input type for 0x1::string::String")
 					}
 				}
 			case "option":
-				switch structTag.Name {
+				switch innerArg.Name {
 				case "Option":
 					// Check it has the proper inner type
-					if 1 != len(structTag.TypeParams) {
+					if len(innerArg.TypeParams) != 1 {
 						return nil, fmt.Errorf("invalid input type for option, must have exactly one type arg")
 					}
 					// Get inner type
-					typeParam := structTag.TypeParams[0]
+					typeParam := innerArg.TypeParams[0]
 
 					// Handle special case of "none", it's a single 0 byte
 					if arg == nil {
