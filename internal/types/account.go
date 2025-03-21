@@ -85,12 +85,11 @@ func (account *Account) PrivateKeyString() (string, error) {
 	// Handle key in single signer
 	singleSigner, ok := account.Signer.(*crypto.SingleSigner)
 	if ok {
-		innerSigner := singleSigner.Signer
-		switch innerSigner.(type) {
+		switch innerSigner := singleSigner.Signer.(type) {
 		case *crypto.Ed25519PrivateKey:
-			return innerSigner.(*crypto.Ed25519PrivateKey).ToAIP80()
+			return innerSigner.ToAIP80()
 		case *crypto.Secp256k1PrivateKey:
-			return innerSigner.(*crypto.Secp256k1PrivateKey).ToAIP80()
+			return innerSigner.ToAIP80()
 		}
 	}
 
@@ -139,9 +138,7 @@ var ErrAddressTooLong = errors.New("AccountAddress too long")
 // ParseStringRelaxed parses a string into an AccountAddress
 // TODO: add strict mode checking
 func (aa *AccountAddress) ParseStringRelaxed(x string) error {
-	if strings.HasPrefix(x, "0x") {
-		x = x[2:]
-	}
+	x = strings.TrimPrefix(x, "0x")
 	if len(x) < 1 {
 		return ErrAddressTooShort
 	}

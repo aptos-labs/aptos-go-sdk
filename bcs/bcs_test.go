@@ -29,12 +29,12 @@ type TestStruct2 struct {
 	b   bool
 }
 
-func (st TestStruct2) MarshalBCS(ser *Serializer) {
+func (st *TestStruct2) MarshalBCS(ser *Serializer) {
 	ser.U8(st.num)
 	ser.Bool(st.b)
 }
 
-func (st TestStruct2) UnmarshalBCS(des *Deserializer) {
+func (st *TestStruct2) UnmarshalBCS(des *Deserializer) {
 	st.num = des.U8()
 	st.b = des.Bool()
 }
@@ -43,7 +43,7 @@ type TestStruct3 struct {
 	num uint16
 }
 
-func (st TestStruct3) MarshalBCS(ser *Serializer) {
+func (st *TestStruct3) MarshalBCS(ser *Serializer) {
 	if st.num > 255 {
 		ser.SetError(errors.New("value is greater than 255"))
 		return
@@ -51,7 +51,7 @@ func (st TestStruct3) MarshalBCS(ser *Serializer) {
 	ser.U8(uint8(st.num))
 }
 
-func (st TestStruct3) UnmarshalBCS(des *Deserializer) {
+func (st *TestStruct3) UnmarshalBCS(des *Deserializer) {
 	st.num = uint16(des.U8())
 }
 

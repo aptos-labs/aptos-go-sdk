@@ -208,23 +208,21 @@ func (client *FungibleAssetClient) Decimals() (decimals uint8, err error) {
 }
 
 // IconUri returns the URI of the icon for the fungible asset
-func (client *FungibleAssetClient) IconUri(uri string, err error) {
+func (client *FungibleAssetClient) IconUri() (string, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "icon_uri")
 	if err != nil {
-		return
+		return "", err
 	}
-	uri = val.(string)
-	return
+	return val.(string), nil
 }
 
 // ProjectUri returns the URI of the project for the fungible asset
-func (client *FungibleAssetClient) ProjectUri(uri string, err error) {
+func (client *FungibleAssetClient) ProjectUri() (string, error) {
 	val, err := client.viewMetadata([][]byte{client.metadataAddress[:]}, "project_uri")
 	if err != nil {
-		return
+		return "", err
 	}
-	uri = val.(string)
-	return
+	return val.(string), nil
 }
 
 // viewMetadata calls a view function on the fungible asset metadata

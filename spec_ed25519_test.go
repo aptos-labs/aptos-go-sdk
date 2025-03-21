@@ -197,6 +197,7 @@ func Test_Spec_Ed25519_Signature(t *testing.T) {
 
 	// It must be able to encode in BCS bytes
 	bcsBytes1, err := bcs.Serialize(sig1)
+	assert.NoError(t, err, "It must be able to encode in BCS bytes")
 
 	// It must be able to decode from BCS bytes
 	decodedSig := &crypto.Ed25519Signature{}

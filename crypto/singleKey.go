@@ -138,14 +138,14 @@ type AnyPublicKey struct {
 // ToAnyPublicKey converts a [VerifyingKey] to an [AnyPublicKey]
 func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 	out := &AnyPublicKey{}
-	switch key.(type) {
+	switch key := key.(type) {
 	case *Ed25519PublicKey:
 		out.Variant = AnyPublicKeyVariantEd25519
 	case *Secp256k1PublicKey:
 		out.Variant = AnyPublicKeyVariantSecp256k1
 	case *AnyPublicKey:
 		// Passthrough for conversion
-		return key.(*AnyPublicKey), nil
+		return key, nil
 	default:
 		return nil, fmt.Errorf("unknown public key type: %T", key)
 	}

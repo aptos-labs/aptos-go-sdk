@@ -284,7 +284,7 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 	}
 
 	// Return early if we don't need transactions
-	if withTransactions == false {
+	if !withTransactions {
 		return block, nil
 	}
 
@@ -596,12 +596,6 @@ func (rc *NodeClient) transactionsConcurrent(
 	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
 ) (data []*api.CommittedTransaction, err error) {
 	const transactionsPageSize = 100
-	// If we know both, we can fetch all concurrently
-	type Pair struct {
-		start uint64 // inclusive
-		end   uint64 // exclusive
-	}
-
 	// If the limit is  greater than the page size, we need to fetch concurrently, otherwise not
 	if limit > transactionsPageSize {
 		numChannels := limit / transactionsPageSize
@@ -745,19 +739,11 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 
 // SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
 func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
-	expirationSeconds := DefaultExpirationSeconds
-
 	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
 
 	for opti, option := range options {
 		switch ovalue := option.(type) {
-		case ExpirationSeconds:
-			expirationSeconds = int64(ovalue)
-			if expirationSeconds < 0 {
-				err = errors.New("ExpirationSeconds cannot be less than 0")
-				return nil, err
-			}
 		case FeePayer:
 			feePayer = ovalue
 		case AdditionalSigners:
