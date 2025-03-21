@@ -461,13 +461,11 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		switch value := arg.(type) {
 		case *http.Client:
 			if httpClient != nil {
-				err = fmt.Errorf("NewClient only accepts one http.Client")
-				return
+				return nil, fmt.Errorf("NewClient only accepts one http.Client")
 			}
 			httpClient = value
 		default:
-			err = fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
-			return
+			return nil, fmt.Errorf("NewClient arg %d bad type %T", i+1, arg)
 		}
 	}
 	var nodeClient *NodeClient
@@ -499,12 +497,11 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		_, _ = nodeClient.GetChainId()
 	}
 
-	client = &Client{
+	return &Client{
 		nodeClient,
 		faucetClient,
 		indexerClient,
-	}
-	return
+	}, nil
 }
 
 // SetTimeout adjusts the HTTP client timeout
