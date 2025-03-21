@@ -12,6 +12,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Breaking`] Change ExpirationSeconds from int64 to uint64
 - [`Fix`] Fix a self calling function in the client
 - [`Fix`/`Breaking`] Fix fungible asset API calls that didn't return a value
+- [`Fix`] Fix errors from failed transactions in concurrent submission
 
 # v1.5.0 (2/10/2024)
 
