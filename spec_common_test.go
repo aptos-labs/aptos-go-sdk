@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"fmt"
 	"math/big"
 	"strconv"
 	"strings"
@@ -65,14 +64,14 @@ func parseBoolean(input string) bool {
 	case "false":
 		return false
 	default:
-		panic(fmt.Sprintf("invalid boolean input %s", input))
+		panic("invalid boolean input " + input)
 	}
 }
 
 func parseU8(input string) uint8 {
 	out, err := strconv.ParseUint(input, 10, 8)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u8 input %s", input))
+		panic("invalid u8 input " + input)
 	}
 	return (uint8)(out)
 }
@@ -80,7 +79,7 @@ func parseU8(input string) uint8 {
 func parseU16(input string) uint16 {
 	out, err := strconv.ParseUint(input, 10, 16)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u16 input %s", input))
+		panic("invalid u16 input " + input)
 	}
 	return (uint16)(out)
 }
@@ -88,7 +87,7 @@ func parseU16(input string) uint16 {
 func parseU32(input string) uint32 {
 	out, err := strconv.ParseUint(input, 10, 32)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u32 input %s", input))
+		panic("invalid u32 input " + input)
 	}
 	return (uint32)(out)
 }
@@ -96,7 +95,7 @@ func parseU32(input string) uint32 {
 func parseU64(input string) uint64 {
 	out, err := StrToUint64(input)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u64 input %s", input))
+		panic("invalid u64 input " + input)
 	}
 	return out
 }
@@ -104,7 +103,7 @@ func parseU64(input string) uint64 {
 func parseU128(input string) *big.Int {
 	out, err := StrToBigInt(input)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u128 input %s", input))
+		panic("invalid u128 input " + input)
 	}
 	return out
 }
@@ -112,7 +111,7 @@ func parseU128(input string) *big.Int {
 func parseU256(input string) *big.Int {
 	out, err := StrToBigInt(input)
 	if err != nil {
-		panic(fmt.Sprintf("invalid u256 input %s", input))
+		panic("invalid u256 input " + input)
 	}
 	return out
 }
@@ -126,7 +125,7 @@ func parseAddress(input string) *AccountAddress {
 	address := &AccountAddress{}
 	err := address.ParseStringRelaxed(input)
 	if err != nil {
-		panic(fmt.Sprintf("invalid address input %s", input))
+		panic("invalid address input " + input)
 	}
 	return address
 }
@@ -240,5 +239,5 @@ func parseSequence(itemType string, items string) any {
 		return stringList
 	}
 
-	panic(fmt.Sprintf("unsupported given sequence item type %s", itemType))
+	panic("unsupported given sequence item type " + itemType)
 }

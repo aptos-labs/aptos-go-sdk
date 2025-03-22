@@ -1,6 +1,7 @@
 package integration_test
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -41,7 +42,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *t
 			case *aptos.RawTransaction:
 				return txn.SignedTransaction(sender.Account)
 			default:
-				return nil, fmt.Errorf("unsupported transaction type")
+				return nil, errors.New("unsupported transaction type")
 			}
 		},
 		workerPoolConfig,

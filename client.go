@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -461,7 +462,7 @@ func NewClient(config NetworkConfig, options ...any) (client *Client, err error)
 		switch value := arg.(type) {
 		case *http.Client:
 			if httpClient != nil {
-				return nil, fmt.Errorf("NewClient only accepts one http.Client")
+				return nil, errors.New("NewClient only accepts one http.Client")
 			}
 			httpClient = value
 		default:

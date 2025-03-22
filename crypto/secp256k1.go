@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -360,7 +361,7 @@ func (e *Secp256k1Signature) RecoverSecp256k1PublicKeyWithAuthenticationKey(mess
 		}
 	}
 
-	return nil, fmt.Errorf("unable to recover public key from signature")
+	return nil, errors.New("unable to recover public key from signature")
 }
 
 // / recoverSecp256k1PublicKey recovers the public key from the signature and message by building up the magic byte
@@ -416,7 +417,7 @@ func (e *Secp256k1Signature) FromBytes(bytes []byte) (err error) {
 	// Checks order of s to be low
 	sTyped := signature.S()
 	if sTyped.IsOverHalfOrder() {
-		return fmt.Errorf("invalid secp256k1 signature: s is over half order")
+		return errors.New("invalid secp256k1 signature: s is over half order")
 	}
 	e.Inner = signature
 	return nil

@@ -37,7 +37,6 @@ type CoinBalance struct {
 
 // GetCoinBalances retrieve the coin balances for all coins owned by the address
 func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance, error) {
-	var out []CoinBalance
 	var q struct {
 		CurrentCoinBalances []struct {
 			CoinType     string `graphql:"coin_type"`
@@ -54,11 +53,12 @@ func (ic *IndexerClient) GetCoinBalances(address AccountAddress) ([]CoinBalance,
 		return nil, err
 	}
 
-	for _, coin := range q.CurrentCoinBalances {
-		out = append(out, CoinBalance{
+	out := make([]CoinBalance, len(q.CurrentCoinBalances))
+	for i, coin := range q.CurrentCoinBalances {
+		out[i] = CoinBalance{
 			CoinType: coin.CoinType,
 			Amount:   coin.Amount,
-		})
+		}
 	}
 
 	return out, nil

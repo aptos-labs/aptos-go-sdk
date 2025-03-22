@@ -118,10 +118,10 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			expectedTypes = savedPop.expectedTypes
 		case ',':
 			if len(saved) == 0 {
-				return nil, fmt.Errorf("unexpected comma at top level type")
+				return nil, errors.New("unexpected comma at top level type")
 			}
 			if len(currentStr) == 0 {
-				return nil, fmt.Errorf("unexpected comma, TypeTag is missing")
+				return nil, errors.New("unexpected comma, TypeTag is missing")
 			}
 
 			newType, err := ParseTypeTagInner(currentStr, innerTypes)
@@ -160,7 +160,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 			// Next char must be a comma or a closing > if something was parsed before it
 			nextChar := inputRunes[cur]
 			if cur < len(inputRunes) && parsedTypeTag && nextChar != ',' && nextChar != '>' {
-				return nil, fmt.Errorf("unexpected character at top level type")
+				return nil, errors.New("unexpected character at top level type")
 			}
 
 			// Skip over incrementing, we already did it above
@@ -173,7 +173,7 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 	}
 
 	if len(saved) > 0 {
-		return nil, fmt.Errorf("missing type argument close '>'")
+		return nil, errors.New("missing type argument close '>'")
 	}
 
 	switch len(curTypes) {
@@ -183,9 +183,9 @@ func ParseTypeTag(inputStr string) (*TypeTag, error) {
 		if currentStr == "" {
 			return &curTypes[0], nil
 		}
-		return nil, fmt.Errorf("unexpected comma ','")
+		return nil, errors.New("unexpected comma ','")
 	default:
-		return nil, fmt.Errorf("unexpected whitespace")
+		return nil, errors.New("unexpected whitespace")
 	}
 }
 
@@ -198,47 +198,47 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 	switch str {
 	case "bool":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &BoolTag{}}, nil
 	case "u8":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U8Tag{}}, nil
 	case "u16":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U16Tag{}}, nil
 	case "u32":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U32Tag{}}, nil
 	case "u64":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U64Tag{}}, nil
 	case "u128":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U128Tag{}}, nil
 	case "u256":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U256Tag{}}, nil
 	case "address":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &AddressTag{}}, nil
 	case "signer":
 		if len(types) > 0 {
-			return nil, fmt.Errorf("invalid type tag, primitive with generics")
+			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &SignerTag{}}, nil
 	case "vector":

@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -74,7 +75,7 @@ func (ak *AuthenticationKey) Bytes() []byte {
 //   - [CryptoMaterial]
 func (ak *AuthenticationKey) FromBytes(bytes []byte) (err error) {
 	if len(bytes) != AuthenticationKeyLength {
-		return fmt.Errorf("invalid authentication key, not 32 bytes")
+		return errors.New("invalid authentication key, not 32 bytes")
 	}
 	copy((*ak)[:], bytes)
 	return nil

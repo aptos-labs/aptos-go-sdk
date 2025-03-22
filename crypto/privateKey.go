@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -45,7 +46,7 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedStrin
 	case []byte:
 		hexStr = util.BytesToHex(v)
 	default:
-		return "", fmt.Errorf("unsupported private key type: must be string or []byte")
+		return "", errors.New("unsupported private key type: must be string or []byte")
 	}
 
 	return fmt.Sprintf("%s%s", aip80Prefix, hexStr), nil
@@ -60,7 +61,7 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (byte
 	// Get the first boolean if it exists, otherwise nil
 	var strictness *bool
 	if len(strict) > 1 {
-		return nil, fmt.Errorf("strictness must be a single boolean")
+		return nil, errors.New("strictness must be a single boolean")
 	} else if len(strict) == 1 {
 		strictness = &strict[0]
 	}
@@ -84,10 +85,10 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (byte
 			parts := strings.Split(v, "-")
 			return util.ParseHex(parts[2])
 		}
-		return nil, fmt.Errorf("invalid hex string input while parsing private key. Must be AIP-80 compliant string")
+		return nil, errors.New("invalid hex string input while parsing private key. Must be AIP-80 compliant string")
 	case []byte:
 		return v, nil
 	default:
-		return nil, fmt.Errorf("unsupported private key type: must be string or []byte")
+		return nil, errors.New("unsupported private key type: must be string or []byte")
 	}
 }
