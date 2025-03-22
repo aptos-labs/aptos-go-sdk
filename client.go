@@ -78,6 +78,43 @@ func init() {
 	setNN(MainnetConfig)
 }
 
+// PollPeriod is an option to PollForTransactions
+type PollPeriod time.Duration
+
+// PollTimeout is an option to PollForTransactions
+type PollTimeout time.Duration
+
+// EstimateGasUnitPrice estimates the gas unit price for a transaction
+type EstimateGasUnitPrice bool
+
+// EstimateMaxGasAmount estimates the max gas amount for a transaction
+type EstimateMaxGasAmount bool
+
+// EstimatePrioritizedGasUnitPrice estimates the prioritized gas unit price for a transaction
+type EstimatePrioritizedGasUnitPrice bool
+
+// MaxGasAmount will set the max gas amount in gas units for a transaction
+type MaxGasAmount uint64
+
+// GasUnitPrice will set the gas unit price in octas (1/10^8 APT) for a transaction
+type GasUnitPrice uint64
+
+// ExpirationSeconds will set the number of seconds from the current time to expire a transaction
+type ExpirationSeconds uint64
+
+// FeePayer will set the fee payer for a transaction
+type FeePayer *AccountAddress
+
+// AdditionalSigners will set the additional signers for a transaction
+type AdditionalSigners []AccountAddress
+
+// SequenceNumber will set the sequence number for a transaction
+type SequenceNumber uint64
+
+// ChainIdOption will set the chain ID for a transaction
+// TODO: This one may want to be removed / renamed?
+type ChainIdOption uint8
+
 // AptosClient is an interface for all functionality on the Client.
 // It is a combination of [AptosRpcClient], [AptosIndexerClient], and [AptosFaucetClient] for the purposes
 // of mocking and convenience.
@@ -137,6 +174,12 @@ type AptosRpcClient interface {
 	// AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 	AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error)
 
+	// AccountModule fetches a single account module's bytecode and ABI from on-chain state.
+	AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error)
+
+	// EntryFunctionWithArgs generates an EntryFunction from on-chain Module ABI, and converts simple inputs to BCS encoded ones.
+	EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error)
+
 	// BlockByHeight fetches a block by height
 	//
 	//	block, _ := client.BlockByHeight(1, false)
@@ -172,6 +215,10 @@ type AptosRpcClient interface {
 	//	}
 	TransactionByHash(txnHash string) (data *api.Transaction, err error)
 
+	// WaitTransactionByHash waits for a transaction to be confirmed by its hash.
+	// This function allows you to monitor the status of a transaction until it is finalized.
+	WaitTransactionByHash(txnHash string) (data *api.Transaction, err error)
+
 	// TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
 	// committed to have a ledger version
 	//
@@ -184,6 +231,11 @@ type AptosRpcClient interface {
 	//		}
 	//	}
 	TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error)
+
+	// PollForTransaction waits up to 10 seconds for a transaction to be done, polling at 10Hz
+	// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+	// Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
+	PollForTransaction(hash string, options ...any) (*api.UserTransaction, error)
 
 	// PollForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
 	// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
@@ -609,6 +661,11 @@ func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, 
 	return client.nodeClient.TransactionByHash(txnHash)
 }
 
+// WaitTransactionByHash waits for a transaction to complete and returns it's data when finished.
+func (client *Client) WaitTransactionByHash(txnHash string) (data *api.Transaction, err error) {
+	return client.nodeClient.WaitTransactionByHash(txnHash)
+}
+
 // TransactionByVersion gets info on a transaction from its LedgerVersion.  It must have been
 // committed to have a ledger version
 //
@@ -622,6 +679,11 @@ func (client *Client) TransactionByHash(txnHash string) (data *api.Transaction, 
 //	}
 func (client *Client) TransactionByVersion(version uint64) (data *api.CommittedTransaction, err error) {
 	return client.nodeClient.TransactionByVersion(version)
+}
+
+// PollForTransaction Waits up to 10 seconds for as single transaction to be done, polling at 10Hz
+func (client *Client) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
+	return client.nodeClient.PollForTransaction(hash, options...)
 }
 
 // PollForTransactions Waits up to 10 seconds for transactions to be done, polling at 10Hz
