@@ -64,7 +64,7 @@ func TestSerialize(t *testing.T) {
 		{0x00, 0x00, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x12, 0x34, 0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef},
 	}
 
-	for i := range len(inputs) {
+	for i := range inputs {
 		addr := AccountAddress(inputs[i])
 		bytes, err := bcs.Serialize(&addr)
 		require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestStringOutput(t *testing.T) {
 		"0x0004123412341234123412341234123412341234123412340123456789abcdef",
 		"0x0000123412341234123412341234123412341234123412340123456789abcdef",
 	}
-	for i := range len(inputs) {
+	for i := range inputs {
 		addr := AccountAddress(inputs[i])
 		assert.Equal(t, expected[i], addr.String())
 		assert.Equal(t, expectedLong[i], addr.StringLong())

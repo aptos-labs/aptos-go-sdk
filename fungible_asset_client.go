@@ -68,54 +68,75 @@ func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner
 // PrimaryStoreAddress returns the [AccountAddress] of the primary store for the owner
 //
 // Note that the primary store may not exist at the address. Use [FungibleAssetClient.PrimaryStoreExists] to check.
-func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (address *AccountAddress, err error) {
+func (client *FungibleAssetClient) PrimaryStoreAddress(owner *AccountAddress) (*AccountAddress, error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_address")
 	if err != nil {
-		return
+		return nil, err
 	}
-	address = &AccountAddress{}
-	err = address.ParseStringRelaxed(val.(string))
-	return
+
+	str, ok := val.(string)
+	if !ok {
+		return nil, errors.New("primary_store_address is not a string")
+	}
+
+	address := &AccountAddress{}
+	err = address.ParseStringRelaxed(str)
+	if err != nil {
+		return nil, err
+	}
+	return address, nil
 }
 
 // PrimaryStoreExists returns true if the primary store for the owner exists
-func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (exists bool, err error) {
+func (client *FungibleAssetClient) PrimaryStoreExists(owner *AccountAddress) (bool, error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "primary_store_exists")
 	if err != nil {
-		return
+		return false, err
 	}
 
-	exists = val.(bool)
-	return
+	exists, ok := val.(bool)
+	if !ok {
+		return false, errors.New("primary_store_exists is not a bool")
+	}
+	return exists, nil
 }
 
 // PrimaryBalance returns the balance of the primary store for the owner
-func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerVersion ...uint64) (uint64, error) {
 	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "balance", ledgerVersion...)
 	if err != nil {
-		return
+		return 0, err
 	}
-	balanceStr := val.(string)
+	balanceStr, ok := val.(string)
+	if !ok {
+		return 0, errors.New("primary_store_address is not a string")
+	}
 	return StrToUint64(balanceStr)
 }
 
 // PrimaryIsFrozen returns true if the primary store for the owner is frozen
-func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress, ledgerVersion ...uint64) (isFrozen bool, err error) {
+func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress, ledgerVersion ...uint64) (bool, error) {
 	val, err := client.viewPrimaryStore([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen", ledgerVersion...)
 	if err != nil {
-		return
+		return false, err
 	}
-	isFrozen = val.(bool)
-	return
+	isFrozen, ok := val.(bool)
+	if !ok {
+		return false, errors.New("isFrozen is not a bool")
+	}
+	return isFrozen, nil
 }
 
 // Balance returns the balance of the store
-func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+func (client *FungibleAssetClient) Balance(storeAddress *AccountAddress, ledgerVersion ...uint64) (uint64, error) {
 	val, err := client.viewStore([][]byte{storeAddress[:]}, "balance", ledgerVersion...)
 	if err != nil {
-		return
+		return 0, err
 	}
-	balanceStr := val.(string)
+	balanceStr, ok := val.(string)
+	if !ok {
+		return 0, errors.New("balance is not a string")
+	}
 	return strconv.ParseUint(balanceStr, 10, 64)
 }
 
