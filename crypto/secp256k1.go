@@ -367,7 +367,7 @@ func (e *Secp256k1Signature) RecoverSecp256k1PublicKeyWithAuthenticationKey(mess
 // / recoverSecp256k1PublicKey recovers the public key from the signature and message by building up the magic byte
 func (e *Secp256k1Signature) recoverSecp256k1PublicKey(messageHash []byte, recoveryBit byte) (pubKey *Secp256k1PublicKey, err error) {
 	// Append magic 27 because of bitcoin, and the recovery byte in front
-	sigWithRecovery := append([]byte{byte(recoveryBit) + 27}, e.Bytes()...)
+	sigWithRecovery := append([]byte{recoveryBit + 27}, e.Bytes()...)
 	publicKey, _, err := ecdsa.RecoverCompact(sigWithRecovery, messageHash)
 	if err != nil {
 		return nil, err

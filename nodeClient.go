@@ -509,7 +509,7 @@ func (rc *NodeClient) EventsByHandle(
 	pages := (effectiveLimit + eventsPageSize - 1) / eventsPageSize
 	channels := make([]chan ConcResponse[[]*api.Event], pages)
 
-	for i := range uint64(pages) {
+	for i := range pages {
 		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
 		pageStart := effectiveStart + (i * eventsPageSize)
 		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))

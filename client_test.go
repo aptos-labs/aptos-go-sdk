@@ -310,7 +310,7 @@ func Test_Block(t *testing.T) {
 	waitGroup := &sync.WaitGroup{}
 	waitGroup.Add(int(numToCheck))
 
-	for i := range uint64(numToCheck) {
+	for i := range numToCheck {
 		go func() {
 			blockNumber := blockHeight - i
 			blockByHeight, err := client.BlockByHeight(blockNumber, true)
@@ -587,7 +587,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate transactions
-	for i := range uint64(numTxns) {
+	for i := range numTxns {
 		payloads <- TransactionBuildPayload{
 			Id:   i,
 			Type: TransactionSubmissionTypeSingle, // TODO: not needed?
@@ -648,7 +648,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	// Check all transactions were successful from [0-numTxns)
 	t.Logf("got %d(%d) successful txns of %d attempted, error submission indexes:", len(txnMap), txnGoodEvents, numTxns)
 	allTrue := true
-	for i := range uint64(numTxns) {
+	for i := range numTxns {
 		allTrue = allTrue && txnMap[i]
 		if !txnMap[i] {
 			t.Logf("%d", i)

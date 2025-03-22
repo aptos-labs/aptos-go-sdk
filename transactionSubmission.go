@@ -175,14 +175,14 @@ func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissio
 			// Process the responses
 			if err != nil {
 				// Error, means all failed
-				for j := range uint32(i) {
+				for j := range i {
 					responses <- TransactionSubmissionResponse{Id: ids[j], Err: err}
 				}
 			} else {
 				// Partial failure, means we need to send errors for those that failed
 				// and responses for those that succeeded
 
-				for j := range uint32(i) {
+				for j := range i {
 					failed := -1
 					for k := range len(response.TransactionFailures) {
 						if response.TransactionFailures[k].TransactionIndex == j {
@@ -433,7 +433,7 @@ func startSigningWorkers(
 	transactionsToSign := make(chan TransactionBuildResponse, numWorkers)
 
 	signingWg.Add(int(numWorkers))
-	for range uint32(numWorkers) {
+	for range numWorkers {
 		go func() {
 			defer signingWg.Done()
 			for buildResponse := range transactionsToSign {
