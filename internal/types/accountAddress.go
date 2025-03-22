@@ -41,7 +41,7 @@ var AccountFour = AccountAddress{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
 // the addresses in the range from `0x0` to `0xf` (inclusive) are special.
 // For more details see the v1 address standard defined as part of AIP-40:
 // https://github.com/aptos-foundation/AIPs/blob/main/aips/aip-40.md
-func (aa *AccountAddress) IsSpecial() bool {
+func (aa AccountAddress) IsSpecial() bool {
 	for _, b := range aa[:31] {
 		if b != 0 {
 			return false
@@ -53,7 +53,7 @@ func (aa *AccountAddress) IsSpecial() bool {
 // String Returns the canonical string representation of the [AccountAddress]
 //
 // Please use [AccountAddress.StringLong] for all indexer queries.
-func (aa *AccountAddress) String() string {
+func (aa AccountAddress) String() string {
 	if aa.IsSpecial() {
 		return fmt.Sprintf("0x%x", aa[31])
 	}
@@ -67,7 +67,7 @@ func (aa *AccountAddress) FromAuthKey(authKey *crypto.AuthenticationKey) {
 }
 
 // AuthKey converts [AccountAddress] to [crypto.AuthenticationKey]
-func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
+func (aa AccountAddress) AuthKey() *crypto.AuthenticationKey {
 	authKey := &crypto.AuthenticationKey{}
 	copy(authKey[:], aa[:])
 	return authKey
@@ -76,12 +76,12 @@ func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
 // StringLong Returns the long string representation of the AccountAddress
 //
 // This is most commonly used for all indexer queries.
-func (aa *AccountAddress) StringLong() string {
+func (aa AccountAddress) StringLong() string {
 	return util.BytesToHex(aa[:])
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
-func (aa *AccountAddress) MarshalBCS(ser *bcs.Serializer) {
+func (aa AccountAddress) MarshalBCS(ser *bcs.Serializer) {
 	ser.FixedBytes(aa[:])
 }
 
@@ -91,7 +91,7 @@ func (aa *AccountAddress) UnmarshalBCS(des *bcs.Deserializer) {
 }
 
 // MarshalJSON converts the AccountAddress to JSON
-func (aa *AccountAddress) MarshalJSON() ([]byte, error) {
+func (aa AccountAddress) MarshalJSON() ([]byte, error) {
 	return json.Marshal(aa.String())
 }
 
@@ -110,22 +110,22 @@ func (aa *AccountAddress) UnmarshalJSON(b []byte) error {
 }
 
 // NamedObjectAddress derives a named object address based on the input address as the creator
-func (aa *AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
+func (aa AccountAddress) NamedObjectAddress(seed []byte) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(seed, crypto.NamedObjectScheme)
 }
 
 // ObjectAddressFromObject derives an object address based on the input address as the creator object
-func (aa *AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
+func (aa AccountAddress) ObjectAddressFromObject(objectAddress *AccountAddress) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(objectAddress[:], crypto.DeriveObjectScheme)
 }
 
 // ResourceAccount derives an object address based on the input address as the creator
-func (aa *AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
+func (aa AccountAddress) ResourceAccount(seed []byte) (accountAddress AccountAddress) {
 	return aa.DerivedAddress(seed, crypto.ResourceAccountScheme)
 }
 
 // DerivedAddress addresses are derived by the address, the seed, then the type byte
-func (aa *AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
+func (aa AccountAddress) DerivedAddress(seed []byte, typeByte uint8) (accountAddress AccountAddress) {
 	authKey := aa.AuthKey()
 	authKey.FromBytesAndScheme(append(authKey[:], seed...), typeByte)
 	copy(accountAddress[:], authKey[:])
