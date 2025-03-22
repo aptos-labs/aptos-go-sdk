@@ -69,11 +69,11 @@ type CryptoMaterial interface {
 	Bytes() []byte
 
 	// FromBytes loads the [CryptoMaterial] from the raw bytes
-	FromBytes([]byte) error
+	FromBytes(input []byte) error
 
 	// ToHex outputs the hex representation of the [CryptoMaterial] with a leading `0x`
 	ToHex() string
 
 	// FromHex parses the hex representation of the [CryptoMaterial] with or without a leading `0x`
-	FromHex(string) error
+	FromHex(input string) error
 }
