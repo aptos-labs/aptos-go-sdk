@@ -1148,7 +1148,7 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
 func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
-	req, err := http.NewRequest("GET", getUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, getUrl, nil)
 	if err != nil {
 		return out, err
 	}
@@ -1183,7 +1183,7 @@ func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
 
 // GetBCS makes a GET request to the endpoint and parses the response into the given type with BCS
 func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
-	req, err := http.NewRequest("GET", getUrl, nil)
+	req, err := http.NewRequest(http.MethodGet, getUrl, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -1218,7 +1218,7 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 	if body == nil {
 		body = http.NoBody
 	}
-	req, err := http.NewRequest("POST", postUrl, body)
+	req, err := http.NewRequest(http.MethodPost, postUrl, body)
 	if err != nil {
 		return data, err
 	}
