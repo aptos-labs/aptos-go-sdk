@@ -155,7 +155,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 
 	alreadyUsed := make(map[int]bool)
 
-	for i := range uint8(s.SignaturesRequired) {
+	for i := range s.SignaturesRequired {
 		// Find a random key
 		var index int
 		for {

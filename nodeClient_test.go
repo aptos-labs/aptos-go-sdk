@@ -49,7 +49,7 @@ func TestEventsByHandle(t *testing.T) {
 		limitInt, _ := strconv.ParseUint(limit, 10, 64)
 
 		events := make([]map[string]interface{}, 0, limitInt)
-		for i := range uint64(limitInt) {
+		for i := range limitInt {
 			events = append(events, map[string]interface{}{
 				"type": "0x1::coin::TransferEvent",
 				"guid": map[string]interface{}{
