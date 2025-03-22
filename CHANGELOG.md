@@ -14,6 +14,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`/`Breaking`] Fix fungible asset API calls that didn't return a value
 - [`Fix`] Fix errors from failed transactions in concurrent submission
 - [`Fix`] Fix AptosRpcClient, AptosFaucetClient, AptosIndexerClient interfaces to be enforced on concrete types properly
+- [`Fix`] A few error case fixes and lint updates
 
 # v1.5.0 (2/10/2024)
 

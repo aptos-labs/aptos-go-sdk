@@ -15,11 +15,43 @@ linters:
     - godot
     - depguard
     - dupword
+    - dupl
+    - wsl
+    - wrapcheck
+    - varnamelen
+    - tagliatelle
+    - gocognit
+    - gocyclo
+    - cyclop
+    - lll
+    - ireturn
+    - gochecknoglobals
+    - funlen
+    - gochecknoinits
+    - iface
+    - interfacebloat
+    - maintidx
+    - nestif
+    - nlreturn
+    - stylecheck
+    - revive
+    - goconst
+    - forbidigo
+    # Dynamic errors, may turn this on later
+    - err113
+    # Magic number may turn on later
+    - mnd
   presets:
     - bugs
     - comment
+    - complexity
+    - error
     - format
     - import
+    - metalinter
     - module
-    - test
     - performance
+    - sql
+    - style
+    - test
+    - unused
