@@ -32,7 +32,7 @@ func (ic *IndexerClient) QueryIndexer(query any, variables map[string]any, optio
 
 // Query is a generic function for making any GraphQL query against the indexer
 //
-// Deprecated, please use QueryIndexer as it matches the interface
+// Deprecated: please use QueryIndexer as it matches the interface
 func (ic *IndexerClient) Query(query any, variables map[string]any, options ...graphql.Option) error {
 	return ic.QueryIndexer(query, variables, options...)
 }
