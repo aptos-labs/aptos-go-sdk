@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -227,14 +228,14 @@ func (rc *NodeClient) BuildSignAndSubmitTransactions(
 		case *RawTransactionWithData:
 			switch rawTxn.Variant {
 			case MultiAgentRawTransactionWithDataVariant:
-				return nil, fmt.Errorf("multi agent not supported, please provide a signer function")
+				return nil, errors.New("multi agent not supported, please provide a signer function")
 			case MultiAgentWithFeePayerRawTransactionWithDataVariant:
-				return nil, fmt.Errorf("fee payer not supported, please provide a signer function")
+				return nil, errors.New("fee payer not supported, please provide a signer function")
 			default:
-				return nil, fmt.Errorf("unsupported rawTransactionWithData type")
+				return nil, errors.New("unsupported rawTransactionWithData type")
 			}
 		default:
-			return nil, fmt.Errorf("unsupported rawTransactionImpl type")
+			return nil, errors.New("unsupported rawTransactionImpl type")
 		}
 	}
 

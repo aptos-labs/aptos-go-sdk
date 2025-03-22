@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // TestModule_MoveBytecode tests the MoveBytecode struct
 func TestModule_MoveBytecode(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"bytecode": "0xa11ceb0b060000000901000202020403060f0515"
 	}`
@@ -24,6 +24,7 @@ func TestModule_MoveBytecode(t *testing.T) {
 
 // TestModule_MoveScript tests the MoveScript struct
 func TestModule_MoveScript(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"bytecode": "0xa11ceb0b060000000901000202020403060f0515"
 	}`

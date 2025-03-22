@@ -3,13 +3,13 @@ package crypto
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiEd25519Keys(t *testing.T) {
+	t.Parallel()
 	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
 
 	message := []byte("hello world")
@@ -28,6 +28,7 @@ func TestMultiEd25519Keys(t *testing.T) {
 }
 
 func TestMultiEd25519KeySerialization(t *testing.T) {
+	t.Parallel()
 	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
 
 	// Test serialization / deserialization public key
@@ -70,6 +71,7 @@ func createMultiEd25519Key(t *testing.T) (
 	*Ed25519PublicKey,
 	*MultiEd25519PublicKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	// TODO: Maybe we should have a typed function for the public keys
@@ -87,6 +89,7 @@ func createMultiEd25519Key(t *testing.T) (
 }
 
 func createMultiEd25519Signature(t *testing.T, key1 *Ed25519PrivateKey, key2 *Ed25519PrivateKey, message []byte) *MultiEd25519Signature {
+	t.Helper()
 	sig1, err := key1.SignMessage(message)
 	require.NoError(t, err)
 	sig2, err := key2.SignMessage(message)

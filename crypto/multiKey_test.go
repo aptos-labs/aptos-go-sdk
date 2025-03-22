@@ -4,13 +4,13 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMultiKey(t *testing.T) {
+	t.Parallel()
 	key1, key2, key3, _, _, _, publicKey := createMultiKey(t)
 
 	message := []byte("hello world")
@@ -53,6 +53,7 @@ func TestMultiKey(t *testing.T) {
 }
 
 func TestMultiKeySerialization(t *testing.T) {
+	t.Parallel()
 	key1, _, key3, _, _, _, publicKey := createMultiKey(t)
 
 	// Test serialization / deserialization public key
@@ -89,6 +90,7 @@ func TestMultiKeySerialization(t *testing.T) {
 }
 
 func TestMultiKey_Serialization_CrossPlatform(t *testing.T) {
+	t.Parallel()
 	serialized := "020140118d6ebe543aaf3a541453f98a5748ab5b9e3f96d781b8c0a43740af2b65c03529fdf62b7de7aad9150770e0994dc4e0714795fdebf312be66cd0550c607755e00401a90421453aa53fa5a7aa3dfe70d913823cbf087bf372a762219ccc824d3a0eeecccaa9d34f22db4366aec61fb6c204d2440f4ed288bc7cc7e407b766723a60901c0"
 	serializedBytes, err := hex.DecodeString(serialized)
 	require.NoError(t, err)
@@ -109,6 +111,7 @@ func createMultiKey(t *testing.T) (
 	*AnyPublicKey,
 	*MultiKey,
 ) {
+	t.Helper()
 	key1, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	pubkey1, err := ToAnyPublicKey(key1.PubKey())
@@ -132,6 +135,7 @@ func createMultiKey(t *testing.T) (
 }
 
 func createMultiKeySignature(t *testing.T, index1 uint8, key1 *SingleSigner, index2 uint8, key2 *SingleSigner, message []byte) *MultiKeySignature {
+	t.Helper()
 	sig1, err := key1.SignMessage(message)
 	require.NoError(t, err)
 	sig2, err := key2.SignMessage(message)

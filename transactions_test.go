@@ -3,13 +3,13 @@ package aptos
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRawTransactionSign(t *testing.T) {
+	t.Parallel()
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
 
@@ -55,6 +55,7 @@ func TestRawTransactionSign(t *testing.T) {
 }
 
 func TestTPMarshal(t *testing.T) {
+	t.Parallel()
 	var wat TransactionPayload
 	var ser bcs.Serializer
 	wat.MarshalBCS(&ser)

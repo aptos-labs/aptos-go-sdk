@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_Error(t *testing.T) {
+	t.Parallel()
 	errorMessage := "Account not found at the requested version"
 	errorCode := "AccountNotFound"
 	vmErrorCode := uint64(0)
@@ -28,6 +28,7 @@ func Test_Error(t *testing.T) {
 }
 
 func Test_ErrorWithVm(t *testing.T) {
+	t.Parallel()
 	errorMessage := "Invalid transaction: Type: The transaction has a bad signature Code: 1"
 	errorCode := "VmError"
 	vmErrorCode := uint64(1)

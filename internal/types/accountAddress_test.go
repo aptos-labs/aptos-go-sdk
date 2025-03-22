@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestAccountSpecialString(t *testing.T) {
+	t.Parallel()
 	var aa AccountAddress
 	aa[31] = 3
 	aas := aa.String()
@@ -24,6 +24,7 @@ func TestAccountSpecialString(t *testing.T) {
 }
 
 func TestAccountAddress_AuthKey(t *testing.T) {
+	t.Parallel()
 	authKey := &crypto.AuthenticationKey{}
 	var aa AccountAddress
 	aa.FromAuthKey(authKey)
@@ -31,6 +32,7 @@ func TestAccountAddress_AuthKey(t *testing.T) {
 }
 
 func TestSpecialAddresses(t *testing.T) {
+	t.Parallel()
 	var addr AccountAddress
 	err := addr.ParseStringRelaxed("0x0")
 	require.NoError(t, err)
@@ -50,6 +52,7 @@ func TestSpecialAddresses(t *testing.T) {
 }
 
 func TestSerialize(t *testing.T) {
+	t.Parallel()
 	inputs := [][]byte{
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -75,6 +78,7 @@ func TestSerialize(t *testing.T) {
 }
 
 func TestStringOutput(t *testing.T) {
+	t.Parallel()
 	inputs := [][]byte{
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
 		{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01},
@@ -113,6 +117,7 @@ func TestStringOutput(t *testing.T) {
 }
 
 func TestAccountAddress_ParseStringRelaxed_Error(t *testing.T) {
+	t.Parallel()
 	var owner AccountAddress
 	err := owner.ParseStringRelaxed("0x")
 	require.Error(t, err)
@@ -123,6 +128,7 @@ func TestAccountAddress_ParseStringRelaxed_Error(t *testing.T) {
 }
 
 func TestAccountAddress_ObjectAddressFromObject(t *testing.T) {
+	t.Parallel()
 	var owner AccountAddress
 	err := owner.ParseStringRelaxed(defaultOwner)
 	require.NoError(t, err)
@@ -142,6 +148,7 @@ func TestAccountAddress_ObjectAddressFromObject(t *testing.T) {
 }
 
 func TestAccountAddress_JSON(t *testing.T) {
+	t.Parallel()
 	type testStruct struct {
 		Address *AccountAddress `json:"address"`
 	}

@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_HealthCheckResponse(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"message": "aptos-node:ok"
 	}`

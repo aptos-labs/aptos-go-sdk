@@ -2,19 +2,18 @@ package aptos
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPollForTransaction(t *testing.T) {
+	t.Parallel()
 	// this doesn't need to actually have an aptos-node!
 	// API error on every GET is fine, poll for a few milliseconds then return error
 	client, err := NewClient(LocalnetConfig)
@@ -29,7 +28,11 @@ func TestPollForTransaction(t *testing.T) {
 	require.Error(t, err)
 }
 
+// TODO: This test has to be rewritten, as it is not parallelizable between subtests
+//
+//nolint:golint,tparallel
 func TestEventsByHandle(t *testing.T) {
+	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path == "/" {
 			// handle initial request from client
@@ -55,7 +58,7 @@ func TestEventsByHandle(t *testing.T) {
 				},
 				"sequence_number": strconv.FormatUint(startInt+i, 10),
 				"data": map[string]interface{}{
-					"amount": fmt.Sprintf("%d", (startInt+i)*100),
+					"amount": strconv.FormatUint((startInt+i)*100, 10),
 				},
 			})
 		}
@@ -73,6 +76,7 @@ func TestEventsByHandle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
+	//nolint:golint,paralleltest
 	t.Run("pagination with concurrent fetching", func(t *testing.T) {
 		start := uint64(0)
 		limit := uint64(150)
@@ -88,6 +92,7 @@ func TestEventsByHandle(t *testing.T) {
 		assert.Len(t, events, 150)
 	})
 
+	//nolint:golint,paralleltest
 	t.Run("default page size when limit not provided", func(t *testing.T) {
 		events, err := client.EventsByHandle(
 			AccountZero,
@@ -102,6 +107,7 @@ func TestEventsByHandle(t *testing.T) {
 		assert.Equal(t, uint64(99), events[99].SequenceNumber)
 	})
 
+	//nolint:golint,paralleltest
 	t.Run("single page fetch", func(t *testing.T) {
 		start := uint64(50)
 		limit := uint64(5)

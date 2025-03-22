@@ -5,12 +5,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
-
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -69,6 +67,7 @@ func initSingleSignerPayloads() {
 }
 
 func TestNamedConfig(t *testing.T) {
+	t.Parallel()
 	names := []string{"mainnet", "devnet", "testnet", "localnet"}
 	for _, name := range names {
 		assert.Equal(t, name, NamedNetworks[name].Name)
@@ -76,17 +75,21 @@ func TestNamedConfig(t *testing.T) {
 }
 
 func TestAptosClientHeaderValue(t *testing.T) {
+	t.Parallel()
 	assert.NotEmpty(t, ClientHeaderValue)
 	assert.NotEqual(t, "aptos-go-sdk/unk", ClientHeaderValue)
 }
 
 func Test_SingleSignerFlows(t *testing.T) {
+	t.Parallel()
 	for name, signer := range TestSigners {
 		for payloadName, buildSingleSignerPayload := range TestSingleSignerPayloads {
 			t.Run(name+" "+payloadName, func(t *testing.T) {
+				t.Parallel()
 				testTransaction(t, signer, buildSingleSignerPayload)
 			})
 			t.Run(name+" "+payloadName+" simulation", func(t *testing.T) {
+				t.Parallel()
 				testTransactionSimulation(t, signer, buildSingleSignerPayload)
 			})
 		}
@@ -94,6 +97,7 @@ func Test_SingleSignerFlows(t *testing.T) {
 }
 
 func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, TransactionSigner) {
+	t.Helper()
 	// All of these run against localnet
 	if testing.Short() {
 		t.Skip("integration test expects network connection to localnet")
@@ -129,6 +133,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 }
 
 func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Build transaction
@@ -170,6 +175,7 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 }
 
 func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTransaction CreateSingleSignerPayload) {
+	t.Helper()
 	client, account := setupIntegrationTest(t, createAccount)
 
 	// Simulate transaction (no options)
@@ -219,6 +225,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
+	t.Parallel()
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
 	dest, err := NewEd25519Account()
@@ -237,6 +244,7 @@ func TestAPTTransferTransaction(t *testing.T) {
 }
 
 func Test_Indexer(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -275,6 +283,7 @@ func Test_Indexer(t *testing.T) {
 }
 
 func Test_Genesis(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -288,6 +297,7 @@ func Test_Genesis(t *testing.T) {
 }
 
 func Test_Block(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 	info, err := client.Info()
@@ -324,6 +334,7 @@ func Test_Block(t *testing.T) {
 }
 
 func Test_Account(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 	account, err := client.Account(AccountOne)
@@ -337,6 +348,7 @@ func Test_Account(t *testing.T) {
 }
 
 func Test_Transactions(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -364,6 +376,7 @@ func Test_Transactions(t *testing.T) {
 }
 
 func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
+	t.Helper()
 	payload, err := CoinTransferPayload(nil, AccountOne, 1)
 	require.NoError(t, err)
 	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
@@ -393,6 +406,7 @@ func Test_AccountTransactions(t *testing.T) {
 
 	for i := uint64(0); i < 100; i++ {
 		go func() {
+			//nolint:golint,testifylint
 			submitAccountTransaction(t, client, account, i)
 			waitGroup.Done()
 		}()
@@ -435,46 +449,54 @@ func Test_AccountTransactions(t *testing.T) {
 	// Check global transactions API
 
 	t.Run("Default transaction size, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from zero", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&zero, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, nil)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 
 	t.Run("101 transactions, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start zero", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&zero, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, &hundredOne)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("10 transactions, no start", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(nil, &ten)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
 
 	t.Run("10 transactions, start one", func(t *testing.T) {
+		t.Parallel()
 		transactions, err = client.Transactions(&one, &ten)
 		require.NoError(t, err)
 		assert.Len(t, transactions, 10)
@@ -482,6 +504,7 @@ func Test_AccountTransactions(t *testing.T) {
 }
 
 func Test_Info(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -491,6 +514,7 @@ func Test_Info(t *testing.T) {
 }
 
 func Test_AccountResources(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -505,12 +529,13 @@ func Test_AccountResources(t *testing.T) {
 
 // A worker thread that reads from a chan of transactions that have been submitted and waits on their completion status
 func concurrentTxnWaiter(
+	t *testing.T,
 	results chan TransactionSubmissionResponse,
 	waitResults chan ConcResponse[*api.UserTransaction],
 	client *Client,
-	t *testing.T,
 	wg *sync.WaitGroup,
 ) {
+	t.Helper()
 	if wg != nil {
 		defer wg.Done()
 	}
@@ -536,6 +561,7 @@ func concurrentTxnWaiter(
 }
 
 func Test_Concurrent_Submission(t *testing.T) {
+	t.Parallel()
 	const numTxns = uint64(100)
 	const numWaiters = 4
 
@@ -579,7 +605,8 @@ func Test_Concurrent_Submission(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
 	for range numWaiters {
-		go concurrentTxnWaiter(results, waitResults, client, t, &wg)
+		//nolint:golint,testifylint
+		go concurrentTxnWaiter(t, results, waitResults, client, &wg)
 	}
 
 	// Wait on all the results, recording the succeeding ones
@@ -632,6 +659,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 }
 
 func TestClient_View(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -649,6 +677,7 @@ func TestClient_View(t *testing.T) {
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -657,6 +686,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 }
 
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -719,6 +749,7 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 }
 
 func TestClient_EntryFunctionWithArgs(t *testing.T) {
+	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
 

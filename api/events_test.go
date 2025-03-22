@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestEvent_V1(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"type": "0x1::coin::WithdrawEvent",
 		"guid": {
@@ -37,6 +37,7 @@ func TestEvent_V1(t *testing.T) {
 }
 
 func TestEvent_V2(t *testing.T) {
+	t.Parallel()
 	testJson := `	{
 		"type": "0x1::fungible_asset::Withdraw",
 		"guid": {
@@ -62,6 +63,7 @@ func TestEvent_V2(t *testing.T) {
 }
 
 func TestEvent_V2_Other(t *testing.T) {
+	t.Parallel()
 	testJson := `	{
 		"type": "vector<u64>",
 		"guid": {

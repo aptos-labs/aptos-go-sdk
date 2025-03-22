@@ -92,6 +92,7 @@ func setupTestLogging() *testSlogContext {
 }
 
 func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
+	t.Helper()
 	if t.Failed() {
 		t.Log(logContext.logbuf.String())
 	}
@@ -99,6 +100,7 @@ func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
 }
 
 func TestEpoch(t *testing.T) {
+	t.Parallel()
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -112,6 +114,7 @@ func TestEpoch(t *testing.T) {
 }
 
 func TestLedgerVersion(t *testing.T) {
+	t.Parallel()
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -125,6 +128,7 @@ func TestLedgerVersion(t *testing.T) {
 }
 
 func TestOldestLedgerVersion(t *testing.T) {
+	t.Parallel()
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -138,6 +142,7 @@ func TestOldestLedgerVersion(t *testing.T) {
 }
 
 func TestBlockHeight(t *testing.T) {
+	t.Parallel()
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -151,6 +156,7 @@ func TestBlockHeight(t *testing.T) {
 }
 
 func TestOldestBlockHeight(t *testing.T) {
+	t.Parallel()
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 

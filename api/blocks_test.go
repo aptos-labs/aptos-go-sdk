@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestBlock(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"block_height": "1",
 		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",
@@ -31,6 +31,7 @@ func TestBlock(t *testing.T) {
 }
 
 func TestBlockWithNoTransactions(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"block_height": "1",
 		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",
@@ -52,6 +53,7 @@ func TestBlockWithNoTransactions(t *testing.T) {
 }
 
 func TestBlockWithTransactions(t *testing.T) {
+	t.Parallel()
 	testJson := `{
 		"block_height": "1",
 		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",

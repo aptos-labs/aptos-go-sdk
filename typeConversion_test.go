@@ -10,6 +10,7 @@ import (
 // ... existing code ...
 
 func TestConvertTypeTag(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		input    any
@@ -21,6 +22,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   TypeTag{Value: &U8Tag{}},
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -31,6 +33,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   &TypeTag{Value: &U8Tag{}},
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -46,6 +49,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "u8",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				if _, ok := tag.Value.(*U8Tag); !ok {
 					t.Error("Expected U8Tag")
 				}
@@ -56,6 +60,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "vector<u8>",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				vecTag, ok := tag.Value.(*VectorTag)
 				if !ok {
 					t.Error("Expected VectorTag")
@@ -70,6 +75,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "&u8",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				refTag, ok := tag.Value.(*ReferenceTag)
 				if !ok {
 					t.Error("Expected ReferenceTag")
@@ -84,6 +90,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "T0",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				genTag, ok := tag.Value.(*GenericTag)
 				if !ok {
 					t.Error("Expected GenericTag")
@@ -98,6 +105,7 @@ func TestConvertTypeTag(t *testing.T) {
 			input:   "0x1::string::String",
 			wantErr: false,
 			validate: func(t *testing.T, tag *TypeTag) {
+				t.Helper()
 				structTag, ok := tag.Value.(*StructTag)
 				if !ok {
 					t.Error("Expected StructTag")
@@ -127,6 +135,7 @@ func TestConvertTypeTag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ConvertTypeTag(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertTypeTag() error = %v, wantErr %v", err, tt.wantErr)
@@ -142,6 +151,7 @@ func TestConvertTypeTag(t *testing.T) {
 // ... existing code ...
 
 func TestConvertArg(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name     string
 		typeArg  TypeTag
@@ -429,6 +439,7 @@ func TestConvertArg(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			val, err := ConvertArg(tt.typeArg, tt.arg, tt.generics)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertArg() error = %v, wantErr %v", err, tt.wantErr)
@@ -439,6 +450,7 @@ func TestConvertArg(t *testing.T) {
 }
 
 func TestConvertToU8(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   any
@@ -497,6 +509,7 @@ func TestConvertToU8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ConvertToU8(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertToU8() error = %v, wantErr %v", err, tt.wantErr)
@@ -510,6 +523,7 @@ func TestConvertToU8(t *testing.T) {
 }
 
 func TestConvertToBool(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   any
@@ -556,6 +570,7 @@ func TestConvertToBool(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ConvertToBool(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertToBool() error = %v, wantErr %v", err, tt.wantErr)
@@ -569,6 +584,7 @@ func TestConvertToBool(t *testing.T) {
 }
 
 func TestConvertToAddress(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   any
@@ -615,6 +631,7 @@ func TestConvertToAddress(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ConvertToAddress(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertToAddress() error = %v, wantErr %v", err, tt.wantErr)
@@ -628,6 +645,7 @@ func TestConvertToAddress(t *testing.T) {
 }
 
 func TestConvertToVectorU8(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		input   any
@@ -668,6 +686,7 @@ func TestConvertToVectorU8(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
 			got, err := ConvertToVectorU8(tt.input)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertToVectorU8() error = %v, wantErr %v", err, tt.wantErr)

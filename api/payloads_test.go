@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestPayload_EntryFunction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
       "function": "0x1::object::transfer",
       "type_arguments": [
@@ -37,6 +37,7 @@ func TestPayload_EntryFunction(t *testing.T) {
 }
 
 func TestPayload_Script(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "code": {
     "bytecode": "0xa11ceb0b0500000008010008020804030c150421020523100733500883012006a30114000000010002000301050800030403010002060105010001070002000008000200010403060c050301050001060c01080001030d6170746f735f6163636f756e740a6170746f735f636f696e04636f696e067369676e65720a616464726573735f6f66094170746f73436f696e0762616c616e6365046d696e74087472616e7366657200000000000000000000000000000000000000000000000000000000000000010308a0860100000000000308ffffffffffffffff000001170a0011000c030a03380007010a02170700172304120a000b030a0207001611020b000b010b02110302",
@@ -74,6 +75,7 @@ func TestPayload_Script(t *testing.T) {
 }
 
 func TestPayload_Multisig(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "payload": {
       "function": "0x1::object::transfer",
@@ -100,6 +102,7 @@ func TestPayload_Multisig(t *testing.T) {
 }
 
 func TestPayload_ModuleBundle(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "type": "module_bundle_payload"
 }`
@@ -110,6 +113,7 @@ func TestPayload_ModuleBundle(t *testing.T) {
 }
 
 func TestPayload_Unknown(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "something": true,
   "type": "new_payload"

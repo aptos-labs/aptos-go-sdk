@@ -17,10 +17,7 @@ runs:
       with:
         PNPM_VERSION: 8.9.0
     # Run unit tests
-    - shell: bash
-      run: 'go vet ./...'
-    - shell: bash
-      run: 'go fmt ./...'
+
     - shell: bash
       run: |
         if [ "x$(git status -uno -s)x" != "xx" ]; then git status; echo NOT CLEAN; exit 1; fi

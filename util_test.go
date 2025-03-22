@@ -4,9 +4,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var testConfig = LocalnetConfig
@@ -18,6 +17,7 @@ func createTestClient() (*Client, error) {
 }
 
 func TestSHA3_256Hash(t *testing.T) {
+	t.Parallel()
 	input := [][]byte{{0x1}, {0x2}, {0x3}}
 	expected, err := ParseHex("fd1780a6fc9ee0dab26ceb4b3941ab03e66ccd970d1db91612c66df4515b0a0a")
 	require.NoError(t, err)
@@ -25,6 +25,7 @@ func TestSHA3_256Hash(t *testing.T) {
 }
 
 func TestParseHex(t *testing.T) {
+	t.Parallel()
 	// Last case is needed from the JSON API, as an empty array comes out as just 0x
 	inputs := []string{"0x012345", "012345", "0x"}
 	expected := [][]byte{{0x01, 0x23, 0x45}, {0x01, 0x23, 0x45}, {}}
@@ -37,6 +38,7 @@ func TestParseHex(t *testing.T) {
 }
 
 func TestBytesToHex(t *testing.T) {
+	t.Parallel()
 	inputs := [][]byte{{0x01, 0x23, 0x45}, {0x01}, {}}
 	expected := []string{"0x012345", "0x01", "0x"}
 
@@ -47,6 +49,7 @@ func TestBytesToHex(t *testing.T) {
 }
 
 func TestStrToUint64(t *testing.T) {
+	t.Parallel()
 	inputs := []string{"0", "1", "100"}
 	expected := []uint64{0, 1, 100}
 
@@ -58,6 +61,7 @@ func TestStrToUint64(t *testing.T) {
 }
 
 func TestStrToBigInt(t *testing.T) {
+	t.Parallel()
 	inputs := []string{"0", "1", "100"}
 	expected := []*big.Int{big.NewInt(0), big.NewInt(1), big.NewInt(100)}
 
@@ -69,6 +73,7 @@ func TestStrToBigInt(t *testing.T) {
 }
 
 func TestStrToBigIntError(t *testing.T) {
+	t.Parallel()
 	inputs := []string{"hello", "1a", "", "0.01"}
 
 	for _, input := range inputs {

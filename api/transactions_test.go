@@ -4,13 +4,13 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTransaction_GenesisTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "0",
   "hash": "0xcf5b7e186572be74741f81e2015146e6df15263082c2660690eccbd66a194043",
@@ -313,6 +313,7 @@ func TestTransaction_GenesisTransaction(t *testing.T) {
 }
 
 func TestTransaction_PendingTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "hash": "0xae3f1f751c6cacd61f46054a5e9e39ca9f094802875befbc54ceecbcdf6eff69",
   "state_checkpoint_hash": null,
@@ -369,6 +370,7 @@ func TestTransaction_PendingTransaction(t *testing.T) {
 }
 
 func TestTransaction_UserTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "1010733903",
   "hash": "0xae3f1f751c6cacd61f46054a5e9e39ca9f094802875befbc54ceecbcdf6eff69",
@@ -572,6 +574,7 @@ func TestTransaction_UserTransaction(t *testing.T) {
 }
 
 func TestTransaction_BlockMetadataTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "1",
   "hash": "0x30f2fea17d9cbab6bb06b34dd9cfb1d47a1eb20538c31ebaa508ce56d00628de",
@@ -680,6 +683,7 @@ func TestTransaction_BlockMetadataTransaction(t *testing.T) {
 }
 
 func TestTransaction_StateCheckpointTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "3",
   "hash": "0x77da2c7a41ba6d46dc015c58f489c8d6ee030f98d95cca5b096578ca9e144aa6",
@@ -728,6 +732,7 @@ func TestTransaction_StateCheckpointTransaction(t *testing.T) {
 }
 
 func TestTransaction_BlockEpilogueTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "2",
   "hash": "0x1f19608413baaa8f39b670fbf001d17443ba7b975e0c22733bf742cea99fbdaf",
@@ -792,6 +797,7 @@ func TestTransaction_BlockEpilogueTransaction(t *testing.T) {
 }
 
 func TestTransaction_UnknownTransaction(t *testing.T) {
+	t.Parallel()
 	testJson := `{
   "version": "2",
   "hash": "0x957c214e74b1aded27be7fd78b50c96fc0bfc25a70ad1555a08968a8fdc05cb1",

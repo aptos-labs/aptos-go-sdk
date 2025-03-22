@@ -15,12 +15,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-
 	"github.com/aptos-labs/aptos-go-sdk/api"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 const (
@@ -619,7 +617,7 @@ func (rc *NodeClient) transactionsConcurrent(
 		for i, ch := range channels {
 			response := <-ch
 			if response.Err != nil {
-				return nil, err
+				return nil, response.Err
 			}
 			responses = append(responses, response.Result...)
 			close(channels[i])
@@ -765,7 +763,7 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 		}
 		signedTxn, ok = rawTxn.ToFeePayerSignedTransaction(senderAuth, feePayerAuth, additionalSignersAuth)
 		if !ok {
-			return nil, fmt.Errorf("failed to convert fee payer signer to signed transaction")
+			return nil, errors.New("failed to convert fee payer signer to signed transaction")
 		}
 	} else {
 		senderAuth := sender.SimulationAuthenticator()
@@ -775,7 +773,7 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 		}
 		signedTxn, ok = rawTxn.ToMultiAgentSignedTransaction(senderAuth, additionalSignersAuth)
 		if !ok {
-			return nil, fmt.Errorf("failed to convert multi agent signer to signed transaction")
+			return nil, errors.New("failed to convert multi agent signer to signed transaction")
 		}
 	}
 

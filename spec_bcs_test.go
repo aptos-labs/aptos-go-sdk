@@ -10,9 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/cucumber/godog"
 )
 
@@ -53,7 +52,7 @@ func (st *TestStruct) UnmarshalBCS(des *bcs.Deserializer) {
 	st.bytes = des.ReadBytes()
 	// Custom error
 	if len(st.bytes) == 0 {
-		des.SetError(fmt.Errorf("invalid bytes length, must be at least 1"))
+		des.SetError(errors.New("invalid bytes length, must be at least 1"))
 	}
 }
 
@@ -1066,6 +1065,7 @@ func failResult(ctx context.Context) error {
 }
 
 func TestFeatures(t *testing.T) {
+	t.Parallel()
 	suite := godog.TestSuite{
 		ScenarioInitializer: InitializeScenario,
 		Options: &godog.Options{

@@ -6,10 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func decodeB64(x string) ([]byte, error) {
@@ -19,6 +18,7 @@ func decodeB64(x string) ([]byte, error) {
 }
 
 func TestMoveResourceBCS(t *testing.T) {
+	t.Parallel()
 	// fetched from local aptos-node 20240501_152556
 	// curl -o /tmp/ar_bcs --header "Accept: application/x-bcs" http://127.0.0.1:8080/v1/accounts/{addr}/resources
 	// base64 < /tmp/ar_bcs

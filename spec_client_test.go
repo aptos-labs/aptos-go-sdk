@@ -15,6 +15,7 @@ import (
 //   - It must be able to create a client with a custom configuration
 //   - It must be able to create a client with a custom configuration and custom headers
 func Test_Spec_ClientConfig(t *testing.T) {
+	t.Parallel()
 	// It must be able to create a devnet client
 	_, err := NewClient(DevnetConfig)
 	require.NoError(t, err)

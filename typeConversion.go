@@ -1,12 +1,12 @@
 package aptos
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
@@ -119,7 +119,7 @@ func ConvertTypeTag(typeArg any) (*TypeTag, error) {
 	case string:
 		return ParseTypeTag(typeArg)
 	default:
-		return nil, fmt.Errorf("invalid type tag type")
+		return nil, errors.New("invalid type tag type")
 	}
 }
 
@@ -135,7 +135,7 @@ func ConvertToU8(arg any) (uint8, error) {
 		return util.UintToU8(uint(arg.Uint64()))
 	case *big.Int:
 		if arg == nil {
-			return 0, fmt.Errorf("cannot convert to uint8, input is nil")
+			return 0, errors.New("cannot convert to uint8, input is nil")
 		}
 		return util.UintToU8(uint(arg.Uint64()))
 	case string:
@@ -146,7 +146,7 @@ func ConvertToU8(arg any) (uint8, error) {
 		}
 		return uint8(u64), nil
 	default:
-		return 0, fmt.Errorf("invalid input type for uint8")
+		return 0, errors.New("invalid input type for uint8")
 	}
 }
 
@@ -162,7 +162,7 @@ func ConvertToU16(arg any) (uint16, error) {
 		return util.UintToU16(uint(arg.Uint64()))
 	case *big.Int:
 		if arg == nil {
-			return 0, fmt.Errorf("cannot convert to uint16, input is nil")
+			return 0, errors.New("cannot convert to uint16, input is nil")
 		}
 		return util.UintToU16(uint(arg.Uint64()))
 	case string:
@@ -173,7 +173,7 @@ func ConvertToU16(arg any) (uint16, error) {
 		}
 		return uint16(u64), nil
 	default:
-		return 0, fmt.Errorf("invalid input type for uint16")
+		return 0, errors.New("invalid input type for uint16")
 	}
 }
 
@@ -189,7 +189,7 @@ func ConvertToU32(arg any) (uint32, error) {
 		return util.UintToU32(uint(arg.Uint64()))
 	case *big.Int:
 		if arg == nil {
-			return 0, fmt.Errorf("cannot convert to uint32, input is nil")
+			return 0, errors.New("cannot convert to uint32, input is nil")
 		}
 		return util.UintToU32(uint(arg.Uint64()))
 	case string:
@@ -200,7 +200,7 @@ func ConvertToU32(arg any) (uint32, error) {
 		}
 		return uint32(u64), nil
 	default:
-		return 0, fmt.Errorf("invalid input type for uint32")
+		return 0, errors.New("invalid input type for uint32")
 	}
 }
 
@@ -216,13 +216,13 @@ func ConvertToU64(arg any) (uint64, error) {
 		return arg.Uint64(), nil
 	case *big.Int:
 		if arg == nil {
-			return 0, fmt.Errorf("cannot convert to uint64, input is nil")
+			return 0, errors.New("cannot convert to uint64, input is nil")
 		}
 		return arg.Uint64(), nil
 	case string:
 		return strconv.ParseUint(arg, 10, 64)
 	default:
-		return 0, fmt.Errorf("invalid input type for uint64")
+		return 0, errors.New("invalid input type for uint64")
 	}
 }
 
@@ -237,14 +237,14 @@ func ConvertToU128(arg any) (num *big.Int, err error) {
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert to uint128, input is nil")
+			return nil, errors.New("cannot convert to uint128, input is nil")
 		}
 		return arg, nil
 	case string:
 		// Convert the number
 		return util.StrToBigInt(arg)
 	default:
-		return nil, fmt.Errorf("invalid input type for uint128")
+		return nil, errors.New("invalid input type for uint128")
 	}
 }
 
@@ -259,14 +259,14 @@ func ConvertToU256(arg any) (num *big.Int, err error) {
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert to uint256, input is nil")
+			return nil, errors.New("cannot convert to uint256, input is nil")
 		}
 		return arg, nil
 	case string:
 		// Convert the number
 		return util.StrToBigInt(arg)
 	default:
-		return nil, fmt.Errorf("invalid input type for uint256")
+		return nil, errors.New("invalid input type for uint256")
 	}
 }
 
@@ -281,10 +281,10 @@ func ConvertToBool(arg any) (b bool, err error) {
 		case "false":
 			b = false
 		default:
-			err = fmt.Errorf("invalid boolean input for bool")
+			err = errors.New("invalid boolean input for bool")
 		}
 	default:
-		err = fmt.Errorf("invalid input type for bool")
+		err = errors.New("invalid input type for bool")
 	}
 	return b, err
 }
@@ -297,7 +297,7 @@ func ConvertToAddress(arg any) (a *AccountAddress, err error) {
 	case *AccountAddress:
 		a = arg
 		if a == nil {
-			err = fmt.Errorf("invalid account address, nil")
+			err = errors.New("invalid account address, nil")
 		}
 	case string:
 		addr := AccountAddress{}
@@ -307,7 +307,7 @@ func ConvertToAddress(arg any) (a *AccountAddress, err error) {
 		}
 		a = &addr
 	default:
-		err = fmt.Errorf("invalid input type for address")
+		err = errors.New("invalid input type for address")
 	}
 	return a, err
 }
@@ -325,11 +325,11 @@ func ConvertToVectorU8(arg any) (b []byte, err error) {
 		return bcs.SerializeBytes(bytes)
 	case []byte:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeBytes(arg)
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u8>")
+		return nil, errors.New("invalid input type for vector<u8>")
 	}
 }
 
@@ -339,7 +339,7 @@ func ConvertToVectorU16(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []uint16:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint16) {
@@ -347,7 +347,7 @@ func ConvertToVectorU16(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u16>")
+		return nil, errors.New("invalid input type for vector<u16>")
 	}
 }
 
@@ -357,7 +357,7 @@ func ConvertToVectorU32(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []uint32:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint32) {
@@ -365,7 +365,7 @@ func ConvertToVectorU32(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u32>")
+		return nil, errors.New("invalid input type for vector<u32>")
 	}
 }
 
@@ -375,7 +375,7 @@ func ConvertToVectorU64(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []uint64:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint64) {
@@ -383,7 +383,7 @@ func ConvertToVectorU64(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u64>")
+		return nil, errors.New("invalid input type for vector<u64>")
 	}
 }
 
@@ -393,7 +393,7 @@ func ConvertToVectorU128(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []big.Int:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
@@ -401,7 +401,7 @@ func ConvertToVectorU128(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u128>")
+		return nil, errors.New("invalid input type for vector<u128>")
 	}
 }
 
@@ -411,7 +411,7 @@ func ConvertToVectorU256(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []big.Int:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bytes")
+			return nil, errors.New("cannot convert nil to bytes")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
@@ -419,7 +419,7 @@ func ConvertToVectorU256(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<u256>")
+		return nil, errors.New("invalid input type for vector<u256>")
 	}
 }
 
@@ -428,7 +428,7 @@ func ConvertToVectorBool(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []bool:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to bool vector")
+			return nil, errors.New("cannot convert nil to bool vector")
 		}
 		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
 			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item bool) {
@@ -436,7 +436,7 @@ func ConvertToVectorBool(arg any) (b []byte, err error) {
 			})
 		})
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<bool>")
+		return nil, errors.New("invalid input type for vector<bool>")
 	}
 }
 
@@ -445,24 +445,24 @@ func ConvertToVectorAddress(arg any) (b []byte, err error) {
 	switch arg := arg.(type) {
 	case []AccountAddress:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to address vector")
+			return nil, errors.New("cannot convert nil to address vector")
 		}
 		return bcs.SerializeSequenceOnly(arg)
 	case []*AccountAddress:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to address vector")
+			return nil, errors.New("cannot convert nil to address vector")
 		}
 		// Convert []*AccountAddress to []AccountAddress
 		addresses := make([]AccountAddress, len(arg))
 		for i, addr := range arg {
 			if addr == nil {
-				return nil, fmt.Errorf("cannot convert nil address in vector")
+				return nil, errors.New("cannot convert nil address in vector")
 			}
 			addresses[i] = *addr
 		}
 		return bcs.SerializeSequenceOnly(addresses)
 	default:
-		return nil, fmt.Errorf("invalid input type for vector<address>")
+		return nil, errors.New("invalid input type for vector<address>")
 	}
 }
 
@@ -470,11 +470,11 @@ func ConvertToVectorAddress(arg any) (b []byte, err error) {
 func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
 	genericTag, ok := typeArg.Value.(*GenericTag)
 	if !ok {
-		return nil, fmt.Errorf("invalid type tag for generic vector")
+		return nil, errors.New("invalid type tag for generic vector")
 	}
 
 	if genericTag.Num >= uint64(len(generics)) {
-		return nil, fmt.Errorf("generic number out of bounds")
+		return nil, errors.New("generic number out of bounds")
 	}
 
 	innerType := generics[genericTag.Num]
@@ -482,7 +482,7 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 	switch arg := arg.(type) {
 	case []any:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to generic vector")
+			return nil, errors.New("cannot convert nil to generic vector")
 		}
 
 		// Serialize length
@@ -506,7 +506,7 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 		}
 		return b, nil
 	default:
-		return nil, fmt.Errorf("invalid input type for generic vector")
+		return nil, errors.New("invalid input type for generic vector")
 	}
 }
 
@@ -514,7 +514,7 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
 	refTag, ok := typeArg.Value.(*ReferenceTag)
 	if !ok {
-		return nil, fmt.Errorf("invalid type tag for reference vector")
+		return nil, errors.New("invalid type tag for reference vector")
 	}
 
 	innerType := refTag.TypeParam
@@ -522,7 +522,7 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b [
 	switch arg := arg.(type) {
 	case []any:
 		if arg == nil {
-			return nil, fmt.Errorf("cannot convert nil to reference vector")
+			return nil, errors.New("cannot convert nil to reference vector")
 		}
 
 		// Serialize length
@@ -546,7 +546,7 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b [
 		}
 		return b, nil
 	default:
-		return nil, fmt.Errorf("invalid input type for reference vector")
+		return nil, errors.New("invalid input type for reference vector")
 	}
 }
 
@@ -635,7 +635,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 		// Convert based on number
 		genericNum := innerType.Num
 		if genericNum >= uint64(len(generics)) {
-			return nil, fmt.Errorf("generic number out of bounds")
+			return nil, errors.New("generic number out of bounds")
 		}
 
 		tag := generics[genericNum]
@@ -676,7 +676,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 					case string:
 						return bcs.SerializeBytes([]byte(arg))
 					default:
-						return nil, fmt.Errorf("invalid input type for 0x1::string::String")
+						return nil, errors.New("invalid input type for 0x1::string::String")
 					}
 				}
 			case "option":
@@ -684,7 +684,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 				case "Option":
 					// Check it has the proper inner type
 					if 1 != len(structTag.TypeParams) {
-						return nil, fmt.Errorf("invalid input type for option, must have exactly one type arg")
+						return nil, errors.New("invalid input type for option, must have exactly one type arg")
 					}
 					// Get inner type
 					typeParam := structTag.TypeParams[0]
@@ -704,8 +704,8 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 			}
 		}
 	default:
-		return nil, fmt.Errorf("unknown type argument")
+		return nil, errors.New("unknown type argument")
 	}
 
-	return nil, fmt.Errorf("failed to convert type argument")
+	return nil, errors.New("failed to convert type argument")
 }

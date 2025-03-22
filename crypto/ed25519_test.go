@@ -4,11 +4,10 @@ import (
 	"crypto/ed25519"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -21,6 +20,7 @@ const (
 )
 
 func TestEd25519Keys(t *testing.T) {
+	t.Parallel()
 	testEd25519PrivateKeyBytes := []byte{0xc5, 0x33, 0x8c, 0xd2, 0x51, 0xc2, 0x2d, 0xaa, 0x8c, 0x9c, 0x9c, 0xc9, 0x4f, 0x49, 0x8c, 0xc8, 0xa5, 0xc7, 0xe1, 0xd2, 0xe7, 0x52, 0x87, 0xa5, 0xdd, 0xa9, 0x10, 0x96, 0xfe, 0x64, 0xef, 0xa5}
 
 	// First ensure bytes and hex are the same
@@ -103,18 +103,21 @@ func TestEd25519Keys(t *testing.T) {
 }
 
 func TestEd25519PrivateKeyWrongLength(t *testing.T) {
+	t.Parallel()
 	privateKey := &Ed25519PrivateKey{}
 	err := privateKey.FromBytes([]byte{0x01})
 	require.Error(t, err)
 }
 
 func TestEd25519PublicKeyWrongLength(t *testing.T) {
+	t.Parallel()
 	key := &Ed25519PublicKey{}
 	err := key.FromBytes([]byte{0x01})
 	require.Error(t, err)
 }
 
 func TestEd25519SignatureWrongLength(t *testing.T) {
+	t.Parallel()
 	sig := &Ed25519Signature{}
 	err := sig.FromBytes([]byte{0x01})
 	require.Error(t, err)
