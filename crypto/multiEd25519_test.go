@@ -10,7 +10,7 @@ import (
 
 func TestMultiEd25519Keys(t *testing.T) {
 	t.Parallel()
-	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
+	key1, key2, publicKey := createMultiEd25519Key(t)
 
 	message := []byte("hello world")
 
@@ -29,7 +29,7 @@ func TestMultiEd25519Keys(t *testing.T) {
 
 func TestMultiEd25519KeySerialization(t *testing.T) {
 	t.Parallel()
-	key1, key2, _, _, publicKey := createMultiEd25519Key(t)
+	key1, key2, publicKey := createMultiEd25519Key(t)
 
 	// Test serialization / deserialization public key
 	keyBytes, err := bcs.Serialize(publicKey)
@@ -67,8 +67,6 @@ func TestMultiEd25519KeySerialization(t *testing.T) {
 func createMultiEd25519Key(t *testing.T) (
 	*Ed25519PrivateKey,
 	*Ed25519PrivateKey,
-	*Ed25519PublicKey,
-	*Ed25519PublicKey,
 	*MultiEd25519PublicKey,
 ) {
 	t.Helper()
@@ -85,7 +83,7 @@ func createMultiEd25519Key(t *testing.T) (
 		SignaturesRequired: 2,
 	}
 
-	return key1, key2, pubkey1, pubkey2, publicKey
+	return key1, key2, publicKey
 }
 
 func createMultiEd25519Signature(t *testing.T, key1 *Ed25519PrivateKey, key2 *Ed25519PrivateKey, message []byte) *MultiEd25519Signature {

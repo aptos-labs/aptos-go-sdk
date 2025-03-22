@@ -11,7 +11,7 @@ import (
 
 func TestMultiKey(t *testing.T) {
 	t.Parallel()
-	key1, key2, key3, _, _, _, publicKey := createMultiKey(t)
+	key1, key2, key3, publicKey := createMultiKey(t)
 
 	message := []byte("hello world")
 
@@ -54,7 +54,7 @@ func TestMultiKey(t *testing.T) {
 
 func TestMultiKeySerialization(t *testing.T) {
 	t.Parallel()
-	key1, _, key3, _, _, _, publicKey := createMultiKey(t)
+	key1, _, key3, publicKey := createMultiKey(t)
 
 	// Test serialization / deserialization public key
 	keyBytes, err := bcs.Serialize(publicKey)
@@ -106,9 +106,6 @@ func createMultiKey(t *testing.T) (
 	*SingleSigner,
 	*SingleSigner,
 	*SingleSigner,
-	*AnyPublicKey,
-	*AnyPublicKey,
-	*AnyPublicKey,
 	*MultiKey,
 ) {
 	t.Helper()
@@ -131,7 +128,7 @@ func createMultiKey(t *testing.T) (
 		SignaturesRequired: 2,
 	}
 
-	return &SingleSigner{key1}, &SingleSigner{key2}, &SingleSigner{key3}, pubkey1, pubkey2, pubkey3, publicKey
+	return &SingleSigner{key1}, &SingleSigner{key2}, &SingleSigner{key3}, publicKey
 }
 
 func createMultiKeySignature(t *testing.T, index1 uint8, key1 *SingleSigner, index2 uint8, key2 *SingleSigner, message []byte) *MultiKeySignature {

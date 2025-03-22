@@ -139,6 +139,7 @@ func TestOldestLedgerVersion(t *testing.T) {
 	info.OldestLedgerVersionStr = "garbage"
 	assert.Equal(t, uint64(0), info.OldestLedgerVersion())
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+	assert.Equal(t, 0, lc.countingHandler.counts.get(slog.LevelDebug))
 }
 
 func TestBlockHeight(t *testing.T) {
