@@ -773,3 +773,36 @@ func TestClient_EntryFunctionWithArgs(t *testing.T) {
 
 	assert.True(t, txn.Success)
 }
+
+func TestEnsureClientInterfacesHold(t *testing.T) {
+	t.Parallel()
+	var err error
+	var c AptosClient
+	c, err = NewClient(LocalnetConfig)
+	require.NoError(t, err)
+	require.NotNil(t, c)
+	var rc AptosRpcClient
+	rc, err = NewClient(LocalnetConfig)
+	require.NoError(t, err)
+	require.NotNil(t, rc)
+	var fc AptosFaucetClient
+	fc, err = NewClient(LocalnetConfig)
+	require.NoError(t, err)
+	require.NotNil(t, fc)
+	var ic AptosIndexerClient
+	ic, err = NewClient(LocalnetConfig)
+	require.NoError(t, err)
+	require.NotNil(t, ic)
+
+	rc, err = NewNodeClient(LocalnetConfig.NodeUrl, 4)
+	require.NoError(t, err)
+	require.NotNil(t, rc)
+	nc, err := NewNodeClient(LocalnetConfig.NodeUrl, 4)
+	require.NoError(t, err)
+	fc, err = NewFaucetClient(nc, LocalnetConfig.FaucetUrl)
+	require.NoError(t, err)
+	require.NotNil(t, fc)
+	ic = NewIndexerClient(nc.client, LocalnetConfig.IndexerUrl)
+	require.NoError(t, err)
+	require.NotNil(t, ic)
+}

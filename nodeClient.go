@@ -179,7 +179,7 @@ func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion 
 	return
 }
 
-// AccountModule
+// AccountModule fetches a single account module's bytecode and ABI from on-chain state.
 func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (data *api.MoveBytecode, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "module", moduleName)
 	if len(ledgerVersion) > 0 {
@@ -194,6 +194,7 @@ func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, l
 	return data, nil
 }
 
+// EntryFunctionWithArgs generates an EntryFunction from on-chain Module ABI, and converts simple inputs to BCS encoded ones.
 func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
 	// TODO: This should be cached / we should be able to take in an ABI
 	module, err := rc.AccountModule(moduleAddress, moduleName)
@@ -202,6 +203,24 @@ func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, module
 	}
 
 	return EntryFunctionFromAbi(module.Abi, moduleAddress, moduleName, functionName, typeArgs, args)
+}
+
+// BlockByVersion gets a block by a transaction's version number
+//
+// Note that this is not the same as a block's height.
+//
+// The function will fetch all transactions in the block if withTransactions is true.
+func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
+	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
+	return rc.getBlockCommon(restUrl, withTransactions)
+}
+
+// BlockByHeight gets a block by block height
+//
+// The function will fetch all transactions in the block if withTransactions is true.
+func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
+	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
+	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
 // TransactionByHash gets info on a transaction
@@ -229,7 +248,7 @@ func (rc *NodeClient) TransactionByHash(txnHash string) (data *api.Transaction, 
 	return data, nil
 }
 
-// Waits for a transaction to be confirmed by its hash.
+// WaitTransactionByHash waits for a transaction to be confirmed by its hash.
 // This function allows you to monitor the status of a transaction until it is finalized.
 func (rc *NodeClient) WaitTransactionByHash(txnHash string) (data *api.Transaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/wait_by_hash", txnHash)
@@ -249,24 +268,6 @@ func (rc *NodeClient) TransactionByVersion(version uint64) (data *api.CommittedT
 		return data, fmt.Errorf("get transaction api err: %w", err)
 	}
 	return data, nil
-}
-
-// BlockByVersion gets a block by a transaction's version number
-//
-// Note that this is not the same as a block's height.
-//
-// The function will fetch all transactions in the block if withTransactions is true.
-func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
-	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
-	return rc.getBlockCommon(restUrl, withTransactions)
-}
-
-// BlockByHeight gets a block by block height
-//
-// The function will fetch all transactions in the block if withTransactions is true.
-func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
-	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
-	return rc.getBlockCommon(restUrl, withTransactions)
 }
 
 // getBlockCommon is a helper function for fetching a block by version or height
@@ -316,22 +317,6 @@ func (rc *NodeClient) getBlockCommon(restUrl *url.URL, withTransactions bool) (b
 	}
 	return block, nil
 }
-
-// WaitForTransaction does a long-GET for one transaction and wait for it to complete.
-// Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
-//
-// Optional arguments:
-//   - PollPeriod: time.Duration, how often to poll for the transaction. Default 100ms.
-//   - PollTimeout: time.Duration, how long to wait for the transaction. Default 10s.
-func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
-	return rc.PollForTransaction(txnHash, options...)
-}
-
-// PollPeriod is an option to PollForTransactions
-type PollPeriod time.Duration
-
-// PollTimeout is an option to PollForTransactions
-type PollTimeout time.Duration
 
 func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, options ...any) (period time.Duration, timeout time.Duration, err error) {
 	period = defaultPeriod
@@ -430,6 +415,16 @@ func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) er
 	return nil
 }
 
+// WaitForTransaction does a long-GET for one transaction and wait for it to complete.
+// Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
+//
+// Optional arguments:
+//   - PollPeriod: time.Duration, how often to poll for the transaction. Default 100ms.
+//   - PollTimeout: time.Duration, how long to wait for the transaction. Default 10s.
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
+	return rc.PollForTransaction(txnHash, options...)
+}
+
 // Transactions Get recent transactions.
 //
 // Arguments:
@@ -459,6 +454,14 @@ func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64,
 	})
 }
 
+// EventsByHandle retrieves events by event handle and field name for a given account.
+//
+// Arguments:
+//   - account - The account address to get events for
+//   - eventHandle - The event handle struct tag
+//   - fieldName - The field in the event handle struct
+//   - start - The starting sequence number. nil for most recent events
+//   - limit - The number of events to return, 100 by default
 func (rc *NodeClient) EventsByHandle(
 	account AccountAddress,
 	eventHandle string,
@@ -712,15 +715,6 @@ func (rc *NodeClient) BatchSubmitTransaction(signedTxns []*SignedTransaction) (r
 	return response, nil
 }
 
-// EstimateGasUnitPrice estimates the gas unit price for a transaction
-type EstimateGasUnitPrice bool
-
-// EstimateMaxGasAmount estimates the max gas amount for a transaction
-type EstimateMaxGasAmount bool
-
-// EstimatePrioritizedGasUnitPrice estimates the prioritized gas unit price for a transaction
-type EstimatePrioritizedGasUnitPrice bool
-
 // SimulateTransaction simulates a transaction
 func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
@@ -826,28 +820,6 @@ func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
 	}
 	return rc.chainId, nil
 }
-
-// MaxGasAmount will set the max gas amount in gas units for a transaction
-type MaxGasAmount uint64
-
-// GasUnitPrice will set the gas unit price in octas (1/10^8 APT) for a transaction
-type GasUnitPrice uint64
-
-// ExpirationSeconds will set the number of seconds from the current time to expire a transaction
-type ExpirationSeconds uint64
-
-// FeePayer will set the fee payer for a transaction
-type FeePayer *AccountAddress
-
-// AdditionalSigners will set the additional signers for a transaction
-type AdditionalSigners []AccountAddress
-
-// SequenceNumber will set the sequence number for a transaction
-type SequenceNumber uint64
-
-// ChainIdOption will set the chain ID for a transaction
-// TODO: This one may want to be removed / renamed?
-type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing for a single signer
 //
@@ -1083,29 +1055,6 @@ func (rc *NodeClient) buildTransactionInner(
 	return rawTxn, nil
 }
 
-// ViewPayload is a payload for a view function
-type ViewPayload struct {
-	Module   ModuleId  // ModuleId of the View function e.g. 0x1::coin
-	Function string    // Name of the View function e.g. balance
-	ArgTypes []TypeTag // TypeTags of the type arguments
-	Args     [][]byte  // Arguments to the function encoded in BCS
-}
-
-func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
-	vp.Module.MarshalBCS(ser)
-	ser.WriteString(vp.Function)
-	bcs.SerializeSequence(vp.ArgTypes, ser)
-	length, err := util.IntToU32(len(vp.Args))
-	if err != nil {
-		ser.SetError(err)
-		return
-	}
-	ser.Uleb128(length)
-	for _, a := range vp.Args {
-		ser.WriteBytes(a)
-	}
-}
-
 // View calls a view function on the blockchain and returns the return value of the function
 func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
 	serializer := bcs.Serializer{}
@@ -1162,19 +1111,6 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ..
 	return StrToUint64(values[0].(string))
 }
 
-// BuildSignAndSubmitTransaction builds, signs, and submits a transaction to the network
-func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
-	rawTxn, err := rc.BuildTransaction(sender.AccountAddress(), payload, options...)
-	if err != nil {
-		return nil, err
-	}
-	signedTxn, err := rawTxn.SignedTransaction(sender)
-	if err != nil {
-		return nil, err
-	}
-	return rc.SubmitTransaction(signedTxn)
-}
-
 // NodeAPIHealthCheck performs a health check on the node
 //
 // Returns a HealthCheckResponse if successful, returns error if not.
@@ -1195,6 +1131,19 @@ func (rc *NodeClient) NodeAPIHealthCheck(durationSecs ...uint64) (api.HealthChec
 // Deprecated: Use NodeAPIHealthCheck instead
 func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	return rc.NodeAPIHealthCheck(durationSecs...)
+}
+
+// BuildSignAndSubmitTransaction builds, signs, and submits a transaction to the network
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+	rawTxn, err := rc.BuildTransaction(sender.AccountAddress(), payload, options...)
+	if err != nil {
+		return nil, err
+	}
+	signedTxn, err := rawTxn.SignedTransaction(sender)
+	if err != nil {
+		return nil, err
+	}
+	return rc.SubmitTransaction(signedTxn)
 }
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON

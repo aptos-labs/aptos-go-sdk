@@ -25,9 +25,16 @@ func NewIndexerClient(httpClient *http.Client, url string) *IndexerClient {
 	}
 }
 
-// Query is a generic function for making any GraphQL query against the indexer
-func (ic *IndexerClient) Query(query any, variables map[string]any, options ...graphql.Option) error {
+// QueryIndexer is a generic function for making any GraphQL query against the indexer
+func (ic *IndexerClient) QueryIndexer(query any, variables map[string]any, options ...graphql.Option) error {
 	return ic.inner.Query(context.Background(), query, variables, options...)
+}
+
+// Query is a generic function for making any GraphQL query against the indexer
+//
+// Deprecated, please use QueryIndexer as it matches the interface
+func (ic *IndexerClient) Query(query any, variables map[string]any, options ...graphql.Option) error {
+	return ic.QueryIndexer(query, variables, options...)
 }
 
 type CoinBalance struct {
