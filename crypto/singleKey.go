@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -66,9 +67,18 @@ func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, 
 		return nil, err
 	}
 
-	auth := &SingleKeyAuthenticator{}
-	auth.PubKey = key.PubKey().(*AnyPublicKey)
-	auth.Sig = signature.(*AnySignature)
+	pubkey, ok := key.PubKey().(*AnyPublicKey)
+	if !ok {
+		return nil, errors.New("invalid public key")
+	}
+	sig, ok := signature.(*AnySignature)
+	if !ok {
+		return nil, errors.New("invalid signature")
+	}
+	auth := &SingleKeyAuthenticator{
+		PubKey: pubkey,
+		Sig:    sig,
+	}
 	return &AccountAuthenticator{Variant: AccountAuthenticatorSingleSender, Auth: auth}, nil
 }
 

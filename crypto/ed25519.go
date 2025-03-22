@@ -54,15 +54,21 @@ func GenerateEd25519PrivateKey(rand ...io.Reader) (privateKey *Ed25519PrivateKey
 // Implements:
 //   - [Signer]
 func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
-	// Can't error
-	signature, _ := key.SignMessage(msg)
+	signature, err := key.SignMessage(msg)
+	if err != nil {
+		return nil, err
+	}
+	sig, ok := signature.(*Ed25519Signature)
+	if !ok {
+		return nil, errors.New("invalid signature, expected Ed25519Signature")
+	}
 	publicKeyBytes := key.PubKey().Bytes()
 
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorEd25519,
 		Auth: &Ed25519Authenticator{
 			PubKey: &Ed25519PublicKey{Inner: publicKeyBytes},
-			Sig:    signature.(*Ed25519Signature),
+			Sig:    sig,
 		},
 	}, nil
 }
@@ -72,10 +78,14 @@ func (key *Ed25519PrivateKey) Sign(msg []byte) (authenticator *AccountAuthentica
 // Implements:
 //   - [Signer]
 func (key *Ed25519PrivateKey) SimulationAuthenticator() *AccountAuthenticator {
+	pubkey, ok := key.PubKey().(*Ed25519PublicKey)
+	if !ok {
+		return nil
+	}
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorEd25519,
 		Auth: &Ed25519Authenticator{
-			PubKey: key.PubKey().(*Ed25519PublicKey),
+			PubKey: pubkey,
 			Sig:    &Ed25519Signature{},
 		},
 	}
@@ -86,9 +96,12 @@ func (key *Ed25519PrivateKey) SimulationAuthenticator() *AccountAuthenticator {
 // Implements:
 //   - [Signer]
 func (key *Ed25519PrivateKey) PubKey() PublicKey {
-	pubKey := key.Inner.Public()
+	pubKey, ok := key.Inner.Public().(ed25519.PublicKey)
+	if !ok {
+		return nil
+	}
 	return &Ed25519PublicKey{
-		pubKey.(ed25519.PublicKey),
+		pubKey,
 	}
 }
 
