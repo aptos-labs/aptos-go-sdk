@@ -3,6 +3,7 @@ package bcs
 import (
 	"bytes"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math/big"
 	"slices"
@@ -145,7 +146,7 @@ func (ser *Serializer) FixedBytes(v []byte) {
 // Struct uses custom serialization for a [Marshaler] implementation.
 func (ser *Serializer) Struct(v Marshaler) {
 	if v == nil {
-		ser.SetError(fmt.Errorf("cannot marshal nil"))
+		ser.SetError(errors.New("cannot marshal nil"))
 		return
 	}
 	v.MarshalBCS(ser)
@@ -198,7 +199,7 @@ func SerializeSequence[AT []T, T any](array AT, ser *Serializer) {
 			return
 		}
 		// If neither works, let's pass an error up
-		ser.SetError(fmt.Errorf("type or reference of type is not Marshaler"))
+		ser.SetError(errors.New("type or reference of type is not Marshaler"))
 	})
 }
 

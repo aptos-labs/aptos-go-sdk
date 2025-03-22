@@ -52,7 +52,7 @@ func (st *TestStruct) UnmarshalBCS(des *bcs.Deserializer) {
 	st.bytes = des.ReadBytes()
 	// Custom error
 	if len(st.bytes) == 0 {
-		des.SetError(fmt.Errorf("invalid bytes length, must be at least 1"))
+		des.SetError(errors.New("invalid bytes length, must be at least 1"))
 	}
 }
 
