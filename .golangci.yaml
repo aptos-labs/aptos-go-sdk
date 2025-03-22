@@ -1,0 +1,25 @@
+linters:
+  enable:
+    - gosec
+    - thelper
+    - gci
+    - nilerr
+  disable:
+    # TODO: Re-enable no-ctx when everything is moved to contexts
+    - noctx
+    - exhaustruct
+    - exhaustive
+    - testpackage
+    - musttag
+    - godox
+    - godot
+    - depguard
+    - dupword
+  presets:
+    - bugs
+    - comment
+    - format
+    - import
+    - module
+    - test
+    - performance
