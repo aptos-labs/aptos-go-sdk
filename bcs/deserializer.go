@@ -264,7 +264,7 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 		return nil
 	}
 	out := make([]T, length)
-	for i := 0; i < int(length); i++ {
+	for i := range length {
 		deserialize(des, &out[i])
 
 		if des.Error() != nil {

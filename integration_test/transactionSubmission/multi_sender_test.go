@@ -23,7 +23,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 
 	// Create and fund senders
 	senders := make([]testutil.TestAccount, numSenders)
-	for i := uint64(0); i < numSenders; i++ {
+	for i := range uint64(numSenders) {
 		senders[i] = testutil.SetupTestAccount(t, clients.Client, initialFunding)
 	}
 
@@ -34,7 +34,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 	// Process transactions for each sender
 	doneCh := make(chan struct{})
 
-	for senderIdx := uint64(0); senderIdx < numSenders; senderIdx++ {
+	for senderIdx := range uint64(numSenders) {
 		go func(senderIdx uint64) {
 			defer func() {
 				doneCh <- struct{}{}
@@ -60,7 +60,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 			)
 
 			workerStartTime := time.Now()
-			for txNum := uint64(0); txNum < txPerSender; txNum++ {
+			for txNum := range uint64(txPerSender) {
 				payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transferAmount)
 
 				payloads <- aptos.TransactionBuildPayload{
@@ -71,7 +71,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 			}
 			close(payloads)
 
-			for i := uint64(0); i < txPerSender; i++ {
+			for range uint64(txPerSender) {
 				resp := <-responses
 				if resp.Err != nil {
 					t.Errorf("Transaction failed: %v", resp.Err)
@@ -91,7 +91,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 	}
 
 	// Wait for all senders to complete
-	for i := uint64(0); i < numSenders; i++ {
+	for range uint64(numSenders) {
 		<-doneCh
 	}
 

@@ -53,7 +53,7 @@ func (s *MultiEd25519TestSigner) Sign(msg []byte) (authenticator *crypto.Account
 
 func (s *MultiEd25519TestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 	signatures := make([]*crypto.Ed25519Signature, s.SignaturesRequired)
-	for i := 0; i < int(s.SignaturesRequired); i++ {
+	for i := range s.SignaturesRequired {
 		sig, err := s.Keys[i].SignMessage(msg)
 		if err != nil {
 			return nil, err
@@ -155,7 +155,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 
 	alreadyUsed := make(map[int]bool)
 
-	for i := uint8(0); i < s.SignaturesRequired; i++ {
+	for i := range uint8(s.SignaturesRequired) {
 		// Find a random key
 		var index int
 		for {
