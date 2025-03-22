@@ -61,7 +61,7 @@ func (key *SingleSigner) EmptySignature() *AnySignature {
 //
 // Implements:
 //   - [Signer]
-func (key *SingleSigner) Sign(msg []byte) (authenticator *AccountAuthenticator, err error) {
+func (key *SingleSigner) Sign(msg []byte) (*AccountAuthenticator, error) {
 	signature, err := key.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (key *AnyPublicKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *AnyPublicKey) FromBytes(bytes []byte) (err error) {
+func (key *AnyPublicKey) FromBytes(bytes []byte) error {
 	return bcs.Deserialize(key, bytes)
 }
 
@@ -233,7 +233,7 @@ func (key *AnyPublicKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *AnyPublicKey) FromHex(hexStr string) (err error) {
+func (key *AnyPublicKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
@@ -313,7 +313,7 @@ func (e *AnySignature) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *AnySignature) FromBytes(bytes []byte) (err error) {
+func (e *AnySignature) FromBytes(bytes []byte) error {
 	return bcs.Deserialize(e, bytes)
 }
 
@@ -329,7 +329,7 @@ func (e *AnySignature) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *AnySignature) FromHex(hexStr string) (err error) {
+func (e *AnySignature) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err

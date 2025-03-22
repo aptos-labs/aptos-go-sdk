@@ -100,13 +100,13 @@ func (txn *RawTransaction) UnmarshalBCS(des *bcs.Deserializer) {
 // region RawTransaction MessageSigner
 
 // SigningMessage generates the bytes needed to be signed by a signer
-func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
+func (txn *RawTransaction) SigningMessage() ([]byte, error) {
 	txnBytes, err := bcs.Serialize(txn)
 	if err != nil {
-		return
+		return nil, err
 	}
 	prehash := RawTransactionPrehash()
-	message = make([]byte, len(prehash)+len(txnBytes))
+	message := make([]byte, len(prehash)+len(txnBytes))
 	copy(message, prehash)
 	copy(message[len(prehash):], txnBytes)
 	return message, nil
@@ -115,10 +115,10 @@ func (txn *RawTransaction) SigningMessage() (message []byte, err error) {
 // endregion
 
 // region RawTransaction Signer
-func (txn *RawTransaction) Sign(signer crypto.Signer) (authenticator *crypto.AccountAuthenticator, err error) {
+func (txn *RawTransaction) Sign(signer crypto.Signer) (*crypto.AccountAuthenticator, error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
-		return
+		return nil, err
 	}
 	return signer.Sign(message)
 }
@@ -222,10 +222,10 @@ func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 }
 
 // region RawTransactionWithData Signer
-func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (authenticator *crypto.AccountAuthenticator, err error) {
+func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (*crypto.AccountAuthenticator, error) {
 	message, err := txn.SigningMessage()
 	if err != nil {
-		return
+		return nil, err
 	}
 	return signer.Sign(message)
 }
@@ -233,13 +233,13 @@ func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (authenticator *cr
 // endregion
 
 // region RawTransactionWithData MessageSigner
-func (txn *RawTransactionWithData) SigningMessage() (message []byte, err error) {
+func (txn *RawTransactionWithData) SigningMessage() ([]byte, error) {
 	txnBytes, err := bcs.Serialize(txn)
 	if err != nil {
-		return
+		return nil, err
 	}
 	prehash := RawTransactionWithDataPrehash()
-	message = make([]byte, len(prehash)+len(txnBytes))
+	message := make([]byte, len(prehash)+len(txnBytes))
 	copy(message, prehash)
 	copy(message[len(prehash):], txnBytes)
 	return message, nil

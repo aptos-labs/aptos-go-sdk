@@ -20,7 +20,7 @@ import (
 //   - amount is the amount of coins to transfer
 //
 // Note: for now, if metadata is nil, then it will fail to build. But in the future, APT will be the default.
-func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
+func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress, dest AccountAddress, amount uint64) (*EntryFunction, error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")
 	}
@@ -57,7 +57,7 @@ func FungibleAssetPrimaryStoreTransferPayload(faMetadataAddress *AccountAddress,
 //   - amount is the amount of coins to transfer
 //
 // Note: for now, if metadata is nil, then it will fail to build. But in the future, APT will be the default
-func FungibleAssetTransferPayload(faMetadataAddress *AccountAddress, source AccountAddress, dest AccountAddress, amount uint64) (payload *EntryFunction, err error) {
+func FungibleAssetTransferPayload(faMetadataAddress *AccountAddress, source AccountAddress, dest AccountAddress, amount uint64) (*EntryFunction, error) {
 	if faMetadataAddress == nil {
 		return nil, errors.New("fa metadata address is nil")
 	}

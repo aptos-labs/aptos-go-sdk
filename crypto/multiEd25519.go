@@ -99,7 +99,7 @@ func (key *MultiEd25519PublicKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *MultiEd25519PublicKey) FromBytes(bytes []byte) (err error) {
+func (key *MultiEd25519PublicKey) FromBytes(bytes []byte) error {
 	keyBytesLength := len(bytes)
 	numKeys := keyBytesLength / ed25519.PublicKeySize
 	signaturesRequired := bytes[keyBytesLength-1]
@@ -134,7 +134,7 @@ func (key *MultiEd25519PublicKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *MultiEd25519PublicKey) FromHex(hexStr string) (err error) {
+func (key *MultiEd25519PublicKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
@@ -289,7 +289,7 @@ func (e *MultiEd25519Signature) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *MultiEd25519Signature) FromBytes(bytes []byte) (err error) {
+func (e *MultiEd25519Signature) FromBytes(bytes []byte) error {
 	signatures := make([]*Ed25519Signature, len(bytes)/ed25519.SignatureSize)
 	for i := 0; (i+1)*ed25519.SignatureSize < len(bytes); i++ {
 		start := i * ed25519.SignatureSize
@@ -319,7 +319,7 @@ func (e *MultiEd25519Signature) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *MultiEd25519Signature) FromHex(hexStr string) (err error) {
+func (e *MultiEd25519Signature) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err

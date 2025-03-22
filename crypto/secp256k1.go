@@ -67,7 +67,7 @@ func (key *Secp256k1PrivateKey) EmptySignature() Signature {
 //
 // Implements:
 //   - [MessageSigner]
-func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (sig Signature, err error) {
+func (key *Secp256k1PrivateKey) SignMessage(msg []byte) (Signature, error) {
 	hash := util.Sha3256Hash([][]byte{msg})
 	signature := ecdsa.Sign(key.Inner, hash)
 	return &Secp256k1Signature{signature}, nil
@@ -91,8 +91,8 @@ func (key *Secp256k1PrivateKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) (err error) {
-	bytes, err = ParsePrivateKey(bytes, PrivateKeyVariantSecp256k1, false)
+func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) error {
+	bytes, err := ParsePrivateKey(bytes, PrivateKeyVariantSecp256k1, false)
 	if err != nil {
 		return err
 	}
@@ -112,7 +112,7 @@ func (key *Secp256k1PrivateKey) ToHex() string {
 }
 
 // ToAIP80 formats the private key to AIP-80 compliant string
-func (key *Secp256k1PrivateKey) ToAIP80() (formattedString string, err error) {
+func (key *Secp256k1PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantSecp256k1)
 }
 
@@ -124,7 +124,7 @@ func (key *Secp256k1PrivateKey) ToAIP80() (formattedString string, err error) {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Secp256k1PrivateKey) FromHex(hexStr string) (err error) {
+func (key *Secp256k1PrivateKey) FromHex(hexStr string) error {
 	bytes, err := ParsePrivateKey(hexStr, PrivateKeyVariantSecp256k1)
 	if err != nil {
 		return err
@@ -185,7 +185,7 @@ func (key *Secp256k1PublicKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Secp256k1PublicKey) FromBytes(bytes []byte) (err error) {
+func (key *Secp256k1PublicKey) FromBytes(bytes []byte) error {
 	newKey, err := secp256k1.ParsePubKey(bytes)
 	if err != nil {
 		return err
@@ -206,7 +206,7 @@ func (key *Secp256k1PublicKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *Secp256k1PublicKey) FromHex(hexStr string) (err error) {
+func (key *Secp256k1PublicKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
@@ -333,7 +333,7 @@ type Secp256k1Signature struct {
 // If you know the recovery bit (0-4), please provide it, otherwise, use [RecoverSecp256k1PublicKeyWithAuthenticationKey]
 //
 // Note that this only applies to an [Secp256k1Signature], all other signatures are not recoverable
-func (e *Secp256k1Signature) RecoverPublicKey(message []byte, recoveryBit byte) (pubKey *Secp256k1PublicKey, err error) {
+func (e *Secp256k1Signature) RecoverPublicKey(message []byte, recoveryBit byte) (*Secp256k1PublicKey, error) {
 	hash := util.Sha3256Hash([][]byte{message})
 	return e.recoverSecp256k1PublicKey(hash, recoveryBit)
 }
@@ -341,7 +341,7 @@ func (e *Secp256k1Signature) RecoverPublicKey(message []byte, recoveryBit byte) 
 // RecoverSecp256k1PublicKeyWithAuthenticationKey recovers the public key from the signature and message, and checks if it matches the authentication key
 //
 // Note that, the authentication key may be an address, but if the authentication key was rotated it will differ from the address
-func (e *Secp256k1Signature) RecoverSecp256k1PublicKeyWithAuthenticationKey(message []byte, authKey *AuthenticationKey) (pubKey *Secp256k1PublicKey, err error) {
+func (e *Secp256k1Signature) RecoverSecp256k1PublicKeyWithAuthenticationKey(message []byte, authKey *AuthenticationKey) (*Secp256k1PublicKey, error) {
 	hash := util.Sha3256Hash([][]byte{message})
 
 	for i := byte(0); i < byte(4); i++ {
@@ -365,7 +365,7 @@ func (e *Secp256k1Signature) RecoverSecp256k1PublicKeyWithAuthenticationKey(mess
 }
 
 // / recoverSecp256k1PublicKey recovers the public key from the signature and message by building up the magic byte
-func (e *Secp256k1Signature) recoverSecp256k1PublicKey(messageHash []byte, recoveryBit byte) (pubKey *Secp256k1PublicKey, err error) {
+func (e *Secp256k1Signature) recoverSecp256k1PublicKey(messageHash []byte, recoveryBit byte) (*Secp256k1PublicKey, error) {
 	// Append magic 27 because of bitcoin, and the recovery byte in front
 	sigWithRecovery := append([]byte{recoveryBit + 27}, e.Bytes()...)
 	publicKey, _, err := ecdsa.RecoverCompact(sigWithRecovery, messageHash)
@@ -398,7 +398,7 @@ func (e *Secp256k1Signature) Bytes() []byte {
 //
 // Implements:
 // - [CryptoMaterial]
-func (e *Secp256k1Signature) FromBytes(bytes []byte) (err error) {
+func (e *Secp256k1Signature) FromBytes(bytes []byte) error {
 	if len(bytes) != Secp256k1SignatureLength {
 		return fmt.Errorf("invalid secp256k1 signature size %d, expected %d", len(bytes), Secp256k1SignatureLength)
 	}
@@ -437,7 +437,7 @@ func (e *Secp256k1Signature) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *Secp256k1Signature) FromHex(hexStr string) (err error) {
+func (e *Secp256k1Signature) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err

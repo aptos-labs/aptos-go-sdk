@@ -99,7 +99,7 @@ func (key *MultiKey) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *MultiKey) FromBytes(bytes []byte) (err error) {
+func (key *MultiKey) FromBytes(bytes []byte) error {
 	return bcs.Deserialize(key, bytes)
 }
 
@@ -115,7 +115,7 @@ func (key *MultiKey) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (key *MultiKey) FromHex(hexStr string) (err error) {
+func (key *MultiKey) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
@@ -223,7 +223,7 @@ func (e *MultiKeySignature) Bytes() []byte {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *MultiKeySignature) FromBytes(bytes []byte) (err error) {
+func (e *MultiKeySignature) FromBytes(bytes []byte) error {
 	return bcs.Deserialize(e, bytes)
 }
 
@@ -239,7 +239,7 @@ func (e *MultiKeySignature) ToHex() string {
 //
 // Implements:
 //   - [CryptoMaterial]
-func (e *MultiKeySignature) FromHex(hexStr string) (err error) {
+func (e *MultiKeySignature) FromHex(hexStr string) error {
 	bytes, err := util.ParseHex(hexStr)
 	if err != nil {
 		return err
@@ -413,7 +413,7 @@ func (bm *MultiKeyBitmap) Indices() []uint8 {
 }
 
 // KeyIndices determines the byte and bit set in the bitmap
-func KeyIndices(index uint8) (numByte uint8, numBit uint8) {
+func KeyIndices(index uint8) (uint8, uint8) {
 	// Bytes and bits are counted from left
 	return index / 8, index % 8
 }

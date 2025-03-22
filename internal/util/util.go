@@ -12,7 +12,7 @@ import (
 )
 
 // Sha3256Hash hashes the input bytes using SHA3-256
-func Sha3256Hash(bytes [][]byte) (output []byte) {
+func Sha3256Hash(bytes [][]byte) []byte {
 	hasher := sha3.New256()
 	for _, b := range bytes {
 		hasher.Write(b)
@@ -41,8 +41,8 @@ func StrToUint64(s string) (uint64, error) {
 }
 
 // StrToBigInt converts a string to a big.Int for u128 and u256 values
-func StrToBigInt(val string) (num *big.Int, err error) {
-	num = &big.Int{}
+func StrToBigInt(val string) (*big.Int, error) {
+	num := &big.Int{}
 	num, ok := num.SetString(val, 10)
 	if !ok {
 		return nil, fmt.Errorf("num %s is not an integer", val)

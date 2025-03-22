@@ -97,12 +97,12 @@ func (account *Account) PrivateKeyString() (string, error) {
 }
 
 // Sign signs a message, returning an appropriate authenticator for the signer
-func (account *Account) Sign(message []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (account *Account) Sign(message []byte) (*crypto.AccountAuthenticator, error) {
 	return account.Signer.Sign(message)
 }
 
 // SignMessage signs a message and returns the raw signature without a public key for verification
-func (account *Account) SignMessage(message []byte) (signature crypto.Signature, err error) {
+func (account *Account) SignMessage(message []byte) (crypto.Signature, error) {
 	return account.Signer.SignMessage(message)
 }
 

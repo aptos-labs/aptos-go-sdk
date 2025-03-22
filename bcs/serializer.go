@@ -33,7 +33,7 @@ type Serializer struct {
 //
 //	struct := &MyStruct{ num: 100 }
 //	bytes, _ := Serialize(struct)
-func Serialize(value Marshaler) (bytes []byte, err error) {
+func Serialize(value Marshaler) ([]byte, error) {
 	return SerializeSingle(func(ser *Serializer) {
 		value.MarshalBCS(ser)
 	})
@@ -343,15 +343,14 @@ func SerializeBytes(input []byte) ([]byte, error) {
 //			ser.WriteBytes(list)
 //		}
 //	})
-func SerializeSingle(marshal func(ser *Serializer)) (bytes []byte, err error) {
+func SerializeSingle(marshal func(ser *Serializer)) ([]byte, error) {
 	ser := &Serializer{}
 	marshal(ser)
-	err = ser.Error()
+	err := ser.Error()
 	if err != nil {
 		return nil, err
 	}
-	bytes = ser.ToBytes()
-	return bytes, nil
+	return ser.ToBytes(), nil
 }
 
 // SerializeOption serializes an optional value
