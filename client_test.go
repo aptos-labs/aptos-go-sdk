@@ -545,12 +545,15 @@ func concurrentTxnWaiter(
 		require.NoError(t, response.Err)
 
 		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(21*time.Second))
-		if err != nil {
+		switch err {
+		case nil:
 			t.Logf("%s err %s", response.Response.Hash, err)
-		} else if waitResponse == nil {
-			t.Logf("%s nil response", response.Response.Hash)
-		} else if !waitResponse.Success {
-			t.Logf("%s !Success", response.Response.Hash)
+		default:
+			if waitResponse == nil {
+				t.Logf("%s nil response", response.Response.Hash)
+			} else if !waitResponse.Success {
+				t.Logf("%s !Success", response.Response.Hash)
+			}
 		}
 		waitResults <- ConcResponse[*api.UserTransaction]{Result: waitResponse, Err: err}
 	}
