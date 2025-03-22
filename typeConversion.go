@@ -657,20 +657,17 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 	case *StructTag:
 		structTag := innerType
 		// TODO: We should be able to support custom structs, but for now only support known
-		switch structTag.Address {
-		case AccountOne:
+		if AccountOne == structTag.Address {
 			switch structTag.Module {
 			case "object":
-				switch structTag.Name {
-				case "Object":
+				if structTag.Name == "Object" {
 					// TODO: Move to function
 					// Handle as address, inner type doesn't matter
 					// TODO: Improve error message
 					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics)
 				}
 			case "string":
-				switch structTag.Name {
-				case "String":
+				if structTag.Name == "String" {
 					// Handle as string, we won't let bytes as an input for now here
 					switch arg := arg.(type) {
 					case string:
@@ -680,8 +677,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 					}
 				}
 			case "option":
-				switch structTag.Name {
-				case "Option":
+				if structTag.Name == "Option" {
 					// Check it has the proper inner type
 					if 1 != len(structTag.TypeParams) {
 						return nil, errors.New("invalid input type for option, must have exactly one type arg")
