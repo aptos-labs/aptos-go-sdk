@@ -157,7 +157,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 
 	for i := uint8(0); i < s.SignaturesRequired; i++ {
 		// Find a random key
-		index := 0
+		var index int
 		for {
 			// Note, this is just for testing, no reason to bring a crypto randomness in here
 			//nolint:golint,gosec
