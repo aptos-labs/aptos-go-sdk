@@ -317,17 +317,15 @@ func unwrapObject(val any) (address *AccountAddress, err error) {
 func unwrapAggregator(val any) (num *big.Int, err error) {
 	inner, ok := val.(map[string]any)
 	if !ok {
-		err = errors.New("bad view return from node, could not unwrap aggregator")
-		return
+		return nil, errors.New("bad view return from node, could not unwrap aggregator")
 	}
 	vals := inner["vec"].([]any)
 	if len(vals) == 0 {
-		return nil, nil
+		return nil, errors.New("aggregator returned no values")
 	}
 	numStr, ok := vals[0].(string)
 	if !ok {
-		err = errors.New("bad view return from node, aggregator value is not a string")
-		return
+		return nil, errors.New("bad view return from node, aggregator value is not a string")
 	}
 
 	return StrToBigInt(numStr)
