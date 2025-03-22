@@ -23,7 +23,7 @@ var AIP80Prefixes = map[PrivateKeyVariant]string{
 }
 
 // FormatPrivateKey formats a hex input to an AIP-80 compliant string
-func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedString string, err error) {
+func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (string, error) {
 	aip80Prefix := AIP80Prefixes[keyType]
 
 	var hexStr string
@@ -55,7 +55,7 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (formattedStrin
 // ParsePrivateKey parses a hex input that may be bytes, hex string, or an AIP-80 compliant string to bytes.
 //
 // You may optionally pass in a boolean to strictly enforce AIP-80 compliance.
-func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) (bytes []byte, err error) {
+func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) ([]byte, error) {
 	aip80Prefix := AIP80Prefixes[keyType]
 
 	// Get the first boolean if it exists, otherwise nil

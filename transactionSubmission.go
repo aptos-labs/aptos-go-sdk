@@ -402,18 +402,18 @@ func (rc *NodeClient) BuildSignAndSubmitTransactionsWithSignFunction(
 	close(submissionRequests)
 }
 
-func (cfg WorkerPoolConfig) getBufferSizes() (build, submission uint32) {
+func (cfg WorkerPoolConfig) getBufferSizes() (uint32, uint32) {
 	workers := defaultWorkerCount
 	if cfg.NumWorkers > 0 {
 		workers = cfg.NumWorkers
 	}
 
-	build = workers
+	build := workers
 	if cfg.BuildResponseBuffer > 0 {
 		build = cfg.BuildResponseBuffer
 	}
 
-	submission = workers
+	submission := workers
 	if cfg.SubmissionBuffer > 0 {
 		submission = cfg.SubmissionBuffer
 	}

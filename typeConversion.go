@@ -11,7 +11,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (entry *EntryFunction, err error) {
+func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
 	var function *api.MoveFunction
 	switch abi := abi.(type) {
 	case *api.MoveModule:
@@ -94,7 +94,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 		convertedArgs[i] = b
 	}
 
-	entry = &EntryFunction{
+	return &EntryFunction{
 		Module: ModuleId{
 			Address: moduleAddress,
 			Name:    moduleName,
@@ -102,9 +102,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 		Function: functionName,
 		ArgTypes: convertedTypeArgs,
 		Args:     convertedArgs,
-	}
-
-	return entry, err
+	}, nil
 }
 
 func ConvertTypeTag(typeArg any) (*TypeTag, error) {
@@ -227,7 +225,7 @@ func ConvertToU64(arg any) (uint64, error) {
 }
 
 // TODO: Check bounds of bigints
-func ConvertToU128(arg any) (num *big.Int, err error) {
+func ConvertToU128(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
 		return util.IntToUBigInt(arg)
@@ -249,7 +247,7 @@ func ConvertToU128(arg any) (num *big.Int, err error) {
 }
 
 // TODO: Check bounds of bigints
-func ConvertToU256(arg any) (num *big.Int, err error) {
+func ConvertToU256(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
 		return util.IntToUBigInt(arg)
@@ -270,50 +268,48 @@ func ConvertToU256(arg any) (num *big.Int, err error) {
 	}
 }
 
-func ConvertToBool(arg any) (b bool, err error) {
+func ConvertToBool(arg any) (bool, error) {
 	switch arg := arg.(type) {
 	case bool:
-		b = arg
+		return arg, nil
 	case string:
 		switch arg {
 		case "true":
-			b = true
+			return true, nil
 		case "false":
-			b = false
+			return false, nil
 		default:
-			err = errors.New("invalid boolean input for bool")
+			return false, errors.New("invalid boolean input for bool")
 		}
 	default:
-		err = errors.New("invalid input type for bool")
+		return false, errors.New("invalid input type for bool")
 	}
-	return b, err
 }
 
-func ConvertToAddress(arg any) (a *AccountAddress, err error) {
+func ConvertToAddress(arg any) (*AccountAddress, error) {
 	switch arg := arg.(type) {
 	case AccountAddress:
 		addr := arg
 		return &addr, nil
 	case *AccountAddress:
-		a = arg
-		if a == nil {
-			err = errors.New("invalid account address, nil")
+		if arg == nil {
+			return nil, errors.New("invalid account address, nil")
 		}
+		return arg, nil
 	case string:
-		addr := AccountAddress{}
-		err = addr.ParseStringRelaxed(arg)
+		addr := &AccountAddress{}
+		err := addr.ParseStringRelaxed(arg)
 		if err != nil {
 			return nil, err
 		}
-		a = &addr
+		return addr, nil
 	default:
-		err = errors.New("invalid input type for address")
+		return nil, errors.New("invalid input type for address")
 	}
-	return a, err
 }
 
 // ConvertToVectorU8 returns the BCS encoded version of the bytes
-func ConvertToVectorU8(arg any) (b []byte, err error) {
+func ConvertToVectorU8(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case string:
@@ -334,7 +330,7 @@ func ConvertToVectorU8(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU16 returns the BCS encoded version of the bytes
-func ConvertToVectorU16(arg any) (b []byte, err error) {
+func ConvertToVectorU16(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case []uint16:
@@ -352,7 +348,7 @@ func ConvertToVectorU16(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU32 returns the BCS encoded version of the bytes
-func ConvertToVectorU32(arg any) (b []byte, err error) {
+func ConvertToVectorU32(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case []uint32:
@@ -370,7 +366,7 @@ func ConvertToVectorU32(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU64 returns the BCS encoded version of the bytes
-func ConvertToVectorU64(arg any) (b []byte, err error) {
+func ConvertToVectorU64(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case []uint64:
@@ -388,7 +384,7 @@ func ConvertToVectorU64(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU128 returns the BCS encoded version of the bytes
-func ConvertToVectorU128(arg any) (b []byte, err error) {
+func ConvertToVectorU128(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case []big.Int:
@@ -406,7 +402,7 @@ func ConvertToVectorU128(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorU256 returns the BCS encoded version of the bytes
-func ConvertToVectorU256(arg any) (b []byte, err error) {
+func ConvertToVectorU256(arg any) ([]byte, error) {
 	// Special case, handle hex string
 	switch arg := arg.(type) {
 	case []big.Int:
@@ -424,7 +420,7 @@ func ConvertToVectorU256(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorBool returns the BCS encoded version of the boolean vector
-func ConvertToVectorBool(arg any) (b []byte, err error) {
+func ConvertToVectorBool(arg any) ([]byte, error) {
 	switch arg := arg.(type) {
 	case []bool:
 		if arg == nil {
@@ -441,7 +437,7 @@ func ConvertToVectorBool(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorAddress returns the BCS encoded version of the address vector
-func ConvertToVectorAddress(arg any) (b []byte, err error) {
+func ConvertToVectorAddress(arg any) ([]byte, error) {
 	switch arg := arg.(type) {
 	case []AccountAddress:
 		if arg == nil {
@@ -467,7 +463,7 @@ func ConvertToVectorAddress(arg any) (b []byte, err error) {
 }
 
 // ConvertToVectorGeneric returns the BCS encoded version of the generic vector
-func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
+func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	genericTag, ok := typeArg.Value.(*GenericTag)
 	if !ok {
 		return nil, errors.New("invalid type tag for generic vector")
@@ -490,11 +486,10 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 		if err != nil {
 			return nil, err
 		}
-		lengthBytes, err := bcs.SerializeUleb128(length)
+		buffer, err := bcs.SerializeUleb128(length)
 		if err != nil {
 			return nil, err
 		}
-		b = lengthBytes
 
 		// Serialize each element
 		for _, item := range arg {
@@ -502,16 +497,16 @@ func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) (b []b
 			if err != nil {
 				return nil, err
 			}
-			b = append(b, val...)
+			buffer = append(buffer, val...)
 		}
-		return b, nil
+		return buffer, nil
 	default:
 		return nil, errors.New("invalid input type for generic vector")
 	}
 }
 
 // ConvertToVectorReference returns the BCS encoded version of the reference vector
-func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
+func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	refTag, ok := typeArg.Value.(*ReferenceTag)
 	if !ok {
 		return nil, errors.New("invalid type tag for reference vector")
@@ -530,11 +525,10 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b [
 		if err != nil {
 			return nil, err
 		}
-		lengthBytes, err := bcs.SerializeUleb128(length)
+		buffer, err := bcs.SerializeUleb128(length)
 		if err != nil {
 			return nil, err
 		}
-		b = lengthBytes
 
 		// Serialize each element
 		for _, item := range arg {
@@ -542,15 +536,15 @@ func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) (b [
 			if err != nil {
 				return nil, err
 			}
-			b = append(b, val...)
+			buffer = append(buffer, val...)
 		}
-		return b, nil
+		return buffer, nil
 	default:
 		return nil, errors.New("invalid input type for reference vector")
 	}
 }
 
-func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) (out []byte, err error) {
+func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	// We have to switch based on type, thanks Golang
 	switch typeArg.Value.(type) {
 	case *U8Tag:
@@ -581,7 +575,7 @@ func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) (out []byte, 
 	}
 }
 
-func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err error) {
+func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 	switch innerType := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
@@ -691,7 +685,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) (b []byte, err err
 					}
 
 					// Otherwise, it's a single byte 1, and the encoded arg
-					b, err = ConvertArg(typeParam, arg, generics)
+					b, err := ConvertArg(typeParam, arg, generics)
 					if err != nil {
 						return nil, err
 					}
