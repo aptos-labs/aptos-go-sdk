@@ -144,7 +144,7 @@ func (key *MultiKey) UnmarshalBCS(des *bcs.Deserializer) {
 	length := des.Uleb128()
 	key.PubKeys = make([]*AnyPublicKey, length)
 
-	for i := uint32(0); i < length; i++ {
+	for i := range uint32(length) {
 		key.PubKeys[i] = &AnyPublicKey{}
 		des.Struct(key.PubKeys[i])
 	}
@@ -268,7 +268,7 @@ func (e *MultiKeySignature) UnmarshalBCS(des *bcs.Deserializer) {
 	length := des.Uleb128()
 	e.Signatures = make([]*AnySignature, length)
 
-	for i := uint32(0); i < length; i++ {
+	for i := range uint32(length) {
 		e.Signatures[i] = &AnySignature{}
 		des.Struct(e.Signatures[i])
 	}
@@ -404,7 +404,7 @@ func (bm *MultiKeyBitmap) AddKey(index uint8) error {
 
 func (bm *MultiKeyBitmap) Indices() []uint8 {
 	indices := make([]uint8, 0)
-	for i := uint8(0); i < MaxMultiKeySignatures; i++ {
+	for i := range uint8(MaxMultiKeySignatures) {
 		if bm.ContainsKey(i) {
 			indices = append(indices, i)
 		}

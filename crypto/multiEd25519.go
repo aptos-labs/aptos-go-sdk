@@ -105,7 +105,7 @@ func (key *MultiEd25519PublicKey) FromBytes(bytes []byte) (err error) {
 	signaturesRequired := bytes[keyBytesLength-1]
 
 	pubKeys := make([]*Ed25519PublicKey, numKeys)
-	for i := 0; i < numKeys; i++ {
+	for i := range numKeys {
 		start := i * ed25519.PublicKeySize
 		end := start + ed25519.PublicKeySize
 		pubKeys[i] = &Ed25519PublicKey{}

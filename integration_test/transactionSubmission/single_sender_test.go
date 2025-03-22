@@ -48,7 +48,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *t
 		workerPoolConfig,
 	)
 
-	for txNum := uint32(0); txNum < numTransactions; txNum++ {
+	for txNum := range uint32(numTransactions) {
 		payload := testutil.CreateTransferPayload(t, receiver.Account.Address, transferAmount)
 		payloads <- aptos.TransactionBuildPayload{
 			Id:    uint64(txNum),
@@ -58,7 +58,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *t
 	}
 	close(payloads)
 
-	for i := uint32(0); i < numTransactions; i++ {
+	for range uint32(numTransactions) {
 		resp := <-responses
 		if resp.Err != nil {
 			t.Errorf("Transaction failed: %v", resp.Err)
