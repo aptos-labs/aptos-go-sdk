@@ -27,7 +27,9 @@ func TestEvent_V1(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "0x1::coin::WithdrawEvent", data.Type)
 	assert.Equal(t, uint64(0), data.SequenceNumber)
-	assert.Equal(t, "1000", data.Data["amount"].(string))
+	val, ok := data.Data["amount"].(string)
+	require.True(t, ok)
+	assert.Equal(t, "1000", val)
 	assert.Equal(t, uint64(3), data.Guid.CreationNumber)
 
 	addr := &types.AccountAddress{}
@@ -56,8 +58,12 @@ func TestEvent_V2(t *testing.T) {
 
 	assert.Equal(t, "0x1::fungible_asset::Withdraw", data.Type)
 	assert.Equal(t, uint64(0), data.SequenceNumber)
-	assert.Equal(t, "1000", data.Data["amount"].(string))
-	assert.Equal(t, "0x1234123412341234123412341234123412341234123412341234123412341234", data.Data["store"].(string))
+	val, ok := data.Data["amount"].(string)
+	require.True(t, ok)
+	assert.Equal(t, "1000", val)
+	val, ok = data.Data["store"].(string)
+	require.True(t, ok)
+	assert.Equal(t, "0x1234123412341234123412341234123412341234123412341234123412341234", val)
 	assert.Equal(t, uint64(0), data.Guid.CreationNumber)
 	assert.Equal(t, &types.AccountZero, data.Guid.AccountAddress)
 }
@@ -79,7 +85,9 @@ func TestEvent_V2_Other(t *testing.T) {
 
 	assert.Equal(t, "vector<u64>", data.Type)
 	assert.Equal(t, uint64(0), data.SequenceNumber)
-	assert.Equal(t, []any{"0", "1", "2"}, data.Data[AnyDataName].([]any))
+	val, ok := data.Data[AnyDataName].([]any)
+	require.True(t, ok)
+	assert.Equal(t, []any{"0", "1", "2"}, val)
 	assert.Equal(t, uint64(0), data.Guid.CreationNumber)
 	assert.Equal(t, &types.AccountZero, data.Guid.AccountAddress)
 }

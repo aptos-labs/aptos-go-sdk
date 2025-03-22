@@ -251,10 +251,12 @@ func Test_Spec_Secp256k1_Authenticator(t *testing.T) {
 		Signature: &crypto.Secp256k1Signature{Inner: ecdsa.NewSignature(&secp256k1.ModNScalar{}, &secp256k1.ModNScalar{})},
 	}, emptySig, "It should be able to generate an empty signature AccountAuthenticator")
 	emptyAuth := key1.SimulationAuthenticator()
+	pubkey, ok := pubKey1.(*crypto.AnyPublicKey)
+	require.True(t, ok)
 	assert.Equal(t, &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorSingleSender,
 		Auth: &crypto.SingleKeyAuthenticator{
-			PubKey: pubKey1.(*crypto.AnyPublicKey),
+			PubKey: pubkey,
 			Sig:    emptySig,
 		},
 	}, emptyAuth, "It should be able to generate an empty signature AccountAuthenticator")

@@ -166,8 +166,7 @@ type RawTransactionWithData struct {
 func (txn *RawTransactionWithData) SetFeePayer(
 	feePayer AccountAddress,
 ) bool {
-	if txn.Variant == MultiAgentWithFeePayerRawTransactionWithDataVariant {
-		inner := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
+	if inner, ok := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData); ok {
 		inner.FeePayer = &feePayer
 		return true
 	}
@@ -179,22 +178,22 @@ func (txn *RawTransactionWithData) ToMultiAgentSignedTransaction(
 	sender *crypto.AccountAuthenticator,
 	additionalSigners []crypto.AccountAuthenticator,
 ) (*SignedTransaction, bool) {
-	if txn.Variant != MultiAgentRawTransactionWithDataVariant {
+	switch multiAgent := txn.Inner.(type) {
+	case *MultiAgentRawTransactionWithData:
+		return &SignedTransaction{
+			Transaction: multiAgent.RawTxn,
+			Authenticator: &TransactionAuthenticator{
+				Variant: TransactionAuthenticatorMultiAgent,
+				Auth: &MultiAgentTransactionAuthenticator{
+					Sender:                   sender,
+					SecondarySignerAddresses: multiAgent.SecondarySigners,
+					SecondarySigners:         additionalSigners,
+				},
+			},
+		}, true
+	default:
 		return nil, false
 	}
-	multiAgent := txn.Inner.(*MultiAgentRawTransactionWithData)
-
-	return &SignedTransaction{
-		Transaction: multiAgent.RawTxn,
-		Authenticator: &TransactionAuthenticator{
-			Variant: TransactionAuthenticatorMultiAgent,
-			Auth: &MultiAgentTransactionAuthenticator{
-				Sender:                   sender,
-				SecondarySignerAddresses: multiAgent.SecondarySigners,
-				SecondarySigners:         additionalSigners,
-			},
-		},
-	}, true
 }
 
 func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
@@ -202,23 +201,24 @@ func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 	feePayerAuthenticator *crypto.AccountAuthenticator,
 	additionalSigners []crypto.AccountAuthenticator,
 ) (*SignedTransaction, bool) {
-	if txn.Variant != MultiAgentWithFeePayerRawTransactionWithDataVariant {
+	switch feePayerTxn := txn.Inner.(type) {
+	case *MultiAgentWithFeePayerRawTransactionWithData:
+		return &SignedTransaction{
+			Transaction: feePayerTxn.RawTxn,
+			Authenticator: &TransactionAuthenticator{
+				Variant: TransactionAuthenticatorFeePayer,
+				Auth: &FeePayerTransactionAuthenticator{
+					Sender:                   sender,
+					SecondarySignerAddresses: feePayerTxn.SecondarySigners,
+					SecondarySigners:         additionalSigners,
+					FeePayer:                 feePayerTxn.FeePayer,
+					FeePayerAuthenticator:    feePayerAuthenticator,
+				},
+			},
+		}, true
+	default:
 		return nil, false
 	}
-	feePayerTxn := txn.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
-	return &SignedTransaction{
-		Transaction: feePayerTxn.RawTxn,
-		Authenticator: &TransactionAuthenticator{
-			Variant: TransactionAuthenticatorFeePayer,
-			Auth: &FeePayerTransactionAuthenticator{
-				Sender:                   sender,
-				SecondarySignerAddresses: feePayerTxn.SecondarySigners,
-				SecondarySigners:         additionalSigners,
-				FeePayer:                 feePayerTxn.FeePayer,
-				FeePayerAuthenticator:    feePayerAuthenticator,
-			},
-		},
-	}, true
 }
 
 // region RawTransactionWithData Signer

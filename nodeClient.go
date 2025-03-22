@@ -1107,7 +1107,11 @@ func (rc *NodeClient) AccountAPTBalance(account AccountAddress, ledgerVersion ..
 	if err != nil {
 		return 0, err
 	}
-	return StrToUint64(values[0].(string))
+	str, ok := values[0].(string)
+	if !ok {
+		return 0, errors.New("account balance err: could not convert account bytes")
+	}
+	return StrToUint64(str)
 }
 
 // NodeAPIHealthCheck performs a health check on the node

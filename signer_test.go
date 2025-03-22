@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"errors"
 	"math/rand/v2"
 
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
@@ -41,12 +42,20 @@ func (s *MultiEd25519TestSigner) Sign(msg []byte) (*crypto.AccountAuthenticator,
 	if err != nil {
 		return nil, err
 	}
+	pubkey, ok := s.PubKey().(*crypto.MultiEd25519PublicKey)
+	if !ok {
+		return nil, errors.New("invalid MultiEd25519 public key")
+	}
+	sig, ok := signature.(*crypto.MultiEd25519Signature)
+	if !ok {
+		return nil, errors.New("invalid MultiEd25519 signature")
+	}
 
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorMultiEd25519,
 		Auth: &crypto.MultiEd25519Authenticator{
-			PubKey: s.PubKey().(*crypto.MultiEd25519PublicKey),
-			Sig:    signature.(*crypto.MultiEd25519Signature),
+			PubKey: pubkey,
+			Sig:    sig,
 		},
 	}, nil
 }
@@ -58,7 +67,11 @@ func (s *MultiEd25519TestSigner) SignMessage(msg []byte) (crypto.Signature, erro
 		if err != nil {
 			return nil, err
 		}
-		signatures[i] = sig.(*crypto.Ed25519Signature)
+		typedSig, ok := sig.(*crypto.Ed25519Signature)
+		if !ok {
+			return nil, errors.New("invalid Ed25519 signature")
+		}
+		signatures[i] = typedSig
 	}
 
 	return &crypto.MultiEd25519Signature{
@@ -74,7 +87,11 @@ func (s *MultiEd25519TestSigner) AuthKey() *crypto.AuthenticationKey {
 func (s *MultiEd25519TestSigner) PubKey() crypto.PublicKey {
 	pubKeys := make([]*crypto.Ed25519PublicKey, len(s.Keys))
 	for i, key := range s.Keys {
-		pubKeys[i] = key.PubKey().(*crypto.Ed25519PublicKey)
+		pubkey, ok := key.PubKey().(*crypto.Ed25519PublicKey)
+		if !ok {
+			return nil
+		}
+		pubKeys[i] = pubkey
 	}
 
 	key := &crypto.MultiEd25519PublicKey{
@@ -114,7 +131,11 @@ func NewMultiKeyTestSigner(numKeys uint8, signaturesRequired uint8) (*MultiKeyTe
 
 	pubKeys := make([]*crypto.AnyPublicKey, len(signers))
 	for i, key := range signers {
-		pubKeys[i] = key.PubKey().(*crypto.AnyPublicKey)
+		pubkey, ok := key.PubKey().(*crypto.AnyPublicKey)
+		if !ok {
+			return nil, errors.New("invalid MultiEd25519 public key")
+		}
+		pubKeys[i] = pubkey
 	}
 
 	pubKey := &crypto.MultiKey{
@@ -141,11 +162,20 @@ func (s *MultiKeyTestSigner) Sign(msg []byte) (*crypto.AccountAuthenticator, err
 		return nil, err
 	}
 
+	pubkey, ok := s.PubKey().(*crypto.MultiKey)
+	if !ok {
+		return nil, errors.New("invalid Multikey public key")
+	}
+	sig, ok := signature.(*crypto.MultiKeySignature)
+	if !ok {
+		return nil, errors.New("invalid Multikey signature")
+	}
+
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorMultiKey,
 		Auth: &crypto.MultiKeyAuthenticator{
-			PubKey: s.PubKey().(*crypto.MultiKey),
-			Sig:    signature.(*crypto.MultiKeySignature),
+			PubKey: pubkey,
+			Sig:    sig,
 		},
 	}, nil
 }
@@ -178,17 +208,25 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 			return nil, err
 		}
 
-		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: u8Index}
+		typedSig, ok := sig.(*crypto.AnySignature)
+		if !ok {
+			return nil, errors.New("invalid AnySignature")
+		}
+		indexedSigs[i] = crypto.IndexedAnySignature{Signature: typedSig, Index: u8Index}
 	}
 
 	return crypto.NewMultiKeySignature(indexedSigs)
 }
 
 func (s *MultiKeyTestSigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
+	pubkey, ok := s.PubKey().(*crypto.MultiKey)
+	if !ok {
+		return nil
+	}
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorMultiKey,
 		Auth: &crypto.MultiKeyAuthenticator{
-			PubKey: s.PubKey().(*crypto.MultiKey),
+			PubKey: pubkey,
 			Sig:    &crypto.MultiKeySignature{},
 		},
 	}

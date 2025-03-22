@@ -64,9 +64,12 @@ func TestSecp256k1Keys(t *testing.T) {
 	assert.Equal(t, publicKey, authenticator.PubKey())
 
 	// Check signature (without a recovery bit)
-	actualSignature := authenticator.Signature().(*AnySignature)
+	actualSignature, ok := authenticator.Signature().(*AnySignature)
+	require.True(t, ok)
 	assert.Equal(t, len(testSecp256k1Signature), len(actualSignature.Signature.ToHex()))
-	assert.Equal(t, testSecp256k1Signature, actualSignature.Signature.(*Secp256k1Signature).ToHex())
+	secp256k1Signature, ok := actualSignature.Signature.(*Secp256k1Signature)
+	require.True(t, ok)
+	assert.Equal(t, testSecp256k1Signature, secp256k1Signature.ToHex())
 
 	// Verify signature with the key and the authenticator directly
 	assert.True(t, authenticator.Verify(message))
@@ -142,7 +145,9 @@ func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	// Recover the public key
-	recoveredKey, err := signature.(*Secp256k1Signature).RecoverPublicKey(message, 1)
+	sig, ok := signature.(*Secp256k1Signature)
+	require.True(t, ok)
+	recoveredKey, err := sig.RecoverPublicKey(message, 1)
 	require.NoError(t, err)
 
 	// Verify the signature with the key
@@ -152,7 +157,9 @@ func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
 	// Also try with the recovery bit attached to the signature
 	anyPubKey, err := ToAnyPublicKey(privateKey.VerifyingKey())
 	require.NoError(t, err)
-	recoveredKey2, err := signature.(*Secp256k1Signature).RecoverSecp256k1PublicKeyWithAuthenticationKey(message, anyPubKey.AuthKey())
+	sig2, ok := signature.(*Secp256k1Signature)
+	require.True(t, ok)
+	recoveredKey2, err := sig2.RecoverSecp256k1PublicKeyWithAuthenticationKey(message, anyPubKey.AuthKey())
 	require.NoError(t, err)
 	assert.Equal(t, privateKey.VerifyingKey().ToHex(), recoveredKey2.ToHex())
 }

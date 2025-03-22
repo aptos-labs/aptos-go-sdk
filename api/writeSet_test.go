@@ -94,7 +94,8 @@ func TestWriteSet_WriteModule(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteModule, data.Type)
-	inner := data.Inner.(*WriteSetChangeWriteModule) // TODO: probably make this a bit cleaner with a function
+	inner, ok := data.Inner.(*WriteSetChangeWriteModule) // TODO: probably make this a bit cleaner with a function
+	require.True(t, ok)
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5")
 	require.NoError(t, err)
@@ -126,7 +127,8 @@ func TestWriteSet_WriteResource(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteResource, data.Type)
-	inner := data.Inner.(*WriteSetChangeWriteResource) // TODO: probably make this a bit cleaner with a function
+	inner, ok := data.Inner.(*WriteSetChangeWriteResource) // TODO: probably make this a bit cleaner with a function
+	require.True(t, ok)
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0xe42895bdea9ffef448368a95f51b4c883a8e025be3f8e7d08df39f46861a0dc5")
 	require.NoError(t, err)
@@ -148,7 +150,8 @@ func TestWriteSet_DeleteResource(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantDeleteResource, data.Type)
-	inner := data.Inner.(*WriteSetChangeDeleteResource) // TODO: probably make this a bit cleaner with a function
+	inner, ok := data.Inner.(*WriteSetChangeDeleteResource) // TODO: probably make this a bit cleaner with a function
+	require.True(t, ok)
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
 	require.NoError(t, err)
@@ -172,7 +175,8 @@ func TestWriteSet_WriteTableItem(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantWriteTableItem, data.Type)
-	inner := data.Inner.(*WriteSetChangeWriteTableItem) // TODO: probably make this a bit cleaner with a function
+	inner, ok := data.Inner.(*WriteSetChangeWriteTableItem) // TODO: probably make this a bit cleaner with a function
+	require.True(t, ok)
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
 	require.NoError(t, err)
@@ -197,7 +201,8 @@ func TestWriteSet_DeleteTableItem(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, WriteSetChangeVariantDeleteTableItem, data.Type)
-	inner := data.Inner.(*WriteSetChangeDeleteTableItem) // TODO: probably make this a bit cleaner with a function
+	inner, ok := data.Inner.(*WriteSetChangeDeleteTableItem) // TODO: probably make this a bit cleaner with a function
+	require.True(t, ok)
 	expectedAddress := &types.AccountAddress{}
 	err = expectedAddress.ParseStringRelaxed("0x307401f7dd9ca5371ed820070dabaff6cf2196b500c0e359c0e388897987ca6a")
 	require.NoError(t, err)

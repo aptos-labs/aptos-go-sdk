@@ -50,9 +50,10 @@ func (o *Signature) UnmarshalJSON(b []byte) error {
 	case SignatureVariantMultiEd25519:
 		o.Inner = &MultiEd25519Signature{}
 	default:
-		o.Inner = &UnknownSignature{Type: string(o.Type)}
+		sig := &UnknownSignature{Type: string(o.Type)}
+		o.Inner = sig
 		o.Type = SignatureVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*UnknownSignature).Payload)
+		return json.Unmarshal(b, &sig.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }

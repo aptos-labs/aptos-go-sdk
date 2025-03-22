@@ -960,7 +960,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 			return errors.New("no address result available")
 		}
 
-		if !slices.Equal(expected.([]AccountAddress), result) {
+		addrs, ok := expected.([]AccountAddress)
+		if !ok {
+			return errors.New("no expected addresses available")
+		}
+		if !slices.Equal(addrs, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "bool":
@@ -968,7 +972,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no bool result available")
 		}
-		if !slices.Equal(expected.([]bool), result) {
+		b, ok := expected.([]bool)
+		if !ok {
+			return errors.New("no bool result available")
+		}
+		if !slices.Equal(b, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "u8":
@@ -976,7 +984,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u8 result available")
 		}
-		if !slices.Equal(expected.([]uint8), result) {
+		ex, ok := expected.([]uint8)
+		if !ok {
+			return errors.New("no expected u8 result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "u16":
@@ -984,7 +996,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u16 result available")
 		}
-		if !slices.Equal(expected.([]uint16), result) {
+		ex, ok := expected.([]uint16)
+		if !ok {
+			return errors.New("no expected u16 result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "u32":
@@ -992,7 +1008,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u32 result available")
 		}
-		if !slices.Equal(expected.([]uint32), result) {
+		ex, ok := expected.([]uint32)
+		if !ok {
+			return errors.New("no expected u32 result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "u64":
@@ -1000,7 +1020,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u64 result available")
 		}
-		if !slices.Equal(expected.([]uint64), result) {
+		ex, ok := expected.([]uint64)
+		if !ok {
+			return errors.New("no expected u64 result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "u128":
@@ -1008,7 +1032,10 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u128 result available")
 		}
-		expectedInts := expected.([]*big.Int)
+		expectedInts, ok := expected.([]*big.Int)
+		if !ok {
+			return errors.New("no expected u128 result available")
+		}
 		if len(expectedInts) != len(result) {
 			return fmt.Errorf("expected %v, but received %v", expectedInts, result)
 		}
@@ -1022,7 +1049,10 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no u256 result available")
 		}
-		expectedInts := expected.([]*big.Int)
+		expectedInts, ok := expected.([]*big.Int)
+		if !ok {
+			return errors.New("no expected u256 result available")
+		}
 		if len(expectedInts) != len(result) {
 			return fmt.Errorf("expected %v, but received %v", expectedInts, result)
 		}
@@ -1036,7 +1066,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no uleb128 result available")
 		}
-		if !slices.Equal(expected.([]uint32), result) {
+		ex, ok := expected.([]uint32)
+		if !ok {
+			return errors.New("no expected uleb128 result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	case "string":
@@ -1044,7 +1078,11 @@ func sequenceResult(ctx context.Context, itemType string, expectedList string) e
 		if !ok {
 			return errors.New("no string result available")
 		}
-		if !slices.Equal(expected.([]string), result) {
+		ex, ok := expected.([]string)
+		if !ok {
+			return errors.New("no string result available")
+		}
+		if !slices.Equal(ex, result) {
 			return fmt.Errorf("expected %v, but received %v", expected, result)
 		}
 	default:

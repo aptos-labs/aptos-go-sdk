@@ -72,67 +72,82 @@ func (o *CommittedTransaction) UnmarshalJSON(b []byte) error {
 	case TransactionVariantValidator:
 		o.Inner = &ValidatorTransaction{}
 	default:
-		o.Inner = &UnknownTransaction{Type: string(o.Type)}
+		sig := &UnknownTransaction{Type: string(o.Type)}
+		o.Inner = sig
 		o.Type = TransactionVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*UnknownTransaction).Payload)
+		return json.Unmarshal(b, &sig.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 // UserTransaction changes the transaction to a [UserTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) UserTransaction() (*UserTransaction, error) {
-	if o.Type == TransactionVariantUser {
-		return o.Inner.(*UserTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *UserTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 }
 
 // GenesisTransaction changes the transaction to a [GenesisTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) GenesisTransaction() (*GenesisTransaction, error) {
-	if o.Type == TransactionVariantGenesis {
-		return o.Inner.(*GenesisTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *GenesisTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 }
 
 // BlockMetadataTransaction changes the transaction to a [BlockMetadataTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
-	if o.Type == TransactionVariantBlockMetadata {
-		return o.Inner.(*BlockMetadataTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *BlockMetadataTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not block_metadata: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
 // BlockEpilogueTransaction changes the transaction to a [BlockEpilogueTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) BlockEpilogueTransaction() (*BlockEpilogueTransaction, error) {
-	if o.Type == TransactionVariantBlockEpilogue {
-		return o.Inner.(*BlockEpilogueTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *BlockEpilogueTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not block_epilogue: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not block epilogue: %s", o.Type)
 }
 
 // StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
-	if o.Type == TransactionVariantStateCheckpoint {
-		return o.Inner.(*StateCheckpointTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *StateCheckpointTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not state_checkpoint: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
 }
 
 // ValidatorTransaction changes the transaction to a [ValidatorTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) ValidatorTransaction() (*ValidatorTransaction, error) {
-	if o.Type == TransactionVariantValidator {
-		return o.Inner.(*ValidatorTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *ValidatorTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
 }
 
 // UnknownTransaction changes the transaction to a [UnknownTransaction]; however, it will fail if it's not one.
 func (o *CommittedTransaction) UnknownTransaction() (*UnknownTransaction, error) {
-	if o.Type == TransactionVariantUnknown {
-		return o.Inner.(*UnknownTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *UnknownTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 }
 
 // Transaction is an enum type for all possible transactions on the blockchain
@@ -184,75 +199,92 @@ func (o *Transaction) UnmarshalJSON(b []byte) error {
 	case TransactionVariantValidator:
 		o.Inner = &ValidatorTransaction{}
 	default:
-		o.Inner = &UnknownTransaction{Type: string(o.Type)}
+		txn := &UnknownTransaction{Type: string(o.Type)}
+		o.Inner = txn
 		o.Type = TransactionVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*UnknownTransaction).Payload)
+		return json.Unmarshal(b, &txn.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
 
 // UserTransaction changes the transaction to a [UserTransaction]; however, it will fail if it's not one.
 func (o *Transaction) UserTransaction() (*UserTransaction, error) {
-	if o.Type == TransactionVariantUser {
-		return o.Inner.(*UserTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *UserTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not user: %s", o.Type)
 }
 
 // PendingTransaction changes the transaction to a [PendingTransaction]; however, it will fail if it's not one.
 func (o *Transaction) PendingTransaction() (*PendingTransaction, error) {
-	if o.Type == TransactionVariantPending {
-		return o.Inner.(*PendingTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *PendingTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not pending: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not pending: %s", o.Type)
 }
 
 // GenesisTransaction changes the transaction to a [GenesisTransaction]; however, it will fail if it's not one.
 func (o *Transaction) GenesisTransaction() (*GenesisTransaction, error) {
-	if o.Type == TransactionVariantGenesis {
-		return o.Inner.(*GenesisTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *GenesisTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not genesis: %s", o.Type)
 }
 
 // BlockMetadataTransaction changes the transaction to a [BlockMetadataTransaction]; however, it will fail if it's not one.
 func (o *Transaction) BlockMetadataTransaction() (*BlockMetadataTransaction, error) {
-	if o.Type == TransactionVariantBlockMetadata {
-		return o.Inner.(*BlockMetadataTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *BlockMetadataTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not block_metadata: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not block metadata: %s", o.Type)
 }
 
 // BlockEpilogueTransaction changes the transaction to a [BlockEpilogueTransaction]; however, it will fail if it's not one.
 func (o *Transaction) BlockEpilogueTransaction() (*BlockEpilogueTransaction, error) {
-	if o.Type == TransactionVariantBlockEpilogue {
-		return o.Inner.(*BlockEpilogueTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *BlockEpilogueTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not block_epilogue: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not block epilogue: %s", o.Type)
 }
 
 // StateCheckpointTransaction changes the transaction to a [StateCheckpointTransaction]; however, it will fail if it's not one.
 func (o *Transaction) StateCheckpointTransaction() (*StateCheckpointTransaction, error) {
-	if o.Type == TransactionVariantStateCheckpoint {
-		return o.Inner.(*StateCheckpointTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *StateCheckpointTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not state_checkpoint: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not state checkpoint: %s", o.Type)
 }
 
 // ValidatorTransaction changes the transaction to a [ValidatorTransaction]; however, it will fail if it's not one.
 func (o *Transaction) ValidatorTransaction() (*ValidatorTransaction, error) {
-	if o.Type == TransactionVariantValidator {
-		return o.Inner.(*ValidatorTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *ValidatorTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not validator: %s", o.Type)
 }
 
 // UnknownTransaction changes the transaction to a [UnknownTransaction]; however, it will fail if it's not one.
 func (o *Transaction) UnknownTransaction() (*UnknownTransaction, error) {
-	if o.Type == TransactionVariantUnknown {
-		return o.Inner.(*UnknownTransaction), nil
+	switch inner := o.Inner.(type) {
+	case *UnknownTransaction:
+		return inner, nil
+	default:
+		return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 	}
-	return nil, fmt.Errorf("transaction type is not unknown: %s", o.Type)
 }
 
 // TransactionImpl is an interface for all transactions
@@ -279,18 +311,27 @@ func (u *UnknownTransaction) TxnSuccess() *bool {
 	if success == nil {
 		return nil
 	}
-	successBool := success.(bool)
+	successBool, ok := success.(bool)
+	if !ok {
+		return nil
+	}
 	return &successBool
 }
 
 // TxnHash gives us the hash of the transaction.
 func (u *UnknownTransaction) TxnHash() Hash {
-	return u.Payload["hash"].(string)
+	if hash, ok := u.Payload["hash"].(string); ok {
+		return hash
+	}
+	return ""
 }
 
 // TxnVersion gives us the ledger version of the transaction. It will be nil if the transaction is not committed.
 func (u *UnknownTransaction) TxnVersion() *uint64 {
-	versionStr := u.Payload["version"].(string)
+	versionStr, ok := u.Payload["version"].(string)
+	if !ok {
+		return nil
+	}
 	num, err := util.StrToUint64(versionStr)
 	if err != nil {
 		return nil

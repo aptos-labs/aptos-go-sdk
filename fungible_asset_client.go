@@ -145,7 +145,12 @@ func (client *FungibleAssetClient) IsFrozen(storeAddress *AccountAddress, ledger
 	if err != nil {
 		return false, err
 	}
-	return val.(bool), nil
+
+	valBool, ok := val.(bool)
+	if !ok {
+		return false, errors.New("is_frozen is not a bool")
+	}
+	return valBool, nil
 }
 
 // IsUntransferable returns true if the store can't be transferred
@@ -154,7 +159,11 @@ func (client *FungibleAssetClient) IsUntransferable(storeAddress *AccountAddress
 	if err != nil {
 		return false, err
 	}
-	return val.(bool), err
+	valBool, ok := val.(bool)
+	if !ok {
+		return false, errors.New("is_untransferable is not a bool")
+	}
+	return valBool, nil
 }
 
 // StoreExists returns true if the store exists
@@ -163,8 +172,10 @@ func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress, led
 	if err != nil {
 		return false, err
 	}
-
-	return val.(bool), nil
+	if val, ok := val.(bool); ok {
+		return val, nil
+	}
+	return false, errors.New("store_exists is not a bool")
 }
 
 // StoreMetadata returns the [AccountAddress] of the metadata for the store
@@ -200,7 +211,11 @@ func (client *FungibleAssetClient) Name() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return val.(string), nil
+	str, ok := val.(string)
+	if !ok {
+		return "", errors.New("name is not a string")
+	}
+	return str, nil
 }
 
 // Symbol returns the symbol of the fungible asset
@@ -209,7 +224,11 @@ func (client *FungibleAssetClient) Symbol() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return val.(string), nil
+	str, ok := val.(string)
+	if !ok {
+		return "", errors.New("symbol is not a string")
+	}
+	return str, nil
 }
 
 // Decimals returns the number of decimal places for the fungible asset
@@ -218,7 +237,11 @@ func (client *FungibleAssetClient) Decimals() (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	return val.(uint8), nil
+	u8, ok := val.(uint8)
+	if !ok {
+		return 0, errors.New("decimals is not a uint8")
+	}
+	return u8, nil
 }
 
 // IconUri returns the URI of the icon for the fungible asset
@@ -227,7 +250,11 @@ func (client *FungibleAssetClient) IconUri() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return val.(string), nil
+	str, ok := val.(string)
+	if !ok {
+		return "", errors.New("icon_uri is not a string")
+	}
+	return str, nil
 }
 
 // ProjectUri returns the URI of the project for the fungible asset
@@ -236,7 +263,11 @@ func (client *FungibleAssetClient) ProjectUri() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return val.(string), nil
+	str, ok := val.(string)
+	if !ok {
+		return "", errors.New("project_uri is not a string")
+	}
+	return str, nil
 }
 
 // viewMetadata calls a view function on the fungible asset metadata
@@ -319,7 +350,10 @@ func unwrapObject(val any) (*AccountAddress, error) {
 	if !ok {
 		return nil, errors.New("bad view return from node, could not unwrap object")
 	}
-	addressString := inner["inner"].(string)
+	addressString, ok := inner["inner"].(string)
+	if !ok {
+		return nil, errors.New("bad view return from node, could not unwrap object")
+	}
 	address := &AccountAddress{}
 	err := address.ParseStringRelaxed(addressString)
 	if err != nil {
@@ -335,7 +369,10 @@ func unwrapAggregator(val any) (*big.Int, error) {
 	if !ok {
 		return nil, errors.New("bad view return from node, could not unwrap aggregator")
 	}
-	vals := inner["vec"].([]any)
+	vals, ok := inner["vec"].([]any)
+	if !ok {
+		return nil, errors.New("bad view return from node, could not unwrap aggregator")
+	}
 	if len(vals) == 0 {
 		return nil, errors.New("aggregator returned no values")
 	}
