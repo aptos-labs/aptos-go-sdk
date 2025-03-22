@@ -7,7 +7,7 @@ import (
 )
 
 // ClientHeader is the header key for the SDK version
-const ClientHeader = "x-aptos-client"
+const ClientHeader = "X-Aptos-Client"
 
 // ClientHeaderValue is the header value for the SDK version
 var ClientHeaderValue = "aptos-go-sdk/unk"
