@@ -28,7 +28,8 @@ func TestPayload_EntryFunction(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, TransactionPayloadVariantEntryFunction, data.Type)
-	payload := data.Inner.(*TransactionPayloadEntryFunction)
+	payload, ok := data.Inner.(*TransactionPayloadEntryFunction)
+	require.True(t, ok)
 
 	assert.Equal(t, "0x1::object::transfer", payload.Function)
 	assert.Len(t, payload.TypeArguments, 1)
@@ -66,7 +67,8 @@ func TestPayload_Script(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, TransactionPayloadVariantScript, data.Type)
-	payload := data.Inner.(*TransactionPayloadScript)
+	payload, ok := data.Inner.(*TransactionPayloadScript)
+	require.True(t, ok)
 
 	assert.Len(t, payload.Code.Bytecode, 263)
 	assert.Equal(t, "main", payload.Code.Abi.Name)
@@ -97,7 +99,8 @@ func TestPayload_Multisig(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, TransactionPayloadVariantMultisig, data.Type)
-	payload := data.Inner.(*TransactionPayloadMultisig)
+	payload, ok := data.Inner.(*TransactionPayloadMultisig)
+	require.True(t, ok)
 	assert.Equal(t, types.AccountOne, *payload.MultisigAddress)
 }
 
@@ -122,8 +125,11 @@ func TestPayload_Unknown(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, TransactionPayloadVariantUnknown, data.Type)
-	payload := data.Inner.(*TransactionPayloadUnknown)
+	payload, ok := data.Inner.(*TransactionPayloadUnknown)
+	require.True(t, ok)
 
 	assert.Equal(t, "new_payload", payload.Type)
-	assert.True(t, payload.Payload["something"].(bool))
+	val, ok := payload.Payload["something"].(bool)
+	require.True(t, ok)
+	assert.True(t, val)
 }

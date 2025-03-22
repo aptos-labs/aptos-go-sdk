@@ -87,10 +87,14 @@ func (key *SingleSigner) Sign(msg []byte) (*AccountAuthenticator, error) {
 // Implements:
 //   - [Signer]
 func (key *SingleSigner) SimulationAuthenticator() *AccountAuthenticator {
+	pubKey, ok := key.PubKey().(*AnyPublicKey)
+	if !ok {
+		return nil
+	}
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorSingleSender,
 		Auth: &SingleKeyAuthenticator{
-			PubKey: key.PubKey().(*AnyPublicKey),
+			PubKey: pubKey,
 			Sig:    key.EmptySignature(),
 		},
 	}

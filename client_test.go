@@ -34,23 +34,23 @@ func initSigners() {
 	TestSigners = make(map[string]CreateSigner)
 	TestSigners["Standard Ed25519"] = func() (TransactionSigner, error) {
 		signer, err := NewEd25519Account()
-		return any(signer).(TransactionSigner), err
+		return signer, err
 	}
 	TestSigners["Single Sender Ed25519"] = func() (TransactionSigner, error) {
 		signer, err := NewEd25519SingleSenderAccount()
-		return any(signer).(TransactionSigner), err
+		return signer, err
 	}
 	TestSigners["Single Sender Secp256k1"] = func() (TransactionSigner, error) {
 		signer, err := NewSecp256k1Account()
-		return any(signer).(TransactionSigner), err
+		return signer, err
 	}
 	TestSigners["2-of-3 MultiKey"] = func() (TransactionSigner, error) {
 		signer, err := NewMultiKeyTestSigner(3, 2)
-		return any(signer).(TransactionSigner), err
+		return signer, err
 	}
 	TestSigners["5-of-32 MultiKey"] = func() (TransactionSigner, error) {
 		signer, err := NewMultiKeyTestSigner(32, 5)
-		return any(signer).(TransactionSigner), err
+		return signer, err
 	}
 	/* TODO: MultiEd25519 is not supported ATM
 	TestSigners["MultiEd25519"] = func() (TransactionSigner, error) {
@@ -675,7 +675,9 @@ func TestClient_View(t *testing.T) {
 	vals, err := client.View(payload)
 	require.NoError(t, err)
 	assert.Len(t, vals, 1)
-	_, err = StrToUint64(vals[0].(string))
+	str, ok := vals[0].(string)
+	require.True(t, ok)
+	_, err = StrToUint64(str)
 	require.NoError(t, err)
 }
 

@@ -144,9 +144,14 @@ func createMultiKeySignature(t *testing.T, index1 uint8, key1 *SingleSigner, ind
 	err = bitmap.AddKey(index2)
 	require.NoError(t, err)
 
+	anySig1, ok := sig1.(*AnySignature)
+	require.True(t, ok)
+	anySig2, ok := sig2.(*AnySignature)
+	require.True(t, ok)
+
 	sig, err := NewMultiKeySignature([]IndexedAnySignature{
-		{Index: index1, Signature: sig1.(*AnySignature)},
-		{Index: index2, Signature: sig2.(*AnySignature)},
+		{Index: index1, Signature: anySig1},
+		{Index: index2, Signature: anySig2},
 	})
 	require.NoError(t, err)
 	return sig

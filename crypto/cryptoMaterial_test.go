@@ -72,8 +72,17 @@ func init() {
 		panic("Failed to create ed25519 private key" + err.Error())
 	}
 
+	pubkey1, ok := ed25519PrivateKey.PubKey().(*Ed25519PublicKey)
+	if !ok {
+		panic("Failed to assert pubkey1")
+	}
+	pubkey2, ok := key2.PubKey().(*Ed25519PublicKey)
+	if !ok {
+		panic("Failed to assert pubkey2")
+	}
+
 	multiEd25519 := &MultiEd25519PublicKey{
-		PubKeys:            []*Ed25519PublicKey{ed25519PrivateKey.PubKey().(*Ed25519PublicKey), key2.PubKey().(*Ed25519PublicKey)},
+		PubKeys:            []*Ed25519PublicKey{pubkey1, pubkey2},
 		SignaturesRequired: 1,
 	}
 	materials["multied25519"] = multiEd25519
@@ -81,8 +90,17 @@ func init() {
 	materials["multied25519AuthKey"] = multiEd25519.AuthKey()
 	structs["multied25519AuthKey"] = multiEd25519.AuthKey()
 
+	pubkey3, ok := ed25519SingleSender.PubKey().(*AnyPublicKey)
+	if !ok {
+		panic("Failed to assert pubkey3")
+	}
+	pubkey4, ok := secp256k1SingleSender.PubKey().(*AnyPublicKey)
+	if !ok {
+		panic("Failed to assert pubkey4")
+	}
+
 	multiKey := &MultiKey{
-		PubKeys:            []*AnyPublicKey{ed25519SingleSender.PubKey().(*AnyPublicKey), secp256k1SingleSender.PubKey().(*AnyPublicKey)},
+		PubKeys:            []*AnyPublicKey{pubkey3, pubkey4},
 		SignaturesRequired: 1,
 	}
 	materials["multiKey"] = multiKey

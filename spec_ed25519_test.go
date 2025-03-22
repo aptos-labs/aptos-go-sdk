@@ -249,11 +249,15 @@ func Test_Spec_Ed25519_Authenticator(t *testing.T) {
 	emptySig := key1.EmptySignature()
 	assert.Equal(t, &crypto.Ed25519Signature{}, emptySig, "It should be able to generate an empty signature AccountAuthenticator")
 	emptyAuth := key1.SimulationAuthenticator()
+	pubkey, ok := pubKey1.(*crypto.Ed25519PublicKey)
+	require.True(t, ok)
+	sig, ok := emptySig.(*crypto.Ed25519Signature)
+	require.True(t, ok)
 	assert.Equal(t, &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorEd25519,
 		Auth: &crypto.Ed25519Authenticator{
-			PubKey: pubKey1.(*crypto.Ed25519PublicKey),
-			Sig:    emptySig.(*crypto.Ed25519Signature),
+			PubKey: pubkey,
+			Sig:    sig,
 		},
 	}, emptyAuth, "It should be able to generate an empty signature AccountAuthenticator")
 

@@ -38,9 +38,10 @@ func (o *WriteSet) UnmarshalJSON(b []byte) error {
 	case WriteSetVariantScript:
 		o.Inner = &ScriptWriteSet{}
 	default:
-		o.Inner = &UnknownWriteSet{Type: string(o.Type)}
+		writeSet := &UnknownWriteSet{Type: string(o.Type)}
+		o.Inner = writeSet
 		o.Type = WriteSetVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*UnknownWriteSet).Payload)
+		return json.Unmarshal(b, &writeSet.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }
@@ -112,9 +113,10 @@ func (o *WriteSetChange) UnmarshalJSON(b []byte) error {
 	case WriteSetChangeVariantDeleteTableItem:
 		o.Inner = &WriteSetChangeDeleteTableItem{}
 	default:
-		o.Inner = &WriteSetChangeUnknown{Type: string(o.Type)}
+		changeSet := &WriteSetChangeUnknown{Type: string(o.Type)}
+		o.Inner = changeSet
 		o.Type = WriteSetChangeVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*WriteSetChangeUnknown).Payload)
+		return json.Unmarshal(b, &changeSet.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }

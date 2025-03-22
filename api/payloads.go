@@ -50,9 +50,10 @@ func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 		o.Inner = &TransactionPayloadModuleBundle{}
 	default:
 		// Make sure it doesn't crash with new types
-		o.Inner = &TransactionPayloadUnknown{Type: string(o.Type)}
+		sig := &TransactionPayloadUnknown{Type: string(o.Type)}
+		o.Inner = sig
 		o.Type = TransactionPayloadVariantUnknown
-		return json.Unmarshal(b, &o.Inner.(*TransactionPayloadUnknown).Payload)
+		return json.Unmarshal(b, &sig.Payload)
 	}
 	return json.Unmarshal(b, o.Inner)
 }

@@ -73,10 +73,12 @@ func createMultiEd25519Key(t *testing.T) (
 	key1, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 	// TODO: Maybe we should have a typed function for the public keys
-	pubkey1 := key1.PubKey().(*Ed25519PublicKey)
+	pubkey1, ok := key1.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
 	key2, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
-	pubkey2 := key2.PubKey().(*Ed25519PublicKey)
+	pubkey2, ok := key2.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
 
 	publicKey := &MultiEd25519PublicKey{
 		PubKeys:            []*Ed25519PublicKey{pubkey1, pubkey2},
@@ -92,12 +94,16 @@ func createMultiEd25519Signature(t *testing.T, key1 *Ed25519PrivateKey, key2 *Ed
 	require.NoError(t, err)
 	sig2, err := key2.SignMessage(message)
 	require.NoError(t, err)
+	sig1Typed, ok := sig1.(*Ed25519Signature)
+	require.True(t, ok)
+	sig2Typed, ok := sig2.(*Ed25519Signature)
+	require.True(t, ok)
 
 	// TODO: This signature should be built easier, ergonomics to fix this late
 	return &MultiEd25519Signature{
 		Signatures: []*Ed25519Signature{
-			sig1.(*Ed25519Signature),
-			sig2.(*Ed25519Signature),
+			sig1Typed,
+			sig2Typed,
 		},
 		Bitmap: [4]byte([]byte("c0000000")),
 	}

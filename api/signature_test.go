@@ -18,7 +18,8 @@ func TestAccountAuthenticator_Unknown(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, SignatureVariantUnknown, data.Type)
-	auth := data.Inner.(*UnknownSignature)
+	auth, ok := data.Inner.(*UnknownSignature)
+	require.True(t, ok)
 
 	assert.Equal(t, "something", auth.Type)
 }
@@ -34,7 +35,8 @@ func TestAccountAuthenticator_Ed25519(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), &data)
 	require.NoError(t, err)
 	assert.Equal(t, SignatureVariantEd25519, data.Type)
-	auth := data.Inner.(*Ed25519Signature)
+	auth, ok := data.Inner.(*Ed25519Signature)
+	require.True(t, ok)
 
 	expectedPubKey := crypto.Ed25519PublicKey{}
 	err = expectedPubKey.FromHex("0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f")
