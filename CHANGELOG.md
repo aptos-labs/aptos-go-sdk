@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.6.0 (3/24/2025)
+
 - [`Feature`] Add the ability for ABI simple type conversion of entry function arguments with both remote and local ABI
 - Add ability to simulate for any transaction including multi-agent and fee payer
 - [`Fix`] Ensure proper cleanup of response body on read error to prevent potential memory leak.
@@ -16,7 +18,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Fix AptosRpcClient, AptosFaucetClient, AptosIndexerClient interfaces to be enforced on concrete types properly
 - [`Fix`] A few error case fixes and lint updates
 
-# v1.5.0 (2/10/2024)
+# v1.5.0 (2/10/2025)
 
 - [`Fix`] Make NodeClient match AptosRpcClient interface
 - [`Dependency`] Update `golang.org/x/crypto` to `v0.32.0`
@@ -24,7 +26,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Make NodeClient satisfy AptosRpcClient interface
 - [`Breaking`] Change Account signer input to use Address instead of AuthKey, authkey comes from the private key
 
-# v1.4.1 (01/02/2024)
+# v1.4.1 (01/02/2025)
 
 - [`Fix`] Non struct events, will have a field named `__any_data__` that contains the actual data of the struct
 
