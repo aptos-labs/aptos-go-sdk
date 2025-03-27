@@ -2,11 +2,13 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk"
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 const (
@@ -53,26 +55,50 @@ func NewLocalKeyStore(numKeys uint8) (*LocalKeyStore, error) {
 }
 
 func (lk *LocalKeyStore) Sign(num uint8, msg []byte) (*crypto.AccountAuthenticator, error) {
-	if num > uint8(len(lk.Signers)) {
-		return nil, fmt.Errorf("signer out of range")
+	numSigners, err := lk.numSigners()
+	if err != nil {
+		return nil, err
+	}
+	if num > numSigners {
+		return nil, errors.New("signer out of range")
 	}
 	return lk.Signers[num].Sign(msg)
 }
 
 func (lk *LocalKeyStore) SignMessage(num uint8, msg []byte) (crypto.Signature, error) {
-	if num > uint8(len(lk.Signers)) {
-		return nil, fmt.Errorf("signer out of range")
+	numSigners, err := lk.numSigners()
+	if err != nil {
+		return nil, err
+	}
+	if num > numSigners {
+		return nil, errors.New("signer out of range")
 	}
 	return lk.Signers[num].SignMessage(msg)
 }
 
+func (lk *LocalKeyStore) numSigners() (uint8, error) {
+	num, err := util.IntToU8(len(lk.Signers))
+	if err != nil {
+		return 0, err
+	}
+	return num, nil
+}
+
 func (lk *LocalKeyStore) NumSigners() uint8 {
-	return uint8(len(lk.Signers))
+	num, err := lk.numSigners()
+	if err != nil {
+		return 0
+	}
+	return num
 }
 
 func (lk *LocalKeyStore) PublicKey(num uint8) (crypto.PublicKey, error) {
-	if num > uint8(len(lk.Signers)) {
-		return nil, fmt.Errorf("signer out of range")
+	numSigners, err := lk.numSigners()
+	if err != nil {
+		return nil, err
+	}
+	if num > numSigners {
+		return nil, errors.New("signer out of range")
 	}
 	return lk.Signers[num].PubKey(), nil
 }
@@ -91,7 +117,11 @@ func NewMultiKeySigner(keystore KeyStore, signaturesRequired uint8) (*MultiKeySi
 		if err != nil {
 			return nil, err
 		}
-		pubKeys[i] = pubkey.(*crypto.AnyPublicKey)
+		pubkeyTyped, ok := pubkey.(*crypto.AnyPublicKey)
+		if !ok {
+			return nil, errors.New("public key is not of type AnyPublicKey")
+		}
+		pubKeys[i] = pubkeyTyped
 	}
 
 	totalPubkey := &crypto.MultiKey{
@@ -111,17 +141,25 @@ func (s *MultiKeySigner) AccountAddress() aptos.AccountAddress {
 	return address
 }
 
-func (s *MultiKeySigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (s *MultiKeySigner) Sign(msg []byte) (*crypto.AccountAuthenticator, error) {
 	signature, err := s.SignMessage(msg)
 	if err != nil {
 		return nil, err
 	}
 
+	pubkey, ok := s.PubKey().(*crypto.MultiKey)
+	if !ok {
+		return nil, errors.New("multi key is not of type MultiKey")
+	}
+	sig, ok := signature.(*crypto.MultiKeySignature)
+	if !ok {
+		return nil, errors.New("signature is not of type MultiKeySignature")
+	}
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorMultiKey,
 		Auth: &crypto.MultiKeyAuthenticator{
-			PubKey: s.PubKey().(*crypto.MultiKey),
-			Sig:    signature.(*crypto.MultiKeySignature),
+			PubKey: pubkey,
+			Sig:    sig,
 		},
 	}, nil
 }
@@ -129,25 +167,30 @@ func (s *MultiKeySigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenti
 func (s *MultiKeySigner) SignMessage(msg []byte) (crypto.Signature, error) {
 	indexedSigs := make([]crypto.IndexedAnySignature, s.SignaturesRequired)
 
-	for i := uint8(0); i < s.SignaturesRequired; i++ {
+	for i := range s.SignaturesRequired {
 		sig, err := s.Keystore.SignMessage(i, msg)
 		if err != nil {
 			return nil, err
 		}
-		if err != nil {
-			return nil, err
+		sigTyped, ok := sig.(*crypto.AnySignature)
+		if !ok {
+			return nil, errors.New("signature is not of type *AnySignature")
 		}
-		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sig.(*crypto.AnySignature), Index: i}
+		indexedSigs[i] = crypto.IndexedAnySignature{Signature: sigTyped, Index: i}
 	}
 
 	return crypto.NewMultiKeySignature(indexedSigs)
 }
 
 func (s *MultiKeySigner) SimulationAuthenticator() *crypto.AccountAuthenticator {
+	pubkey, ok := s.PubKey().(*crypto.MultiKey)
+	if !ok {
+		return nil
+	}
 	return &crypto.AccountAuthenticator{
 		Variant: crypto.AccountAuthenticatorMultiKey,
 		Auth: &crypto.MultiKeyAuthenticator{
-			PubKey: s.PubKey().(*crypto.MultiKey),
+			PubKey: pubkey,
 			Sig:    &crypto.MultiKeySignature{},
 		},
 	}

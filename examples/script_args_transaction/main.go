@@ -89,8 +89,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_u16 := []uint16{1, 2, 3, 4, 5}
-
-	vec_u16_len, err := bcs.SerializeUleb128(uint32(len(vec_u16)))
+	uleb, err := util.IntToU32(len(vec_u16))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_u16_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -106,7 +109,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_u32 := []uint32{1, 2, 3, 4, 5}
-	vec_u32_len, err := bcs.SerializeUleb128(uint32(len(vec_u32)))
+	uleb, err = util.IntToU32(len(vec_u32))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_u32_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -121,7 +128,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_u64 := []uint64{1, 2, 3, 4, 5}
-	vec_u64_len, err := bcs.SerializeUleb128(uint32(len(vec_u64)))
+	uleb, err = util.IntToU32(len(vec_u64))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_u64_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -136,7 +147,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_u128 := []big.Int{*big.NewInt(1), *big.NewInt(1), *big.NewInt(2), *big.NewInt(3), *big.NewInt(4)}
-	vec_u128_len, err := bcs.SerializeUleb128(uint32(len(vec_u128)))
+	uleb, err = util.IntToU32(len(vec_u128))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_u128_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -151,7 +166,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_u256 := []big.Int{*big.NewInt(1), *big.NewInt(1), *big.NewInt(2), *big.NewInt(3), *big.NewInt(4)}
-	vec_u256_len, err := bcs.SerializeUleb128(uint32(len(vec_u256)))
+	uleb, err = util.IntToU32(len(vec_u256))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_u256_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -166,7 +185,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_address := []aptos.AccountAddress{alice.AccountAddress(), alice.AccountAddress(), alice.AccountAddress(), alice.AccountAddress(), alice.AccountAddress()}
-	vec_address_len, err := bcs.SerializeUleb128(uint32(len(vec_address)))
+	uleb, err = util.IntToU32(len(vec_address))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_address_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -180,7 +203,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	}
 
 	vec_string := []string{"string", "string", "string", "string", "string"}
-	vec_string_len, err := bcs.SerializeUleb128(uint32(len(vec_string)))
+	uleb, err = util.IntToU32(len(vec_string))
+	if err != nil {
+		panic("Failed to convert vec length:" + err.Error())
+	}
+	vec_string_len, err := bcs.SerializeUleb128(uleb)
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
@@ -188,7 +215,11 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	vec_string_arg = append(vec_string_arg, vec_string_len...)
 
 	for _, v := range vec_string {
-		string_len, err := bcs.SerializeUleb128(uint32(len([]byte(v))))
+		uleb, err = util.IntToU32(len([]byte(v)))
+		if err != nil {
+			panic("Failed to convert vec length:" + err.Error())
+		}
+		string_len, err := bcs.SerializeUleb128(uleb)
 		if err != nil {
 			panic("Failed to serialize uleb128:" + err.Error())
 		}

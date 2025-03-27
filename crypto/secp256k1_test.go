@@ -66,7 +66,7 @@ func TestSecp256k1Keys(t *testing.T) {
 	// Check signature (without a recovery bit)
 	actualSignature, ok := authenticator.Signature().(*AnySignature)
 	require.True(t, ok)
-	assert.Equal(t, len(testSecp256k1Signature), len(actualSignature.Signature.ToHex()))
+	assert.Len(t, actualSignature.Signature.ToHex(), len(testSecp256k1Signature))
 	secp256k1Signature, ok := actualSignature.Signature.(*Secp256k1Signature)
 	require.True(t, ok)
 	assert.Equal(t, testSecp256k1Signature, secp256k1Signature.ToHex())

@@ -2,6 +2,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -31,15 +32,19 @@ func (signer *ExternalSigner) ToHex() string {
 	return ""
 }
 
-func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.AccountAuthenticator, err error) {
+func (signer *ExternalSigner) Sign(msg []byte) (*crypto.AccountAuthenticator, error) {
 	sig, err := signer.SignMessage(msg)
 	if err != nil {
 		return nil, err
 	}
 	pubKey := signer.PublicKey()
+	sigTyped, ok := sig.(*crypto.Ed25519Signature)
+	if !ok {
+		return nil, errors.New("signature is not of type Ed25519Signature")
+	}
 	auth := &crypto.Ed25519Authenticator{
 		PubKey: pubKey,
-		Sig:    sig.(*crypto.Ed25519Signature),
+		Sig:    sigTyped,
 	}
 	// TODO: maybe make convenience functions for this
 	return &crypto.AccountAuthenticator{
@@ -48,7 +53,7 @@ func (signer *ExternalSigner) Sign(msg []byte) (authenticator *crypto.AccountAut
 	}, nil
 }
 
-func (signer *ExternalSigner) SignMessage(msg []byte) (signature crypto.Signature, err error) {
+func (signer *ExternalSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 	sigBytes := ed25519.Sign(signer.privateKey, msg)
 	sig := &crypto.Ed25519Signature{}
 	copy(sig.Inner[:], sigBytes)
@@ -93,6 +98,9 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Fund the sender with the faucet to create it on-chain
 	err = client.Fund(sender.Address, 100_000_000)
+	if err != nil {
+		panic("Failed to fund:" + err.Error())
+	}
 	fmt.Printf("We fund the signer account %s with the faucet\n", sender.Address.String())
 
 	// Prep arguments
