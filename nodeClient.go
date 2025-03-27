@@ -737,14 +737,14 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
 
-	for opti, option := range options {
+	for _, option := range options {
 		switch ovalue := option.(type) {
 		case FeePayer:
 			feePayer = ovalue
 		case AdditionalSigners:
 			additionalSigners = ovalue
 		default:
-			return nil, fmt.Errorf("APTTransferTransaction arg [%d] unknown option type %T", opti+4, option)
+			// Silently ignore unknown arguments, as there are types that are passed down further
 		}
 	}
 
