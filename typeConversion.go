@@ -673,7 +673,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 			case "option":
 				if structTag.Name == "Option" {
 					// Check it has the proper inner type
-					if 1 != len(structTag.TypeParams) {
+					if len(structTag.TypeParams) != 1 {
 						return nil, errors.New("invalid input type for option, must have exactly one type arg")
 					}
 					// Get inner type

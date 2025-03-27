@@ -33,6 +33,9 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Fund the sender with the faucet to create it on-chain
 	err = client.Fund(sender.Address, 100_000_000)
+	if err != nil {
+		panic("Failed to fund:" + err.Error())
+	}
 
 	println("Fund sender:", time.Since(before).Milliseconds(), "ms")
 
@@ -87,7 +90,10 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Wait for transaction:", time.Since(before).Milliseconds(), "ms")
 
 	println("Total time:    ", time.Since(start).Milliseconds(), "ms")
-	txnStr, _ := json.Marshal(txn)
+	txnStr, err := json.Marshal(txn)
+	if err != nil {
+		panic("Failed to marshal transaction:" + err.Error())
+	}
 	println(string(txnStr))
 }
 

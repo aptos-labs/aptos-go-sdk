@@ -50,7 +50,13 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Publish the package for FA
 	metadataBytes, err := aptos.ParseHex(metadata)
+	if err != nil {
+		panic("Failed to parse metadata:" + err.Error())
+	}
 	bytecodeBytes, err := aptos.ParseHex(bytecode)
+	if err != nil {
+		panic("Failed to parse bytecode:" + err.Error())
+	}
 	payload, err := aptos.PublishPackagePayloadFromJsonFile(metadataBytes, [][]byte{bytecodeBytes})
 	if err != nil {
 		panic("Failed to create publish payload:" + err.Error())
@@ -63,8 +69,11 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to wait for publish transaction:" + err.Error())
 	}
-	if waitResponse.Success == false {
-		responseStr, _ := json.Marshal(response)
+	if !waitResponse.Success {
+		responseStr, err := json.Marshal(response)
+		if err != nil {
+			panic("Failed to marshal failure response:" + err.Error())
+		}
 		panic(fmt.Sprintf("Failed to publish transaction %s", responseStr))
 	}
 
@@ -80,8 +89,12 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to view fa address:" + err.Error())
 	}
+	viewStr, ok := viewResponse[0].(string)
+	if !ok {
+		panic("Failed to view fa address, not a string")
+	}
 	faMetadataAddress := &aptos.AccountAddress{}
-	err = faMetadataAddress.ParseStringRelaxed(viewResponse[0].(string))
+	err = faMetadataAddress.ParseStringRelaxed(viewStr)
 	if err != nil {
 		panic("Failed to parse fa address:" + err.Error())
 	}

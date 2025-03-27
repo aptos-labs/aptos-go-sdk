@@ -124,7 +124,7 @@ func assertBalance(client *aptos.Client, address aptos.AccountAddress, expectedB
 
 func generateOwnerAccounts() []*aptos.Account {
 	accounts := make([]*aptos.Account, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		account, err := aptos.NewEd25519Account()
 		if err != nil {
 			panic("Failed to create account " + err.Error())
@@ -199,15 +199,24 @@ func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddres
 		panic("Failed to get resource for multisig account: " + err.Error())
 	}
 	// TODO: Add JSON types
-	resourceData := resource["data"].(map[string]any)
+	resourceData, ok := resource["data"].(map[string]any)
+	if !ok {
+		panic("Failed to get resource data for multisig account")
+	}
 
-	numSigsRequiredStr := resourceData["num_signatures_required"].(string)
+	numSigsRequiredStr, ok := resourceData["num_signatures_required"].(string)
+	if !ok {
+		panic("Failed to get resource data for multisig account")
+	}
 
 	numSigsRequired, err := aptos.StrToUint64(numSigsRequiredStr)
 	if err != nil {
 		panic("Failed to convert string to u64: " + err.Error())
 	}
-	ownersArray := resourceData["owners"].([]any)
+	ownersArray, ok := resourceData["owners"].([]any)
+	if !ok {
+		panic("Failed to get resource data for multisig account")
+	}
 
 	return numSigsRequired, ownersArray
 }
@@ -319,7 +328,10 @@ func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.Tr
 	// TODO: make this a function on the user transaction
 	for _, event := range txn.Events {
 		if event.Type == "0x1::multisig_account::TransactionExecutionFailed" {
-			eventStr, _ := json.Marshal(event)
+			eventStr, err := json.Marshal(event)
+			if err != nil {
+				panic("Failed to marshal failure event: " + err.Error())
+			}
 			panic(fmt.Sprintf("Multisig transaction failed. details: %s", eventStr))
 		}
 	}

@@ -190,7 +190,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 		require.NoError(t, err)
 		assert.True(t, simulatedTxn[0].Success)
 		assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-		assert.Positive(t, simulatedTxn[0].GasUsed)
+		assert.Greater(t, simulatedTxn[0].GasUsed, uint64(1))
 	}
 
 	// simulate transaction (estimate gas unit price)
@@ -201,7 +201,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice := simulatedTxn[0].GasUnitPrice
-	assert.Positive(t, estimatedGasUnitPrice)
+	assert.Greater(t, estimatedGasUnitPrice, uint64(1))
 
 	// simulate transaction (estimate max gas amount)
 	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
@@ -210,7 +210,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	require.NoError(t, err)
 	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
-	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(1))
 
 	// simulate transaction (estimate prioritized gas unit price and max gas amount)
 	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
@@ -220,8 +220,8 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	assert.True(t, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
 	estimatedGasUnitPrice = simulatedTxn[0].GasUnitPrice
-	assert.Positive(t, estimatedGasUnitPrice)
-	assert.Positive(t, simulatedTxn[0].MaxGasAmount)
+	assert.Greater(t, estimatedGasUnitPrice, uint64(1))
+	assert.Greater(t, simulatedTxn[0].MaxGasAmount, uint64(1))
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
@@ -279,7 +279,7 @@ func Test_Indexer(t *testing.T) {
 	status, err := client.GetProcessorStatus("default_processor")
 	require.NoError(t, err)
 	// TODO: When we have waiting on indexer, we can add this check to be more accurate
-	assert.GreaterOrEqual(t, status, uint64(0))
+	assert.GreaterOrEqual(t, status, uint64(1))
 }
 
 func Test_Genesis(t *testing.T) {
@@ -510,7 +510,7 @@ func Test_Info(t *testing.T) {
 
 	info, err := client.Info()
 	require.NoError(t, err)
-	assert.Positive(t, info.BlockHeight())
+	assert.Greater(t, info.BlockHeight(), uint64(1))
 }
 
 func Test_AccountResources(t *testing.T) {

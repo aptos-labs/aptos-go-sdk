@@ -41,11 +41,10 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}
-	receiver := &aptos.AccountAddress{}
 
 	// Now run a script version
 	fmt.Printf("\n== Now running script version ==\n")
-	runScript(client, sender, receiver)
+	runScript(client, sender)
 
 	if err != nil {
 		panic("Failed to get store balance:" + err.Error())
@@ -53,7 +52,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// fmt.Printf("After Script: Receiver Before transfer: %d, after transfer: %d\n", receiverAfterBalance, receiverAfterAfterBalance)
 }
 
-func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAddress) {
+func runScript(client *aptos.Client, alice *aptos.Account) {
 	scriptBytes, err := aptos.ParseHex(TransferScriptPayload)
 	if err != nil {
 		panic("Failed to parse script:" + err.Error())

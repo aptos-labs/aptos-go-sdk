@@ -49,7 +49,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 
 	senderAddress := sender.AccountAddress()
 	sequenceNumber := uint64(0)
-	for i := uint64(0); i < numTransactions; i++ {
+	for i := range numTransactions {
 		rawTxn, err := client.BuildTransaction(senderAddress, payload, aptos.SequenceNumber(sequenceNumber))
 		if err != nil {
 			panic("Failed to build transaction:" + err.Error())
@@ -73,7 +73,7 @@ func sendManyTransactionsSerially(networkConfig aptos.NetworkConfig, numTransact
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
-	if response.Success == false {
+	if !response.Success {
 		panic("Transaction failed due to " + response.VmStatus)
 	}
 }
@@ -89,7 +89,7 @@ func sendManyTransactionsConcurrently(networkConfig aptos.NetworkConfig, numTran
 
 	// Submit transactions to goroutine
 	go func() {
-		for i := uint64(0); i < numTransactions; i++ {
+		for i := range numTransactions {
 			payloads <- aptos.TransactionBuildPayload{
 				Id:    i,
 				Type:  aptos.TransactionSubmissionTypeSingle,
