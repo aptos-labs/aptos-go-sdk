@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"sync"
-	"sync/atomic"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
 )
@@ -51,25 +50,6 @@ type WorkerPoolConfig struct {
 	SubmissionBuffer    uint32
 }
 
-type SequenceNumberTracker struct {
-	SequenceNumber atomic.Uint64
-}
-
-func (snt *SequenceNumberTracker) Increment() uint64 {
-	for {
-		seqNumber := snt.SequenceNumber.Load()
-		next := seqNumber + 1
-		ok := snt.SequenceNumber.CompareAndSwap(seqNumber, next)
-		if ok {
-			return seqNumber
-		}
-	}
-}
-
-func (snt *SequenceNumberTracker) Update(next uint64) uint64 {
-	return snt.SequenceNumber.Swap(next)
-}
-
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
 func (client *Client) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	client.nodeClient.BuildTransactions(sender, payloads, responses, setSequenceNumber, options...)
@@ -78,20 +58,18 @@ func (client *Client) BuildTransactions(sender AccountAddress, payloads chan Tra
 // BuildTransactions start a goroutine to process [TransactionPayload] and spit out [RawTransactionImpl].
 func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan TransactionBuildPayload, responses chan TransactionBuildResponse, setSequenceNumber chan uint64, options ...any) {
 	// Initialize state
+	defer close(responses)
 	account, err := rc.Account(sender)
 	if err != nil {
 		responses <- TransactionBuildResponse{Err: err}
-		close(responses)
 		return
 	}
 	sequenceNumber, err := account.SequenceNumber()
 	if err != nil {
 		responses <- TransactionBuildResponse{Err: err}
-		close(responses)
 		return
 	}
-	snt := &SequenceNumberTracker{}
-	snt.SequenceNumber.Store(sequenceNumber)
+	snt := sequenceNumber
 	optionsLast := len(options)
 	options = append(options, SequenceNumber(0))
 
@@ -100,13 +78,12 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 		case payload, ok := <-payloads:
 			// End if it's not closed
 			if !ok {
-				close(responses)
 				return
 			}
 			switch payload.Type {
 			case TransactionSubmissionTypeSingle:
-				curSequenceNumber := snt.Increment()
-				options[optionsLast] = SequenceNumber(curSequenceNumber)
+				options[optionsLast] = SequenceNumber(snt)
+				snt++
 				txnResponse, err := rc.BuildTransaction(sender, payload.Inner, options...)
 				if err != nil {
 					responses <- TransactionBuildResponse{Err: err}
@@ -114,8 +91,8 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 					responses <- TransactionBuildResponse{Response: txnResponse}
 				}
 			case TransactionSubmissionTypeMultiAgent:
-				curSequenceNumber := snt.Increment()
-				options[optionsLast] = SequenceNumber(curSequenceNumber)
+				options[optionsLast] = SequenceNumber(snt)
+				snt++
 				txnResponse, err := rc.BuildTransactionMultiAgent(sender, payload.Inner, options...)
 				if err != nil {
 					responses <- TransactionBuildResponse{Err: err}
@@ -127,7 +104,7 @@ func (rc *NodeClient) BuildTransactions(sender AccountAddress, payloads chan Tra
 			}
 		case newSequenceNumber := <-setSequenceNumber:
 			// This can be used to update the sequence number at anytime
-			snt.Update(newSequenceNumber)
+			snt = newSequenceNumber
 			// TODO: We should periodically handle reconciliation of the sequence numbers, but this needs to know submission as well
 		}
 	}
