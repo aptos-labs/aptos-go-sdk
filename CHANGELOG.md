@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Fix`] Enable users to simulate gas fee payer and multi agent transactions
+
 # v1.6.0 (3/24/2025)
 
 - [`Feature`] Add the ability for ABI simple type conversion of entry function arguments with both remote and local ABI
