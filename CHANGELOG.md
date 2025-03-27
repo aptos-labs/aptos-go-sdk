@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.6.1 (3/27/2025)
+
 - [`Refactor`] Remove unnecessary atomic swap in submit transactions
 - [`Fix`] Enable users to simulate gas fee payer and multi agent transactions
  
