@@ -260,7 +260,7 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 		// If it's generic
 		if strings.HasPrefix(str, "T") {
 			numStr := strings.TrimPrefix(str, "T")
-			num, err := strconv.ParseUint(numStr, 10, 32)
+			num, err := strconv.ParseUint(numStr, 10, 8)
 			if err != nil {
 				return nil, err
 			}
