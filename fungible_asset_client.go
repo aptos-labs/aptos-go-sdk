@@ -4,6 +4,8 @@ import (
 	"errors"
 	"math/big"
 	"strconv"
+
+	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
 // FungibleAssetClient This is an example client around a single fungible asset
@@ -29,14 +31,14 @@ func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (*F
 // -- Entry functions -- //
 
 // Transfer sends amount of the fungible asset from senderStore to receiverStore
-func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64) (*SignedTransaction, error) {
+func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64, options ...any) (*SignedTransaction, error) {
 	payload, err := FungibleAssetTransferPayload(client.metadataAddress, senderStore, receiverStore, amount)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build transaction
-	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
+	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload}, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,13 +49,13 @@ func (client *FungibleAssetClient) Transfer(sender TransactionSigner, senderStor
 }
 
 // TransferPrimaryStore sends amount of the fungible asset from the primary store of the sender to receiverAddress
-func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64) (*SignedTransaction, error) {
+func (client *FungibleAssetClient) TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64, options ...any) (*SignedTransaction, error) {
 	// Build transaction
 	payload, err := FungibleAssetPrimaryStoreTransferPayload(client.metadataAddress, receiverAddress, amount)
 	if err != nil {
 		return nil, err
 	}
-	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload})
+	rawTxn, err := client.aptosClient.BuildTransaction(sender.AccountAddress(), TransactionPayload{Payload: payload}, options...)
 	if err != nil {
 		return nil, err
 	}
@@ -115,7 +117,7 @@ func (client *FungibleAssetClient) PrimaryBalance(owner *AccountAddress, ledgerV
 
 // PrimaryIsFrozen returns true if the primary store for the owner is frozen
 func (client *FungibleAssetClient) PrimaryIsFrozen(owner *AccountAddress, ledgerVersion ...uint64) (bool, error) {
-	val, err := client.viewPrimaryStore([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen", ledgerVersion...)
+	val, err := client.viewPrimaryStoreMetadata([][]byte{owner[:], client.metadataAddress[:]}, "is_frozen", ledgerVersion...)
 	if err != nil {
 		return false, err
 	}
@@ -168,7 +170,16 @@ func (client *FungibleAssetClient) IsUntransferable(storeAddress *AccountAddress
 
 // StoreExists returns true if the store exists
 func (client *FungibleAssetClient) StoreExists(storeAddress *AccountAddress, ledgerVersion ...uint64) (bool, error) {
-	val, err := client.viewStore([][]byte{storeAddress[:]}, "store_exists", ledgerVersion...)
+	payload := &ViewPayload{
+		Module: ModuleId{
+			Address: AccountOne,
+			Name:    "fungible_asset",
+		},
+		Function: "store_exists",
+		ArgTypes: []TypeTag{},
+		Args:     [][]byte{storeAddress[:]},
+	}
+	val, err := client.view(payload, ledgerVersion...)
 	if err != nil {
 		return false, err
 	}
@@ -237,10 +248,15 @@ func (client *FungibleAssetClient) Decimals() (uint8, error) {
 	if err != nil {
 		return 0, err
 	}
-	u8, ok := val.(uint8)
+	fl, ok := val.(float64)
 	if !ok {
-		return 0, errors.New("decimals is not a uint8")
+		return 0, errors.New("decimals is not a float64")
 	}
+	u8, err := util.Float64ToU8(fl)
+	if err != nil {
+		return 0, err
+	}
+
 	return u8, nil
 }
 
@@ -290,20 +306,6 @@ func (client *FungibleAssetClient) viewStore(args [][]byte, functionName string,
 		Module: ModuleId{
 			Address: AccountOne,
 			Name:    "fungible_asset",
-		},
-		Function: functionName,
-		ArgTypes: []TypeTag{storeStructTag()},
-		Args:     args,
-	}
-	return client.view(payload, ledgerVersion...)
-}
-
-// viewPrimaryStore calls a view function on the primary fungible asset store
-func (client *FungibleAssetClient) viewPrimaryStore(args [][]byte, functionName string, ledgerVersion ...uint64) (any, error) {
-	payload := &ViewPayload{
-		Module: ModuleId{
-			Address: AccountOne,
-			Name:    "primary_fungible_store",
 		},
 		Function: functionName,
 		ArgTypes: []TypeTag{storeStructTag()},
@@ -374,7 +376,8 @@ func unwrapAggregator(val any) (*big.Int, error) {
 		return nil, errors.New("bad view return from node, could not unwrap aggregator")
 	}
 	if len(vals) == 0 {
-		return nil, errors.New("aggregator returned no values")
+		// Specifically in this case, there is no maximum, so we return -1
+		return big.NewInt(-1), nil
 	}
 	numStr, ok := vals[0].(string)
 	if !ok {

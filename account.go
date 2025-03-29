@@ -29,6 +29,9 @@ var AccountThree = types.AccountThree
 // AccountFour represents the 0x4 address
 var AccountFour = types.AccountFour
 
+// AccountTen represents the 0xA address
+var AccountTen = types.AccountTen
+
 // NewAccountFromSigner creates an account from a Signer, which is most commonly a private key
 func NewAccountFromSigner(signer crypto.Signer, accountAddress ...AccountAddress) (*Account, error) {
 	return types.NewAccountFromSigner(signer, accountAddress...)

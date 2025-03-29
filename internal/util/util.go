@@ -81,6 +81,20 @@ func UintToUBigInt(u uint) (*big.Int, error) {
 	return StrToBigInt(str)
 }
 
+func Float64ToU8(u float64) (uint8, error) {
+	switch {
+	case u > math.MaxUint8:
+		return 0, fmt.Errorf("u %f is greater than %d", u, math.MaxUint8)
+	case u < 0:
+		return 0, fmt.Errorf("u %f is less than 0", u)
+	case math.Floor(u) != u:
+		return 0, fmt.Errorf("u %f should be an integer", u)
+	default:
+		val := uint8(u)
+		return val, nil
+	}
+}
+
 func IntToU8(u int) (uint8, error) {
 	if u > math.MaxUint8 {
 		return 0, fmt.Errorf("u %d is greater than %d", u, math.MaxUint8)
