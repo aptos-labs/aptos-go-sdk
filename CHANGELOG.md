@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.6.2 (3/28/2025)
+
 - Limit generics to max 255 in types
 - [`Fix`] Add coverage and fix broken view calls in FungibleAssetClient
 
