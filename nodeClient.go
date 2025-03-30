@@ -35,15 +35,281 @@ const ContentTypeAptosSignedTxnBcs = "application/x.aptos.signed_transaction+bcs
 const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
 // NodeClient is a client for interacting with an Aptos node API
-type NodeClient struct {
+type NodeClient ExposedNodeClient
+
+// NewNodeClient creates a new client for interacting with an Aptos node API
+func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
+	client, err := NewExposedNodeClient(rpcUrl, chainId)
+	if err != nil {
+		return nil, err
+	}
+	return (*NodeClient)(client), nil
+}
+
+// NewNodeClientWithHttpClient creates a new client for interacting with an Aptos node API with a custom http.Client
+func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
+	nc, err := NewExposedNodeClientWithHttpClient(rpcUrl, chainId, client)
+	if err != nil {
+		return nil, err
+	}
+	return (*NodeClient)(nc), nil
+}
+
+// SetTimeout adjusts the HTTP client timeout
+//
+//	client.SetTimeout(5 * time.Millisecond)
+func (rc *NodeClient) SetTimeout(timeout time.Duration) {
+	(*ExposedNodeClient)(rc).SetTimeout(timeout)
+}
+
+// SetHeader sets the header for all future requests
+//
+//	client.SetHeader("Authorization", "Bearer abcde")
+func (rc *NodeClient) SetHeader(key string, value string) {
+	(*ExposedNodeClient)(rc).SetHeader(key, value)
+}
+
+// RemoveHeader removes the header from being automatically set all future requests.
+//
+//	client.RemoveHeader("Authorization")
+func (rc *NodeClient) RemoveHeader(key string) {
+	(*ExposedNodeClient)(rc).RemoveHeader(key)
+}
+
+// Info gets general information about the blockchain
+func (rc *NodeClient) Info() (info NodeInfo, err error) {
+	return (*ExposedNodeClient)(rc).Info(context.Background())
+
+}
+
+// Account gets information about an account for a given address
+//
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
+func (rc *NodeClient) Account(address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
+	return (*ExposedNodeClient)(rc).Account(context.Background(), address, ledgerVersion...)
+
+}
+
+// AccountResource fetches a resource for an account into a JSON-like map[string]any.
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
+//
+// For fetching raw Move structs as BCS, See #AccountResourceBCS
+func (rc *NodeClient) AccountResource(address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
+	return (*ExposedNodeClient)(rc).AccountResource(context.Background(), address, resourceType, ledgerVersion...)
+
+}
+
+// AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
+// For fetching raw Move structs as BCS, See #AccountResourcesBCS
+func (rc *NodeClient) AccountResources(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
+	return (*ExposedNodeClient)(rc).AccountResources(context.Background(), address, ledgerVersion...)
+}
+
+// AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
+// Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
+func (rc *NodeClient) AccountResourcesBCS(address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
+	return (*ExposedNodeClient)(rc).AccountResourcesBCS(context.Background(), address, ledgerVersion...)
+
+}
+
+// TransactionByHash gets info on a transaction
+// The transaction may be pending or recently committed.  If the transaction is a [api.PendingTransaction], then it is
+// still in the mempool.  If the transaction is any other type, it has been committed.
+//
+//	data, err := c.TransactionByHash("0xabcd")
+//	if err != nil {
+//		if httpErr, ok := err.(aptos.HttpError) {
+//			if httpErr.StatusCode == 404 {
+//				// if we're sure this has been submitted, assume it is still pending elsewhere in the mempool
+//			}
+//		}
+//	} else {
+//		if data["type"] == "pending_transaction" {
+//			// known to local mempool, but not committed yet
+//		}
+//	}
+func (rc *NodeClient) TransactionByHash(ctx context.Context, txnHash string) (data *api.Transaction, err error) {
+	return (*ExposedNodeClient)(rc).TransactionByHash(context.Background(), txnHash)
+
+}
+
+// TransactionByVersion gets info on a transaction by version number
+// The transaction will have been committed.  The response will not be of the type [api.PendingTransaction].
+func (rc *NodeClient) TransactionByVersion(ctx context.Context, version uint64) (data *api.CommittedTransaction, err error) {
+	return (*ExposedNodeClient)(rc).TransactionByVersion(context.Background(), version)
+
+}
+
+// BlockByVersion gets a block by a transaction's version number
+//
+// Note that this is not the same as a block's height.
+//
+// The function will fetch all transactions in the block if withTransactions is true.
+func (rc *NodeClient) BlockByVersion(ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
+	return (*ExposedNodeClient)(rc).BlockByVersion(context.Background(), ledgerVersion, withTransactions)
+}
+
+// BlockByHeight gets a block by block height
+//
+// The function will fetch all transactions in the block if withTransactions is true.
+func (rc *NodeClient) BlockByHeight(blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
+	return (*ExposedNodeClient)(rc).BlockByHeight(context.Background(), blockHeight, withTransactions)
+}
+
+// WaitForTransaction does a long-GET for one transaction and wait for it to complete.
+// Initially poll at 10 Hz for up to 1 second if node replies with 404 (wait for txn to propagate).
+//
+// Optional arguments:
+//   - PollPeriod: time.Duration, how often to poll for the transaction. Default 100ms.
+//   - PollTimeout: time.Duration, how long to wait for the transaction. Default 10s.
+func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (data *api.UserTransaction, err error) {
+	return (*ExposedNodeClient)(rc).WaitForTransaction(context.Background(), txnHash, options)
+}
+
+// PollForTransaction waits up to 10 seconds for a transaction to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+// Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
+func (rc *NodeClient) PollForTransaction(hash string, options ...any) (*api.UserTransaction, error) {
+	return (*ExposedNodeClient)(rc).PollForTransaction(context.Background(), hash, options...)
+}
+
+// PollForTransactions waits up to 10 seconds for transactions to be done, polling at 10Hz
+// Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
+func (rc *NodeClient) PollForTransactions(txnHashes []string, options ...any) error {
+	return (*ExposedNodeClient)(rc).PollForTransactions(context.Background(), txnHashes, options...)
+}
+
+// Transactions Get recent transactions.
+//
+// Arguments:
+//   - start is a version number. Nil for most recent transactions.
+//   - limit is a number of transactions to return. 'about a hundred' by default.
+func (rc *NodeClient) Transactions(start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return (*ExposedNodeClient)(rc).Transactions(context.Background(), start, limit)
+}
+
+// AccountTransactions Get recent transactions for an account
+//
+// Arguments:
+//   - start is a version number. Nil for most recent transactions.
+//   - limit is a number of transactions to return. 'about a hundred' by default.
+func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+	return (*ExposedNodeClient)(rc).AccountTransactions(context.Background(), account, start, limit)
+}
+
+// SubmitTransaction submits a signed transaction to the network
+func (rc *NodeClient) SubmitTransaction(signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
+	return (*ExposedNodeClient)(rc).SubmitTransaction(context.Background(), signedTxn)
+
+}
+
+// BatchSubmitTransaction submits a collection of signed transactions to the network in a single request
+//
+// It will return the responses in the same order as the input transactions that failed.  If the response is empty, then
+// all transactions succeeded.
+func (rc *NodeClient) BatchSubmitTransaction(signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
+	return (*ExposedNodeClient)(rc).BatchSubmitTransaction(context.Background(), signedTxns)
+}
+
+// SimulateTransaction simulates a transaction
+//
+// TODO: This needs to support RawTransactionWithData
+// TODO: Support multikey simulation
+func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+	return (*ExposedNodeClient)(rc).SimulateTransaction(context.Background(), rawTxn, sender, options...)
+
+}
+
+// GetChainId gets the chain ID of the network
+func (rc *NodeClient) GetChainId() (chainId uint8, err error) {
+	return (*ExposedNodeClient)(rc).GetChainId(context.Background())
+}
+
+// BuildTransaction builds a raw transaction for signing for a single signer
+//
+// For MultiAgent and FeePayer transactions use [ExposedNodeClient.BuildTransactionMultiAgent]
+//
+// Accepts options:
+//   - [MaxGasAmount]
+//   - [GasUnitPrice]
+//   - [ExpirationSeconds]
+//   - [SequenceNumber]
+//   - [ChainIdOption]
+func (rc *NodeClient) BuildTransaction(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+	return (*ExposedNodeClient)(rc).BuildTransaction(context.Background(), sender, payload, options...)
+}
+
+// BuildTransactionMultiAgent builds a raw transaction for signing with fee payer or multi-agent
+//
+// For single signer transactions use [ExposedNodeClient.BuildTransaction]
+//
+// Accepts options:
+//   - [MaxGasAmount]
+//   - [GasUnitPrice]
+//   - [ExpirationSeconds]
+//   - [SequenceNumber]
+//   - [ChainIdOption]
+//   - [FeePayer]
+//   - [AdditionalSigners]
+func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
+	return (*ExposedNodeClient)(rc).BuildTransactionMultiAgent(context.Background(), sender, payload, options...)
+}
+
+// View calls a view function on the blockchain and returns the return value of the function
+func (rc *NodeClient) View(payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
+	return (*ExposedNodeClient)(rc).View(context.Background(), payload, ledgerVersion...)
+}
+
+// EstimateGasPrice estimates the gas price given on-chain data
+// TODO: add caching for some period of time
+func (rc *NodeClient) EstimateGasPrice() (info EstimateGasInfo, err error) {
+	return (*ExposedNodeClient)(rc).EstimateGasPrice(context.Background())
+
+}
+
+// AccountAPTBalance fetches the balance of an account of APT.  Response is in octas or 1/10^8 APT.
+func (rc *NodeClient) AccountAPTBalance(ctx context.Context, account AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+	return (*ExposedNodeClient)(rc).AccountAPTBalance(context.Background(), account, ledgerVersion...)
+
+}
+
+// BuildSignAndSubmitTransaction builds, signs, and submits a transaction to the network
+func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+	return (*ExposedNodeClient)(rc).BuildSignAndSubmitTransaction(context.Background(), sender, payload, options...)
+}
+
+// NodeAPIHealthCheck performs a health check on the node
+//
+// Returns a HealthCheckResponse if successful, returns error if not.
+func (rc *NodeClient) NodeAPIHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	return (*ExposedNodeClient)(rc).NodeAPIHealthCheck(context.Background(), durationSecs...)
+}
+
+// NodeHealthCheck performs a health check on the node
+//
+// Returns a HealthCheckResponse if successful, returns error if not.
+//
+// Deprecated: Use NodeAPIHealthCheck instead
+func (rc *NodeClient) NodeHealthCheck(durationSecs ...uint64) (api.HealthCheckResponse, error) {
+	return (*ExposedNodeClient)(rc).NodeHealthCheck(context.Background(), durationSecs...)
+}
+
+// GetBCS makes a GET request to the endpoint and parses the response into the given type with BCS
+func (rc *NodeClient) GetBCS(getUrl string) (out []byte, err error) {
+	return (*ExposedNodeClient)(rc).GetBCS(context.Background(), getUrl)
+}
+
+// ExposedNodeClient is a client for interacting with an Aptos node API with exposed context.Context.
+type ExposedNodeClient struct {
 	client  *http.Client      // HTTP client to use for requests
 	baseUrl *url.URL          // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
 	chainId uint8             // Chain ID of the network e.g. 2 for Testnet
 	headers map[string]string // Headers to be added to every transaction
 }
 
-// NewNodeClient creates a new client for interacting with an Aptos node API
-func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
+// NewExposedNodeClient creates a new client for interacting with an Aptos node API
+func NewExposedNodeClient(rpcUrl string, chainId uint8) (*ExposedNodeClient, error) {
 	// Set cookie jar so cookie stickiness applies to connections
 	// TODO Add appropriate suffix list
 	jar, err := cookiejar.New(nil)
@@ -55,16 +321,16 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 		Timeout: 60 * time.Second,
 	}
 
-	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
+	return NewExposedNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
 }
 
-// NewNodeClientWithHttpClient creates a new client for interacting with an Aptos node API with a custom http.Client
-func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*NodeClient, error) {
+// NewExposedNodeClientWithHttpClient creates a new client for interacting with an Aptos node API with a custom http.Client
+func NewExposedNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Client) (*ExposedNodeClient, error) {
 	baseUrl, err := url.Parse(rpcUrl)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse RPC url '%s': %w", rpcUrl, err)
 	}
-	return &NodeClient{
+	return &ExposedNodeClient{
 		client:  client,
 		baseUrl: baseUrl,
 		chainId: chainId,
@@ -75,27 +341,27 @@ func NewNodeClientWithHttpClient(rpcUrl string, chainId uint8, client *http.Clie
 // SetTimeout adjusts the HTTP client timeout
 //
 //	client.SetTimeout(5 * time.Millisecond)
-func (rc *NodeClient) SetTimeout(timeout time.Duration) {
+func (rc *ExposedNodeClient) SetTimeout(timeout time.Duration) {
 	rc.client.Timeout = timeout
 }
 
 // SetHeader sets the header for all future requests
 //
 //	client.SetHeader("Authorization", "Bearer abcde")
-func (rc *NodeClient) SetHeader(key string, value string) {
+func (rc *ExposedNodeClient) SetHeader(key string, value string) {
 	rc.headers[key] = value
 }
 
 // RemoveHeader removes the header from being automatically set all future requests.
 //
 //	client.RemoveHeader("Authorization")
-func (rc *NodeClient) RemoveHeader(key string) {
+func (rc *ExposedNodeClient) RemoveHeader(key string) {
 	delete(rc.headers, key)
 }
 
 // Info gets general information about the blockchain
-func (rc *NodeClient) Info(ctx context.Context) (info NodeInfo, err error) {
-	info, err = Get[NodeInfo](ctx, rc, rc.baseUrl.String())
+func (rc *ExposedNodeClient) Info(ctx context.Context) (info NodeInfo, err error) {
+	info, err = exposedGet[NodeInfo](ctx, rc, rc.baseUrl.String())
 	if err != nil {
 		return info, fmt.Errorf("get node info api err: %w", err)
 	}
@@ -108,14 +374,14 @@ func (rc *NodeClient) Info(ctx context.Context) (info NodeInfo, err error) {
 // Account gets information about an account for a given address
 //
 // Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
-func (rc *NodeClient) Account(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
+func (rc *ExposedNodeClient) Account(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (info AccountInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String())
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
-	info, err = Get[AccountInfo](ctx, rc, au.String())
+	info, err = exposedGet[AccountInfo](ctx, rc, au.String())
 	if err != nil {
 		return info, fmt.Errorf("get account info api err: %w", err)
 	}
@@ -126,7 +392,7 @@ func (rc *NodeClient) Account(ctx context.Context, address AccountAddress, ledge
 // Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
 //
 // For fetching raw Move structs as BCS, See #AccountResourceBCS
-func (rc *NodeClient) AccountResource(ctx context.Context, address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
+func (rc *ExposedNodeClient) AccountResource(ctx context.Context, address AccountAddress, resourceType string, ledgerVersion ...uint64) (data map[string]any, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resource", resourceType)
 	// TODO: offer a list of known-good resourceType string constants
 	if len(ledgerVersion) > 0 {
@@ -134,7 +400,7 @@ func (rc *NodeClient) AccountResource(ctx context.Context, address AccountAddres
 		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
-	data, err = Get[map[string]any](ctx, rc, au.String())
+	data, err = exposedGet[map[string]any](ctx, rc, au.String())
 	if err != nil {
 		return nil, fmt.Errorf("get resource api err: %w", err)
 	}
@@ -144,14 +410,14 @@ func (rc *NodeClient) AccountResource(ctx context.Context, address AccountAddres
 // AccountResources fetches resources for an account into a JSON-like map[string]any in AccountResourceInfo.Data
 // Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
 // For fetching raw Move structs as BCS, See #AccountResourcesBCS
-func (rc *NodeClient) AccountResources(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
+func (rc *ExposedNodeClient) AccountResources(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceInfo, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
 		params.Set("ledger_version", strconv.FormatUint(ledgerVersion[0], 10))
 		au.RawQuery = params.Encode()
 	}
-	resources, err = Get[[]AccountResourceInfo](ctx, rc, au.String())
+	resources, err = exposedGet[[]AccountResourceInfo](ctx, rc, au.String())
 	if err != nil {
 		return nil, fmt.Errorf("get resources api err: %w", err)
 	}
@@ -160,7 +426,7 @@ func (rc *NodeClient) AccountResources(ctx context.Context, address AccountAddre
 
 // AccountResourcesBCS fetches account resources as raw Move struct BCS blobs in AccountResourceRecord.Data []byte
 // Optionally, a ledgerVersion can be given to get the account state at a specific ledger version
-func (rc *NodeClient) AccountResourcesBCS(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
+func (rc *ExposedNodeClient) AccountResourcesBCS(ctx context.Context, address AccountAddress, ledgerVersion ...uint64) (resources []AccountResourceRecord, err error) {
 	au := rc.baseUrl.JoinPath("accounts", address.String(), "resources")
 	if len(ledgerVersion) > 0 {
 		params := url.Values{}
@@ -194,9 +460,9 @@ func (rc *NodeClient) AccountResourcesBCS(ctx context.Context, address AccountAd
 //			// known to local mempool, but not committed yet
 //		}
 //	}
-func (rc *NodeClient) TransactionByHash(ctx context.Context, txnHash string) (data *api.Transaction, err error) {
+func (rc *ExposedNodeClient) TransactionByHash(ctx context.Context, txnHash string) (data *api.Transaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/by_hash", txnHash)
-	data, err = Get[*api.Transaction](ctx, rc, restUrl.String())
+	data, err = exposedGet[*api.Transaction](ctx, rc, restUrl.String())
 	if err != nil {
 		return data, fmt.Errorf("get transaction api err: %w", err)
 	}
@@ -205,9 +471,9 @@ func (rc *NodeClient) TransactionByHash(ctx context.Context, txnHash string) (da
 
 // TransactionByVersion gets info on a transaction by version number
 // The transaction will have been committed.  The response will not be of the type [api.PendingTransaction].
-func (rc *NodeClient) TransactionByVersion(ctx context.Context, version uint64) (data *api.CommittedTransaction, err error) {
+func (rc *ExposedNodeClient) TransactionByVersion(ctx context.Context, version uint64) (data *api.CommittedTransaction, err error) {
 	restUrl := rc.baseUrl.JoinPath("transactions/by_version", strconv.FormatUint(version, 10))
-	data, err = Get[*api.CommittedTransaction](ctx, rc, restUrl.String())
+	data, err = exposedGet[*api.CommittedTransaction](ctx, rc, restUrl.String())
 	if err != nil {
 		return data, fmt.Errorf("get transaction api err: %w", err)
 	}
@@ -219,7 +485,7 @@ func (rc *NodeClient) TransactionByVersion(ctx context.Context, version uint64) 
 // Note that this is not the same as a block's height.
 //
 // The function will fetch all transactions in the block if withTransactions is true.
-func (rc *NodeClient) BlockByVersion(ctx context.Context, ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
+func (rc *ExposedNodeClient) BlockByVersion(ctx context.Context, ledgerVersion uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_version", strconv.FormatUint(ledgerVersion, 10))
 	return rc.getBlockCommon(ctx, restUrl, withTransactions)
 }
@@ -227,7 +493,7 @@ func (rc *NodeClient) BlockByVersion(ctx context.Context, ledgerVersion uint64, 
 // BlockByHeight gets a block by block height
 //
 // The function will fetch all transactions in the block if withTransactions is true.
-func (rc *NodeClient) BlockByHeight(ctx context.Context, blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
+func (rc *ExposedNodeClient) BlockByHeight(ctx context.Context, blockHeight uint64, withTransactions bool) (data *api.Block, err error) {
 	restUrl := rc.baseUrl.JoinPath("blocks/by_height", strconv.FormatUint(blockHeight, 10))
 	return rc.getBlockCommon(ctx, restUrl, withTransactions)
 }
@@ -235,13 +501,13 @@ func (rc *NodeClient) BlockByHeight(ctx context.Context, blockHeight uint64, wit
 // getBlockCommon is a helper function for fetching a block by version or height
 //
 // It will fetch all the transactions associated with the block if withTransactions is true.
-func (rc *NodeClient) getBlockCommon(ctx context.Context, restUrl *url.URL, withTransactions bool) (block *api.Block, err error) {
+func (rc *ExposedNodeClient) getBlockCommon(ctx context.Context, restUrl *url.URL, withTransactions bool) (block *api.Block, err error) {
 	params := url.Values{}
 	params.Set("with_transactions", strconv.FormatBool(withTransactions))
 	restUrl.RawQuery = params.Encode()
 
 	// Fetch block
-	block, err = Get[*api.Block](ctx, rc, restUrl.String())
+	block, err = exposedGet[*api.Block](ctx, rc, restUrl.String())
 	if err != nil {
 		return block, fmt.Errorf("get block api err: %w", err)
 	}
@@ -286,7 +552,7 @@ func (rc *NodeClient) getBlockCommon(ctx context.Context, restUrl *url.URL, with
 // Optional arguments:
 //   - PollPeriod: time.Duration, how often to poll for the transaction. Default 100ms.
 //   - PollTimeout: time.Duration, how long to wait for the transaction. Default 10s.
-func (rc *NodeClient) WaitForTransaction(ctx context.Context, txnHash string, options ...any) (data *api.UserTransaction, err error) {
+func (rc *ExposedNodeClient) WaitForTransaction(ctx context.Context, txnHash string, options ...any) (data *api.UserTransaction, err error) {
 	return rc.PollForTransaction(ctx, txnHash, options...)
 }
 
@@ -316,7 +582,7 @@ func getTransactionPollOptions(defaultPeriod, defaultTimeout time.Duration, opti
 // PollForTransaction waits up to 10 seconds for a transaction to be done, polling at 10Hz
 // Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
 // Not just a degenerate case of PollForTransactions, it may return additional information for the single transaction polled.
-func (rc *NodeClient) PollForTransaction(ctx context.Context, hash string, options ...any) (*api.UserTransaction, error) {
+func (rc *ExposedNodeClient) PollForTransaction(ctx context.Context, hash string, options ...any) (*api.UserTransaction, error) {
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
 	if err != nil {
 		return nil, err
@@ -343,7 +609,7 @@ func (rc *NodeClient) PollForTransaction(ctx context.Context, hash string, optio
 
 // PollForTransactions waits up to 10 seconds for transactions to be done, polling at 10Hz
 // Accepts options PollPeriod and PollTimeout which should wrap time.Duration values.
-func (rc *NodeClient) PollForTransactions(ctx context.Context, txnHashes []string, options ...any) error {
+func (rc *ExposedNodeClient) PollForTransactions(ctx context.Context, txnHashes []string, options ...any) error {
 	period, timeout, err := getTransactionPollOptions(100*time.Millisecond, 10*time.Second, options...)
 	if err != nil {
 		return err
@@ -384,7 +650,7 @@ func (rc *NodeClient) PollForTransactions(ctx context.Context, txnHashes []strin
 // Arguments:
 //   - start is a version number. Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *NodeClient) Transactions(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+func (rc *ExposedNodeClient) Transactions(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	return rc.handleTransactions(ctx, start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
 		txn := (*txns)[len(*txns)-1]
 		return txn.Version()
@@ -398,7 +664,7 @@ func (rc *NodeClient) Transactions(ctx context.Context, start *uint64, limit *ui
 // Arguments:
 //   - start is a version number. Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
-func (rc *NodeClient) AccountTransactions(ctx context.Context, account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+func (rc *ExposedNodeClient) AccountTransactions(ctx context.Context, account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	return rc.handleTransactions(ctx, start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
 		// It will always be a UserTransaction, no other type will come from the API
 		userTxn, _ := ((*txns)[0]).UserTransaction()
@@ -411,7 +677,7 @@ func (rc *NodeClient) AccountTransactions(ctx context.Context, account AccountAd
 // handleTransactions is a helper function for fetching transactions
 //
 // It will fetch the transactions from the node in a single request if possible, otherwise it will fetch them concurrently.
-func (rc *NodeClient) handleTransactions(
+func (rc *ExposedNodeClient) handleTransactions(
 	ctx context.Context,
 	start *uint64,
 	limit *uint64,
@@ -453,7 +719,7 @@ func (rc *NodeClient) handleTransactions(
 // transactionsConcurrent fetches the transactions from the node concurrently
 //
 // It will fetch the transactions concurrently if the limit is greater than the page size, otherwise it will fetch them in a single request.
-func (rc *NodeClient) transactionsConcurrent(
+func (rc *ExposedNodeClient) transactionsConcurrent(
 	ctx context.Context,
 	start uint64,
 	limit uint64,
@@ -511,7 +777,7 @@ func (rc *NodeClient) transactionsConcurrent(
 }
 
 // transactionsInner fetches the transactions from the node in a single request
-func (rc *NodeClient) transactionsInner(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+func (rc *ExposedNodeClient) transactionsInner(ctx context.Context, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	au := rc.baseUrl.JoinPath("transactions")
 	params := url.Values{}
 	if start != nil {
@@ -523,7 +789,7 @@ func (rc *NodeClient) transactionsInner(ctx context.Context, start *uint64, limi
 	if len(params) != 0 {
 		au.RawQuery = params.Encode()
 	}
-	data, err = Get[[]*api.CommittedTransaction](ctx, rc, au.String())
+	data, err = exposedGet[[]*api.CommittedTransaction](ctx, rc, au.String())
 	if err != nil {
 		return data, fmt.Errorf("get transactions api err: %w", err)
 	}
@@ -531,7 +797,7 @@ func (rc *NodeClient) transactionsInner(ctx context.Context, start *uint64, limi
 }
 
 // accountTransactionsInner fetches the transactions from the node in a single request for a single account
-func (rc *NodeClient) accountTransactionsInner(ctx context.Context, account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
+func (rc *ExposedNodeClient) accountTransactionsInner(ctx context.Context, account AccountAddress, start *uint64, limit *uint64) (data []*api.CommittedTransaction, err error) {
 	au := rc.baseUrl.JoinPath(fmt.Sprintf("accounts/%s/transactions", account.String()))
 	params := url.Values{}
 	if start != nil {
@@ -544,7 +810,7 @@ func (rc *NodeClient) accountTransactionsInner(ctx context.Context, account Acco
 		au.RawQuery = params.Encode()
 	}
 
-	data, err = Get[[]*api.CommittedTransaction](ctx, rc, au.String())
+	data, err = exposedGet[[]*api.CommittedTransaction](ctx, rc, au.String())
 	if err != nil {
 		return data, fmt.Errorf("get account transactions api err: %w", err)
 	}
@@ -552,14 +818,14 @@ func (rc *NodeClient) accountTransactionsInner(ctx context.Context, account Acco
 }
 
 // SubmitTransaction submits a signed transaction to the network
-func (rc *NodeClient) SubmitTransaction(ctx context.Context, signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
+func (rc *ExposedNodeClient) SubmitTransaction(ctx context.Context, signedTxn *SignedTransaction) (data *api.SubmitTransactionResponse, err error) {
 	sblob, err := bcs.Serialize(signedTxn)
 	if err != nil {
 		return
 	}
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions")
-	data, err = Post[*api.SubmitTransactionResponse](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = exposedPost[*api.SubmitTransactionResponse](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("submit transaction api err: %w", err)
 	}
@@ -570,14 +836,14 @@ func (rc *NodeClient) SubmitTransaction(ctx context.Context, signedTxn *SignedTr
 //
 // It will return the responses in the same order as the input transactions that failed.  If the response is empty, then
 // all transactions succeeded.
-func (rc *NodeClient) BatchSubmitTransaction(ctx context.Context, signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
+func (rc *ExposedNodeClient) BatchSubmitTransaction(ctx context.Context, signedTxns []*SignedTransaction) (response *api.BatchSubmitTransactionResponse, err error) {
 	sblob, err := bcs.SerializeSequenceOnly(signedTxns)
 	if err != nil {
 		return
 	}
 	bodyReader := bytes.NewReader(sblob)
 	au := rc.baseUrl.JoinPath("transactions/batch")
-	response, err = Post[*api.BatchSubmitTransactionResponse](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	response, err = exposedPost[*api.BatchSubmitTransactionResponse](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("submit transaction api err: %w", err)
 	}
@@ -597,7 +863,7 @@ type EstimatePrioritizedGasUnitPrice bool
 //
 // TODO: This needs to support RawTransactionWithData
 // TODO: Support multikey simulation
-func (rc *NodeClient) SimulateTransaction(ctx context.Context, rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
+func (rc *ExposedNodeClient) SimulateTransaction(ctx context.Context, rawTxn *RawTransaction, sender TransactionSigner, options ...any) (data []*api.UserTransaction, err error) {
 	// build authenticator for simulation
 	derivationScheme := sender.PubKey().Scheme()
 	switch derivationScheme {
@@ -640,7 +906,7 @@ func (rc *NodeClient) SimulateTransaction(ctx context.Context, rawTxn *RawTransa
 		au.RawQuery = params.Encode()
 	}
 
-	data, err = Post[[]*api.UserTransaction](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
+	data, err = exposedPost[[]*api.UserTransaction](ctx, rc, au.String(), ContentTypeAptosSignedTxnBcs, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("simulate transaction api err: %w", err)
 	}
@@ -649,7 +915,7 @@ func (rc *NodeClient) SimulateTransaction(ctx context.Context, rawTxn *RawTransa
 }
 
 // GetChainId gets the chain ID of the network
-func (rc *NodeClient) GetChainId(ctx context.Context) (chainId uint8, err error) {
+func (rc *ExposedNodeClient) GetChainId(ctx context.Context) (chainId uint8, err error) {
 	if rc.chainId == 0 {
 		// Calling Info will cache the ChainId
 		info, err := rc.Info(ctx)
@@ -685,7 +951,7 @@ type ChainIdOption uint8
 
 // BuildTransaction builds a raw transaction for signing for a single signer
 //
-// For MultiAgent and FeePayer transactions use [NodeClient.BuildTransactionMultiAgent]
+// For MultiAgent and FeePayer transactions use [ExposedNodeClient.BuildTransactionMultiAgent]
 //
 // Accepts options:
 //   - [MaxGasAmount]
@@ -693,7 +959,7 @@ type ChainIdOption uint8
 //   - [ExpirationSeconds]
 //   - [SequenceNumber]
 //   - [ChainIdOption]
-func (rc *NodeClient) BuildTransaction(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
+func (rc *ExposedNodeClient) BuildTransaction(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxn *RawTransaction, err error) {
 
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
@@ -734,7 +1000,7 @@ func (rc *NodeClient) BuildTransaction(ctx context.Context, sender AccountAddres
 
 // BuildTransactionMultiAgent builds a raw transaction for signing with fee payer or multi-agent
 //
-// For single signer transactions use [NodeClient.BuildTransaction]
+// For single signer transactions use [ExposedNodeClient.BuildTransaction]
 //
 // Accepts options:
 //   - [MaxGasAmount]
@@ -744,7 +1010,7 @@ func (rc *NodeClient) BuildTransaction(ctx context.Context, sender AccountAddres
 //   - [ChainIdOption]
 //   - [FeePayer]
 //   - [AdditionalSigners]
-func (rc *NodeClient) BuildTransactionMultiAgent(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
+func (rc *ExposedNodeClient) BuildTransactionMultiAgent(ctx context.Context, sender AccountAddress, payload TransactionPayload, options ...any) (rawTxnImpl *RawTransactionWithData, err error) {
 
 	maxGasAmount := DefaultMaxGasAmount
 	gasUnitPrice := DefaultGasUnitPrice
@@ -814,7 +1080,7 @@ func (rc *NodeClient) BuildTransactionMultiAgent(ctx context.Context, sender Acc
 	}
 }
 
-func (rc *NodeClient) buildTransactionInner(
+func (rc *ExposedNodeClient) buildTransactionInner(
 	ctx context.Context,
 	sender AccountAddress,
 	payload TransactionPayload,
@@ -943,7 +1209,7 @@ func (vp *ViewPayload) MarshalBCS(ser *bcs.Serializer) {
 }
 
 // View calls a view function on the blockchain and returns the return value of the function
-func (rc *NodeClient) View(ctx context.Context, payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
+func (rc *ExposedNodeClient) View(ctx context.Context, payload *ViewPayload, ledgerVersion ...uint64) (data []any, err error) {
 	serializer := bcs.Serializer{}
 	payload.MarshalBCS(&serializer)
 	err = serializer.Error()
@@ -959,7 +1225,7 @@ func (rc *NodeClient) View(ctx context.Context, payload *ViewPayload, ledgerVers
 		au.RawQuery = params.Encode()
 	}
 
-	data, err = Post[[]any](ctx, rc, au.String(), ContentTypeAptosViewFunctionBcs, bodyReader)
+	data, err = exposedPost[[]any](ctx, rc, au.String(), ContentTypeAptosViewFunctionBcs, bodyReader)
 	if err != nil {
 		return nil, fmt.Errorf("view function api err: %w", err)
 	}
@@ -968,9 +1234,9 @@ func (rc *NodeClient) View(ctx context.Context, payload *ViewPayload, ledgerVers
 
 // EstimateGasPrice estimates the gas price given on-chain data
 // TODO: add caching for some period of time
-func (rc *NodeClient) EstimateGasPrice(ctx context.Context) (info EstimateGasInfo, err error) {
+func (rc *ExposedNodeClient) EstimateGasPrice(ctx context.Context) (info EstimateGasInfo, err error) {
 	au := rc.baseUrl.JoinPath("estimate_gas_price")
-	info, err = Get[EstimateGasInfo](ctx, rc, au.String())
+	info, err = exposedGet[EstimateGasInfo](ctx, rc, au.String())
 	if err != nil {
 		return info, fmt.Errorf("estimate gas price err: %w", err)
 	}
@@ -978,7 +1244,7 @@ func (rc *NodeClient) EstimateGasPrice(ctx context.Context) (info EstimateGasInf
 }
 
 // AccountAPTBalance fetches the balance of an account of APT.  Response is in octas or 1/10^8 APT.
-func (rc *NodeClient) AccountAPTBalance(ctx context.Context, account AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
+func (rc *ExposedNodeClient) AccountAPTBalance(ctx context.Context, account AccountAddress, ledgerVersion ...uint64) (balance uint64, err error) {
 	accountBytes, err := bcs.Serialize(&account)
 	if err != nil {
 		return 0, err
@@ -998,7 +1264,7 @@ func (rc *NodeClient) AccountAPTBalance(ctx context.Context, account AccountAddr
 }
 
 // BuildSignAndSubmitTransaction builds, signs, and submits a transaction to the network
-func (rc *NodeClient) BuildSignAndSubmitTransaction(ctx context.Context, sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
+func (rc *ExposedNodeClient) BuildSignAndSubmitTransaction(ctx context.Context, sender TransactionSigner, payload TransactionPayload, options ...any) (data *api.SubmitTransactionResponse, err error) {
 	rawTxn, err := rc.BuildTransaction(ctx, sender.AccountAddress(), payload, options...)
 	if err != nil {
 		return nil, err
@@ -1013,14 +1279,14 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(ctx context.Context, sender 
 // NodeAPIHealthCheck performs a health check on the node
 //
 // Returns a HealthCheckResponse if successful, returns error if not.
-func (rc *NodeClient) NodeAPIHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
+func (rc *ExposedNodeClient) NodeAPIHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	au := rc.baseUrl.JoinPath("-/healthy")
 	if len(durationSecs) > 0 {
 		params := url.Values{}
 		params.Set("duration_secs", strconv.FormatUint(durationSecs[0], 10))
 		au.RawQuery = params.Encode()
 	}
-	return Get[api.HealthCheckResponse](ctx, rc, au.String())
+	return exposedGet[api.HealthCheckResponse](ctx, rc, au.String())
 }
 
 // NodeHealthCheck performs a health check on the node
@@ -1028,12 +1294,17 @@ func (rc *NodeClient) NodeAPIHealthCheck(ctx context.Context, durationSecs ...ui
 // Returns a HealthCheckResponse if successful, returns error if not.
 //
 // Deprecated: Use NodeAPIHealthCheck instead
-func (rc *NodeClient) NodeHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
+func (rc *ExposedNodeClient) NodeHealthCheck(ctx context.Context, durationSecs ...uint64) (api.HealthCheckResponse, error) {
 	return rc.NodeAPIHealthCheck(ctx, durationSecs...)
 }
 
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
-func Get[T any](ctx context.Context, rc *NodeClient, getUrl string) (out T, err error) {
+func Get[T any](rc *NodeClient, getUrl string) (out T, err error) {
+	return exposedGet[T](context.Background(), (*ExposedNodeClient)(rc), getUrl)
+}
+
+// Get makes a GET request to the endpoint and parses the response into the given type with JSON
+func exposedGet[T any](ctx context.Context, rc *ExposedNodeClient, getUrl string) (out T, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", getUrl, nil)
 	if err != nil {
 		return out, err
@@ -1071,7 +1342,7 @@ func Get[T any](ctx context.Context, rc *NodeClient, getUrl string) (out T, err 
 }
 
 // GetBCS makes a GET request to the endpoint and parses the response into the given type with BCS
-func (rc *NodeClient) GetBCS(ctx context.Context, getUrl string) (out []byte, err error) {
+func (rc *ExposedNodeClient) GetBCS(ctx context.Context, getUrl string) (out []byte, err error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", getUrl, nil)
 	if err != nil {
 		return nil, err
@@ -1104,6 +1375,11 @@ func (rc *NodeClient) GetBCS(ctx context.Context, getUrl string) (out []byte, er
 
 // Post makes a POST request to the endpoint with the given body and parses the response into the given type with JSON
 func Post[T any](ctx context.Context, rc *NodeClient, postUrl string, contentType string, body io.Reader) (data T, err error) {
+	return exposedPost[T](context.Background(), (*ExposedNodeClient)(rc), postUrl, contentType, body)
+}
+
+// Post makes a POST request to the endpoint with the given body and parses the response into the given type with JSON
+func exposedPost[T any](ctx context.Context, rc *ExposedNodeClient, postUrl string, contentType string, body io.Reader) (data T, err error) {
 	if body == nil {
 		body = http.NoBody
 	}

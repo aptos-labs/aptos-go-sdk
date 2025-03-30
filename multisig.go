@@ -7,7 +7,12 @@ import (
 )
 
 // FetchNextMultisigAddress retrieves the next multisig address to be created from the given account
-func (client *Client) FetchNextMultisigAddress(ctx context.Context, address AccountAddress) (*AccountAddress, error) {
+func (client *Client) FetchNextMultisigAddress(address AccountAddress) (*AccountAddress, error) {
+	return (*ExposedClient)(client).FetchNextMultisigAddress(context.Background(), address)
+}
+
+// FetchNextMultisigAddress retrieves the next multisig address to be created from the given account
+func (client *ExposedClient) FetchNextMultisigAddress(ctx context.Context, address AccountAddress) (*AccountAddress, error) {
 	viewResponse, err := client.View(ctx, &ViewPayload{
 		Module: ModuleId{
 			Address: AccountOne,

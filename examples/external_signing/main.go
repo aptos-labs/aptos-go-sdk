@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -93,7 +92,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(context.Background(), sender.Address, 100_000_000)
+	err = client.Fund(sender.Address, 100_000_000)
 	fmt.Printf("We fund the signer account %s with the faucet\n", sender.Address.String())
 
 	// Prep arguments
@@ -110,7 +109,7 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Sign transaction
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
-	rawTxn, err := client.BuildTransaction(context.Background(), sender.Address,
+	rawTxn, err := client.BuildTransaction(sender.Address,
 		aptos.TransactionPayload{Payload: payload},
 	)
 	if err != nil {
@@ -141,7 +140,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// TODO: Show how to send over a wire with an encoding
 
 	// Submit and wait for it to complete
-	submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
+	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -149,7 +148,7 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Wait for the transaction
 	fmt.Printf("And we wait for the transaction %s to complete...\n", txnHash)
-	userTxn, err := client.WaitForTransaction(context.Background(), txnHash)
+	userTxn, err := client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}

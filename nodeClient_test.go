@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -15,7 +14,7 @@ func TestPollForTransaction(t *testing.T) {
 	assert.NoError(t, err)
 
 	start := time.Now()
-	err = client.PollForTransactions(context.Background(), []string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
+	err = client.PollForTransactions([]string{"alice", "bob"}, PollTimeout(10*time.Millisecond), PollPeriod(2*time.Millisecond))
 	dt := time.Now().Sub(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)

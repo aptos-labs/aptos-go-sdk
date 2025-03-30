@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
@@ -39,19 +38,19 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%s\n", bob.Address.String())
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(context.Background(), alice.Address, FundAmount)
+	err = client.Fund(alice.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund alice:" + err.Error())
 	}
-	err = client.Fund(context.Background(), bob.Address, FundAmount)
+	err = client.Fund(bob.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund bob:" + err.Error())
 	}
-	aliceBalance, err := client.AccountAPTBalance(context.Background(), alice.Address)
+	aliceBalance, err := client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err := client.AccountAPTBalance(context.Background(), bob.Address)
+	bobBalance, err := client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -64,7 +63,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to deserialize script:" + err.Error())
 	}
-	rawTxn, err := client.BuildTransactionMultiAgent(context.Background(), alice.AccountAddress(), aptos.TransactionPayload{
+	rawTxn, err := client.BuildTransactionMultiAgent(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.Script{
 			Code:     script,
 			ArgTypes: []aptos.TypeTag{aptos.AptosCoinTypeTag, aptos.AptosCoinTypeTag},
@@ -115,24 +114,24 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// 4. Submit transaction
-	submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
+	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
 	// 5. Wait for the transaction to complete
-	_, err = client.WaitForTransaction(context.Background(), txnHash)
+	_, err = client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 
 	// Check balances
-	aliceBalance, err = client.AccountAPTBalance(context.Background(), alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(context.Background(), bob.Address)
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}

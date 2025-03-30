@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk"
@@ -35,16 +34,16 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%s\n", bob.Address.String())
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(context.Background(), alice.Address, FundAmount)
+	err = client.Fund(alice.Address, FundAmount)
 	if err != nil {
 		panic("Failed to fund alice:" + err.Error())
 	}
 
-	aliceBalance, err := client.AccountAPTBalance(context.Background(), alice.Address)
+	aliceBalance, err := client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err := client.AccountAPTBalance(context.Background(), bob.Address)
+	bobBalance, err := client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -62,7 +61,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
-	rawTxn, err := client.BuildTransaction(context.Background(), alice.AccountAddress(), aptos.TransactionPayload{
+	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
 				Address: aptos.AccountOne,
@@ -85,7 +84,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// This is useful for understanding how much the transaction will cost
 	// and to ensure that the transaction is valid before sending it to the network
 	// This is optional, but recommended
-	simulationResult, err := client.SimulateTransaction(context.Background(), rawTxn, alice)
+	simulationResult, err := client.SimulateTransaction(rawTxn, alice)
 	if err != nil {
 		panic("Failed to simulate transaction:" + err.Error())
 	}
@@ -102,24 +101,24 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// 4. Submit transaction
-	submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
+	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
 	txnHash := submitResult.Hash
 
 	// 5. Wait for the transaction to complete
-	_, err = client.WaitForTransaction(context.Background(), txnHash)
+	_, err = client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 
 	// Check balances
-	aliceBalance, err = client.AccountAPTBalance(context.Background(), alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(context.Background(), bob.Address)
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}
@@ -128,7 +127,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%d\n", bobBalance)
 
 	// Now do it again, but with a different method
-	resp, err := client.BuildSignAndSubmitTransaction(context.Background(), alice, aptos.TransactionPayload{
+	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
 		Payload: &aptos.EntryFunction{
 			Module: aptos.ModuleId{
 				Address: aptos.AccountOne,
@@ -146,16 +145,16 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to sign transaction:" + err.Error())
 	}
 
-	_, err = client.WaitForTransaction(context.Background(), resp.Hash)
+	_, err = client.WaitForTransaction(resp.Hash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
 
-	aliceBalance, err = client.AccountAPTBalance(context.Background(), alice.Address)
+	aliceBalance, err = client.AccountAPTBalance(alice.Address)
 	if err != nil {
 		panic("Failed to retrieve alice balance:" + err.Error())
 	}
-	bobBalance, err = client.AccountAPTBalance(context.Background(), bob.Address)
+	bobBalance, err = client.AccountAPTBalance(bob.Address)
 	if err != nil {
 		panic("Failed to retrieve bob balance:" + err.Error())
 	}

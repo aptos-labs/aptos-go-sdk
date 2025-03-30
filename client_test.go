@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"context"
 	"strings"
 	"sync"
 	"testing"
@@ -101,7 +100,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 	assert.NoError(t, err)
 
 	// Verify chain id retrieval works
-	chainId, err := client.GetChainId(context.Background())
+	chainId, err := client.GetChainId()
 	assert.NoError(t, err)
 	if testConfig == DevnetConfig {
 		assert.Greater(t, chainId, LocalnetConfig.ChainId)
@@ -110,7 +109,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 	}
 
 	// Verify gas estimation works
-	_, err = client.EstimateGasPrice(context.Background())
+	_, err = client.EstimateGasPrice()
 	assert.NoError(t, err)
 
 	// Create an account
@@ -118,7 +117,7 @@ func setupIntegrationTest(t *testing.T, createAccount CreateSigner) (*Client, Tr
 	assert.NoError(t, err)
 
 	// Fund the account with 1 APT
-	err = client.Fund(context.Background(), account.AccountAddress(), fundAmount)
+	err = client.Fund(account.AccountAddress(), fundAmount)
 	assert.NoError(t, err)
 
 	return client, account
@@ -136,17 +135,17 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 	assert.NoError(t, err)
 
 	// Send transaction
-	result, err := client.SubmitTransaction(context.Background(), signedTxn)
+	result, err := client.SubmitTransaction(signedTxn)
 	assert.NoError(t, err)
 
 	hash := result.Hash
 
 	// Wait for the transaction
-	_, err = client.WaitForTransaction(context.Background(), hash)
+	_, err = client.WaitForTransaction(hash)
 	assert.NoError(t, err)
 
 	// Read transaction by hash
-	txn, err := client.TransactionByHash(context.Background(), hash)
+	txn, err := client.TransactionByHash(hash)
 	assert.NoError(t, err)
 
 	// Read transaction by version
@@ -154,7 +153,7 @@ func testTransaction(t *testing.T, createAccount CreateSigner, buildTransaction 
 	version := userTxn.Version
 
 	// Load the transaction again
-	txnByVersion, err := client.TransactionByVersion(context.Background(), version)
+	txnByVersion, err := client.TransactionByVersion(version)
 	assert.NoError(t, err)
 
 	// Assert that both are the same
@@ -171,7 +170,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	// Simulate transaction (no options)
 	rawTxn, err := buildTransaction(client, account)
 	assert.NoError(t, err)
-	simulatedTxn, err := client.SimulateTransaction(context.Background(), rawTxn, account)
+	simulatedTxn, err := client.SimulateTransaction(rawTxn, account)
 	switch account.(type) {
 	case *MultiKeyTestSigner:
 		// multikey simulation currently not supported
@@ -188,7 +187,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	// simulate transaction (estimate gas unit price)
 	rawTxnZeroGasUnitPrice, err := buildTransaction(client, account, GasUnitPrice(0))
 	assert.NoError(t, err)
-	simulatedTxn, err = client.SimulateTransaction(context.Background(), rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasUnitPrice, account, EstimateGasUnitPrice(true))
 	assert.NoError(t, err)
 	assert.Equal(t, true, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
@@ -198,7 +197,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	// simulate transaction (estimate max gas amount)
 	rawTxnZeroMaxGasAmount, err := buildTransaction(client, account, MaxGasAmount(0))
 	assert.NoError(t, err)
-	simulatedTxn, err = client.SimulateTransaction(context.Background(), rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroMaxGasAmount, account, EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
 	assert.Equal(t, true, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
@@ -207,7 +206,7 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 	// simulate transaction (estimate prioritized gas unit price and max gas amount)
 	rawTxnZeroGasConfig, err := buildTransaction(client, account, GasUnitPrice(0), MaxGasAmount(0))
 	assert.NoError(t, err)
-	simulatedTxn, err = client.SimulateTransaction(context.Background(), rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
+	simulatedTxn, err = client.SimulateTransaction(rawTxnZeroGasConfig, account, EstimatePrioritizedGasUnitPrice(true), EstimateMaxGasAmount(true))
 	assert.NoError(t, err)
 	assert.Equal(t, true, simulatedTxn[0].Success)
 	assert.Equal(t, vmStatusSuccess, simulatedTxn[0].VmStatus)
@@ -224,12 +223,12 @@ func TestAPTTransferTransaction(t *testing.T) {
 
 	client, err := createTestClient()
 	assert.NoError(t, err)
-	signedTxn, err := APTTransferTransaction(context.Background(), client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	signedTxn, err := APTTransferTransaction(client, sender, dest.Address, 1337, MaxGasAmount(123123), GasUnitPrice(111), ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
 	assert.NoError(t, err)
 	assert.NotNil(t, signedTxn)
 
 	// use defaults for: max gas amount, gas unit price
-	signedTxn, err = APTTransferTransaction(context.Background(), client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
+	signedTxn, err = APTTransferTransaction(client, sender, dest.Address, 1337, ExpirationSeconds(42), ChainIdOption(71), SequenceNumber(31337))
 	assert.NoError(t, err)
 	assert.NotNil(t, signedTxn)
 }
@@ -242,14 +241,14 @@ func Test_Indexer(t *testing.T) {
 	account, err := NewEd25519Account()
 	assert.NoError(t, err)
 
-	err = client.Fund(context.Background(), account.AccountAddress(), 10)
+	err = client.Fund(account.AccountAddress(), 10)
 	assert.NoError(t, err)
 
-	balance, err := client.AccountAPTBalance(context.Background(), account.AccountAddress())
+	balance, err := client.AccountAPTBalance(account.AccountAddress())
 	assert.NoError(t, err)
 
 	// TODO: May need to wait on indexer for this one
-	coins, err := client.GetCoinBalances(context.Background(), account.AccountAddress())
+	coins, err := client.GetCoinBalances(account.AccountAddress())
 	assert.NoError(t, err)
 	switch len(coins) {
 	case 0:
@@ -266,7 +265,7 @@ func Test_Indexer(t *testing.T) {
 	}
 
 	// Get current version
-	status, err := client.GetProcessorStatus(context.Background(), "default_processor")
+	status, err := client.GetProcessorStatus("default_processor")
 	assert.NoError(t, err)
 	// TODO: When we have waiting on indexer, we can add this check to be more accurate
 	assert.GreaterOrEqual(t, status, uint64(0))
@@ -276,7 +275,7 @@ func Test_Genesis(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	genesis, err := client.BlockByHeight(context.Background(), 0, true)
+	genesis, err := client.BlockByHeight(0, true)
 	assert.NoError(t, err)
 
 	txn, err := genesis.Transactions[0].GenesisTransaction()
@@ -288,7 +287,7 @@ func Test_Genesis(t *testing.T) {
 func Test_Block(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
-	info, err := client.Info(context.Background())
+	info, err := client.Info()
 	assert.NoError(t, err)
 
 	// TODO: I need to add hardcoded testing sets for these conversions
@@ -301,7 +300,7 @@ func Test_Block(t *testing.T) {
 	for i := uint64(0); i < numToCheck; i++ {
 		go func() {
 			blockNumber := blockHeight - i
-			blockByHeight, err := client.BlockByHeight(context.Background(), blockNumber, true)
+			blockByHeight, err := client.BlockByHeight(blockNumber, true)
 			assert.NoError(t, err)
 
 			assert.Equal(t, blockNumber, blockByHeight.BlockHeight)
@@ -310,7 +309,7 @@ func Test_Block(t *testing.T) {
 			assert.Equal(t, 1+blockByHeight.LastVersion-blockByHeight.FirstVersion, uint64(len(blockByHeight.Transactions)))
 
 			// Version should be the same
-			blockByVersion, err := client.BlockByVersion(context.Background(), blockByHeight.FirstVersion, true)
+			blockByVersion, err := client.BlockByVersion(blockByHeight.FirstVersion, true)
 			assert.NoError(t, err)
 
 			assert.Equal(t, blockByHeight, blockByVersion)
@@ -324,7 +323,7 @@ func Test_Block(t *testing.T) {
 func Test_Account(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
-	account, err := client.Account(context.Background(), AccountOne)
+	account, err := client.Account(AccountOne)
 	assert.NoError(t, err)
 	sequenceNumber, err := account.SequenceNumber()
 	assert.NoError(t, err)
@@ -341,22 +340,22 @@ func Test_Transactions(t *testing.T) {
 	start := uint64(1)
 	count := uint64(2)
 	// Specific 2 should only give 2
-	transactions, err := client.Transactions(context.Background(), &start, &count)
+	transactions, err := client.Transactions(&start, &count)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 2)
 
 	// This will give the latest 2
-	transactions, err = client.Transactions(context.Background(), nil, &count)
+	transactions, err = client.Transactions(nil, &count)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 2)
 
 	// This will give the 25 from 2
-	transactions, err = client.Transactions(context.Background(), &start, nil)
+	transactions, err = client.Transactions(&start, nil)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
 	// This will give the latest 25
-	transactions, err = client.Transactions(context.Background(), nil, nil)
+	transactions, err = client.Transactions(nil, nil)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 25)
 }
@@ -364,13 +363,13 @@ func Test_Transactions(t *testing.T) {
 func submitAccountTransaction(t *testing.T, client *Client, account *Account, seqNo uint64) {
 	payload, err := CoinTransferPayload(nil, AccountOne, 1)
 	assert.NoError(t, err)
-	rawTxn, err := client.BuildTransaction(context.Background(), account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
+	rawTxn, err := client.BuildTransaction(account.AccountAddress(), TransactionPayload{Payload: payload}, SequenceNumber(seqNo))
 	assert.NoError(t, err)
 	signedTxn, err := rawTxn.SignedTransaction(account)
 	assert.NoError(t, err)
-	txn, err := client.SubmitTransaction(context.Background(), signedTxn)
+	txn, err := client.SubmitTransaction(signedTxn)
 	assert.NoError(t, err)
-	_, err = client.WaitForTransaction(context.Background(), txn.Hash)
+	_, err = client.WaitForTransaction(txn.Hash)
 	assert.NoError(t, err)
 }
 
@@ -382,7 +381,7 @@ func Test_AccountTransactions(t *testing.T) {
 	// Create a bunch of transactions so we can test the pagination
 	account, err := NewEd25519Account()
 	assert.NoError(t, err)
-	err = client.Fund(context.Background(), account.AccountAddress(), 100_000_000)
+	err = client.Fund(account.AccountAddress(), 100_000_000)
 	assert.NoError(t, err)
 
 	// Build and submit 100 transactions
@@ -401,7 +400,7 @@ func Test_AccountTransactions(t *testing.T) {
 	submitAccountTransaction(t, client, account, 100)
 
 	// Fetch default
-	transactions, err := client.AccountTransactions(context.Background(), account.AccountAddress(), nil, nil)
+	transactions, err := client.AccountTransactions(account.AccountAddress(), nil, nil)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
@@ -411,69 +410,69 @@ func Test_AccountTransactions(t *testing.T) {
 	ten := uint64(10)
 	hundredOne := uint64(101)
 
-	transactions, err = client.AccountTransactions(context.Background(), account.AccountAddress(), nil, &hundredOne)
+	transactions, err = client.AccountTransactions(account.AccountAddress(), nil, &hundredOne)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 101)
 
 	// Fetch 101 with start
-	transactions, err = client.AccountTransactions(context.Background(), account.AccountAddress(), &zero, &hundredOne)
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, &hundredOne)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 101)
 
 	// Fetch 100 from 1
-	transactions, err = client.AccountTransactions(context.Background(), account.AccountAddress(), &one, &hundredOne)
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &one, &hundredOne)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 100)
 
 	// Fetch default from 0
-	transactions, err = client.AccountTransactions(context.Background(), account.AccountAddress(), &zero, nil)
+	transactions, err = client.AccountTransactions(account.AccountAddress(), &zero, nil)
 	assert.NoError(t, err)
 	assert.Len(t, transactions, 25)
 
 	// Check global transactions API
 
 	t.Run("Default transaction size, no start", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), nil, nil)
+		transactions, err = client.Transactions(nil, nil)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from zero", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), &zero, nil)
+		transactions, err = client.Transactions(&zero, nil)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 	t.Run("Default transaction size, start from one", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), &one, nil)
+		transactions, err = client.Transactions(&one, nil)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 25)
 	})
 
 	t.Run("101 transactions, no start", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), nil, &hundredOne)
+		transactions, err = client.Transactions(nil, &hundredOne)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start zero", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), &zero, &hundredOne)
+		transactions, err = client.Transactions(&zero, &hundredOne)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("101 transactions, start one", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), &one, &hundredOne)
+		transactions, err = client.Transactions(&one, &hundredOne)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 101)
 	})
 
 	t.Run("10 transactions, no start", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), nil, &ten)
+		transactions, err = client.Transactions(nil, &ten)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
 
 	t.Run("10 transactions, start one", func(t *testing.T) {
-		transactions, err = client.Transactions(context.Background(), &one, &ten)
+		transactions, err = client.Transactions(&one, &ten)
 		assert.NoError(t, err)
 		assert.Len(t, transactions, 10)
 	})
@@ -483,7 +482,7 @@ func Test_Info(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	info, err := client.Info(context.Background())
+	info, err := client.Info()
 	assert.NoError(t, err)
 	assert.Greater(t, info.BlockHeight(), uint64(0))
 }
@@ -492,11 +491,11 @@ func Test_AccountResources(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	resources, err := client.AccountResources(context.Background(), AccountOne)
+	resources, err := client.AccountResources(AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resources), 0)
 
-	resourcesBcs, err := client.AccountResourcesBCS(context.Background(), AccountOne)
+	resourcesBcs, err := client.AccountResourcesBCS(AccountOne)
 	assert.NoError(t, err)
 	assert.Greater(t, len(resourcesBcs), 0)
 }
@@ -517,7 +516,7 @@ func concurrentTxnWaiter(
 		responseCount++
 		assert.NoError(t, response.Err)
 
-		waitResponse, err := client.WaitForTransaction(context.Background(), response.Response.Hash, PollTimeout(21*time.Second))
+		waitResponse, err := client.WaitForTransaction(response.Response.Hash, PollTimeout(21*time.Second))
 		if err != nil {
 			t.Logf("%s err %s", response.Response.Hash, err)
 		} else if waitResponse == nil {
@@ -545,15 +544,15 @@ func Test_Concurrent_Submission(t *testing.T) {
 	account2, err := NewEd25519Account()
 	assert.NoError(t, err)
 
-	err = client.Fund(context.Background(), account1.AccountAddress(), 100_000_000)
+	err = client.Fund(account1.AccountAddress(), 100_000_000)
 	assert.NoError(t, err)
-	err = client.Fund(context.Background(), account2.AccountAddress(), 0)
+	err = client.Fund(account2.AccountAddress(), 0)
 	assert.NoError(t, err)
 
 	// start submission goroutine
 	payloads := make(chan TransactionBuildPayload, 50)
 	results := make(chan TransactionSubmissionResponse, 50)
-	go client.BuildSignAndSubmitTransactions(context.Background(), account1, payloads, results, ExpirationSeconds(20))
+	go client.BuildSignAndSubmitTransactions(account1, payloads, results, ExpirationSeconds(20))
 
 	transferPayload, err := CoinTransferPayload(nil, AccountOne, 100)
 	assert.NoError(t, err)
@@ -639,7 +638,7 @@ func TestClient_View(t *testing.T) {
 		ArgTypes: []TypeTag{AptosCoinTypeTag},
 		Args:     [][]byte{AccountOne[:]},
 	}
-	vals, err := client.View(context.Background(), payload)
+	vals, err := client.View(payload)
 	assert.NoError(t, err)
 	assert.Len(t, vals, 1)
 	_, err = StrToUint64(vals[0].(string))
@@ -650,7 +649,7 @@ func TestClient_BlockByHeight(t *testing.T) {
 	client, err := createTestClient()
 	assert.NoError(t, err)
 
-	_, err = client.BlockByHeight(context.Background(), 1, true)
+	_, err = client.BlockByHeight(1, true)
 	assert.NoError(t, err)
 }
 
@@ -660,7 +659,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 
 	t.Run("Node API health check default", func(t *testing.T) {
 		t.Parallel()
-		response, err := client.NodeAPIHealthCheck(context.Background())
+		response, err := client.NodeAPIHealthCheck()
 		assert.NoError(t, err)
 		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
 	})
@@ -668,7 +667,7 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	// Now, check node API health check with a future time that should never fail
 	t.Run("Node API health check far future", func(t *testing.T) {
 		t.Parallel()
-		response, err := client.NodeAPIHealthCheck(context.Background(), 10000)
+		response, err := client.NodeAPIHealthCheck(10000)
 		assert.NoError(t, err)
 		assert.True(t, strings.Contains(response.Message, "ok"), "Node API health check failed"+response.Message)
 	})
@@ -677,13 +676,13 @@ func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	t.Run("Node API health check fail", func(t *testing.T) {
 		t.Parallel()
 		// Now, check node API health check with a time that should probably fail
-		_, err := client.NodeAPIHealthCheck(context.Background(), 0)
+		_, err := client.NodeAPIHealthCheck(0)
 		assert.Error(t, err)
 	})
 }
 
 func buildSingleSignerEntryFunction(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
-	return APTTransferTransaction(context.Background(), client, sender, AccountOne, 100, options...)
+	return APTTransferTransaction(client, sender, AccountOne, 100, options...)
 }
 
 func buildSingleSignerScript(client *Client, sender TransactionSigner, options ...any) (*RawTransaction, error) {
@@ -695,7 +694,7 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 	amount := uint64(1)
 	dest := AccountOne
 
-	rawTxn, err := client.BuildTransaction(context.Background(), sender.AccountAddress(),
+	rawTxn, err := client.BuildTransaction(sender.AccountAddress(),
 		TransactionPayload{Payload: &Script{
 			Code:     scriptBytes,
 			ArgTypes: []TypeTag{},

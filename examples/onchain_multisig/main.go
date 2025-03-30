@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -114,7 +113,7 @@ func example(networkConfig aptos.NetworkConfig) {
 }
 
 func assertBalance(client *aptos.Client, address aptos.AccountAddress, expectedBalance uint64) {
-	amount, err := client.AccountAPTBalance(context.Background(), address)
+	amount, err := client.AccountAPTBalance(address)
 	if err != nil {
 		panic("failed to get balance: " + err.Error())
 	}
@@ -137,7 +136,7 @@ func generateOwnerAccounts() []*aptos.Account {
 
 func fundAccounts(client *aptos.Client, accounts []*aptos.AccountAddress) {
 	for _, account := range accounts {
-		err := client.Fund(context.Background(), *account, 100_000_000)
+		err := client.Fund(*account, 100_000_000)
 		if err != nil {
 			panic("Failed to fund account " + err.Error())
 		}
@@ -151,7 +150,7 @@ func setUpMultisig(client *aptos.Client, accounts []*aptos.Account) *aptos.Accou
 	// ===========================================================================================
 	// Get the next multisig account address. This will be the same as the account address of the multisig account we'll
 	// be creating.
-	multisigAddress, err := client.FetchNextMultisigAddress(context.Background(), accounts[0].Address)
+	multisigAddress, err := client.FetchNextMultisigAddress(accounts[0].Address)
 	if err != nil {
 		panic("Failed to fetch next multisig address: " + err.Error())
 	}
@@ -195,7 +194,7 @@ func createMultisig(client *aptos.Client, account *aptos.Account, additionalAddr
 
 // TODO: This should be a view function
 func multisigResource(client *aptos.Client, multisigAddress *aptos.AccountAddress) (uint64, []any) {
-	resource, err := client.AccountResource(context.Background(), *multisigAddress, "0x1::multisig_account::MultisigAccount")
+	resource, err := client.AccountResource(*multisigAddress, "0x1::multisig_account::MultisigAccount")
 	if err != nil {
 		panic("Failed to get resource for multisig account: " + err.Error())
 	}
@@ -302,12 +301,12 @@ func executeTransaction(client *aptos.Client, multisigAddress aptos.AccountAddre
 }
 
 func submitAndWait(client *aptos.Client, sender *aptos.Account, payload aptos.TransactionPayloadImpl) *api.UserTransaction {
-	submitResponse, err := client.BuildSignAndSubmitTransaction(context.Background(), sender, aptos.TransactionPayload{Payload: payload})
+	submitResponse, err := client.BuildSignAndSubmitTransaction(sender, aptos.TransactionPayload{Payload: payload})
 	if err != nil {
 		panic("Failed to submit transaction: " + err.Error())
 	}
 
-	txn, err := client.WaitForTransaction(context.Background(), submitResponse.Hash)
+	txn, err := client.WaitForTransaction(submitResponse.Hash)
 	if err != nil {
 		panic("Failed to wait for transaction: " + err.Error())
 	}

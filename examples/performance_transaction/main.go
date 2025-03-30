@@ -2,7 +2,6 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"time"
 
@@ -33,7 +32,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	before = time.Now()
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(context.Background(), sender.Address, 100_000_000)
+	err = client.Fund(sender.Address, 100_000_000)
 
 	println("Fund sender:", time.Since(before).Milliseconds(), "ms")
 
@@ -53,7 +52,7 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize arguments:" + err.Error())
 	}
 
-	rawTxn, err := client.BuildTransaction(context.Background(), sender.Address,
+	rawTxn, err := client.BuildTransaction(sender.Address,
 		aptos.TransactionPayload{Payload: payload}, aptos.SequenceNumber(0)) // Use the sequence number to skip fetching it
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
@@ -72,7 +71,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	println("Sign transaction:", time.Since(before).Milliseconds(), "ms")
 
 	before = time.Now()
-	submitResult, err := client.SubmitTransaction(context.Background(), signedTxn)
+	submitResult, err := client.SubmitTransaction(signedTxn)
 	if err != nil {
 		panic("Failed to submit transaction:" + err.Error())
 	}
@@ -81,7 +80,7 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Wait for the transaction
 	before = time.Now()
-	txn, err := client.WaitForTransaction(context.Background(), txnHash)
+	txn, err := client.WaitForTransaction(txnHash)
 	if err != nil {
 		panic("Failed to wait for transaction:" + err.Error())
 	}
