@@ -35,6 +35,7 @@ import "encoding/json"
 //	  }
 //	}
 type Event struct {
+	Version        uint64         // Version is the block version of the event
 	Type           string         // Type is the fully qualified name of the event e.g. 0x1::coin::WithdrawEvent
 	Guid           *GUID          // GUID is the unique identifier of the event, only present in V1 events
 	SequenceNumber uint64         // SequenceNumber is the sequence number of the event, only present in V1 events
@@ -50,6 +51,7 @@ const (
 func (o *Event) UnmarshalJSON(b []byte) error {
 	// In order to handle non-map types of data, we will give a new field name for it
 	type innerStandard struct {
+		Version        U64            `json:"version"`
 		Type           string         `json:"type"`
 		Guid           *GUID          `json:"guid"`
 		SequenceNumber U64            `json:"sequence_number"`
@@ -59,6 +61,7 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 	err := json.Unmarshal(b, &data)
 	if err == nil {
 		// For maps, we're fine
+		o.Version = data.Version.ToUint64()
 		o.Type = data.Type
 		o.Guid = data.Guid
 		o.SequenceNumber = data.SequenceNumber.ToUint64()
@@ -68,6 +71,7 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 
 	// Handle the case where the data is anything other than a map
 	type innerAny struct {
+		Version        U64    `json:"version"`
 		Type           string `json:"type"`
 		Guid           *GUID  `json:"guid"`
 		SequenceNumber U64    `json:"sequence_number"`
@@ -82,6 +86,7 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 	dataMap := make(map[string]any)
 	dataMap[AnyDataName] = dataAny.Data
 
+	o.Version = data.Version.ToUint64()
 	o.Type = data.Type
 	o.Guid = data.Guid
 	o.SequenceNumber = data.SequenceNumber.ToUint64()
