@@ -103,11 +103,11 @@ func (aa *AccountAddress) UnmarshalJSON(b []byte) error {
 	var str string
 	err := json.Unmarshal(b, &str)
 	if err != nil {
-		return fmt.Errorf("failed to convert input to AccountAdddress: %w", err)
+		return fmt.Errorf("failed to convert input to AccountAddress: %w", err)
 	}
 	err = aa.ParseStringRelaxed(str)
 	if err != nil {
-		return fmt.Errorf("failed to convert input to AccountAdddress: %w", err)
+		return fmt.Errorf("failed to convert input to AccountAddress: %w", err)
 	}
 	return nil
 }
