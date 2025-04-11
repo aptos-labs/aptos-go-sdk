@@ -79,6 +79,10 @@ func (u *HexBytes) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (u *HexBytes) MarshalJSON() ([]byte, error) {
+	return json.Marshal(util.BytesToHex(*u))
+}
+
 // Hash is a representation of a hash as Hex in JSON
 //
 // # This is always represented as a 32-byte hash in hexadecimal format
