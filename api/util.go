@@ -79,6 +79,18 @@ func (u *HexBytes) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// MarshalJSON serializes a JSON data into blob [HexBytes]
+//
+// Example:
+//
+//	[]byte{0x12, 0x34, 0x56} -> "0x123456"
+func (u *HexBytes) MarshalJSON() ([]byte, error) {
+	if u == nil {
+		return []byte("null"), nil
+	}
+	return json.Marshal(util.BytesToHex(*u))
+}
+
 // Hash is a representation of a hash as Hex in JSON
 //
 // # This is always represented as a 32-byte hash in hexadecimal format
