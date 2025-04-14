@@ -8,6 +8,8 @@ import (
 )
 
 func TestHexBytesEncoding(t *testing.T) {
+	t.Parallel()
+
 	must := func(s string) HexBytes {
 		res, err := util.ParseHex(s)
 		require.NoError(t, err)
