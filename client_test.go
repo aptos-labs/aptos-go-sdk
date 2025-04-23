@@ -406,7 +406,7 @@ func Test_AccountTransactions(t *testing.T) {
 
 	for i := range uint64(100) {
 		go func() {
-			//nolint:golint,testifylint
+			//nolint:testifylint
 			submitAccountTransaction(t, client, account, i)
 			waitGroup.Done()
 		}()
@@ -604,7 +604,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
 	for range numWaiters {
-		//nolint:golint,testifylint
+		//nolint:testifylint
 		go concurrentTxnWaiter(t, results, waitResults, client, &wg)
 	}
 

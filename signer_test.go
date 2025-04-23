@@ -190,7 +190,7 @@ func (s *MultiKeyTestSigner) SignMessage(msg []byte) (crypto.Signature, error) {
 		var index int
 		for {
 			// Note, this is just for testing, no reason to bring a crypto randomness in here
-			//nolint:golint,gosec
+			//nolint:gosec
 			index = rand.IntN(len(s.Signers))
 			_, present := alreadyUsed[index]
 			if !present {
