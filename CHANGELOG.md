@@ -6,6 +6,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - [`Fix`] Add missing `Version` field to Event struct
+- [`Deps`] Update dependencies including go crypto for security purposes
 
 # v1.6.2 (3/28/2025)
 
