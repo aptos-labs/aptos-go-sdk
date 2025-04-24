@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"log"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
@@ -114,6 +115,19 @@ func (key *Secp256k1PrivateKey) ToHex() string {
 // ToAIP80 formats the private key to AIP-80 compliant string
 func (key *Secp256k1PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantSecp256k1)
+}
+
+// String returns the string representation of the [Secp256k1PrivateKey] in the AIP-80 format
+//
+// If an error occurs during formatting, it returns a placeholder string.
+func (key *Secp256k1PrivateKey) String() string {
+	s, err := key.ToAIP80()
+	if err != nil {
+		// This should never happen
+		log.Printf("Error formatting Secp256k1PrivateKey: %v", err)
+		return "<error formatting Secp256k1PrivateKey>"
+	}
+	return s
 }
 
 // endregion

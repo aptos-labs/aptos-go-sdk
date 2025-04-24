@@ -134,6 +134,14 @@ func TestGenerateSecp256k1Key(t *testing.T) {
 	assert.True(t, privateKey.VerifyingKey().Verify(msg, sig))
 }
 
+func TestSecp256k1Key_String(t *testing.T) {
+	t.Parallel()
+	privateKey := &Secp256k1PrivateKey{}
+	err := privateKey.FromHex(testSecp256k1PrivateKeyHex)
+	require.NoError(t, err)
+	assert.Equal(t, testSecp256k1PrivateKey, privateKey.String())
+}
+
 func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
 	t.Parallel()
 	privateKey := &Secp256k1PrivateKey{}
