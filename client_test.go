@@ -406,7 +406,7 @@ func Test_AccountTransactions(t *testing.T) {
 
 	for i := range uint64(100) {
 		go func() {
-			//nolint:golint,testifylint
+			//nolint:testifylint
 			submitAccountTransaction(t, client, account, i)
 			waitGroup.Done()
 		}()
@@ -573,12 +573,8 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 	account1, err := NewEd25519Account()
 	require.NoError(t, err)
-	account2, err := NewEd25519Account()
-	require.NoError(t, err)
 
 	err = client.Fund(account1.AccountAddress(), 100_000_000)
-	require.NoError(t, err)
-	err = client.Fund(account2.AccountAddress(), 0)
 	require.NoError(t, err)
 
 	// start submission goroutine
@@ -608,7 +604,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(numWaiters)
 	for range numWaiters {
-		//nolint:golint,testifylint
+		//nolint:testifylint
 		go concurrentTxnWaiter(t, results, waitResults, client, &wg)
 	}
 

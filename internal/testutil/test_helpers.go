@@ -60,9 +60,12 @@ func SetupTestAccount(t *testing.T, client *aptos.Client, funding uint64) TestAc
 		t.Fatalf("Failed to create account: %v", err)
 	}
 
-	err = client.Fund(account.Address, funding)
-	if err != nil {
-		t.Fatalf("Failed to fund account: %v", err)
+	// Faucet used to work if the account didn't exist, now the account always exists
+	if funding != 0 {
+		err = client.Fund(account.Address, funding)
+		if err != nil {
+			t.Fatalf("Failed to fund account: %v", err)
+		}
 	}
 
 	balance, err := client.AccountAPTBalance(account.Address)

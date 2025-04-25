@@ -30,7 +30,7 @@ func TestPollForTransaction(t *testing.T) {
 
 // TODO: This test has to be rewritten, as it is not parallelizable between subtests
 //
-//nolint:golint,tparallel
+//nolint:tparallel
 func TestEventsByHandle(t *testing.T) {
 	t.Parallel()
 	mockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -76,7 +76,7 @@ func TestEventsByHandle(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	//nolint:golint,paralleltest
+	//nolint:paralleltest
 	t.Run("pagination with concurrent fetching", func(t *testing.T) {
 		start := uint64(0)
 		limit := uint64(150)
@@ -92,7 +92,7 @@ func TestEventsByHandle(t *testing.T) {
 		assert.Len(t, events, 150)
 	})
 
-	//nolint:golint,paralleltest
+	//nolint:paralleltest
 	t.Run("default page size when limit not provided", func(t *testing.T) {
 		events, err := client.EventsByHandle(
 			AccountZero,
@@ -107,7 +107,7 @@ func TestEventsByHandle(t *testing.T) {
 		assert.Equal(t, uint64(99), events[99].SequenceNumber)
 	})
 
-	//nolint:golint,paralleltest
+	//nolint:paralleltest
 	t.Run("single page fetch", func(t *testing.T) {
 		start := uint64(50)
 		limit := uint64(5)

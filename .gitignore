@@ -29,3 +29,6 @@ cmd/goclient/goclient
 .idea/
 *.swp
 *.swo
+
+# MacOS
+.DS_Store
