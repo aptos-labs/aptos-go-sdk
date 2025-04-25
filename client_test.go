@@ -573,12 +573,8 @@ func Test_Concurrent_Submission(t *testing.T) {
 
 	account1, err := NewEd25519Account()
 	require.NoError(t, err)
-	account2, err := NewEd25519Account()
-	require.NoError(t, err)
 
 	err = client.Fund(account1.AccountAddress(), 100_000_000)
-	require.NoError(t, err)
-	err = client.Fund(account2.AccountAddress(), 0)
 	require.NoError(t, err)
 
 	// start submission goroutine

@@ -5,6 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Feature`] Added `String()` method to `Ed25519PrivateKey` and `Secp256k1PrivateKey` which exports the private key in the AIP-80 format
 - [`Fix`] Add missing `Version` field to Event struct
 - [`Deps`] Update dependencies including go crypto for security purposes
 
@@ -17,7 +18,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 - [`Refactor`] Remove unnecessary atomic swap in submit transactions
 - [`Fix`] Enable users to simulate gas fee payer and multi agent transactions
- 
+
 # v1.6.0 (3/24/2025)
 
 - [`Feature`] Add the ability for ABI simple type conversion of entry function arguments with both remote and local ABI

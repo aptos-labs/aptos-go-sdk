@@ -102,6 +102,14 @@ func TestEd25519Keys(t *testing.T) {
 	assert.Equal(t, authenticator, authenticator2)
 }
 
+func TestEd25519Key_String(t *testing.T) {
+	t.Parallel()
+	privateKey := &Ed25519PrivateKey{}
+	err := privateKey.FromHex(testEd25519PrivateKeyHex)
+	require.NoError(t, err)
+	assert.Equal(t, testEd25519PrivateKey, privateKey.String())
+}
+
 func TestEd25519PrivateKeyWrongLength(t *testing.T) {
 	t.Parallel()
 	privateKey := &Ed25519PrivateKey{}
