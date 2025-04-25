@@ -8,6 +8,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Feature`] Added `String()` method to `Ed25519PrivateKey` and `Secp256k1PrivateKey` which exports the private key in the AIP-80 format
 - [`Fix`] Add missing `Version` field to Event struct
 - [`Deps`] Update dependencies including go crypto for security purposes
+- [`Fix`] Add `MarshalJSON` support for `HexBytes` to match custom `UnmarshalJSON` logic
 
 # v1.6.2 (3/28/2025)
 
