@@ -31,6 +31,7 @@ func TestPollForTransaction(t *testing.T) {
 func TestEventsByHandle(t *testing.T) {
 	t.Parallel()
 	createMockServer := func(t *testing.T) *httptest.Server {
+		t.Helper()
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
 				// handle initial request from client
@@ -56,7 +57,7 @@ func TestEventsByHandle(t *testing.T) {
 			}
 
 			events := make([]map[string]interface{}, 0, limitInt)
-			for i := uint64(0); i < limitInt; i++ {
+			for i := range limitInt {
 				events = append(events, map[string]interface{}{
 					"type": "0x1::coin::TransferEvent",
 					"guid": map[string]interface{}{
@@ -158,6 +159,7 @@ func TestEventsByHandle(t *testing.T) {
 func TestEventsByCreationNumber(t *testing.T) {
 	t.Parallel()
 	createMockServer := func(t *testing.T) *httptest.Server {
+		t.Helper()
 		return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.URL.Path == "/" {
 				// handle initial request from client
@@ -183,7 +185,7 @@ func TestEventsByCreationNumber(t *testing.T) {
 			}
 
 			events := make([]map[string]interface{}, 0, limitInt)
-			for i := uint64(0); i < limitInt; i++ {
+			for i := range limitInt {
 				events = append(events, map[string]interface{}{
 					"type": "0x1::coin::TransferEvent",
 					"guid": map[string]interface{}{

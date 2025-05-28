@@ -511,10 +511,10 @@ func (rc *NodeClient) EventsByHandle(
 		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
 		var pageStart *uint64
 		if start != nil {
-			value := *start + (uint64(i) * eventsPageSize)
+			value := *start + (i * eventsPageSize)
 			pageStart = &value
 		}
-		pageLimit := min(eventsPageSize, effectiveLimit-(uint64(i)*eventsPageSize))
+		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
 
 		go fetch(func() ([]*api.Event, error) {
 			params := url.Values{}
@@ -602,10 +602,10 @@ func (rc *NodeClient) EventsByCreationNumber(
 		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
 		var pageStart *uint64
 		if start != nil {
-			value := *start + (uint64(i) * eventsPageSize)
+			value := *start + (i * eventsPageSize)
 			pageStart = &value
 		}
-		pageLimit := min(eventsPageSize, effectiveLimit-(uint64(i)*eventsPageSize))
+		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
 
 		go fetch(func() ([]*api.Event, error) {
 			params := url.Values{}
