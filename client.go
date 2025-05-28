@@ -738,6 +738,16 @@ func (client *Client) EventsByHandle(account AccountAddress, eventHandle string,
 	return client.nodeClient.EventsByHandle(account, eventHandle, fieldName, start, limit)
 }
 
+// EventsByCreationNumber Get events by creation number for an account.
+// Start is a sequence number. Nil for most recent events.
+// Limit is a number of events to return, 100 by default.
+//
+//	client.EventsByCreationNumber(AccountOne, "123", nil, 2)   // Returns 2 events
+//	client.EventsByCreationNumber(AccountOne, "123", 1, 100) // Returns 100 events
+func (client *Client) EventsByCreationNumber(account AccountAddress, creationNumber string, start *uint64, limit *uint64) ([]*api.Event, error) {
+	return client.nodeClient.EventsByCreationNumber(account, creationNumber, start, limit)
+}
+
 // SubmitTransaction Submits an already signed transaction to the blockchain
 //
 //	sender := NewEd25519Account()
