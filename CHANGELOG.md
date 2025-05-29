@@ -5,6 +5,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Feature`] Added `EventsByCreationNumber` API to fetch events by creation number for a given account
+- [`Fix`] Not set nil `start` argument for `EventsByHandle` to 0 to allow fetching latest events
+
 # v1.7.0 (4/25/2025)
 
 - [`Feature`] Added `String()` method to `Ed25519PrivateKey` and `Secp256k1PrivateKey` which exports the private key in the AIP-80 format
