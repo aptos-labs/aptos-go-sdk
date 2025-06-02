@@ -286,6 +286,20 @@ type AptosRpcClient interface {
 		limit *uint64,
 	) ([]*api.Event, error)
 
+	// EventsByCreationNumber retrieves events by creation number for a given account.
+	//
+	// Arguments:
+	//   - account - The account address to get events for
+	//   - creationNumber - The creation number identifying the event
+	//   - start - The starting sequence number, nil for most recent events
+	//   - limit - The number of events to return, 100 by default
+	EventsByCreationNumber(
+		account AccountAddress,
+		creationNumber string,
+		start *uint64,
+		limit *uint64,
+	) ([]*api.Event, error)
+
 	// SubmitTransaction Submits an already signed transaction to the blockchain
 	//
 	//	sender := NewEd25519Account()
