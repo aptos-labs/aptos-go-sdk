@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.8.0 (6/3/2025)
+
 - [`Feature`] Added `EventsByCreationNumber` API to fetch events by creation number for a given account
 - [`Fix`] Not set nil `start` argument for `EventsByHandle` to 0 to allow fetching latest events
 
