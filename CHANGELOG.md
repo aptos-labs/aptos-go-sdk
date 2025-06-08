@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Breaking`] Change how plain text arguments are parsed from inputs. All inputs now have to be []any and will work nested properly.
+
 # v1.8.0 (6/3/2025)
 
 - [`Feature`] Added `EventsByCreationNumber` API to fetch events by creation number for a given account
