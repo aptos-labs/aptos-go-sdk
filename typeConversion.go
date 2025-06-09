@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -418,12 +419,6 @@ func ConvertToVector(vectorTag VectorTag, arg any, generics []TypeTag, options .
 type CompatibilityMode bool
 
 func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
-	compatibilityMode := false
-	for _, option := range options {
-		if compatMode, ok := option.(CompatibilityMode); ok {
-			compatibilityMode = bool(compatMode)
-		}
-	}
 	switch innerType := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
@@ -518,20 +513,8 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 					// Get inner type
 					typeParam := structTag.TypeParams[0]
 
-					// Handle special case of "none", it's a single 0 byte
-					if arg == nil {
-						return bcs.SerializeU8(0)
-					}
-
-					// There is a second special case of "none" that is used by frontends
-					if compatibilityMode {
-						if typedArg, ok := arg.(string); ok && typedArg == "0x00" {
-							return bcs.SerializeU8(0)
-						}
-					}
-
 					// Otherwise, it's a single byte 1, and the encoded arg
-					b, err := ConvertArg(typeParam, arg, generics, options...)
+					b, err := ConvertToOption(typeParam, arg, generics, options...)
 					if err != nil {
 						return nil, err
 					}
@@ -544,4 +527,88 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 	}
 
 	return nil, errors.New("failed to convert type argument")
+}
+
+func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag, options ...any) ([]byte, error) {
+	switch innerType := typeParam.Value.(type) {
+	case *U8Tag:
+		return bcs.SerializeU8(arg.U8())
+	case *U16Tag:
+		return bcs.SerializeU16(arg.U16())
+	case *U32Tag:
+		return bcs.SerializeU32(arg.U32())
+	case *U64Tag:
+		return bcs.SerializeU64(arg.U64())
+	case *U128Tag:
+		return bcs.SerializeU128(arg.U128())
+	case *U256Tag:
+		return bcs.SerializeU256(arg.U256())
+	case *BoolTag:
+		return bcs.SerializeBool(arg.Bool())
+	case *AddressTag:
+		return bcs.SerializeBytes(arg.ReadFixedBytes(32))
+	case *SignerTag:
+		return nil, errors.New("signer is not supported")
+	case *GenericTag:
+		genericNum := innerType.Num
+		if genericNum >= uint64(len(generics)) {
+			return nil, errors.New("generic number out of bounds")
+		}
+		genericType := generics[genericNum]
+		return ConvertSerializeType(genericType, arg, generics, options...)
+	case *ReferenceTag:
+		return ConvertSerializeType(innerType.TypeParam, arg, generics, options...)
+	case *VectorTag:
+		length := arg.Uleb128()
+		buffer, err := bcs.SerializeUleb128(length)
+		if err != nil {
+			return nil, err
+		}
+		for i := 0; i < int(length); i++ {
+			tempType := typeParam
+			b, err := ConvertSerializeType(tempType, arg, generics, options...)
+			if err != nil {
+				return nil, err
+			}
+			buffer = append(buffer, b...)
+		}
+		return buffer, nil
+	case *StructTag:
+		return ConvertSerializeType(typeParam, arg, generics, options...)
+	default:
+		return nil, errors.New("unknown type")
+	}
+}
+
+func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
+
+	if compatibilityMode {
+		if typedArg, ok := arg.(string); ok {
+			if len(typedArg) >= 2 && typedArg[:2] == "0x" {
+				typedArg = typedArg[2:]
+			}
+			bytes, err := hex.DecodeString(typedArg)
+			if err != nil {
+				return nil, err
+			}
+			des := bcs.NewDeserializer(bytes)
+			length := des.Uleb128()
+			if length == 0 {
+				return bcs.SerializeU8(0)
+			} else {
+				return ConvertSerializeType(typeParam, *des, generics, options...)
+			}
+		}
+	}
+
+	if arg == nil {
+		return bcs.SerializeU8(0)
+	}
+	return ConvertArg(typeParam, arg, generics, options...)
 }
