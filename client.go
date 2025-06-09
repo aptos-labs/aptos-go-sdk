@@ -178,7 +178,7 @@ type AptosRpcClient interface {
 	AccountModule(address AccountAddress, moduleName string, ledgerVersion ...uint64) (*api.MoveBytecode, error)
 
 	// EntryFunctionWithArgs generates an EntryFunction from on-chain Module ABI, and converts simple inputs to BCS encoded ones.
-	EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error)
+	EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error)
 
 	// BlockByHeight fetches a block by height
 	//
@@ -996,6 +996,6 @@ func (client *Client) AccountModule(address AccountAddress, moduleName string, l
 	return client.nodeClient.AccountModule(address, moduleName, ledgerVersion...)
 }
 
-func (client *Client) EntryFunctionWithArgs(address AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
-	return client.nodeClient.EntryFunctionWithArgs(address, moduleName, functionName, typeArgs, args)
+func (client *Client) EntryFunctionWithArgs(address AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
+	return client.nodeClient.EntryFunctionWithArgs(address, moduleName, functionName, typeArgs, args, options...)
 }

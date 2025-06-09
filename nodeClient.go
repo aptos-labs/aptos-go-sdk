@@ -199,14 +199,14 @@ func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, l
 }
 
 // EntryFunctionWithArgs generates an EntryFunction from on-chain Module ABI, and converts simple inputs to BCS encoded ones.
-func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
+func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
 	// TODO: This should be cached / we should be able to take in an ABI
 	module, err := rc.AccountModule(moduleAddress, moduleName)
 	if err != nil {
 		return nil, err
 	}
 
-	return EntryFunctionFromAbi(module.Abi, moduleAddress, moduleName, functionName, typeArgs, args)
+	return EntryFunctionFromAbi(module.Abi, moduleAddress, moduleName, functionName, typeArgs, args, options...)
 }
 
 // BlockByVersion gets a block by a transaction's version number

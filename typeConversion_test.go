@@ -528,11 +528,12 @@ func TestConvertArg(t *testing.T) {
 func TestConvertArg_Special(t *testing.T) {
 	t.Parallel()
 	type Test struct {
-		strTag   string
-		arg      any
-		generics []TypeTag
-		wantErr  bool
-		expected []byte
+		strTag            string
+		arg               any
+		generics          []TypeTag
+		wantErr           bool
+		expected          []byte
+		compatibilityMode bool
 	}
 	tests := []Test{
 		{
@@ -560,6 +561,30 @@ func TestConvertArg_Special(t *testing.T) {
 			arg:      []any{[]any{"0x4222"}, []any{}, []string{"0x32"}},
 			expected: []byte{3, 1, 2, 0x42, 0x22, 0, 1, 1, 0x32},
 		},
+		{ // Special case, difference in behavior with compatibility mode
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x00",
+			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			compatibilityMode: false,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{1, 0},
+			compatibilityMode: false,
+		},
+		{
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
+			compatibilityMode: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -568,7 +593,7 @@ func TestConvertArg_Special(t *testing.T) {
 			typeArg, err := ParseTypeTag(tt.strTag)
 			require.NoError(t, err)
 
-			val, err := ConvertArg(*typeArg, tt.arg, tt.generics)
+			val, err := ConvertArg(*typeArg, tt.arg, tt.generics, CompatibilityMode(tt.compatibilityMode))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertArg() error = %v, wantErr %v", err, tt.wantErr)
 			}

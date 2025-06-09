@@ -11,7 +11,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
+func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
 	var function *api.MoveFunction
 	switch abi := abi.(type) {
 	case *api.MoveModule:
@@ -87,7 +87,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 
 	convertedArgs := make([][]byte, len(args))
 	for i, arg := range args {
-		b, err := ConvertArg(argTypes[i], arg, argTypes)
+		b, err := ConvertArg(argTypes[i], arg, argTypes, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -309,65 +309,69 @@ func ConvertToAddress(arg any) (*AccountAddress, error) {
 }
 
 // ConvertToVectorU8 returns the BCS encoded version of the bytes
-func ConvertToVectorU8(arg any) ([]byte, error) {
+func ConvertToVectorU8(arg any, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
+
 	// Convert input to normalized byte array
 	switch arg := arg.(type) {
 	// Special case, handle hex string
 	case string:
+		// Parse string as UTF-8 bytes, in compatibility mode
+		if compatibilityMode {
+			return bcs.SerializeBytes([]byte(arg))
+		}
+
 		bytes, err := util.ParseHex(arg)
 		if err != nil {
 			return nil, err
 		}
 		return bcs.SerializeBytes(bytes)
 	default:
-		return convertToVectorInner(VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}, arg, []TypeTag{})
+		return convertToVectorInner(VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}, arg, []TypeTag{}, options...)
 	}
 }
 
 // convertToVectorInner specifically is a wrapper to handle the many possible vector input types
-func convertToVectorInner(vectorTag VectorTag, arg any, generics []TypeTag) ([]byte, error) {
+func convertToVectorInner(vectorTag VectorTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	switch arg := arg.(type) {
 	case []any:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []string:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint8:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint16:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint32:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint64:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []int:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
-	case []int8:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
-	case []int16:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
-	case []int32:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
-	case []int64:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []big.Int:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []*big.Int:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []bool:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []AccountAddress:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []*AccountAddress:
-		return convertToVectorInnerTyped(vectorTag, arg, generics)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	default:
 		return nil, fmt.Errorf("invalid input type for struct vector %T", arg)
 	}
 }
 
 // convertToVectorInnerTyped handles typed array access to convert a vector
-func convertToVectorInnerTyped[T any](vectorTag VectorTag, arg []T, generics []TypeTag) ([]byte, error) {
+func convertToVectorInnerTyped[T any](vectorTag VectorTag, arg []T, generics []TypeTag, options ...any) ([]byte, error) {
 	if arg == nil {
 		return nil, errors.New("cannot convert nil to vector")
 	}
@@ -380,7 +384,7 @@ func convertToVectorInnerTyped[T any](vectorTag VectorTag, arg []T, generics []T
 		return nil, err
 	}
 	for _, item := range arg {
-		val, err := ConvertArg(vectorTag.TypeParam, item, generics)
+		val, err := ConvertArg(vectorTag.TypeParam, item, generics, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -389,26 +393,37 @@ func convertToVectorInnerTyped[T any](vectorTag VectorTag, arg []T, generics []T
 	return buffer, nil
 }
 
-func ConvertToVector(vectorTag VectorTag, arg any, generics []TypeTag) ([]byte, error) {
+func ConvertToVector(vectorTag VectorTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	// We have to switch based on type, thanks Golang
 	switch innerType := vectorTag.TypeParam.Value.(type) {
 	case *U8Tag:
 		// Special case to handle hex
-		return ConvertToVectorU8(arg)
+		return ConvertToVectorU8(arg, options...)
 	case *GenericTag:
 		if innerType.Num >= uint64(len(generics)) {
 			return nil, errors.New("generic number out of bounds")
 		}
 		genericType := generics[innerType.Num]
-		return convertToVectorInner(VectorTag{TypeParam: genericType}, arg, generics)
+		return convertToVectorInner(VectorTag{TypeParam: genericType}, arg, generics, options...)
 	case *ReferenceTag:
-		return convertToVectorInner(VectorTag{TypeParam: innerType.TypeParam}, arg, generics)
+		return convertToVectorInner(VectorTag{TypeParam: innerType.TypeParam}, arg, generics, options...)
 	default:
-		return convertToVectorInner(vectorTag, arg, generics)
+		return convertToVectorInner(vectorTag, arg, generics, options...)
 	}
 }
 
-func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
+// CompatibilityMode enables compatibility with the TS SDK in behavior
+// This includes "0x00" as an None option
+// And string interpreted as bytes instead of hex
+type CompatibilityMode bool
+
+func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
 	switch innerType := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
@@ -452,7 +467,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 			return nil, err
 		}
 		return bcs.SerializeBool(bo)
-	case *AddressTag:
+	case *AddressTag, *SignerTag:
 		a, err := ConvertToAddress(arg)
 		if err != nil {
 			return nil, err
@@ -466,12 +481,12 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 		}
 
 		tag := generics[genericNum]
-		return ConvertArg(tag, arg, generics)
+		return ConvertArg(tag, arg, generics, options...)
 	case *ReferenceTag:
 		// Convert based on inner type
-		return ConvertArg(innerType.TypeParam, arg, generics)
+		return ConvertArg(innerType.TypeParam, arg, generics, options...)
 	case *VectorTag:
-		return ConvertToVector(*innerType, arg, generics)
+		return ConvertToVector(*innerType, arg, generics, options...)
 	case *StructTag:
 		structTag := innerType
 		// TODO: We should be able to support custom structs, but for now only support known
@@ -482,7 +497,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 					// TODO: Move to function
 					// Handle as address, inner type doesn't matter
 					// TODO: Improve error message
-					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics)
+					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics, options...)
 				}
 			case "string":
 				if structTag.Name == "String" {
@@ -508,8 +523,15 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 						return bcs.SerializeU8(0)
 					}
 
+					// There is a second special case of "none" that is used by frontends
+					if compatibilityMode {
+						if typedArg, ok := arg.(string); ok && typedArg == "0x00" {
+							return bcs.SerializeU8(0)
+						}
+					}
+
 					// Otherwise, it's a single byte 1, and the encoded arg
-					b, err := ConvertArg(typeParam, arg, generics)
+					b, err := ConvertArg(typeParam, arg, generics, options...)
 					if err != nil {
 						return nil, err
 					}
@@ -518,7 +540,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 			}
 		}
 	default:
-		return nil, errors.New("unknown type argument")
+		return nil, fmt.Errorf("unknown type argument %T", innerType)
 	}
 
 	return nil, errors.New("failed to convert type argument")
