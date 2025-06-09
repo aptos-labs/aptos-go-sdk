@@ -81,12 +81,12 @@ func example(networkConfig aptos.NetworkConfig) {
 	// }
 
 	testVectorU8FunctionAbi := &api.MoveFunction{
-		Name:              "test_vector_u8",
+		Name:              "test_signer_option_signer",
 		Visibility:        "public",
 		IsEntry:           true,
 		IsView:            false,
 		GenericTypeParams: []*api.GenericTypeParam{},
-		Params:            []string{"vector<u8>"},
+		Params:            []string{"&signer", "0x1::option::Option<signer>"},
 		Return:            []string{},
 	}
 
@@ -98,7 +98,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	var address types.AccountAddress
 	copy(address[:], addressBytes)
 
-	payload, err := aptos.EntryFunctionFromAbi(testVectorU8FunctionAbi, address, "args_test", "test_vector_u8", []any{}, []any{[]any{1, 2, 3}})
+	payload, err := aptos.EntryFunctionFromAbi(testVectorU8FunctionAbi, address, "args_test", "test_signer_option_signer", []any{}, []any{"0x00"})
 	if err != nil {
 		panic("Failed to call EntryFunctionWithArgs:" + err.Error())
 	}
