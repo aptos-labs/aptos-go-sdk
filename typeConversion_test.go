@@ -573,6 +573,24 @@ func TestConvertArg_Special(t *testing.T) {
 			expected:          []byte{0},
 			compatibilityMode: true,
 		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x0100",
+			expected:          []byte{1, 0},
+			compatibilityMode: true,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x010102",
+			expected:          []byte{1, 1, 2},
+			compatibilityMode: true,
+		},
 		{
 			strTag:            "vector<u8>",
 			arg:               "0x00",
