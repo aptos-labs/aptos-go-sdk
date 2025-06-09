@@ -80,7 +80,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	// 	Return:            []string{},
 	// }
 
-	testVectorU8FunctionAbi := &api.MoveFunction{
+	testSignerOptionSignerFunctionAbi := &api.MoveFunction{
 		Name:              "test_signer_option_signer",
 		Visibility:        "public",
 		IsEntry:           true,
@@ -98,7 +98,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	var address types.AccountAddress
 	copy(address[:], addressBytes)
 
-	payload, err := aptos.EntryFunctionFromAbi(testVectorU8FunctionAbi, address, "args_test", "test_signer_option_signer", []any{}, []any{"0x00"})
+	payload, err := aptos.EntryFunctionFromAbi(testSignerOptionSignerFunctionAbi, address, "args_test", "test_signer_option_signer", []any{}, []any{"0x00"})
 	if err != nil {
 		panic("Failed to call EntryFunctionWithArgs:" + err.Error())
 	}
