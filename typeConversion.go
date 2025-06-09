@@ -564,7 +564,7 @@ func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []Ty
 		if err != nil {
 			return nil, err
 		}
-		for i := 0; i < int(length); i++ {
+		for range int(length) {
 			tempType := typeParam
 			b, err := ConvertSerializeType(tempType, arg, generics, options...)
 			if err != nil {
