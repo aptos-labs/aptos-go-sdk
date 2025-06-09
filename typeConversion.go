@@ -513,12 +513,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 					// Get inner type
 					typeParam := structTag.TypeParams[0]
 
-					// Otherwise, it's a single byte 1, and the encoded arg
-					b, err := ConvertToOption(typeParam, arg, generics, options...)
-					if err != nil {
-						return nil, err
-					}
-					return append([]byte{1}, b...), nil
+					return ConvertToOption(typeParam, arg, generics, options...)
 				}
 			}
 		}
@@ -564,9 +559,8 @@ func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []Ty
 		if err != nil {
 			return nil, err
 		}
-		for range int(length) {
-			tempType := typeParam
-			b, err := ConvertSerializeType(tempType, arg, generics, options...)
+		for i := 0; i < int(length); i++ {
+			b, err := ConvertSerializeType(innerType.TypeParam, arg, generics, options...)
 			if err != nil {
 				return nil, err
 			}
@@ -588,6 +582,10 @@ func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...
 		}
 	}
 
+	if arg == nil {
+		return bcs.SerializeU8(0)
+	}
+
 	if compatibilityMode {
 		if typedArg, ok := arg.(string); ok {
 			if len(typedArg) >= 2 && typedArg[:2] == "0x" {
@@ -602,13 +600,20 @@ func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...
 			if length == 0 {
 				return bcs.SerializeU8(0)
 			} else {
-				return ConvertSerializeType(typeParam, *des, generics, options...)
+				b := []byte{1}
+				buffer, err := ConvertSerializeType(typeParam, *des, generics, options...)
+				if err != nil {
+					return nil, err
+				}
+				return append(b, buffer...), nil
 			}
 		}
 	}
 
-	if arg == nil {
-		return bcs.SerializeU8(0)
+	b := []byte{1}
+	buffer, err := ConvertArg(typeParam, arg, generics, options...)
+	if err != nil {
+		return nil, err
 	}
-	return ConvertArg(typeParam, arg, generics, options...)
+	return append(b, buffer...), nil
 }
