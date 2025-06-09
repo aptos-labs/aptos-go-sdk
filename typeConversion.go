@@ -524,7 +524,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 	return nil, errors.New("failed to convert type argument")
 }
 
-func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag, options ...any) ([]byte, error) {
+func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag, options ...any) ([]byte, error) {
 	switch innerType := typeParam.Value.(type) {
 	case *U8Tag:
 		return bcs.SerializeU8(arg.U8())
@@ -550,9 +550,9 @@ func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []Ty
 			return nil, errors.New("generic number out of bounds")
 		}
 		genericType := generics[genericNum]
-		return ConvertSerializeType(genericType, arg, generics, options...)
+		return convertCompatibilitySerializedType(genericType, arg, generics, options...)
 	case *ReferenceTag:
-		return ConvertSerializeType(innerType.TypeParam, arg, generics, options...)
+		return convertCompatibilitySerializedType(innerType.TypeParam, arg, generics, options...)
 	case *VectorTag:
 		length := arg.Uleb128()
 		buffer, err := bcs.SerializeUleb128(length)
@@ -560,7 +560,7 @@ func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []Ty
 			return nil, err
 		}
 		for range int(length) {
-			b, err := ConvertSerializeType(innerType.TypeParam, arg, generics, options...)
+			b, err := convertCompatibilitySerializedType(innerType.TypeParam, arg, generics, options...)
 			if err != nil {
 				return nil, err
 			}
@@ -568,7 +568,7 @@ func ConvertSerializeType(typeParam TypeTag, arg bcs.Deserializer, generics []Ty
 		}
 		return buffer, nil
 	case *StructTag:
-		return ConvertSerializeType(typeParam, arg, generics, options...)
+		return convertCompatibilitySerializedType(typeParam, arg, generics, options...)
 	default:
 		return nil, errors.New("unknown type")
 	}
@@ -601,7 +601,7 @@ func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...
 				return bcs.SerializeU8(0)
 			} else {
 				b := []byte{1}
-				buffer, err := ConvertSerializeType(typeParam, *des, generics, options...)
+				buffer, err := convertCompatibilitySerializedType(typeParam, *des, generics, options...)
 				if err != nil {
 					return nil, err
 				}
