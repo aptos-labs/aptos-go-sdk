@@ -2,19 +2,13 @@ package aptos
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
-
-// SerializeString serializes a single string using the BCS format
-func SerializeString(input string) ([]byte, error) {
-	return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-		ser.WriteString(input)
-	})
-}
 
 // DigitalAssetClient provides methods for interacting with Aptos Digital Assets (NFTs) and Fungible Assets
 type DigitalAssetClient struct {
@@ -120,81 +114,81 @@ type MintTokenOptions struct {
 // === COLLECTION OPERATIONS ===
 
 // CreateCollection creates a new collection using the Digital Asset standard
-func (dac *DigitalAssetClient) CreateCollection(creator *Account, options CreateCollectionOptions) (*string, error) {
+func (dac *DigitalAssetClient) CreateCollection(creator *Account, options CreateCollectionOptions) (string, error) {
 	// Serialize arguments for BCS
-	descriptionBytes, err := SerializeString(options.Description)
+	descriptionBytes, err := bcs.SerializeString(options.Description)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize description: %w", err)
+		return CreateErrorMessage("description", err)
 	}
 
-	nameBytes, err := SerializeString(options.Name)
+	nameBytes, err := bcs.SerializeString(options.Name)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize name: %w", err)
+		return CreateErrorMessage("name", err)
 	}
 
-	uriBytes, err := SerializeString(options.URI)
+	uriBytes, err := bcs.SerializeString(options.URI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize URI: %w", err)
+		return CreateErrorMessage("URI", err)
 	}
 
 	maxSupplyBytes, err := bcs.SerializeU64(options.MaxSupply)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize max_supply: %w", err)
+		return CreateErrorMessage("max_supply", err)
 	}
 
 	mutableDescBytes, err := bcs.SerializeBool(options.MutableDescription)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_description: %w", err)
+		return CreateErrorMessage("mutable_description", err)
 	}
 
 	mutableRoyaltyBytes, err := bcs.SerializeBool(options.MutableRoyalty)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_royalty: %w", err)
+		return CreateErrorMessage("mutable_royalty", err)
 	}
 
 	mutableURIBytes, err := bcs.SerializeBool(options.MutableURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_uri: %w", err)
+		return CreateErrorMessage("mutable_uri", err)
 	}
 
 	mutableTokenDescBytes, err := bcs.SerializeBool(options.MutableTokenDescription)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_token_description: %w", err)
+		return CreateErrorMessage("mutable_token_description", err)
 	}
 
 	mutableTokenNameBytes, err := bcs.SerializeBool(options.MutableTokenName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_token_name: %w", err)
+		return CreateErrorMessage("mutable_token_name", err)
 	}
 
 	mutableTokenPropsBytes, err := bcs.SerializeBool(options.MutableTokenProperties)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_token_properties: %w", err)
+		return CreateErrorMessage("mutable_token_properties", err)
 	}
 
 	mutableTokenURIBytes, err := bcs.SerializeBool(options.MutableTokenURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize mutable_token_uri: %w", err)
+		return CreateErrorMessage("mutable_token_uri", err)
 	}
 
 	tokensBurnableBytes, err := bcs.SerializeBool(options.TokensBurnableByCreator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize tokens_burnable_by_creator: %w", err)
+		return CreateErrorMessage("tokens_burnable_by_creator", err)
 	}
 
 	tokensFreezableBytes, err := bcs.SerializeBool(options.TokensFreezableByCreator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize tokens_freezable_by_creator: %w", err)
+		return CreateErrorMessage("tokens_freezable_by_creator", err)
 	}
 
 	royaltyNumeratorBytes, err := bcs.SerializeU64(options.RoyaltyPointsNumerator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize royalty_points_numerator: %w", err)
+		return CreateErrorMessage("royalty_points_numerator", err)
 	}
 
 	royaltyDenominatorBytes, err := bcs.SerializeU64(options.RoyaltyPointsDenominator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize royalty_points_denominator: %w", err)
+		return CreateErrorMessage("royalty_points_denominator", err)
 	}
 
 	// Build the transaction
@@ -226,64 +220,68 @@ func (dac *DigitalAssetClient) CreateCollection(creator *Account, options Create
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to build transaction: %w", err)
+		return "", fmt.Errorf("failed to build transaction: %w", err)
 	}
 
 	// Sign and submit the transaction
 	signedTxn, err := rawTxn.SignedTransaction(creator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign transaction: %w", err)
+		return "", fmt.Errorf("failed to sign transaction: %w", err)
 	}
 
 	submitResult, err := dac.client.SubmitTransaction(signedTxn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to submit transaction: %w", err)
+		return "", fmt.Errorf("failed to submit transaction: %w", err)
 	}
 
-	return &submitResult.Hash, nil
+	return submitResult.Hash, nil
+}
+
+func CreateErrorMessage(attr string, err error) (string, error) {
+	return "", fmt.Errorf("failed to serialize %s: %w", attr, err)
 }
 
 // === TOKEN OPERATIONS ===
 
 // MintToken mints a new token (NFT) to the specified collection
-func (dac *DigitalAssetClient) MintToken(creator *Account, recipient AccountAddress, options MintTokenOptions) (*string, error) {
+func (dac *DigitalAssetClient) MintToken(creator *Account, recipient AccountAddress, options MintTokenOptions) (string, error) {
 	// Serialize arguments
-	collectionBytes, err := SerializeString(options.CollectionName)
+	collectionBytes, err := bcs.SerializeString(options.CollectionName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize collection: %w", err)
+		return CreateErrorMessage("collection", err)
 	}
 
-	descriptionBytes, err := SerializeString(options.TokenDescription)
+	descriptionBytes, err := bcs.SerializeString(options.TokenDescription)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize description: %w", err)
+		return CreateErrorMessage("description", err)
 	}
 
-	nameBytes, err := SerializeString(options.TokenName)
+	nameBytes, err := bcs.SerializeString(options.TokenName)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize name: %w", err)
+		return CreateErrorMessage("name", err)
 	}
 
-	uriBytes, err := SerializeString(options.TokenURI)
+	uriBytes, err := bcs.SerializeString(options.TokenURI)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize URI: %w", err)
+		return CreateErrorMessage("URI", err)
 	}
 
 	// Serialize property keys
 	propertyKeysBytes, err := SerializeVectorString(options.PropertyKeys)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize property keys: %w", err)
+		return CreateErrorMessage("property_keys", err)
 	}
 
 	// Serialize property types
 	propertyTypesBytes, err := SerializeVectorString(options.PropertyTypes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize property types: %w", err)
+		return CreateErrorMessage("property_types", err)
 	}
 
 	// Serialize property values (as bytes)
 	propertyValuesBytes, err := SerializePropertyValues(options.PropertyValues, options.PropertyTypes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to serialize property values: %w", err)
+		return CreateErrorMessage("property_values", err)
 	}
 
 	// Build the transaction
@@ -291,38 +289,12 @@ func (dac *DigitalAssetClient) MintToken(creator *Account, recipient AccountAddr
 	var args [][]byte
 
 	if options.IsSoulBound {
-		functionName = "mint_soul_bound"
-
-		// Serialize the soul_bound_to address
-		recipientBytes, err := bcs.Serialize(&recipient)
+		functionName, args, err = mintSoulboundArgs(recipient, collectionBytes, descriptionBytes, nameBytes, uriBytes, propertyKeysBytes, propertyTypesBytes, propertyValuesBytes)
 		if err != nil {
-			return nil, fmt.Errorf("failed to serialize recipient address: %w", err)
-		}
-
-		// mint_soul_bound requires the recipient address as the last argument
-		args = [][]byte{
-			collectionBytes,
-			descriptionBytes,
-			nameBytes,
-			uriBytes,
-			propertyKeysBytes,
-			propertyTypesBytes,
-			propertyValuesBytes,
-			recipientBytes, // soul_bound_to: address
+			return "", err
 		}
 	} else {
-		functionName = "mint"
-
-		// Regular mint doesn't need the recipient address
-		args = [][]byte{
-			collectionBytes,
-			descriptionBytes,
-			nameBytes,
-			uriBytes,
-			propertyKeysBytes,
-			propertyTypesBytes,
-			propertyValuesBytes,
-		}
+		functionName, args = mintArgs(collectionBytes, descriptionBytes, nameBytes, uriBytes, propertyKeysBytes, propertyTypesBytes, propertyValuesBytes)
 	}
 
 	rawTxn, err := dac.client.BuildTransaction(creator.AccountAddress(), TransactionPayload{
@@ -337,21 +309,62 @@ func (dac *DigitalAssetClient) MintToken(creator *Account, recipient AccountAddr
 		},
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to build transaction: %w", err)
+		return "", fmt.Errorf("failed to build transaction: %w", err)
 	}
 
 	// Sign and submit the transaction
 	signedTxn, err := rawTxn.SignedTransaction(creator)
 	if err != nil {
-		return nil, fmt.Errorf("failed to sign transaction: %w", err)
+		return "", fmt.Errorf("failed to sign transaction: %w", err)
 	}
 
 	submitResult, err := dac.client.SubmitTransaction(signedTxn)
 	if err != nil {
-		return nil, fmt.Errorf("failed to submit transaction: %w", err)
+		return "", fmt.Errorf("failed to submit transaction: %w", err)
 	}
 
-	return &submitResult.Hash, nil
+	return submitResult.Hash, nil
+}
+
+func mintSoulboundArgs(recipient AccountAddress, collectionBytes []byte, descriptionBytes []byte, nameBytes []byte, uriBytes []byte, propertyKeysBytes []byte, propertyTypesBytes []byte, propertyValuesBytes []byte) (string, [][]byte, error) {
+	functionName := "mint_soul_bound"
+
+	// Serialize the soul_bound_to address
+	recipientBytes, err := bcs.Serialize(&recipient)
+	if err != nil {
+		return "", nil, fmt.Errorf("failed to serialize recipient: %w", err)
+	}
+
+	// mint_soul_bound requires the recipient address as the last argument
+	args := [][]byte{
+		collectionBytes,
+		descriptionBytes,
+		nameBytes,
+		uriBytes,
+		propertyKeysBytes,
+		propertyTypesBytes,
+		propertyValuesBytes,
+		recipientBytes, // soul_bound_to: address
+	}
+
+	return functionName, args, err
+}
+
+func mintArgs(collectionBytes []byte, descriptionBytes []byte, nameBytes []byte, uriBytes []byte, propertyKeysBytes []byte, propertyTypesBytes []byte, propertyValuesBytes []byte) (string, [][]byte) {
+	functionName := "mint"
+
+	// mint_soul_bound requires the recipient address as the last argument
+	args := [][]byte{
+		collectionBytes,
+		descriptionBytes,
+		nameBytes,
+		uriBytes,
+		propertyKeysBytes,
+		propertyTypesBytes,
+		propertyValuesBytes,
+	}
+
+	return functionName, args
 }
 
 // TransferToken transfers a token from one account to another
@@ -371,11 +384,11 @@ func (dac *DigitalAssetClient) TransferToken(sender *Account, tokenAddress Accou
 	rawTxn, err := dac.client.BuildTransaction(sender.AccountAddress(), TransactionPayload{
 		Payload: &EntryFunction{
 			Module: ModuleId{
-				Address: AccountFour, // 0x4
+				Address: AccountOne, // 0x1
 				Name:    "object",
 			},
 			Function: "transfer",
-			ArgTypes: []TypeTag{},
+			ArgTypes: []TypeTag{ObjectTypeTag},
 			Args: [][]byte{
 				tokenAddressBytes,
 				recipientBytes,
@@ -428,7 +441,7 @@ func SerializeVectorBytes(values []string) ([]byte, error) {
 
 func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 	if len(values) != len(types) {
-		return nil, fmt.Errorf("property values and types must have the same length")
+		return nil, errors.New("property values and types must have the same length")
 	}
 
 	// Convert each value to BCS-serialized bytes according to its type
@@ -447,39 +460,45 @@ func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 				s.WriteString(value)
 			})
 
-		case "u64":
-			// For u64, parse and BCS serialize as u64
-			numValue, parseErr := strconv.ParseUint(value, 10, 64)
-			if parseErr != nil {
-				return nil, fmt.Errorf("failed to parse u64 value '%s': %w", value, parseErr)
-			}
-			valueBytes, err = bcs.SerializeSingle(func(s *bcs.Serializer) {
-				s.U64(numValue)
-			})
-
 		case "u8":
 			// For u8, parse and BCS serialize as u8
-			numValue, parseErr := strconv.ParseUint(value, 10, 8)
+			numValue, parseErr := ConvertToU8(value)
 			if parseErr != nil {
 				return nil, fmt.Errorf("failed to parse u8 value '%s': %w", value, parseErr)
 			}
-			valueBytes, err = bcs.SerializeSingle(func(s *bcs.Serializer) {
-				s.U8(uint8(numValue))
-			})
+			valueBytes, err = bcs.SerializeU8(numValue)
+
+		case "u16":
+			// For u8, parse and BCS serialize as u8
+			numValue, parseErr := ConvertToU16(value)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse u8 value '%s': %w", value, parseErr)
+			}
+			valueBytes, err = bcs.SerializeU16(numValue)
+
+		case "u32":
+			// For u8, parse and BCS serialize as u8
+			numValue, parseErr := ConvertToU32(value)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse u8 value '%s': %w", value, parseErr)
+			}
+			valueBytes, err = bcs.SerializeU32(numValue)
+
+		case "u64":
+			// For u64, parse and BCS serialize as u64
+			numValue, parseErr := ConvertToU64(value)
+			if parseErr != nil {
+				return nil, fmt.Errorf("failed to parse u64 value '%s': %w", value, parseErr)
+			}
+			valueBytes, err = bcs.SerializeU64(numValue)
 
 		case "u128":
-			// For u128, parse and serialize manually as 16 bytes little-endian
-			numValue, parseErr := strconv.ParseUint(value, 10, 64) // Limited to u64 range
+			// For u128, parse as bigInt and BCS serialize as u128
+			bigIntValue, parseErr := StrToBigInt(value)
 			if parseErr != nil {
-				return nil, fmt.Errorf("failed to parse u128 value '%s': %w", value, parseErr)
+				return nil, fmt.Errorf("failed to parse bigInt value '%s': %w", value, parseErr)
 			}
-			// Manually create 16-byte little-endian representation
-			bytes := make([]byte, 16)
-			for j := 0; j < 8; j++ {
-				bytes[j] = byte(numValue >> (8 * j))
-			}
-			// Upper 8 bytes remain zero for values that fit in u64
-			valueBytes = bytes
+			valueBytes, err = bcs.SerializeU128(*bigIntValue)
 
 		case "bool":
 			// For bool, parse and BCS serialize as bool
@@ -487,24 +506,15 @@ func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 			if parseErr != nil {
 				return nil, fmt.Errorf("failed to parse bool value '%s': %w", value, parseErr)
 			}
-			valueBytes, err = bcs.SerializeSingle(func(s *bcs.Serializer) {
-				s.Bool(boolValue)
-			})
+			valueBytes, err = bcs.SerializeBool(boolValue)
 
 		case "address":
 			// For address, decode hex and use as 32-byte array
-			addressStr := strings.TrimPrefix(value, "0x")
-			addressBytes, parseErr := hex.DecodeString(addressStr)
+			addressBytes, parseErr := ConvertToAddress(value)
 			if parseErr != nil {
 				return nil, fmt.Errorf("failed to parse address value '%s': %w", value, parseErr)
 			}
-			// Ensure it's 32 bytes
-			if len(addressBytes) < 32 {
-				padded := make([]byte, 32)
-				copy(padded[32-len(addressBytes):], addressBytes)
-				addressBytes = padded
-			}
-			valueBytes = addressBytes
+			valueBytes, err = bcs.Serialize(addressBytes)
 
 		case "vector<u8>":
 			// For byte vector, decode from hex or use as UTF-8, then BCS serialize
@@ -524,10 +534,7 @@ func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 
 		default:
 			// For unknown types, fall back to BCS string
-			fmt.Printf("Warning: unknown property type '%s', treating as Move String\n", propertyType)
-			valueBytes, err = bcs.SerializeSingle(func(s *bcs.Serializer) {
-				s.WriteString(value)
-			})
+			return nil, fmt.Errorf("failed to serialize, unknown property type '%s'", propertyType)
 		}
 
 		if err != nil {
