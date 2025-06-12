@@ -28,10 +28,11 @@ func (txn *TransactionInnerPayload) UnmarshalBCS(des *bcs.Deserializer) {
 	switch innerType {
 	case TransactionInnerPayloadVariantV1:
 		txn.Payload = &TransactionInnerPayloadV1{}
-		txn.Payload.UnmarshalBCS(des)
 	default:
 		des.SetError(errors.New("unknown transaction inner payload variant"))
+		return
 	}
+	txn.Payload.UnmarshalBCS(des)
 }
 
 type TransactionInnerPayloadImpl interface {
@@ -83,6 +84,7 @@ func (txn *TransactionExecutable) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Inner = &TransactionExecutableEmpty{}
 	default:
 		des.SetError(errors.New("unknown transaction executable variant"))
+		return
 	}
 	txn.Inner.UnmarshalBCS(des)
 }
@@ -122,6 +124,7 @@ func (txn *TransactionExtraConfig) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Inner = &TransactionExtraConfigV1{}
 	default:
 		des.SetError(errors.New("unknown transaction extra config variant"))
+		return
 	}
 	des.Struct(txn.Inner)
 }
@@ -155,6 +158,6 @@ func (txn *TransactionExtraConfigV1) UnmarshalBCS(des *bcs.Deserializer) {
 		des.Struct(out)
 	})
 	bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *uint64) {
-		des.U64()
+		*out = des.U64()
 	})
 }
