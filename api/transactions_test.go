@@ -564,6 +564,7 @@ func TestTransaction_UserTransaction(t *testing.T) {
 	assert.Equal(t, uint64(100), txn.GasUnitPrice)
 	assert.Equal(t, uint64(2018), txn.MaxGasAmount)
 	assert.Equal(t, uint64(1719968695), txn.ExpirationTimestampSecs)
+	assert.Nil(t, txn.ReplayProtectionNonce)
 
 	// TODO: test some more
 
@@ -856,4 +857,320 @@ func TestTransaction_UnknownTransaction(t *testing.T) {
 	require.Error(t, err)
 	_, err = data2.ValidatorTransaction()
 	require.Error(t, err)
+}
+
+func TestTransaction_WithReplayNonce(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+  "version": "6781425728",
+  "hash": "0x650da387b6e7de0e9a83ca5f7c12e41ef865d0d12c38e793b55091da7ec90b39",
+  "state_change_hash": "0x5b30b4306a1cbebe71dd319a02b84a78305f1a228de00f965c0e3350220e9f95",
+  "event_root_hash": "0x5d3d8778f6d08e1668d9c2827841e63402531f8696a4df5b9bd36954ff048799",
+  "state_checkpoint_hash": null,
+  "gas_used": "57",
+  "success": true,
+  "vm_status": "Executed successfully",
+  "accumulator_root_hash": "0x24585b5a178b55a7f899522e6101a6b2bb65baf3e33bdc4215034a1c463c13bb",
+  "changes": [
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::coin::PairedCoinType",
+        "data": {
+          "type": {
+            "account_address": "0x1",
+            "module_name": "0x6170746f735f636f696e",
+            "struct_name": "0x4170746f73436f696e"
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::coin::PairedFungibleAssetRefs",
+        "data": {
+          "burn_ref_opt": {
+            "vec": [
+              {
+                "metadata": {
+                  "inner": "0xa"
+                }
+              }
+            ]
+          },
+          "mint_ref_opt": {
+            "vec": [
+              {
+                "metadata": {
+                  "inner": "0xa"
+                }
+              }
+            ]
+          },
+          "transfer_ref_opt": {
+            "vec": [
+              {
+                "metadata": {
+                  "inner": "0xa"
+                }
+              }
+            ]
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::fungible_asset::ConcurrentSupply",
+        "data": {
+          "current": {
+            "max_value": "340282366920938463463374607431768211455",
+            "value": "29015120094410588863"
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::fungible_asset::Metadata",
+        "data": {
+          "decimals": 8,
+          "icon_uri": "",
+          "name": "Aptos Coin",
+          "project_uri": "",
+          "symbol": "APT"
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::object::ObjectCore",
+        "data": {
+          "allow_ungated_transfer": true,
+          "guid_creation_num": "1125899906842625",
+          "owner": "0x1",
+          "transfer_events": {
+            "counter": "0",
+            "guid": {
+              "id": {
+                "addr": "0xa",
+                "creation_num": "1125899906842624"
+              }
+            }
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa",
+      "state_key_hash": "0x1db5441d8fa4229c5844f73fd66da4ad8176cb8793d8b3a7f6ca858722030043",
+      "data": {
+        "type": "0x1::primary_fungible_store::DeriveRefPod",
+        "data": {
+          "metadata_derive_ref": {
+            "self": "0xa"
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0x4f8733c98d484ea506fcfd7ecdec17c4b27f7489fb0c8962975bf0cf213b6242",
+      "state_key_hash": "0x0002c250a4d5c3d717c489aec95f5989b6f09af282473fb4ad604ee02bbc0af8",
+      "data": {
+        "type": "0x1::fungible_asset::FungibleStore",
+        "data": {
+          "balance": "1994000",
+          "frozen": false,
+          "metadata": {
+            "inner": "0xa"
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0x4f8733c98d484ea506fcfd7ecdec17c4b27f7489fb0c8962975bf0cf213b6242",
+      "state_key_hash": "0x0002c250a4d5c3d717c489aec95f5989b6f09af282473fb4ad604ee02bbc0af8",
+      "data": {
+        "type": "0x1::object::ObjectCore",
+        "data": {
+          "allow_ungated_transfer": false,
+          "guid_creation_num": "1125899906842625",
+          "owner": "0x49ffe7968750a5ffea80af6fd7657bb246ff8ce6657cbf2c8ed13d9276096b3f",
+          "transfer_events": {
+            "counter": "0",
+            "guid": {
+              "id": {
+                "addr": "0x4f8733c98d484ea506fcfd7ecdec17c4b27f7489fb0c8962975bf0cf213b6242",
+                "creation_num": "1125899906842624"
+              }
+            }
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa66d5588e5e71987999dea776e5798be8926470f012e4a4f320e0737903ecba1",
+      "state_key_hash": "0xc1c56630c82dbd34129a5a5347df7ecfb713e9a665407234e3bbfe94117c4e92",
+      "data": {
+        "type": "0x1::fungible_asset::FungibleStore",
+        "data": {
+          "balance": "29999948600",
+          "frozen": false,
+          "metadata": {
+            "inner": "0xa"
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "address": "0xa66d5588e5e71987999dea776e5798be8926470f012e4a4f320e0737903ecba1",
+      "state_key_hash": "0xc1c56630c82dbd34129a5a5347df7ecfb713e9a665407234e3bbfe94117c4e92",
+      "data": {
+        "type": "0x1::object::ObjectCore",
+        "data": {
+          "allow_ungated_transfer": false,
+          "guid_creation_num": "1125899906842625",
+          "owner": "0xa5b2dd0b5fe37a06f151d424cc880f67458c6fe3d8dbf44a55c6021cd111c10d",
+          "transfer_events": {
+            "counter": "0",
+            "guid": {
+              "id": {
+                "addr": "0xa66d5588e5e71987999dea776e5798be8926470f012e4a4f320e0737903ecba1",
+                "creation_num": "1125899906842624"
+              }
+            }
+          }
+        }
+      },
+      "type": "write_resource"
+    },
+    {
+      "state_key_hash": "0x6e4b28d40f98a106a65163530924c0dcb40c1349d3aa915d108b4d6cfc1ddb19",
+      "handle": "0x1b854694ae746cdbd8d44186ca4929b2b337df21d1c74633be19b2710552fdca",
+      "key": "0x0619dc29a0aac8fa146714058e8dd6d2d0f3bdf5f6331907bf91f3acd81e6935",
+      "value": "0xd6b01fdfed0ebb020000000000000000",
+      "data": null,
+      "type": "write_table_item"
+    },
+    {
+      "state_key_hash": "0xae1988c58918023c1d5e3c83860a8fd21958557059c62a9fb6348815aa358b95",
+      "handle": "0x4f68492eeffc337d93969722200c8ebf28d80eb30f5dee5c54981012da31f0a4",
+      "key": "0x2627000000000000",
+      "value": "0x00000100017492476800000000a5b2dd0b5fe37a06f151d424cc880f67458c6fe3d8dbf44a55c6021cd111c10de0e1f6016d2ed4c001010000000000000000000000000000000000012b52265feda0da555eb84a3e43894602937237ce11a4a323aa8c73b41d04204005000000000000000f00000000000000010e00000000000000050000000100000000000000010000000000000001550053000000010001a5b2dd0b5fe37a06f151d424cc880f67458c6fe3d8dbf44a55c6021cd111c10de0e1f6016d2ed4c0017492476800000000000000000000000000000000000000000001e532644d51f5b1be0bf1b1d41405b0199307f80c463d1fbc9263c2b804a9b13d05000000000000000f00000000000000010e0000000000000005000000010000000000000001000000000000000166005500",
+      "data": null,
+      "type": "write_table_item"
+    }
+  ],
+  "sender": "0xa5b2dd0b5fe37a06f151d424cc880f67458c6fe3d8dbf44a55c6021cd111c10d",
+  "sequence_number": "18446744073709551615",
+  "max_gas_amount": "85",
+  "gas_unit_price": "100",
+  "expiration_timestamp_secs": "1749521012",
+  "payload": {
+    "function": "0x1::aptos_account::transfer",
+    "type_arguments": [],
+    "arguments": [
+      "0x49ffe7968750a5ffea80af6fd7657bb246ff8ce6657cbf2c8ed13d9276096b3f",
+      "20000"
+    ],
+    "type": "entry_function_payload"
+  },
+  "signature": {
+    "public_key": "0xd782a5d884d64b26d73670109669f309224c553768a517fa0ebcce08ffedaa09",
+    "signature": "0xc76ec8b8024497d0a70932da7b9e3ba9effff96e24626cb8bc6133c4b1544b54df6ea9fec05c53910034d341ef8424a502761df1ed658abba22b15a084224c06",
+    "type": "ed25519_signature"
+  },
+  "replay_protection_nonce": "13894781796064092640",
+  "events": [
+    {
+      "guid": {
+        "creation_number": "0",
+        "account_address": "0x0"
+      },
+      "sequence_number": "0",
+      "type": "0x1::fungible_asset::Withdraw",
+      "data": {
+        "amount": "20000",
+        "store": "0xa66d5588e5e71987999dea776e5798be8926470f012e4a4f320e0737903ecba1"
+      }
+    },
+    {
+      "guid": {
+        "creation_number": "0",
+        "account_address": "0x0"
+      },
+      "sequence_number": "0",
+      "type": "0x1::fungible_asset::Deposit",
+      "data": {
+        "amount": "20000",
+        "store": "0x4f8733c98d484ea506fcfd7ecdec17c4b27f7489fb0c8962975bf0cf213b6242"
+      }
+    },
+    {
+      "guid": {
+        "creation_number": "0",
+        "account_address": "0x0"
+      },
+      "sequence_number": "0",
+      "type": "0x1::transaction_fee::FeeStatement",
+      "data": {
+        "execution_gas_units": "7",
+        "io_gas_units": "11",
+        "storage_fee_octas": "3960",
+        "storage_fee_refund_octas": "0",
+        "total_charge_gas_units": "57"
+      }
+    }
+  ],
+  "timestamp": "1749520982956875",
+  "type": "user_transaction"
+}`
+	data := &Transaction{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionVariantUser, data.Type)
+	data2 := &CommittedTransaction{}
+	err = json.Unmarshal([]byte(testJson), &data2)
+	require.NoError(t, err)
+	assert.Equal(t, TransactionVariantUser, data2.Type)
+
+	txn, err := data.UserTransaction()
+	require.NoError(t, err)
+	txn2, err := data2.UserTransaction()
+	require.NoError(t, err)
+	assert.Equal(t, txn, txn2)
+
+	assert.Equal(t, uint64(6781425728), txn.Version)
+	assert.Equal(t, uint64(1749520982956875), txn.Timestamp)
+	assert.Equal(t, uint64(0xffffffffffffffff), txn.SequenceNumber)
+	assert.Equal(t, uint64(100), txn.GasUnitPrice)
+	assert.Equal(t, uint64(85), txn.MaxGasAmount)
+	assert.Equal(t, uint64(1749521012), txn.ExpirationTimestampSecs)
+	assert.NotNil(t, txn.ReplayProtectionNonce)
+	assert.Equal(t, uint64(13894781796064092640), *txn.ReplayProtectionNonce)
+
+	// TODO: test some more
+
+	// Check functions
+	assert.Equal(t, *data.Version(), data2.Version())
+	assert.Equal(t, data.Hash(), data2.Hash())
+	assert.Equal(t, *data.Success(), data2.Success())
 }
