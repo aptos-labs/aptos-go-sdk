@@ -334,36 +334,3 @@ func (txn *MultiAgentWithFeePayerRawTransactionWithData) UnmarshalBCS(des *bcs.D
 
 // endregion
 // endregion
-
-// DeserializeMultiAgentTransaction deserializes a BCS encoded MultiAgent transaction
-func DeserializeMultiAgentTransaction(data []byte) (*RawTransactionWithData, error) {
-	des := bcs.NewDeserializer(data)
-	rawTxnWithData := &RawTransactionWithData{}
-
-	rawTxn := &RawTransaction{}
-	rawTxn.UnmarshalBCS(des)
-
-	if des.Error() != nil {
-		return nil, des.Error()
-	}
-	secondarySigners := bcs.DeserializeSequence[AccountAddress](des)
-
-	hasFeePayer := des.Bool()
-	if hasFeePayer {
-		feePayer := &AccountAddress{}
-		feePayer.UnmarshalBCS(des)
-		rawTxnWithData.Variant = MultiAgentWithFeePayerRawTransactionWithDataVariant
-		rawTxnWithData.Inner = &MultiAgentWithFeePayerRawTransactionWithData{
-			RawTxn:           rawTxn,
-			SecondarySigners: secondarySigners,
-			FeePayer:         feePayer,
-		}
-	} else {
-		rawTxnWithData.Variant = MultiAgentRawTransactionWithDataVariant
-		rawTxnWithData.Inner = &MultiAgentRawTransactionWithData{
-			RawTxn:           rawTxn,
-			SecondarySigners: secondarySigners,
-		}
-	}
-	return rawTxnWithData, nil
-}

@@ -21,6 +21,13 @@ type Serializer struct {
 	err error        // any error that has occurred during serialization
 }
 
+func NewSerializer() *Serializer {
+	return &Serializer{
+		out: bytes.Buffer{},
+		err: nil,
+	}
+}
+
 // Serialize serializes a single item
 //
 //	type MyStruct struct {
