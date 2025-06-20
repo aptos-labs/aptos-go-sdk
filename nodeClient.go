@@ -834,7 +834,11 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 		case FeePayer:
 			feePayerAuth = crypto.NoAccountAuthenticator()
 		case FeePayerPublicKey:
-			feePayerAuth = ovalue.(crypto.PublicKey).SimulationAuthenticator()
+			pubKey, ok := ovalue.(crypto.PublicKey)
+			if !ok {
+				return nil, errors.New("FeePayerPublicKey must be a crypto.PublicKey")
+			}
+			feePayerAuth = pubKey.SimulationAuthenticator()
 		case AdditionalSigners:
 			additionalSigners = ovalue
 		default:
@@ -1003,7 +1007,11 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			feePayer = ovalue
 		case FeePayerPublicKey:
 			feePayer = new(AccountAddress)
-			copy(feePayer[:], ovalue.(crypto.PublicKey).AuthKey()[:])
+			pubKey, ok := ovalue.(crypto.PublicKey)
+			if !ok {
+				return nil, errors.New("FeePayerPublicKey must be a crypto.PublicKey")
+			}
+			copy(feePayer[:], pubKey.AuthKey()[:])
 		case AdditionalSigners:
 			additionalSigners = ovalue
 		default:
