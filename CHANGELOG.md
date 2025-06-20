@@ -4,6 +4,8 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+
+# v1.10.0 (6/20/2025)
 - [`Feature`] Add orderless transaction support
 
 # v1.9.0 (6/8/2025)
