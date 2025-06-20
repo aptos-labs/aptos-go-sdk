@@ -10,9 +10,6 @@ type Signer interface {
 	// SignMessage signs a message and returns the raw [Signature] without a [PublicKey] for verification
 	SignMessage(msg []byte) (signature Signature, err error)
 
-	// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
-	SimulationAuthenticator() *AccountAuthenticator
-
 	// AuthKey gives the [AuthenticationKey] associated with the [Signer]
 	AuthKey() *AuthenticationKey
 
@@ -43,6 +40,9 @@ type PublicKey interface {
 
 	// Scheme The [DeriveScheme] used for address derivation
 	Scheme() DeriveScheme
+
+	// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+	SimulationAuthenticator() *AccountAuthenticator
 }
 
 // VerifyingKey a generic interface for a public key associated with the private key, but it cannot necessarily stand on

@@ -204,6 +204,20 @@ func (key *AnyPublicKey) Scheme() uint8 {
 	return SingleKeyScheme
 }
 
+// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+
+// Implements:
+//   - [PublicKey]
+func (key *AnyPublicKey) SimulationAuthenticator() *AccountAuthenticator {
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorSingleSender,
+		Auth: &SingleKeyAuthenticator{
+			PubKey: key,
+			Sig:    &AnySignature{},
+		},
+	}
+}
+
 // endregion
 
 // region AnyPublicKey CryptoMaterial implementation
