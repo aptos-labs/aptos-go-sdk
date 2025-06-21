@@ -82,6 +82,20 @@ func (key *MultiKey) Scheme() uint8 {
 	return MultiKeyScheme
 }
 
+// SimulationAuthenticator creates a new [AccountAuthenticator] for simulation purposes
+//
+// Implements:
+//   - [PublicKey]
+func (key *MultiKey) SimulationAuthenticator() *AccountAuthenticator {
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorMultiKey,
+		Auth: &MultiKeyAuthenticator{
+			PubKey: key,
+			Sig:    &MultiKeySignature{},
+		},
+	}
+}
+
 // endregion
 
 // region MultiKey CryptoMaterial implementation

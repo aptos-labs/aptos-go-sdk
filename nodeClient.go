@@ -813,7 +813,7 @@ func (rc *NodeClient) BatchSubmitTransaction(signedTxns []*SignedTransaction) (*
 // SimulateTransaction simulates a transaction
 func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender TransactionSigner, options ...any) ([]*api.UserTransaction, error) {
 	// build authenticator for simulation
-	auth := sender.SimulationAuthenticator()
+	auth := sender.PubKey().SimulationAuthenticator()
 
 	// generate signed transaction for simulation (with zero signature)
 	signedTxn, err := rawTxn.SignedTransactionWithAuthenticator(auth)
@@ -826,13 +826,19 @@ func (rc *NodeClient) SimulateTransaction(rawTxn *RawTransaction, sender Transac
 
 // SimulateTransactionMultiAgent simulates a transaction as fee payer or multi agent
 func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithData, sender TransactionSigner, options ...any) ([]*api.UserTransaction, error) {
-	var feePayer *AccountAddress
 	var additionalSigners []AccountAddress
+	var feePayerAuth *crypto.AccountAuthenticator
 
 	for _, option := range options {
 		switch ovalue := option.(type) {
 		case FeePayer:
-			feePayer = ovalue
+			feePayerAuth = crypto.NoAccountAuthenticator()
+		case FeePayerPublicKey:
+			pubKey, ok := ovalue.(crypto.PublicKey)
+			if !ok {
+				return nil, errors.New("FeePayerPublicKey must be a crypto.PublicKey")
+			}
+			feePayerAuth = pubKey.SimulationAuthenticator()
 		case AdditionalSigners:
 			additionalSigners = ovalue
 		default:
@@ -842,9 +848,8 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 
 	var signedTxn *SignedTransaction
 	var ok bool
-	if feePayer != nil {
-		senderAuth := sender.SimulationAuthenticator()
-		feePayerAuth := crypto.NoAccountAuthenticator()
+	if feePayerAuth != nil {
+		senderAuth := sender.PubKey().SimulationAuthenticator()
 		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
 		for i := range additionalSigners {
 			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
@@ -854,7 +859,7 @@ func (rc *NodeClient) SimulateTransactionMultiAgent(rawTxn *RawTransactionWithDa
 			return nil, errors.New("failed to convert fee payer signer to signed transaction")
 		}
 	} else {
-		senderAuth := sender.SimulationAuthenticator()
+		senderAuth := sender.PubKey().SimulationAuthenticator()
 		additionalSignersAuth := make([]crypto.AccountAuthenticator, len(additionalSigners))
 		for i := range additionalSigners {
 			additionalSignersAuth[i] = *crypto.NoAccountAuthenticator()
@@ -1000,6 +1005,13 @@ func (rc *NodeClient) BuildTransactionMultiAgent(sender AccountAddress, payload 
 			haveChainId = true
 		case FeePayer:
 			feePayer = ovalue
+		case FeePayerPublicKey:
+			feePayer = new(AccountAddress)
+			pubKey, ok := ovalue.(crypto.PublicKey)
+			if !ok {
+				return nil, errors.New("FeePayerPublicKey must be a crypto.PublicKey")
+			}
+			copy(feePayer[:], pubKey.AuthKey()[:])
 		case AdditionalSigners:
 			additionalSigners = ovalue
 		default:

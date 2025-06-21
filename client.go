@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/aptos-labs/aptos-go-sdk/crypto"
 	"github.com/hasura/go-graphql-client"
 )
 
@@ -104,6 +105,9 @@ type ExpirationSeconds uint64
 
 // FeePayer will set the fee payer for a transaction
 type FeePayer *AccountAddress
+
+// (Deprecated) FeePayerPublicKey will construct authenticator from public key.
+type FeePayerPublicKey crypto.PublicKey
 
 // AdditionalSigners will set the additional signers for a transaction
 type AdditionalSigners []AccountAddress
