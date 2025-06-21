@@ -6,6 +6,8 @@ import (
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4"
+	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 )
 
 // region SingleSigner
@@ -209,12 +211,36 @@ func (key *AnyPublicKey) Scheme() uint8 {
 // Implements:
 //   - [PublicKey]
 func (key *AnyPublicKey) SimulationAuthenticator() *AccountAuthenticator {
-	return &AccountAuthenticator{
-		Variant: AccountAuthenticatorSingleSender,
-		Auth: &SingleKeyAuthenticator{
-			PubKey: key,
-			Sig:    &AnySignature{},
-		},
+	switch key.Variant {
+	case AnyPublicKeyVariantEd25519:
+		return &AccountAuthenticator{
+			Variant: AccountAuthenticatorSingleSender,
+			Auth: &SingleKeyAuthenticator{
+				PubKey: key,
+				Sig: &AnySignature{
+					Variant:   AnySignatureVariantEd25519,
+					Signature: &Ed25519Signature{},
+				},
+			},
+		}
+	case AnyPublicKeyVariantSecp256k1:
+		return &AccountAuthenticator{
+			Variant: AccountAuthenticatorSingleSender,
+			Auth: &SingleKeyAuthenticator{
+				PubKey: key,
+				Sig: &AnySignature{
+					Variant: AnySignatureVariantSecp256k1,
+					Signature: &Secp256k1Signature{
+						Inner: ecdsa.NewSignature(
+							&secp256k1.ModNScalar{},
+							&secp256k1.ModNScalar{},
+						),
+					},
+				},
+			},
+		}
+	default:
+		return nil
 	}
 }
 
