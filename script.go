@@ -21,6 +21,10 @@ func (s *Script) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantScript
 }
 
+func (s *Script) ExecutableType() TransactionExecutableVariant {
+	return TransactionExecutableVariantScript
+}
+
 // endregion
 
 // region Script bcs.Struct

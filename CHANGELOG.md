@@ -5,9 +5,24 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.10.0 (6/20/2025)
+- [`Feature`] Add orderless transaction support
+
+# v1.9.0 (6/8/2025)
+
+- [`Breaking`] Change how plain text arguments are parsed from inputs. All inputs now have to be []any and will work
+  nested properly.
+- [`Feature`] Add `CompatibilityMode` to `ConvertArg` so that it can be used to convert arguments similar to the original TS SDK.
+
+# v1.8.0 (6/3/2025)
+
+- [`Feature`] Added `EventsByCreationNumber` API to fetch events by creation number for a given account
+- [`Fix`] Not set nil `start` argument for `EventsByHandle` to 0 to allow fetching latest events
+
 # v1.7.0 (4/25/2025)
 
-- [`Feature`] Added `String()` method to `Ed25519PrivateKey` and `Secp256k1PrivateKey` which exports the private key in the AIP-80 format
+- [`Feature`] Added `String()` method to `Ed25519PrivateKey` and `Secp256k1PrivateKey` which exports the private key in
+  the AIP-80 format
 - [`Fix`] Add missing `Version` field to Event struct
 - [`Deps`] Update dependencies including go crypto for security purposes
 - [`Fix`] Add `MarshalJSON` support for `HexBytes` to match custom `UnmarshalJSON` logic

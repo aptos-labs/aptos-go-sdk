@@ -16,6 +16,27 @@ const (
 	TransactionPayloadVariantModuleBundle  TransactionPayloadVariant = 1 // Deprecated
 	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = 2
 	TransactionPayloadVariantMultisig      TransactionPayloadVariant = 3
+	TransactionPayloadVariantPayload       TransactionPayloadVariant = 4
+)
+
+type TransactionInnerPayloadVariant uint32
+
+const (
+	TransactionInnerPayloadVariantV1 TransactionInnerPayloadVariant = 0
+)
+
+type TransactionExecutableVariant uint32
+
+const (
+	TransactionExecutableVariantScript        TransactionExecutableVariant = 0
+	TransactionExecutableVariantEntryFunction TransactionExecutableVariant = 1
+	TransactionExecutableVariantEmpty         TransactionExecutableVariant = 2
+)
+
+type TransactionExtraConfigVariant uint32
+
+const (
+	TransactionExtraConfigVariantV1 TransactionExtraConfigVariant = 0
 )
 
 type TransactionPayloadImpl interface {
@@ -51,6 +72,8 @@ func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Payload = &EntryFunction{}
 	case TransactionPayloadVariantMultisig:
 		txn.Payload = &Multisig{}
+	case TransactionPayloadVariantPayload:
+		txn.Payload = &TransactionInnerPayload{}
 	default:
 		des.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
 		return
@@ -94,6 +117,10 @@ type EntryFunction struct {
 // region EntryFunction TransactionPayloadImpl
 func (sf *EntryFunction) PayloadType() TransactionPayloadVariant {
 	return TransactionPayloadVariantEntryFunction
+}
+
+func (sf *EntryFunction) ExecutableType() TransactionExecutableVariant {
+	return TransactionExecutableVariantEntryFunction
 }
 
 // endregion

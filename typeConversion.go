@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -11,7 +12,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
-func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
+func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
 	var function *api.MoveFunction
 	switch abi := abi.(type) {
 	case *api.MoveModule:
@@ -87,7 +88,7 @@ func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName stri
 
 	convertedArgs := make([][]byte, len(args))
 	for i, arg := range args {
-		b, err := ConvertArg(argTypes[i], arg, argTypes)
+		b, err := ConvertArg(argTypes[i], arg, argTypes, options...)
 		if err != nil {
 			return nil, err
 		}
@@ -144,7 +145,7 @@ func ConvertToU8(arg any) (uint8, error) {
 		}
 		return uint8(u64), nil
 	default:
-		return 0, errors.New("invalid input type for uint8")
+		return 0, fmt.Errorf("cannot convert to uint8, input is %T", arg)
 	}
 }
 
@@ -171,7 +172,7 @@ func ConvertToU16(arg any) (uint16, error) {
 		}
 		return uint16(u64), nil
 	default:
-		return 0, errors.New("invalid input type for uint16")
+		return 0, fmt.Errorf("invalid input type for uint16: %T", arg)
 	}
 }
 
@@ -198,7 +199,7 @@ func ConvertToU32(arg any) (uint32, error) {
 		}
 		return uint32(u64), nil
 	default:
-		return 0, errors.New("invalid input type for uint32")
+		return 0, fmt.Errorf("invalid input type for uint32: %T", arg)
 	}
 }
 
@@ -220,7 +221,7 @@ func ConvertToU64(arg any) (uint64, error) {
 	case string:
 		return strconv.ParseUint(arg, 10, 64)
 	default:
-		return 0, errors.New("invalid input type for uint64")
+		return 0, fmt.Errorf("invalid input type for uint64: %T", arg)
 	}
 }
 
@@ -242,7 +243,7 @@ func ConvertToU128(arg any) (*big.Int, error) {
 		// Convert the number
 		return util.StrToBigInt(arg)
 	default:
-		return nil, errors.New("invalid input type for uint128")
+		return nil, fmt.Errorf("invalid input type for uint128: %T", arg)
 	}
 }
 
@@ -264,7 +265,7 @@ func ConvertToU256(arg any) (*big.Int, error) {
 		// Convert the number
 		return util.StrToBigInt(arg)
 	default:
-		return nil, errors.New("invalid input type for uint256")
+		return nil, fmt.Errorf("invalid input type for uint256: %T", arg)
 	}
 }
 
@@ -282,7 +283,7 @@ func ConvertToBool(arg any) (bool, error) {
 			return false, errors.New("invalid boolean input for bool")
 		}
 	default:
-		return false, errors.New("invalid input type for bool")
+		return false, fmt.Errorf("invalid input type for bool: %T", arg)
 	}
 }
 
@@ -304,278 +305,120 @@ func ConvertToAddress(arg any) (*AccountAddress, error) {
 		}
 		return addr, nil
 	default:
-		return nil, errors.New("invalid input type for address")
+		return nil, fmt.Errorf("invalid input type for address: %T", arg)
 	}
 }
 
 // ConvertToVectorU8 returns the BCS encoded version of the bytes
-func ConvertToVectorU8(arg any) ([]byte, error) {
-	// Special case, handle hex string
+func ConvertToVectorU8(arg any, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
+
+	// Convert input to normalized byte array
 	switch arg := arg.(type) {
+	// Special case, handle hex string
 	case string:
+		// Parse string as UTF-8 bytes, in compatibility mode
+		if compatibilityMode {
+			return bcs.SerializeBytes([]byte(arg))
+		}
+
 		bytes, err := util.ParseHex(arg)
 		if err != nil {
 			return nil, err
 		}
-		// Serialize the bytes
 		return bcs.SerializeBytes(bytes)
-	case []byte:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeBytes(arg)
 	default:
-		return nil, errors.New("invalid input type for vector<u8>")
+		return convertToVectorInner(VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}, arg, []TypeTag{}, options...)
 	}
 }
 
-// ConvertToVectorU16 returns the BCS encoded version of the bytes
-func ConvertToVectorU16(arg any) ([]byte, error) {
-	// Special case, handle hex string
+// convertToVectorInner specifically is a wrapper to handle the many possible vector input types
+func convertToVectorInner(vectorTag VectorTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	switch arg := arg.(type) {
+	case []any:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
+	case []string:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
+	case []uint:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
+	case []uint8:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint16:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint16) {
-				ser.U16(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<u16>")
-	}
-}
-
-// ConvertToVectorU32 returns the BCS encoded version of the bytes
-func ConvertToVectorU32(arg any) ([]byte, error) {
-	// Special case, handle hex string
-	switch arg := arg.(type) {
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint32:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint32) {
-				ser.U32(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<u32>")
-	}
-}
-
-// ConvertToVectorU64 returns the BCS encoded version of the bytes
-func ConvertToVectorU64(arg any) ([]byte, error) {
-	// Special case, handle hex string
-	switch arg := arg.(type) {
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []uint64:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item uint64) {
-				ser.U64(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<u64>")
-	}
-}
-
-// ConvertToVectorU128 returns the BCS encoded version of the bytes
-func ConvertToVectorU128(arg any) ([]byte, error) {
-	// Special case, handle hex string
-	switch arg := arg.(type) {
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
+	case []int:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []big.Int:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
-				ser.U128(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<u128>")
-	}
-}
-
-// ConvertToVectorU256 returns the BCS encoded version of the bytes
-func ConvertToVectorU256(arg any) ([]byte, error) {
-	// Special case, handle hex string
-	switch arg := arg.(type) {
-	case []big.Int:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bytes")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item big.Int) {
-				ser.U256(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<u256>")
-	}
-}
-
-// ConvertToVectorBool returns the BCS encoded version of the boolean vector
-func ConvertToVectorBool(arg any) ([]byte, error) {
-	switch arg := arg.(type) {
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
+	case []*big.Int:
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []bool:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to bool vector")
-		}
-		return bcs.SerializeSingle(func(ser *bcs.Serializer) {
-			bcs.SerializeSequenceWithFunction(arg, ser, func(ser *bcs.Serializer, item bool) {
-				ser.Bool(item)
-			})
-		})
-	default:
-		return nil, errors.New("invalid input type for vector<bool>")
-	}
-}
-
-// ConvertToVectorAddress returns the BCS encoded version of the address vector
-func ConvertToVectorAddress(arg any) ([]byte, error) {
-	switch arg := arg.(type) {
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []AccountAddress:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to address vector")
-		}
-		return bcs.SerializeSequenceOnly(arg)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	case []*AccountAddress:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to address vector")
-		}
-		// Convert []*AccountAddress to []AccountAddress
-		addresses := make([]AccountAddress, len(arg))
-		for i, addr := range arg {
-			if addr == nil {
-				return nil, errors.New("cannot convert nil address in vector")
-			}
-			addresses[i] = *addr
-		}
-		return bcs.SerializeSequenceOnly(addresses)
+		return convertToVectorInnerTyped(vectorTag, arg, generics, options...)
 	default:
-		return nil, errors.New("invalid input type for vector<address>")
+		return nil, fmt.Errorf("invalid input type for struct vector %T", arg)
 	}
 }
 
-// ConvertToVectorGeneric returns the BCS encoded version of the generic vector
-func ConvertToVectorGeneric(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
-	genericTag, ok := typeArg.Value.(*GenericTag)
-	if !ok {
-		return nil, errors.New("invalid type tag for generic vector")
+// convertToVectorInnerTyped handles typed array access to convert a vector
+func convertToVectorInnerTyped[T any](vectorTag VectorTag, arg []T, generics []TypeTag, options ...any) ([]byte, error) {
+	if arg == nil {
+		return nil, errors.New("cannot convert nil to vector")
 	}
-
-	if genericTag.Num >= uint64(len(generics)) {
-		return nil, errors.New("generic number out of bounds")
+	length, err := util.IntToU32(len(arg))
+	if err != nil {
+		return nil, err
 	}
-
-	innerType := generics[genericTag.Num]
-
-	switch arg := arg.(type) {
-	case []any:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to generic vector")
-		}
-
-		// Serialize length
-		length, err := util.IntToU32(len(arg))
+	buffer, err := bcs.SerializeUleb128(length)
+	if err != nil {
+		return nil, err
+	}
+	for _, item := range arg {
+		val, err := ConvertArg(vectorTag.TypeParam, item, generics, options...)
 		if err != nil {
 			return nil, err
 		}
-		buffer, err := bcs.SerializeUleb128(length)
-		if err != nil {
-			return nil, err
-		}
-
-		// Serialize each element
-		for _, item := range arg {
-			val, err := ConvertArg(innerType, item, generics)
-			if err != nil {
-				return nil, err
-			}
-			buffer = append(buffer, val...)
-		}
-		return buffer, nil
-	default:
-		return nil, errors.New("invalid input type for generic vector")
+		buffer = append(buffer, val...)
 	}
+	return buffer, nil
 }
 
-// ConvertToVectorReference returns the BCS encoded version of the reference vector
-func ConvertToVectorReference(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
-	refTag, ok := typeArg.Value.(*ReferenceTag)
-	if !ok {
-		return nil, errors.New("invalid type tag for reference vector")
-	}
-
-	innerType := refTag.TypeParam
-
-	switch arg := arg.(type) {
-	case []any:
-		if arg == nil {
-			return nil, errors.New("cannot convert nil to reference vector")
-		}
-
-		// Serialize length
-		length, err := util.IntToU32(len(arg))
-		if err != nil {
-			return nil, err
-		}
-		buffer, err := bcs.SerializeUleb128(length)
-		if err != nil {
-			return nil, err
-		}
-
-		// Serialize each element
-		for _, item := range arg {
-			val, err := ConvertArg(innerType, item, generics)
-			if err != nil {
-				return nil, err
-			}
-			buffer = append(buffer, val...)
-		}
-		return buffer, nil
-	default:
-		return nil, errors.New("invalid input type for reference vector")
-	}
-}
-
-func ConvertToVector(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
+func ConvertToVector(vectorTag VectorTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	// We have to switch based on type, thanks Golang
-	switch typeArg.Value.(type) {
+	switch innerType := vectorTag.TypeParam.Value.(type) {
 	case *U8Tag:
-		return ConvertToVectorU8(arg)
-	case *U16Tag:
-		return ConvertToVectorU16(arg)
-	case *U32Tag:
-		return ConvertToVectorU32(arg)
-	case *U64Tag:
-		return ConvertToVectorU64(arg)
-	case *U128Tag:
-		return ConvertToVectorU128(arg)
-	case *U256Tag:
-		return ConvertToVectorU256(arg)
-	case *BoolTag:
-		return ConvertToVectorBool(arg)
-	case *AddressTag:
-		return ConvertToVectorAddress(arg)
-	case *SignerTag:
-		return ConvertToVectorAddress(arg)
+		// Special case to handle hex
+		return ConvertToVectorU8(arg, options...)
 	case *GenericTag:
-		return ConvertToVectorGeneric(typeArg, arg, generics)
+		if innerType.Num >= uint64(len(generics)) {
+			return nil, errors.New("generic number out of bounds")
+		}
+		genericType := generics[innerType.Num]
+		return convertToVectorInner(VectorTag{TypeParam: genericType}, arg, generics, options...)
 	case *ReferenceTag:
-		return ConvertToVectorReference(typeArg, arg, generics)
-	// TODO: Handle structs
+		return convertToVectorInner(VectorTag{TypeParam: innerType.TypeParam}, arg, generics, options...)
 	default:
-		return nil, fmt.Errorf("%s is currently not supported as an input type", typeArg.String())
+		return convertToVectorInner(vectorTag, arg, generics, options...)
 	}
 }
 
-func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
+// CompatibilityMode enables compatibility with the TS SDK in behavior
+// This includes "0x00" as an None option
+// And string interpreted as bytes instead of hex
+type CompatibilityMode bool
+
+func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	switch innerType := typeArg.Value.(type) {
 	case *U8Tag:
 		num, err := ConvertToU8(arg)
@@ -619,7 +462,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 			return nil, err
 		}
 		return bcs.SerializeBool(bo)
-	case *AddressTag:
+	case *AddressTag, *SignerTag:
 		a, err := ConvertToAddress(arg)
 		if err != nil {
 			return nil, err
@@ -633,21 +476,12 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 		}
 
 		tag := generics[genericNum]
-		return ConvertArg(tag, arg, generics)
+		return ConvertArg(tag, arg, generics, options...)
 	case *ReferenceTag:
 		// Convert based on inner type
-		return ConvertArg(innerType.TypeParam, arg, generics)
+		return ConvertArg(innerType.TypeParam, arg, generics, options...)
 	case *VectorTag:
-		// This has two paths:
-		// 1. Hex strings are allowed for vector<u8>
-		// 2. Otherwise, everything is just parsed as an array of the inner type
-		vecTag := innerType
-		switch vecTag.TypeParam.Value.(type) {
-		case *U8Tag:
-			return ConvertToVectorU8(arg)
-		default:
-			return ConvertToVector(vecTag.TypeParam, arg, generics)
-		}
+		return ConvertToVector(*innerType, arg, generics, options...)
 	case *StructTag:
 		structTag := innerType
 		// TODO: We should be able to support custom structs, but for now only support known
@@ -658,7 +492,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 					// TODO: Move to function
 					// Handle as address, inner type doesn't matter
 					// TODO: Improve error message
-					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics)
+					return ConvertArg(TypeTag{&AddressTag{}}, arg, generics, options...)
 				}
 			case "string":
 				if structTag.Name == "String" {
@@ -679,23 +513,107 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag) ([]byte, error) {
 					// Get inner type
 					typeParam := structTag.TypeParams[0]
 
-					// Handle special case of "none", it's a single 0 byte
-					if arg == nil {
-						return bcs.SerializeU8(0)
-					}
-
-					// Otherwise, it's a single byte 1, and the encoded arg
-					b, err := ConvertArg(typeParam, arg, generics)
-					if err != nil {
-						return nil, err
-					}
-					return append([]byte{1}, b...), nil
+					return ConvertToOption(typeParam, arg, generics, options...)
 				}
 			}
 		}
 	default:
-		return nil, errors.New("unknown type argument")
+		return nil, fmt.Errorf("unknown type argument %T", innerType)
 	}
 
 	return nil, errors.New("failed to convert type argument")
+}
+
+func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag) ([]byte, error) {
+	switch innerType := typeParam.Value.(type) {
+	case *U8Tag:
+		return bcs.SerializeU8(arg.U8())
+	case *U16Tag:
+		return bcs.SerializeU16(arg.U16())
+	case *U32Tag:
+		return bcs.SerializeU32(arg.U32())
+	case *U64Tag:
+		return bcs.SerializeU64(arg.U64())
+	case *U128Tag:
+		return bcs.SerializeU128(arg.U128())
+	case *U256Tag:
+		return bcs.SerializeU256(arg.U256())
+	case *BoolTag:
+		return bcs.SerializeBool(arg.Bool())
+	case *AddressTag:
+		return bcs.SerializeBytes(arg.ReadFixedBytes(32))
+	case *SignerTag:
+		return nil, errors.New("signer is not supported")
+	case *GenericTag:
+		genericNum := innerType.Num
+		if genericNum >= uint64(len(generics)) {
+			return nil, errors.New("generic number out of bounds")
+		}
+		genericType := generics[genericNum]
+		return convertCompatibilitySerializedType(genericType, arg, generics)
+	case *ReferenceTag:
+		return convertCompatibilitySerializedType(innerType.TypeParam, arg, generics)
+	case *VectorTag:
+		length := arg.Uleb128()
+		buffer, err := bcs.SerializeUleb128(length)
+		if err != nil {
+			return nil, err
+		}
+		for range int(length) {
+			b, err := convertCompatibilitySerializedType(innerType.TypeParam, arg, generics)
+			if err != nil {
+				return nil, err
+			}
+			buffer = append(buffer, b...)
+		}
+		return buffer, nil
+	case *StructTag:
+		return convertCompatibilitySerializedType(typeParam, arg, generics)
+	default:
+		return nil, errors.New("unknown type")
+	}
+}
+
+func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
+
+	if arg == nil {
+		return bcs.SerializeU8(0)
+	}
+
+	if compatibilityMode {
+		if typedArg, ok := arg.(string); ok {
+			if len(typedArg) >= 2 && typedArg[:2] == "0x" {
+				typedArg = typedArg[2:]
+			}
+			bytes, err := hex.DecodeString(typedArg)
+			if err != nil {
+				return nil, err
+			}
+			des := bcs.NewDeserializer(bytes)
+			length := des.Uleb128()
+			if length == 0 {
+				return bcs.SerializeU8(0)
+			} else {
+				b := []byte{1}
+				buffer, err := convertCompatibilitySerializedType(typeParam, *des, generics)
+				if err != nil {
+					return nil, err
+				}
+				return append(b, buffer...), nil
+			}
+		}
+	}
+
+	b := []byte{1}
+	buffer, err := ConvertArg(typeParam, arg, generics, options...)
+	if err != nil {
+		return nil, err
+	}
+	return append(b, buffer...), nil
 }

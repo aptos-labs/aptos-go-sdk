@@ -199,14 +199,14 @@ func (rc *NodeClient) AccountModule(address AccountAddress, moduleName string, l
 }
 
 // EntryFunctionWithArgs generates an EntryFunction from on-chain Module ABI, and converts simple inputs to BCS encoded ones.
-func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any) (*EntryFunction, error) {
+func (rc *NodeClient) EntryFunctionWithArgs(moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
 	// TODO: This should be cached / we should be able to take in an ABI
 	module, err := rc.AccountModule(moduleAddress, moduleName)
 	if err != nil {
 		return nil, err
 	}
 
-	return EntryFunctionFromAbi(module.Abi, moduleAddress, moduleName, functionName, typeArgs, args)
+	return EntryFunctionFromAbi(module.Abi, moduleAddress, moduleName, functionName, typeArgs, args, options...)
 }
 
 // BlockByVersion gets a block by a transaction's version number
@@ -487,16 +487,11 @@ func (rc *NodeClient) EventsByHandle(
 		effectiveLimit = *limit
 	}
 
-	var effectiveStart uint64
-	if start == nil {
-		effectiveStart = 0
-	} else {
-		effectiveStart = *start
-	}
-
 	if effectiveLimit <= eventsPageSize {
 		params := url.Values{}
-		params.Set("start", strconv.FormatUint(effectiveStart, 10))
+		if start != nil {
+			params.Set("start", strconv.FormatUint(*start, 10))
+		}
 		params.Set("limit", strconv.FormatUint(effectiveLimit, 10))
 
 		requestUrl := *baseUrl
@@ -514,12 +509,109 @@ func (rc *NodeClient) EventsByHandle(
 
 	for i := range pages {
 		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
-		pageStart := effectiveStart + (i * eventsPageSize)
+		var pageStart *uint64
+		if start != nil {
+			value := *start + (i * eventsPageSize)
+			pageStart = &value
+		}
 		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
 
 		go fetch(func() ([]*api.Event, error) {
 			params := url.Values{}
-			params.Set("start", strconv.FormatUint(pageStart, 10))
+			if pageStart != nil {
+				params.Set("start", strconv.FormatUint(*pageStart, 10))
+			}
+			params.Set("limit", strconv.FormatUint(pageLimit, 10))
+
+			requestUrl := *baseUrl
+			requestUrl.RawQuery = params.Encode()
+
+			events, err := Get[[]*api.Event](rc, requestUrl.String())
+			if err != nil {
+				return nil, fmt.Errorf("get events api err: %w", err)
+			}
+			return events, nil
+		}, channels[i])
+	}
+
+	events := make([]*api.Event, 0, effectiveLimit)
+	for i, ch := range channels {
+		response := <-ch
+		if response.Err != nil {
+			return nil, response.Err
+		}
+		events = append(events, response.Result...)
+		close(channels[i])
+	}
+
+	sort.Slice(events, func(i, j int) bool {
+		return events[i].SequenceNumber < events[j].SequenceNumber
+	})
+
+	return events, nil
+}
+
+// EventsByCreationNumber retrieves events by creation number for a given account.
+//
+// Arguments:
+//   - account - The account address to get events for
+//   - creationNumber - The creation number of the event
+//   - start - The starting sequence number. nil for most recent events
+//   - limit - The number of events to return, 100 by default
+func (rc *NodeClient) EventsByCreationNumber(
+	account AccountAddress,
+	creationNumber string,
+	start *uint64,
+	limit *uint64,
+) ([]*api.Event, error) {
+	basePath := fmt.Sprintf("accounts/%s/events/%s",
+		account.String(),
+		creationNumber)
+
+	baseUrl := rc.baseUrl.JoinPath(basePath)
+
+	const eventsPageSize = 100
+	var effectiveLimit uint64
+	if limit == nil {
+		effectiveLimit = eventsPageSize
+	} else {
+		effectiveLimit = *limit
+	}
+
+	if effectiveLimit <= eventsPageSize {
+		params := url.Values{}
+		if start != nil {
+			params.Set("start", strconv.FormatUint(*start, 10))
+		}
+		params.Set("limit", strconv.FormatUint(effectiveLimit, 10))
+
+		requestUrl := *baseUrl
+		requestUrl.RawQuery = params.Encode()
+
+		data, err := Get[[]*api.Event](rc, requestUrl.String())
+		if err != nil {
+			return nil, fmt.Errorf("get events api err: %w", err)
+		}
+		return data, nil
+	}
+
+	pages := (effectiveLimit + eventsPageSize - 1) / eventsPageSize
+	channels := make([]chan ConcResponse[[]*api.Event], pages)
+
+	for i := range pages {
+		channels[i] = make(chan ConcResponse[[]*api.Event], 1)
+		var pageStart *uint64
+		if start != nil {
+			value := *start + (i * eventsPageSize)
+			pageStart = &value
+		}
+		pageLimit := min(eventsPageSize, effectiveLimit-(i*eventsPageSize))
+
+		go fetch(func() ([]*api.Event, error) {
+			params := url.Values{}
+			if pageStart != nil {
+				params.Set("start", strconv.FormatUint(*pageStart, 10))
+			}
 			params.Set("limit", strconv.FormatUint(pageLimit, 10))
 
 			requestUrl := *baseUrl

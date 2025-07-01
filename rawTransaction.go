@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -123,6 +124,15 @@ func (txn *RawTransaction) Sign(signer crypto.Signer) (*crypto.AccountAuthentica
 	return signer.Sign(message)
 }
 
+// String returns a JSON formatted string representation of the RawTransaction
+func (txn *RawTransaction) String() string {
+	jsonBytes, err := json.MarshalIndent(txn, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error marshaling RawTransaction: %v", err)
+	}
+	return string(jsonBytes)
+}
+
 // endregion
 // endregion
 
@@ -221,6 +231,49 @@ func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 	}
 }
 
+// MarshalTypeScriptBCS converts to RawTransactionWithData to the TypeScript type MultiAgentTransaction
+func (txn *RawTransactionWithData) MarshalTypeScriptBCS(ser *bcs.Serializer) {
+	switch inner := (txn.Inner).(type) {
+	case *MultiAgentRawTransactionWithData:
+		ser.Struct(inner.RawTxn)
+		bcs.SerializeSequence(inner.SecondarySigners, ser)
+		ser.Bool(false)
+	case *MultiAgentWithFeePayerRawTransactionWithData:
+		ser.Struct(inner.RawTxn)
+		bcs.SerializeSequence(inner.SecondarySigners, ser)
+		ser.Bool(true)
+		ser.Struct(inner.FeePayer)
+	}
+}
+
+// UnmarshalTypeScriptBCS converts to RawTransactionWithData from the TypeScript type MultiAgentTransaction
+func (txn *RawTransactionWithData) UnmarshalTypeScriptBCS(des *bcs.Deserializer) {
+	rawTxn := &RawTransaction{}
+	des.Struct(rawTxn)
+	secondarySigners := bcs.DeserializeSequence[AccountAddress](des)
+	feePayer := bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *AccountAddress) {
+		des.Struct(out)
+	})
+	if des.Error() != nil {
+		return
+	}
+
+	if feePayer == nil {
+		txn.Variant = MultiAgentRawTransactionWithDataVariant
+		txn.Inner = &MultiAgentRawTransactionWithData{
+			RawTxn:           rawTxn,
+			SecondarySigners: secondarySigners,
+		}
+	} else {
+		txn.Variant = MultiAgentWithFeePayerRawTransactionWithDataVariant
+		txn.Inner = &MultiAgentWithFeePayerRawTransactionWithData{
+			RawTxn:           rawTxn,
+			SecondarySigners: secondarySigners,
+			FeePayer:         feePayer,
+		}
+	}
+}
+
 // region RawTransactionWithData Signer
 func (txn *RawTransactionWithData) Sign(signer crypto.Signer) (*crypto.AccountAuthenticator, error) {
 	message, err := txn.SigningMessage()
@@ -286,6 +339,15 @@ func (txn *MultiAgentRawTransactionWithData) UnmarshalBCS(des *bcs.Deserializer)
 	txn.RawTxn = &RawTransaction{}
 	des.Struct(txn.RawTxn)
 	txn.SecondarySigners = bcs.DeserializeSequence[AccountAddress](des)
+}
+
+// String returns a JSON formatted string representation of the RawTransactionWithData
+func (txn *RawTransactionWithData) String() string {
+	jsonBytes, err := json.MarshalIndent(txn, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("Error marshaling RawTransactionWithData: %v", err)
+	}
+	return string(jsonBytes)
 }
 
 // endregion
