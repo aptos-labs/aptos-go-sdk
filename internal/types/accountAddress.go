@@ -57,11 +57,13 @@ func (aa *AccountAddress) IsSpecial() bool {
 //
 // Please use [AccountAddress.StringLong] for all indexer queries.
 func (aa *AccountAddress) String() string {
-	if aa.IsSpecial() {
-		return fmt.Sprintf("0x%x", aa[31])
+	msb := aa[0]
+	msbIdx := 0
+	for msb == 0 && msbIdx < 31 {
+		msbIdx++
+		msb = aa[msbIdx]
 	}
-
-	return util.BytesToHex(aa[:])
+	return fmt.Sprintf("0x%x%x", msb, aa[msbIdx+1:])
 }
 
 // FromAuthKey converts [crypto.AuthenticationKey] to [AccountAddress]
