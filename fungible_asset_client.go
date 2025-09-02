@@ -8,9 +8,66 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
+// AptosFungibleAssetClient is an interface for all functionality on the Client that is Fungible Asset related.  Its main implementation
+type AptosFungibleAssetClient interface {
+	// Transfer transfers amount of the fungible asset from senderStore to receiverStore
+	Transfer(sender TransactionSigner, senderStore AccountAddress, receiverStore AccountAddress, amount uint64, options ...any) (*SignedTransaction, error)
+
+	// TransferPrimaryStore transfers amount of the fungible asset from the primary store of the sender to receiverAddress
+	TransferPrimaryStore(sender TransactionSigner, receiverAddress AccountAddress, amount uint64, options ...any) (*SignedTransaction, error)
+
+	// PrimaryStoreAddress returns the [AccountAddress] of the primary store for the owner
+	PrimaryStoreAddress(owner *AccountAddress) (*AccountAddress, error)
+
+	// PrimaryStoreExists returns true if the primary store for the owner exists
+	PrimaryStoreExists(owner *AccountAddress) (bool, error)
+
+	// PrimaryBalance returns the balance of the primary store for the owner
+	PrimaryBalance(owner *AccountAddress, ledgerVersion ...uint64) (uint64, error)
+
+	// PrimaryIsFrozen returns true if the primary store for the owner is frozen
+	PrimaryIsFrozen(owner *AccountAddress, ledgerVersion ...uint64) (bool, error)
+
+	// Balance returns the balance of the store
+	Balance(storeAddress *AccountAddress, ledgerVersion ...uint64) (uint64, error)
+
+	// IsFrozen returns true if the store is frozen
+	IsFrozen(storeAddress *AccountAddress, ledgerVersion ...uint64) (bool, error)
+
+	// IsUntransferable returns true if the store can't be transferred
+	IsUntransferable(storeAddress *AccountAddress, ledgerVersion ...uint64) (bool, error)
+
+	// StoreExists returns true if the store exists
+	StoreExists(storeAddress *AccountAddress, ledgerVersion ...uint64) (bool, error)
+
+	// StoreMetadata returns the [AccountAddress] of the metadata for the store
+	StoreMetadata(storeAddress *AccountAddress, ledgerVersion ...uint64) (*AccountAddress, error)
+
+	// Supply returns the total supply of the fungible asset
+	Supply(ledgerVersion ...uint64) (*big.Int, error)
+
+	// Maximum returns the maximum possible supply of the fungible asset
+	Maximum(ledgerVersion ...uint64) (*big.Int, error)
+
+	// Name returns the name of the fungible asset
+	Name() (string, error)
+
+	// Symbol returns the symbol of the fungible asset
+	Symbol() (string, error)
+
+	// Decimals returns the number of decimal places for the fungible asset
+	Decimals() (uint8, error)
+
+	// IconUri returns the URI of the icon for the fungible asset
+	IconUri() (string, error)
+
+	// ProjectUri returns the URI of the project for the fungible asset
+	ProjectUri() (string, error)
+}
+
 // FungibleAssetClient This is an example client around a single fungible asset
 type FungibleAssetClient struct {
-	aptosClient     *Client         // Aptos client
+	aptosClient     AptosClient     // Aptos client
 	metadataAddress *AccountAddress // Metadata address of the fungible asset
 }
 
