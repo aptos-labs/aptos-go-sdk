@@ -3,7 +3,7 @@ package testutil
 import (
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk"
 )
 
 // TestClients holds the clients needed for testing

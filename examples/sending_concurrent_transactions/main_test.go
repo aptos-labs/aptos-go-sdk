@@ -3,7 +3,7 @@ package main
 import (
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk"
 )
 
 func Test_Main(t *testing.T) {

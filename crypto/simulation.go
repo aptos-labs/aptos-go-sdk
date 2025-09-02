@@ -1,6 +1,6 @@
 package crypto
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import "github.com/qimeila/aptos-go-sdk/bcs"
 
 // region NoAuthenticator
 

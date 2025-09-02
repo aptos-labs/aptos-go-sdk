@@ -4,9 +4,9 @@ package main
 import (
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/crypto"
 )
 
 const testEd25519PrivateKey = "ed25519-priv-0xc5338cd251c22daa8c9c9cc94f498cc8a5c7e1d2e75287a5dda91096fe64efa5"

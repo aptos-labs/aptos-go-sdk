@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

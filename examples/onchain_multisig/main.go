@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 )
 
 const TransferAmount = uint64(1_000_000)

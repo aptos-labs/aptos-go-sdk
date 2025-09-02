@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 	"github.com/cucumber/godog"
 )
 

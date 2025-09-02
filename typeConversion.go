@@ -7,9 +7,9 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {

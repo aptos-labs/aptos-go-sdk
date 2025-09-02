@@ -3,8 +3,8 @@ package aptos
 import (
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/crypto"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4"
 	"github.com/decred/dcrd/dcrec/secp256k1/v4/ecdsa"
 	"github.com/stretchr/testify/assert"

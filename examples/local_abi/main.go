@@ -4,8 +4,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk/api"
 )
 
 const (
