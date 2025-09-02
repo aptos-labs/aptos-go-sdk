@@ -109,6 +109,9 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 		ea.Auth = &SingleKeyAuthenticator{}
 	case AccountAuthenticatorMultiKey:
 		ea.Auth = &MultiKeyAuthenticator{}
+	case AccountAuthenticatorNone:
+		ea.Auth = &NoAuthenticator{}
+		return
 	default:
 		des.SetError(fmt.Errorf("unknown AccountAuthenticator kind: %d", kindNum))
 		return
