@@ -72,7 +72,7 @@ type FungibleAssetClient struct {
 }
 
 // NewFungibleAssetClient verifies the [AccountAddress] of the metadata exists when creating the client
-func NewFungibleAssetClient(client *Client, metadataAddress *AccountAddress) (*FungibleAssetClient, error) {
+func NewFungibleAssetClient(client AptosClient, metadataAddress *AccountAddress) (*FungibleAssetClient, error) {
 	// Retrieve the Metadata resource to ensure the fungible asset actually exists
 	_, err := client.AccountResource(*metadataAddress, "0x1::fungible_asset::Metadata")
 	if err != nil {
