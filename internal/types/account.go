@@ -1,12 +1,14 @@
 package types
 
 import (
-	"encoding/hex"
 	"errors"
-	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
 )
+
+// -----
+// Note that all of these are re-exported, and are only internal to prevent circular dependencies
+// -----
 
 // Account represents an on-chain account, with an associated signer, which must be a [crypto.Signer]
 //
@@ -124,61 +126,4 @@ func (account *Account) AuthKey() *crypto.AuthenticationKey {
 // AccountAddress retrieves the account address
 func (account *Account) AccountAddress() AccountAddress {
 	return account.Address
-}
-
-// ErrAddressMissing0x is returned when an AccountAddress is missing the leading 0x
-var ErrAddressMissing0x = errors.New("AccountAddress missing 0x")
-
-// ErrAddressTooShort is returned when an AccountAddress is too short
-var ErrAddressTooShort = errors.New("AccountAddress too short")
-
-// ErrAddressTooLong is returned when an AccountAddress is too long
-var ErrAddressTooLong = errors.New("AccountAddress too long")
-
-// ParseStringRelaxed parses a string into an AccountAddress
-// TODO: add strict mode checking
-func (aa *AccountAddress) ParseStringRelaxed(x string) error {
-	x = strings.TrimPrefix(x, "0x")
-	if len(x) < 1 {
-		return ErrAddressTooShort
-	}
-	if len(x) > 64 {
-		return ErrAddressTooLong
-	}
-	if len(x)%2 != 0 {
-		x = "0" + x
-	}
-	bytes, err := hex.DecodeString(x)
-	if err != nil {
-		return err
-	}
-	// zero-prefix/right-align what bytes we got
-	copy((*aa)[32-len(bytes):], bytes)
-
-	return nil
-}
-
-// ParseStringWithPrefixRelaxed parses a string into an AccountAddress
-func (aa *AccountAddress) ParseStringWithPrefixRelaxed(x string) error {
-	if !strings.HasPrefix(x, "0x") {
-		return ErrAddressTooShort
-	}
-	x = x[2:]
-	if len(x) < 1 {
-		return ErrAddressTooShort
-	}
-	if len(x) > 64 {
-		return ErrAddressTooLong
-	}
-	if len(x)%2 != 0 {
-		x = "0" + x
-	}
-	bytes, err := hex.DecodeString(x)
-	if err != nil {
-		return err
-	}
-	// zero-prefix/right-align what bytes we got
-	copy((*aa)[32-len(bytes):], bytes)
-
-	return nil
 }
