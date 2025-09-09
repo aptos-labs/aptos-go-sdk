@@ -66,13 +66,11 @@ func (aa *AccountAddress) IsSpecial() bool {
 //
 // Please use [AccountAddress.StringLong] for all indexer queries.
 func (aa *AccountAddress) String() string {
-	msb := aa[0]
-	msbIdx := 0
-	for msb == 0 && msbIdx < 31 {
-		msbIdx++
-		msb = aa[msbIdx]
+	if aa.IsSpecial() {
+		return fmt.Sprintf("0x%x", aa[31])
 	}
-	return fmt.Sprintf("0x%x%x", msb, aa[msbIdx+1:])
+
+	return util.BytesToHex(aa[:])
 }
 
 // FromAuthKey converts [crypto.AuthenticationKey] to [AccountAddress]
@@ -92,6 +90,17 @@ func (aa *AccountAddress) AuthKey() *crypto.AuthenticationKey {
 // This is most commonly used for all indexer queries.
 func (aa *AccountAddress) StringLong() string {
 	return util.BytesToHex(aa[:])
+}
+
+// StringShort Returns the short string representation of the AccountAddress
+func (aa *AccountAddress) StringShort() string {
+	msb := aa[0]
+	msbIdx := 0
+	for msb == 0 && msbIdx < 31 {
+		msbIdx++
+		msb = aa[msbIdx]
+	}
+	return fmt.Sprintf("0x%x%x", msb, aa[msbIdx+1:])
 }
 
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
