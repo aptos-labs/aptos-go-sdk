@@ -546,6 +546,120 @@ func TestConvertArg_Special(t *testing.T) {
 			arg:      []any{[]any{[]any{}, []any{22}}, []any{}, []any{[]any{42}}},
 			expected: []byte{1, 3, 2, 0, 1, 22, 0, 1, 1, 42},
 		},
+		// Option<u8> tests
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      uint8(42),
+			expected: []byte{1, 42}, // Some(42)
+		},
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      255,
+			expected: []byte{1, 255}, // Some(255)
+		},
+		// Option<u16> tests
+		{
+			strTag:   "0x1::option::Option<u16>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u16>",
+			arg:      uint16(1000),
+			expected: []byte{1, 0xe8, 0x03}, // Some(1000) - little endian
+		},
+		// Option<u32> tests
+		{
+			strTag:   "0x1::option::Option<u32>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u32>",
+			arg:      uint32(100000),
+			expected: []byte{1, 0xa0, 0x86, 0x01, 0x00}, // Some(100000) - little endian
+		},
+		// Option<u64> tests
+		{
+			strTag:   "0x1::option::Option<u64>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u64>",
+			arg:      uint64(1000000000),
+			expected: []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00}, // Some(1000000000) - little endian
+		},
+		// Option<u128> tests
+		{
+			strTag:   "0x1::option::Option<u128>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u128>",
+			arg:      "123456789",
+			expected: []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(123456789) - u128 little endian
+		},
+		// Option<u256> tests
+		{
+			strTag:   "0x1::option::Option<u256>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u256>",
+			arg:      "987654321",
+			expected: []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(987654321) - u256 little endian
+		},
+		// Option<bool> tests
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      true,
+			expected: []byte{1, 1}, // Some(true)
+		},
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      false,
+			expected: []byte{1, 0}, // Some(false)
+		},
+		// Option<0x1::string::String> tests
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      "hello",
+			expected: []byte{1, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f}, // Some("hello") - length + UTF-8 bytes
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      "",
+			expected: []byte{1, 0}, // Some("") - empty string
+		},
+		// Option<address> tests
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      "0x1",
+			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // Some(0x1) - 32 bytes address
+		},
 		{
 			strTag:   "vector<vector<vector<bool>>>",
 			arg:      []any{[]any{[]any{}, []any{false}}, []any{}, []any{[]any{true}}},
@@ -601,6 +715,116 @@ func TestConvertArg_Special(t *testing.T) {
 			strTag:            "vector<u8>",
 			arg:               "0x00",
 			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
+			compatibilityMode: true,
+		},
+		// Option<u8> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u8>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u8>",
+			arg:               "0x012A", // ULEB128(1) + u8(42)
+			expected:          []byte{1, 42},
+			compatibilityMode: true,
+		},
+		// Option<u16> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u16>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u16>",
+			arg:               "0x01E803", // ULEB128(1) + u16(1000 little endian)
+			expected:          []byte{1, 0xe8, 0x03},
+			compatibilityMode: true,
+		},
+		// Option<u32> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u32>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u32>",
+			arg:               "0x01A0860100", // ULEB128(1) + u32(100000 little endian)
+			expected:          []byte{1, 0xa0, 0x86, 0x01, 0x00},
+			compatibilityMode: true,
+		},
+		// Option<u64> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u64>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u64>",
+			arg:               "0x0100CA9A3B00000000", // ULEB128(1) + u64(1000000000 little endian)
+			expected:          []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+		// Option<u128> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u128>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u128>",
+			arg:               "0x0115CD5B07000000000000000000000000", // ULEB128(1) + u128(123456789 little endian)
+			expected:          []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+		// Option<u256> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<u256>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u256>",
+			arg:               "0x01B168DE3A0000000000000000000000000000000000000000000000000000000000", // ULEB128(1) + u256(987654321 little endian)
+			expected:          []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+		// Option<bool> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<bool>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<bool>",
+			arg:               "0x0101", // ULEB128(1) + bool(true)
+			expected:          []byte{1, 1},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<bool>",
+			arg:               "0x0100", // ULEB128(1) + bool(false)
+			expected:          []byte{1, 0},
+			compatibilityMode: true,
+		},
+		// Option<address> compatibility mode tests
+		{
+			strTag:            "0x1::option::Option<address>",
+			arg:               "0x00",
+			expected:          []byte{0}, // None in compatibility mode
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<address>",
+			arg:               "0x010000000000000000000000000000000000000000000000000000000000000001",                                                                                                                                          // ULEB128(1) + address(32 bytes)
+			expected:          []byte{1, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // addresses are serialized as bytes with length prefix
 			compatibilityMode: true,
 		},
 	}
