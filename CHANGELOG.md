@@ -5,8 +5,6 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 - Refactor address internal packages to be more clear
-- [`Feature`] Add simple string input support for Option types in ConvertToOption function. Now supports direct string inputs like "1" for Some(1), "true" for Some(true), etc.
-- [`Refactor`] Remove unused convertCompatibilitySerializedType function to simplify codebase
 
 # v1.10.0 (6/20/2025)
 - [`Feature`] Add orderless transaction support
