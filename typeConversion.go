@@ -1,7 +1,6 @@
 package aptos
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -575,39 +574,8 @@ func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer,
 }
 
 func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
-	compatibilityMode := false
-	for _, option := range options {
-		if compatMode, ok := option.(CompatibilityMode); ok {
-			compatibilityMode = bool(compatMode)
-		}
-	}
-
 	if arg == nil {
 		return bcs.SerializeU8(0)
-	}
-
-	if compatibilityMode {
-		if typedArg, ok := arg.(string); ok {
-			if len(typedArg) >= 2 && typedArg[:2] == "0x" {
-				typedArg = typedArg[2:]
-			}
-			bytes, err := hex.DecodeString(typedArg)
-			if err != nil {
-				return nil, err
-			}
-			des := bcs.NewDeserializer(bytes)
-			length := des.Uleb128()
-			if length == 0 {
-				return bcs.SerializeU8(0)
-			} else {
-				b := []byte{1}
-				buffer, err := convertCompatibilitySerializedType(typeParam, *des, generics)
-				if err != nil {
-					return nil, err
-				}
-				return append(b, buffer...), nil
-			}
-		}
 	}
 
 	b := []byte{1}
