@@ -536,6 +536,378 @@ func TestConvertArg_Special(t *testing.T) {
 		compatibilityMode bool
 	}
 	tests := []Test{
+		// ===== Option<u8> tests =====
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      uint8(42),
+			expected: []byte{1, 42}, // Some(42) - native Go type
+		},
+		{
+			strTag:   "0x1::option::Option<u8>",
+			arg:      255,
+			expected: []byte{1, 255}, // Some(255) - int as u8
+		},
+		{
+			strTag:            "0x1::option::Option<u8>",
+			arg:               "0",
+			expected:          []byte{1, 0}, // Some(0) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u8>",
+			arg:               "255",
+			expected:          []byte{1, 255}, // Some(255) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u8>",
+			arg:               "42",
+			expected:          []byte{1, 42},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<u16> tests =====
+		{
+			strTag:   "0x1::option::Option<u16>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u16>",
+			arg:      uint16(1000),
+			expected: []byte{1, 0xe8, 0x03}, // Some(1000) - native Go type
+		},
+		{
+			strTag:            "0x1::option::Option<u16>",
+			arg:               "1000",
+			expected:          []byte{1, 0xe8, 0x03},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<u32> tests =====
+		{
+			strTag:   "0x1::option::Option<u32>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u32>",
+			arg:      uint32(100000),
+			expected: []byte{1, 0xa0, 0x86, 0x01, 0x00}, // Some(100000) - native Go type
+		},
+		{
+			strTag:            "0x1::option::Option<u32>",
+			arg:               "0",
+			expected:          []byte{1, 0x00, 0x00, 0x00, 0x00}, // Some(0) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u32>",
+			arg:               "100000",
+			expected:          []byte{1, 0xa0, 0x86, 0x01, 0x00}, // Some(100000) - string compatibility
+			compatibilityMode: true,
+		},
+
+		// ===== Option<u64> tests =====
+		{
+			strTag:   "0x1::option::Option<u64>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u64>",
+			arg:      uint64(1000000000),
+			expected: []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00}, // Some(1000000000) - native Go type
+		},
+		{
+			strTag:            "0x1::option::Option<u64>",
+			arg:               "0",
+			expected:          []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(0) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u64>",
+			arg:               "123",
+			expected:          []byte{1, 0x7b, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(123) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u64>",
+			arg:               "1000000000",
+			expected:          []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<u128> tests =====
+		{
+			strTag:   "0x1::option::Option<u128>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u128>",
+			arg:      "123456789",
+			expected: []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(123456789) - string works for u128
+		},
+		{
+			strTag:            "0x1::option::Option<u128>",
+			arg:               "0",
+			expected:          []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(0) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u128>",
+			arg:               "123456789",
+			expected:          []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<u256> tests =====
+		{
+			strTag:   "0x1::option::Option<u256>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<u256>",
+			arg:      "987654321",
+			expected: []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(987654321) - string works for u256
+		},
+		{
+			strTag:            "0x1::option::Option<u256>",
+			arg:               "0",
+			expected:          []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(0) - string compatibility
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<u256>",
+			arg:               "987654321",
+			expected:          []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<bool> tests =====
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      true,
+			expected: []byte{1, 1}, // Some(true) - native Go type
+		},
+		{
+			strTag:   "0x1::option::Option<bool>",
+			arg:      false,
+			expected: []byte{1, 0}, // Some(false) - native Go type
+		},
+		{
+			strTag:            "0x1::option::Option<bool>",
+			arg:               "true",
+			expected:          []byte{1, 1},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<bool>",
+			arg:               "false",
+			expected:          []byte{1, 0},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<address> tests =====
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      AccountOne,
+			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // Some(0x1)
+		},
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      "0x0",
+			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(0x0)
+		},
+		{
+			strTag:   "0x1::option::Option<address>",
+			arg:      "0x1",
+			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // Some(0x1)
+		},
+		{
+			strTag:            "0x1::option::Option<address>",
+			arg:               "0x00",
+			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<signer> tests =====
+		{
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x00",
+			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			compatibilityMode: false,
+		},
+		{
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x01",
+			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
+			compatibilityMode: false,
+		},
+
+		// ===== Option<string> tests =====
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      "",
+			expected: []byte{1, 0}, // Some("")
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::string::String>",
+			arg:      "hello",
+			expected: []byte{1, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f}, // Some("hello")
+		},
+
+		// ===== Option<object> tests =====
+		{
+			strTag:   "0x1::option::Option<0x1::object::Object<0x1::aptos_coin::AptosCoin>>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::object::Object<0x1::aptos_coin::AptosCoin>>",
+			arg:      "0x0",
+			expected: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Some(0x0)
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::object::Object<0x1::aptos_coin::AptosCoin>>",
+			arg:      "0x1",
+			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // Some(0x1)
+		},
+		{
+			strTag:   "0x1::option::Option<0x1::object::Object<0x1::string::String>>",
+			arg:      "0xabcdef1234567890abcdef1234567890abcdef12",
+			expected: []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12, 0x34, 0x56, 0x78, 0x90, 0xab, 0xcd, 0xef, 0x12}, // Some(long address)
+		},
+
+		// ===== Option<vector<u8>> tests =====
+		{
+			strTag:   "0x1::option::Option<vector<u8>>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<vector<u8>>",
+			arg:      "",
+			expected: []byte{1, 0}, // Some([])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<u8>>",
+			arg:      []byte{},
+			expected: []byte{1, 0}, // Some([]) - empty vector as []byte
+		},
+		{
+			strTag:   "0x1::option::Option<vector<u8>>",
+			arg:      "0x1234",
+			expected: []byte{1, 2, 0x12, 0x34}, // Some([0x12, 0x34])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<u8>>",
+			arg:      []byte{0x12, 0x34},
+			expected: []byte{1, 2, 0x12, 0x34}, // Some([0x12, 0x34])
+		},
+		{
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x00",
+			expected:          []byte{1, 4, 48, 120, 48, 48},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x0102",
+			expected:          []byte{1, 6, 48, 120, 48, 49, 48, 50},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x1234",
+			expected:          []byte{1, 6, 48, 120, 49, 50, 51, 52},
+			compatibilityMode: true,
+		},
+
+		// ===== Option<vector<address>> tests =====
+		{
+			strTag:   "0x1::option::Option<vector<address>>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<vector<address>>",
+			arg:      []string{},
+			expected: []byte{1, 0}, // Some([])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<address>>",
+			arg:      []string{"0x0"},
+			expected: []byte{1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Some([0x0])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<address>>",
+			arg:      []string{"0x1", "0x2"},
+			expected: []byte{1, 2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}, // Some([0x1, 0x2])
+		},
+
+		// ===== Option<vector<string>> tests =====
+		{
+			strTag:   "0x1::option::Option<vector<0x1::string::String>>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<vector<0x1::string::String>>",
+			arg:      []string{},
+			expected: []byte{1, 0}, // Some([])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<0x1::string::String>>",
+			arg:      []string{""},
+			expected: []byte{1, 1, 0}, // Some([""]) - vector with one empty string
+		},
+		{
+			strTag:   "0x1::option::Option<vector<0x1::string::String>>",
+			arg:      []string{"hello", "world"},
+			expected: []byte{1, 2, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 5, 0x77, 0x6f, 0x72, 0x6c, 0x64}, // Some(["hello", "world"])
+		},
+
+		// ===== Option<vector<object>> tests =====
+		{
+			strTag:   "0x1::option::Option<vector<0x1::object::Object<0x1::aptos_coin::AptosCoin>>>",
+			arg:      nil,
+			expected: []byte{0}, // None
+		},
+		{
+			strTag:   "0x1::option::Option<vector<0x1::object::Object<0x1::aptos_coin::AptosCoin>>>",
+			arg:      []string{},
+			expected: []byte{1, 0}, // Some([])
+		},
+		{
+			strTag:   "0x1::option::Option<vector<0x1::object::Object<0x1::aptos_coin::AptosCoin>>>",
+			arg:      []string{"0x1", "0x2"},
+			expected: []byte{1, 2, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02}, // Some([0x1, 0x2])
+		},
+
+		// ===== Option<nested vectors> tests =====
 		{
 			strTag:   "0x1::option::Option<vector<vector<vector<u8>>>>",
 			arg:      nil,
@@ -546,119 +918,19 @@ func TestConvertArg_Special(t *testing.T) {
 			arg:      []any{[]any{[]any{}, []any{22}}, []any{}, []any{[]any{42}}},
 			expected: []byte{1, 3, 2, 0, 1, 22, 0, 1, 1, 42},
 		},
-		// Option<u8> tests
+
+		// ===== vector<nested> tests (non-option) =====
 		{
-			strTag:   "0x1::option::Option<u8>",
-			arg:      nil,
-			expected: []byte{0}, // None
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{1, 0},
+			compatibilityMode: false,
 		},
 		{
-			strTag:   "0x1::option::Option<u8>",
-			arg:      uint8(42),
-			expected: []byte{1, 42}, // Some(42)
-		},
-		{
-			strTag:   "0x1::option::Option<u8>",
-			arg:      255,
-			expected: []byte{1, 255}, // Some(255)
-		},
-		// Option<u16> tests
-		{
-			strTag:   "0x1::option::Option<u16>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<u16>",
-			arg:      uint16(1000),
-			expected: []byte{1, 0xe8, 0x03}, // Some(1000) - little endian
-		},
-		// Option<u32> tests
-		{
-			strTag:   "0x1::option::Option<u32>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<u32>",
-			arg:      uint32(100000),
-			expected: []byte{1, 0xa0, 0x86, 0x01, 0x00}, // Some(100000) - little endian
-		},
-		// Option<u64> tests
-		{
-			strTag:   "0x1::option::Option<u64>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<u64>",
-			arg:      uint64(1000000000),
-			expected: []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00}, // Some(1000000000) - little endian
-		},
-		// Option<u128> tests
-		{
-			strTag:   "0x1::option::Option<u128>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<u128>",
-			arg:      "123456789",
-			expected: []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(123456789) - u128 little endian
-		},
-		// Option<u256> tests
-		{
-			strTag:   "0x1::option::Option<u256>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<u256>",
-			arg:      "987654321",
-			expected: []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}, // Some(987654321) - u256 little endian
-		},
-		// Option<bool> tests
-		{
-			strTag:   "0x1::option::Option<bool>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<bool>",
-			arg:      true,
-			expected: []byte{1, 1}, // Some(true)
-		},
-		{
-			strTag:   "0x1::option::Option<bool>",
-			arg:      false,
-			expected: []byte{1, 0}, // Some(false)
-		},
-		// Option<0x1::string::String> tests
-		{
-			strTag:   "0x1::option::Option<0x1::string::String>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<0x1::string::String>",
-			arg:      "hello",
-			expected: []byte{1, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f}, // Some("hello") - length + UTF-8 bytes
-		},
-		{
-			strTag:   "0x1::option::Option<0x1::string::String>",
-			arg:      "",
-			expected: []byte{1, 0}, // Some("") - empty string
-		},
-		// Option<address> tests
-		{
-			strTag:   "0x1::option::Option<address>",
-			arg:      nil,
-			expected: []byte{0}, // None
-		},
-		{
-			strTag:   "0x1::option::Option<address>",
-			arg:      "0x1",
-			expected: []byte{1, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01}, // Some(0x1) - 32 bytes address
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
+			compatibilityMode: true,
 		},
 		{
 			strTag:   "vector<vector<vector<bool>>>",
@@ -674,110 +946,6 @@ func TestConvertArg_Special(t *testing.T) {
 			strTag:   "vector<vector<vector<u8>>>",
 			arg:      []any{[]any{"0x4222"}, []any{}, []string{"0x32"}},
 			expected: []byte{3, 1, 2, 0x42, 0x22, 0, 1, 1, 0x32},
-		},
-		{ // Special case, difference in behavior with compatibility mode
-			strTag:            "0x1::option::Option<signer>",
-			arg:               "0x00",
-			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			compatibilityMode: false,
-		},
-		{ // Special case, difference in behavior with compatibility mode
-			strTag:            "0x1::option::Option<signer>",
-			arg:               "0x01",
-			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-			compatibilityMode: false,
-		},
-		{ // Special case in compatibility mode
-			strTag:            "0x1::option::Option<vector<u8>>",
-			arg:               "0x1234",
-			expected:          []byte{1, 6, 48, 120, 49, 50, 51, 52},
-			compatibilityMode: true,
-		},
-		{ // Special case in compatibility mode
-			strTag:            "0x1::option::Option<vector<u8>>",
-			arg:               "0x00",
-			expected:          []byte{1, 4, 48, 120, 48, 48},
-			compatibilityMode: true,
-		},
-		{ // Special case in compatibility mode
-			strTag:            "0x1::option::Option<vector<u8>>",
-			arg:               "0x0102",
-			expected:          []byte{1, 6, 48, 120, 48, 49, 48, 50},
-			compatibilityMode: true,
-		},
-		{
-			strTag:            "vector<u8>",
-			arg:               "0x00",
-			expected:          []byte{1, 0},
-			compatibilityMode: false,
-		},
-		{
-			strTag:            "vector<u8>",
-			arg:               "0x00",
-			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
-			compatibilityMode: true,
-		},
-		// Option<u8> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u8>",
-			arg:               "42", // ULEB128(1) + u8(42)
-			expected:          []byte{1, 42},
-			compatibilityMode: true,
-		},
-		// Option<u16> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u16>",
-			arg:               "1000", // ULEB128(1) + u16(1000 little endian)
-			expected:          []byte{1, 0xe8, 0x03},
-			compatibilityMode: true,
-		},
-		// Option<u32> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u32>",
-			arg:               "100000", // ULEB128(1) + u32(100000 little endian)
-			expected:          []byte{1, 0xa0, 0x86, 0x01, 0x00},
-			compatibilityMode: true,
-		},
-		// Option<u64> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u64>",
-			arg:               "1000000000", // ULEB128(1) + u64(1000000000 little endian)
-			expected:          []byte{1, 0x00, 0xca, 0x9a, 0x3b, 0x00, 0x00, 0x00, 0x00},
-			compatibilityMode: true,
-		},
-		// Option<u128> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u128>",
-			arg:               "123456789", // ULEB128(1) + u128(123456789 little endian)
-			expected:          []byte{1, 0x15, 0xcd, 0x5b, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			compatibilityMode: true,
-		},
-		// Option<u256> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<u256>",
-			arg:               "987654321", // ULEB128(1) + u256(987654321 little endian)
-			expected:          []byte{1, 0xb1, 0x68, 0xde, 0x3a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00},
-			compatibilityMode: true,
-		},
-		// Option<bool> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<bool>",
-			arg:               "true", // ULEB128(1) + bool(true)
-			expected:          []byte{1, 1},
-			compatibilityMode: true,
-		},
-		{
-			strTag:            "0x1::option::Option<bool>",
-			arg:               "false", // ULEB128(1) + bool(false)
-			expected:          []byte{1, 0},
-			compatibilityMode: true,
-		},
-		// Option<address> compatibility mode tests
-		{
-			strTag:            "0x1::option::Option<address>",
-			arg:               "0x00",
-			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, // Some(0x00) - 32 bytes address
-			compatibilityMode: true,
 		},
 	}
 
