@@ -523,56 +523,6 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 	return nil, errors.New("failed to convert type argument")
 }
 
-func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag) ([]byte, error) {
-	switch innerType := typeParam.Value.(type) {
-	case *U8Tag:
-		return bcs.SerializeU8(arg.U8())
-	case *U16Tag:
-		return bcs.SerializeU16(arg.U16())
-	case *U32Tag:
-		return bcs.SerializeU32(arg.U32())
-	case *U64Tag:
-		return bcs.SerializeU64(arg.U64())
-	case *U128Tag:
-		return bcs.SerializeU128(arg.U128())
-	case *U256Tag:
-		return bcs.SerializeU256(arg.U256())
-	case *BoolTag:
-		return bcs.SerializeBool(arg.Bool())
-	case *AddressTag:
-		return bcs.SerializeBytes(arg.ReadFixedBytes(32))
-	case *SignerTag:
-		return nil, errors.New("signer is not supported")
-	case *GenericTag:
-		genericNum := innerType.Num
-		if genericNum >= uint64(len(generics)) {
-			return nil, errors.New("generic number out of bounds")
-		}
-		genericType := generics[genericNum]
-		return convertCompatibilitySerializedType(genericType, arg, generics)
-	case *ReferenceTag:
-		return convertCompatibilitySerializedType(innerType.TypeParam, arg, generics)
-	case *VectorTag:
-		length := arg.Uleb128()
-		buffer, err := bcs.SerializeUleb128(length)
-		if err != nil {
-			return nil, err
-		}
-		for range int(length) {
-			b, err := convertCompatibilitySerializedType(innerType.TypeParam, arg, generics)
-			if err != nil {
-				return nil, err
-			}
-			buffer = append(buffer, b...)
-		}
-		return buffer, nil
-	case *StructTag:
-		return convertCompatibilitySerializedType(typeParam, arg, generics)
-	default:
-		return nil, errors.New("unknown type")
-	}
-}
-
 func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
 	if arg == nil {
 		return bcs.SerializeU8(0)
