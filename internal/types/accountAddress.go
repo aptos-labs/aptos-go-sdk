@@ -92,6 +92,17 @@ func (aa *AccountAddress) StringLong() string {
 	return util.BytesToHex(aa[:])
 }
 
+// StringShort Returns the short string representation of the AccountAddress
+func (aa *AccountAddress) StringShort() string {
+	msb := aa[0]
+	msbIdx := 0
+	for msb == 0 && msbIdx < 31 {
+		msbIdx++
+		msb = aa[msbIdx]
+	}
+	return fmt.Sprintf("0x%x%x", msb, aa[msbIdx+1:])
+}
+
 // MarshalBCS Converts the AccountAddress to BCS encoded bytes
 func (aa *AccountAddress) MarshalBCS(ser *bcs.Serializer) {
 	ser.FixedBytes(aa[:])
