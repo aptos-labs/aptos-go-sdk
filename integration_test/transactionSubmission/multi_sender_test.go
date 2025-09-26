@@ -15,7 +15,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSender
 	const (
 		numSenders     = uint64(3)
 		txPerSender    = uint64(5)
-		initialFunding = uint64(100_000_000)
+		initialFunding = uint64(200_000_000)
 		transferAmount = uint64(100)
 	)
 
