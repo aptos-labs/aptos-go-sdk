@@ -4,8 +4,11 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+
+# v1.11.0 (9/26/2025)
 - Refactor address internal packages to be more clear
 - [`Feature`] Add AccountAddress.StringShort() for short string representation.
+- Upgrade dependencies
 
 # v1.10.0 (6/20/2025)
 - [`Feature`] Add orderless transaction support
