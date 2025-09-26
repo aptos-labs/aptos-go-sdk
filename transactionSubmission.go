@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk/api"
 )
 
 // TransactionSubmissionType is the counter for an enum

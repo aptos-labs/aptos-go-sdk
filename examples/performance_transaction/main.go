@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk"
 )
 
 // example This example shows you how to improve performance of the transaction submission

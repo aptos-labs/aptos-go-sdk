@@ -5,8 +5,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk/crypto"
 	"golang.org/x/crypto/ed25519"
 )
 

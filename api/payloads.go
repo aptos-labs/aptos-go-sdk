@@ -3,7 +3,7 @@ package api
 import (
 	"encoding/json"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+	"github.com/qimeila/aptos-go-sdk/internal/types"
 )
 
 // TransactionPayloadVariant is the type of payload represented in JSON

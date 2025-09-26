@@ -43,5 +43,5 @@
 //	}
 //
 // [Aptos Dev Docs]: https://aptos.dev
-// [Examples]: https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk/examples
+// [Examples]: https://pkg.go.dev/github.com/qimeila/aptos-go-sdk/examples
 package aptos

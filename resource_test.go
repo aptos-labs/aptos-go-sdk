@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

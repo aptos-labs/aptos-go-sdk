@@ -1,7 +1,7 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 )
 
 // PublishPackagePayloadFromJsonFile publishes code created with the Aptos CLI to publish with it.

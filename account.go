@@ -1,8 +1,8 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+	"github.com/qimeila/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/internal/types"
 )
 
 // Re-export types so that way the user experience doesn't change

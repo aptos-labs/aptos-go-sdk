@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk/api"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+	"github.com/qimeila/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

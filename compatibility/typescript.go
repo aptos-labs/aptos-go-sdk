@@ -1,6 +1,6 @@
 package compatibility
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import "github.com/qimeila/aptos-go-sdk/bcs"
 
 // TypeScriptCompatible means the type is able to marshal and unmarshal in BCS to a specific type in TypeScript
 type TypeScriptCompatible interface {

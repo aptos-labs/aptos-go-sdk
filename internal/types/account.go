@@ -3,7 +3,7 @@ package types
 import (
 	"errors"
 
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/crypto"
 )
 
 // -----
