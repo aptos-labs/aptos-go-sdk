@@ -469,7 +469,7 @@ func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 			valueBytes, err = bcs.SerializeU8(numValue)
 
 		case "u16":
-			// For u8, parse and BCS serialize as u8
+			// For u16, parse and BCS serialize as u16
 			numValue, parseErr := ConvertToU16(value)
 			if parseErr != nil {
 				return nil, fmt.Errorf("failed to parse u8 value '%s': %w", value, parseErr)
@@ -477,7 +477,7 @@ func SerializePropertyValues(values []string, types []string) ([]byte, error) {
 			valueBytes, err = bcs.SerializeU16(numValue)
 
 		case "u32":
-			// For u8, parse and BCS serialize as u8
+			// For u32, parse and BCS serialize as u32
 			numValue, parseErr := ConvertToU32(value)
 			if parseErr != nil {
 				return nil, fmt.Errorf("failed to parse u8 value '%s': %w", value, parseErr)
