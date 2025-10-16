@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // ... existing code ...
@@ -366,11 +367,86 @@ func TestConvertArg(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "vector<reference>",
+			name:     "vector<&u8>",
 			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &ReferenceTag{TypeParam: TypeTag{Value: &U8Tag{}}}}}},
 			arg:      []any{uint8(42), uint8(43)},
 			expected: []byte{2, 42, 43},
 			wantErr:  false,
+		},
+		{
+			name:     "vector<u8> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}},
+			arg:      []any{uint8(0), uint(1), byte(2), 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 1, 2, 3, 4, 5, 6},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u16> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U16Tag{}}}},
+			arg:      []any{uint16(0), uint(1), 2, 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 0, 1, 0, 2, 0, 3, 0, 4, 0, 5, 0, 6, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u32> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U32Tag{}}}},
+			arg:      []any{uint32(0), uint(1), 2, 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 0, 0, 0, 1, 0, 0, 0, 2, 0, 0, 0, 3, 0, 0, 0, 4, 0, 0, 0, 5, 0, 0, 0, 6, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u64> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U64Tag{}}}},
+			arg:      []any{uint64(0), uint(1), 2, 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u128> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U128Tag{}}}},
+			arg:      []any{0, uint(1), 2, 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u256> with big.Int",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U256Tag{}}}},
+			arg:      []big.Int{*big.NewInt(2)},
+			expected: []byte{1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<u256> with various types",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U256Tag{}}}},
+			arg:      []any{0, uint(1), 2, 3, "4", big.NewInt(5), *big.NewInt(6)},
+			expected: []byte{7, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 6, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<vector<u8>>",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}}}},
+			arg:      []any{[]any{}, []any{1}, []int{1, 2, 3}, []uint{1, 2, 3}, []uint{}, []int{}},
+			expected: []byte{6, 0, 1, 1, 3, 1, 2, 3, 3, 1, 2, 3, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<vector<vector<u8>>>",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &VectorTag{TypeParam: TypeTag{&U8Tag{}}}}}}}},
+			arg:      []any{[]any{[]any{1}, []any{2, 3}}, []any{[]any{4, 5}, []any{}}},
+			expected: []byte{2, 2, 1, 1, 2, 2, 3, 2, 2, 4, 5, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<0x1::string::String>",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}},
+			arg:      []string{"hello", "goodbye"},
+			expected: []byte{2, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 7, 0x67, 0x6f, 0x6f, 0x64, 0x62, 0x79, 0x65},
+		},
+		{
+			name:     "vector<0x1::string::String> with []any",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}},
+			arg:      []any{"hello", "goodbye"},
+			expected: []byte{2, 5, 0x68, 0x65, 0x6c, 0x6c, 0x6f, 7, 0x67, 0x6f, 0x6f, 0x64, 0x62, 0x79, 0x65},
 		},
 		{
 			name:    "nil vector<bool>",
@@ -441,6 +517,101 @@ func TestConvertArg(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 			val, err := ConvertArg(tt.typeArg, tt.arg, tt.generics)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertArg() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			assert.Equalf(t, tt.expected, val, "ConvertArg() failed to convert to correct bytes %v != %v", tt.expected, val)
+		})
+	}
+}
+
+func TestConvertArg_Special(t *testing.T) {
+	t.Parallel()
+	type Test struct {
+		strTag            string
+		arg               any
+		generics          []TypeTag
+		wantErr           bool
+		expected          []byte
+		compatibilityMode bool
+	}
+	tests := []Test{
+		{
+			strTag:   "0x1::option::Option<vector<vector<vector<u8>>>>",
+			arg:      nil,
+			expected: []byte{0},
+		},
+		{
+			strTag:   "0x1::option::Option<vector<vector<vector<u8>>>>",
+			arg:      []any{[]any{[]any{}, []any{22}}, []any{}, []any{[]any{42}}},
+			expected: []byte{1, 3, 2, 0, 1, 22, 0, 1, 1, 42},
+		},
+		{
+			strTag:   "vector<vector<vector<bool>>>",
+			arg:      []any{[]any{[]any{}, []any{false}}, []any{}, []any{[]any{true}}},
+			expected: []byte{3, 2, 0, 1, 0, 0, 1, 1, 1},
+		},
+		{
+			strTag:   "vector<vector<vector<u16>>>",
+			arg:      []any{[]any{[]any{}, []any{22}}, []any{}, []any{[]any{42}}},
+			expected: []byte{3, 2, 0, 1, 22, 0, 0, 1, 1, 0x2a, 0},
+		},
+		{
+			strTag:   "vector<vector<vector<u8>>>",
+			arg:      []any{[]any{"0x4222"}, []any{}, []string{"0x32"}},
+			expected: []byte{3, 1, 2, 0x42, 0x22, 0, 1, 1, 0x32},
+		},
+		{ // Special case, difference in behavior with compatibility mode
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x00",
+			expected:          []byte{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			compatibilityMode: false,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<signer>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x0100",
+			expected:          []byte{1, 0},
+			compatibilityMode: true,
+		},
+		{ // Special case in compatibility mode
+			strTag:            "0x1::option::Option<vector<u8>>",
+			arg:               "0x010102",
+			expected:          []byte{1, 1, 2},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{1, 0},
+			compatibilityMode: false,
+		},
+		{
+			strTag:            "vector<u8>",
+			arg:               "0x00",
+			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
+			compatibilityMode: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.strTag, func(t *testing.T) {
+			t.Parallel()
+			typeArg, err := ParseTypeTag(tt.strTag)
+			require.NoError(t, err)
+
+			val, err := ConvertArg(*typeArg, tt.arg, tt.generics, CompatibilityMode(tt.compatibilityMode))
 			if (err != nil) != tt.wantErr {
 				t.Errorf("ConvertArg() error = %v, wantErr %v", err, tt.wantErr)
 			}

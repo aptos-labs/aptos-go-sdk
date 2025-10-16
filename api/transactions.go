@@ -356,6 +356,7 @@ type UserTransaction struct {
 	Events                  []*Event              // Events emitted by the transaction, may be empty.
 	Sender                  *types.AccountAddress // Sender of the transaction, will never be nil.
 	SequenceNumber          uint64                // SequenceNumber of the transaction, starts at 0 and increments per transaction submitted by the sender.
+	ReplayProtectionNonce   *uint64               // ReplayProtectionNonce of the transaction, if this value is non-null, then the sequence number does not apply.  Must be unique for 60 seconds for between user transactions for an addredss.
 	MaxGasAmount            uint64                // MaxGasAmount of the transaction, this is the max amount of gas units that the user is willing to pay.
 	GasUnitPrice            uint64                // GasUnitPrice of the transaction, this is the multiplier per unit of gas to tokens.
 	ExpirationTimestampSecs uint64                // ExpirationTimestampSecs of the transaction, this is the Unix timestamp in seconds when the transaction expires.
@@ -395,6 +396,7 @@ func (o *UserTransaction) UnmarshalJSON(b []byte) error {
 		Events                  []*Event              `json:"events"`
 		Sender                  *types.AccountAddress `json:"sender"`
 		SequenceNumber          U64                   `json:"sequence_number"`
+		ReplayProtectionNonce   *U64                  `json:"replay_protection_nonce"`
 		MaxGasAmount            U64                   `json:"max_gas_amount"`
 		GasUnitPrice            U64                   `json:"gas_unit_price"`
 		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
@@ -427,6 +429,11 @@ func (o *UserTransaction) UnmarshalJSON(b []byte) error {
 	o.Signature = data.Signature
 	o.Timestamp = data.Timestamp.ToUint64()
 	o.StateCheckpointHash = data.StateCheckpointHash
+
+	if data.ReplayProtectionNonce != nil {
+		replayNonce := (data.ReplayProtectionNonce).ToUint64()
+		o.ReplayProtectionNonce = &replayNonce
+	}
 	return nil
 }
 
@@ -435,6 +442,7 @@ type PendingTransaction struct {
 	Hash                    Hash                  // Hash of the transaction, it is a SHA3-256 hash in hexadecimal format with a leading 0x.
 	Sender                  *types.AccountAddress // Sender of the transaction, will never be nil.
 	SequenceNumber          uint64                // SequenceNumber of the transaction, starts at 0 and increments per transaction submitted by the sender.
+	ReplayProtectionNonce   *uint64               // ReplayProtectionNonce of the transaction, if this value is non-null, then the sequence number does not apply.  Must be unique for 60 seconds for between user transactions for an addredss.
 	MaxGasAmount            uint64                // MaxGasAmount of the transaction, this is the max amount of gas units that the user is willing to pay.
 	GasUnitPrice            uint64                // GasUnitPrice of the transaction, this is the multiplier per unit of gas to tokens.
 	ExpirationTimestampSecs uint64                // ExpirationTimestampSecs of the transaction, this is the Unix timestamp in seconds when the transaction expires.
@@ -463,6 +471,7 @@ func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
 		Hash                    Hash                  `json:"hash"`
 		Sender                  *types.AccountAddress `json:"sender"`
 		SequenceNumber          U64                   `json:"sequence_number"`
+		ReplayProtectionNonce   *U64                  `json:"replay_protection_nonce"`
 		MaxGasAmount            U64                   `json:"max_gas_amount"`
 		GasUnitPrice            U64                   `json:"gas_unit_price"`
 		ExpirationTimestampSecs U64                   `json:"expiration_timestamp_secs"`
@@ -482,6 +491,11 @@ func (o *PendingTransaction) UnmarshalJSON(b []byte) error {
 	o.ExpirationTimestampSecs = data.ExpirationTimestampSecs.ToUint64()
 	o.Payload = data.Payload
 	o.Signature = data.Signature
+
+	if data.ReplayProtectionNonce != nil {
+		replayNonce := data.ReplayProtectionNonce.ToUint64()
+		o.ReplayProtectionNonce = &replayNonce
+	}
 	return nil
 }
 
