@@ -16,7 +16,7 @@ func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *t
 		numTransactions = uint32(5)
 		transferAmount  = uint64(100)
 		numWorkers      = uint32(3)
-		initialFunding  = uint64(100_000_000)
+		initialFunding  = uint64(200_000_000)
 	)
 
 	clients := testutil.SetupTestClients(t)
