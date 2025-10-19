@@ -17,6 +17,7 @@ const (
 	TransactionPayloadVariantEntryFunction TransactionPayloadVariant = 2
 	TransactionPayloadVariantMultisig      TransactionPayloadVariant = 3
 	TransactionPayloadVariantPayload       TransactionPayloadVariant = 4
+	TransactionPayloadVariantCEX           TransactionPayloadVariant = 5
 )
 
 type TransactionInnerPayloadVariant uint32
@@ -31,6 +32,7 @@ const (
 	TransactionExecutableVariantScript        TransactionExecutableVariant = 0
 	TransactionExecutableVariantEntryFunction TransactionExecutableVariant = 1
 	TransactionExecutableVariantEmpty         TransactionExecutableVariant = 2
+	TransactionExecutableVariantCEX           TransactionExecutableVariant = 3
 )
 
 type TransactionExtraConfigVariant uint32
@@ -74,6 +76,9 @@ func (txn *TransactionPayload) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Payload = &Multisig{}
 	case TransactionPayloadVariantPayload:
 		txn.Payload = &TransactionInnerPayload{}
+	case TransactionPayloadVariantCEX:
+		// CEX payload - use CexTx for proper handling
+		txn.Payload = &CexTx{}
 	default:
 		des.SetError(fmt.Errorf("bad txn payload kind, %d", payloadType))
 		return

@@ -82,6 +82,9 @@ func (txn *TransactionExecutable) UnmarshalBCS(des *bcs.Deserializer) {
 		txn.Inner = &EntryFunction{}
 	case TransactionExecutableVariantEmpty:
 		txn.Inner = &TransactionExecutableEmpty{}
+	case TransactionExecutableVariantCEX:
+		// CEX transactions use CexTx structure
+		txn.Inner = &CexTxExecutable{}
 	default:
 		des.SetError(errors.New("unknown transaction executable variant"))
 		return
@@ -103,6 +106,23 @@ func (txn *TransactionExecutableEmpty) ExecutableType() TransactionExecutableVar
 
 func (txn *TransactionExecutableEmpty) MarshalBCS(*bcs.Serializer)     {}
 func (txn *TransactionExecutableEmpty) UnmarshalBCS(*bcs.Deserializer) {}
+
+// CexTxExecutable wraps CexTx for executable variant
+type CexTxExecutable struct {
+	Tx CexTx
+}
+
+func (txn *CexTxExecutable) ExecutableType() TransactionExecutableVariant {
+	return TransactionExecutableVariantCEX
+}
+
+func (txn *CexTxExecutable) MarshalBCS(ser *bcs.Serializer) {
+	txn.Tx.MarshalBCS(ser)
+}
+
+func (txn *CexTxExecutable) UnmarshalBCS(des *bcs.Deserializer) {
+	txn.Tx.UnmarshalBCS(des)
+}
 
 type TransactionExtraConfig struct {
 	Inner TransactionExtraConfigImpl
