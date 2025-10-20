@@ -317,6 +317,10 @@ func ConvertToVectorU8(arg any, options ...any) ([]byte, error) {
 	case string:
 		return bcs.SerializeBytes([]byte(arg))
 	case []byte:
+		// []byte{nil} is not allowed
+		if arg == nil {
+			return nil, errors.New("cannot convert nil bytes to vector<u8>")
+		}
 		return bcs.SerializeBytes(arg)
 	default:
 		return convertToVectorInner(VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}, arg, []TypeTag{}, options...)

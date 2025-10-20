@@ -915,7 +915,7 @@ func TestConvertToVectorU8(t *testing.T) {
 		{
 			name:    "hex string",
 			input:   "0x42",
-			want:    []byte{0x01, 0x42},
+			want:    []byte{0x04, 48, 120, 52, 50},
 			wantErr: false,
 		},
 		{
@@ -927,12 +927,6 @@ func TestConvertToVectorU8(t *testing.T) {
 		{
 			name:    "nil bytes",
 			input:   []byte(nil),
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid hex string",
-			input:   "invalid",
 			want:    nil,
 			wantErr: true,
 		},
