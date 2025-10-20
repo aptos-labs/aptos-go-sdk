@@ -1,6 +1,7 @@
 package aptos
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -508,7 +509,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 	return nil, errors.New("failed to convert type argument")
 }
 
-func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag) ([]byte, error) {
+func convertCompatibilitySerializedType(typeParam TypeTag, arg *bcs.Deserializer, generics []TypeTag) ([]byte, error) {
 	switch innerType := typeParam.Value.(type) {
 	case *U8Tag:
 		return bcs.SerializeU8(arg.U8())
@@ -552,15 +553,76 @@ func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer,
 		}
 		return buffer, nil
 	case *StructTag:
-		return convertCompatibilitySerializedType(typeParam, arg, generics)
+		// Handle core stdlib structs used in compatibility mode
+		if innerType.Address == AccountOne {
+			switch innerType.Module {
+			case "string":
+				if innerType.Name == "String" {
+					// Read inner bytes as vector<u8> and re-serialize
+					length := arg.Uleb128()
+					bytes := arg.ReadFixedBytes(int(length))
+					return bcs.SerializeBytes(bytes)
+				} else {
+					return nil, errors.New("unknown string type")
+				}
+			case "object":
+				if innerType.Name == "Object" {
+					// Treat as 32-byte address-like
+					return bcs.SerializeBytes(arg.ReadFixedBytes(32))
+				} else {
+					return nil, errors.New("unknown object type")
+				}
+			case "option":
+				if innerType.Name == "Option" {
+					return convertCompatibilitySerializedType(innerType.TypeParams[0], arg, generics)
+				} else {
+					return nil, errors.New("unknown option type")
+				}
+			default:
+				return nil, errors.New("unknown struct module type")
+			}
+		} else {
+			return nil, errors.New("unknown struct address")
+		}
 	default:
 		return nil, errors.New("unknown type")
 	}
 }
 
 func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...any) ([]byte, error) {
+	compatibilityMode := false
+	for _, option := range options {
+		if compatMode, ok := option.(CompatibilityMode); ok {
+			compatibilityMode = bool(compatMode)
+		}
+	}
+
 	if arg == nil {
 		return bcs.SerializeU8(0)
+	}
+
+	if compatibilityMode {
+		if typedArg, ok := arg.(string); ok {
+			if len(typedArg) >= 2 && typedArg[:2] == "0x" {
+				typedArg = typedArg[2:]
+			}
+			bytes, err := hex.DecodeString(typedArg)
+			if err != nil {
+				return nil, err
+			}
+			des := bcs.NewDeserializer(bytes)
+			length := des.Uleb128()
+			if length == 0 {
+				return bcs.SerializeU8(0)
+			} else {
+				b := []byte{1}
+				buffer, err := convertCompatibilitySerializedType(typeParam, des, generics)
+				if err != nil {
+					return nil, err
+				}
+				return append(b, buffer...), nil
+			}
+		}
 	}
 
 	b := []byte{1}
