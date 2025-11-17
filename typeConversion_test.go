@@ -218,13 +218,6 @@ func TestConvertArg(t *testing.T) {
 			wantErr:  false,
 		},
 		{
-			name:     "vector<u8> from hex",
-			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}},
-			arg:      "0x42",
-			expected: []byte{0x1, 0x42},
-			wantErr:  false,
-		},
-		{
 			name:     "vector<u8> from bytes",
 			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}},
 			arg:      []byte{0x42},
@@ -243,6 +236,48 @@ func TestConvertArg(t *testing.T) {
 			typeArg:  TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &U8Tag{}}}}},
 			arg:      nil,
 			expected: []byte{0x0},
+			wantErr:  false,
+		},
+		{
+			name:     "option<string> some",
+			typeArg:  TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}}},
+			arg:      "hello",
+			expected: []byte{0x1, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o')},
+			wantErr:  false,
+		},
+		{
+			name:     "option<string> none",
+			typeArg:  TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}}},
+			arg:      nil,
+			expected: []byte{0x0},
+			wantErr:  false,
+		},
+		{
+			name:     "option<vector<string>> some",
+			typeArg:  TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}}}}},
+			arg:      []string{"hello", "goodbye"},
+			expected: []byte{0x1, 2, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o'), 7, byte('g'), byte('o'), byte('o'), byte('d'), byte('b'), byte('y'), byte('e')},
+			wantErr:  false,
+		},
+		{
+			name:     "option<vector<string>> none",
+			typeArg:  TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}}}}},
+			arg:      nil,
+			expected: []byte{0x0},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<option<u8>> mixed",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &U8Tag{}}}}}}},
+			arg:      []any{nil, uint8(2)},
+			expected: []byte{2, 0, 1, 2},
+			wantErr:  false,
+		},
+		{
+			name:     "vector<option<string>> mixed",
+			typeArg:  TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &StructTag{Address: AccountOne, Module: "option", Name: "Option", TypeParams: []TypeTag{{Value: &StructTag{Address: AccountOne, Module: "string", Name: "String"}}}}}}},
+			arg:      []any{nil, "hello"},
+			expected: []byte{2, 0, 1, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o')},
 			wantErr:  false,
 		},
 		{
@@ -288,12 +323,6 @@ func TestConvertArg(t *testing.T) {
 		{
 			name:    "invalid type",
 			typeArg: TypeTag{Value: &U8Tag{}},
-			arg:     "invalid",
-			wantErr: true,
-		},
-		{
-			name:    "invalid vector type",
-			typeArg: TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}},
 			arg:     "invalid",
 			wantErr: true,
 		},
@@ -559,7 +588,7 @@ func TestConvertArg_Special(t *testing.T) {
 		{
 			strTag:   "vector<vector<vector<u8>>>",
 			arg:      []any{[]any{"0x4222"}, []any{}, []string{"0x32"}},
-			expected: []byte{3, 1, 2, 0x42, 0x22, 0, 1, 1, 0x32},
+			expected: []byte{3, 1, 6, 48, 120, 52, 50, 50, 50, 0, 1, 4, 48, 120, 51, 50}, // "0x4222" and "0x32" as bytes
 		},
 		{ // Special case, difference in behavior with compatibility mode
 			strTag:            "0x1::option::Option<signer>",
@@ -570,37 +599,97 @@ func TestConvertArg_Special(t *testing.T) {
 		{ // Special case in compatibility mode
 			strTag:            "0x1::option::Option<signer>",
 			arg:               "0x00",
-			expected:          []byte{0},
+			expected:          []byte{0}, // Option with "0x00" as None
 			compatibilityMode: true,
 		},
 		{ // Special case in compatibility mode
 			strTag:            "0x1::option::Option<vector<u8>>",
 			arg:               "0x00",
-			expected:          []byte{0},
+			expected:          []byte{0}, // Option with "0x00" as None
 			compatibilityMode: true,
 		},
 		{ // Special case in compatibility mode
 			strTag:            "0x1::option::Option<vector<u8>>",
 			arg:               "0x0100",
-			expected:          []byte{1, 0},
+			expected:          []byte{1, 0}, // Option with "0x0100" as Some([]byte{})
 			compatibilityMode: true,
 		},
 		{ // Special case in compatibility mode
 			strTag:            "0x1::option::Option<vector<u8>>",
 			arg:               "0x010102",
-			expected:          []byte{1, 1, 2},
+			expected:          []byte{1, 1, 2}, // Option with "0x010102" as Some([]byte{2})
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<0x1::string::String>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<0x1::string::String>",
+			arg:               "0x010568656c6c6f",
+			expected:          []byte{1, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o')},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<0x1::string::String>>",
+			arg:               "0x00",
+			expected:          []byte{0},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<0x1::string::String>>",
+			arg:               "0x01020568656c6c6f07676f6f64627965",
+			expected:          []byte{1, 2, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o'), 7, byte('g'), byte('o'), byte('o'), byte('d'), byte('b'), byte('y'), byte('e')},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "vector<0x1::option::Option<u8>>",
+			arg:               []any{"0x00", "0x0102"},
+			expected:          []byte{2, 0, 1, 2},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "vector<0x1::option::Option<0x1::string::String>>",
+			arg:               []any{"0x00", "0x010568656c6c6f"},
+			expected:          []byte{2, 0, 1, 5, byte('h'), byte('e'), byte('l'), byte('l'), byte('o')},
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<0x1::string::String>",
+			arg:               "0x0100",
+			expected:          []byte{1, 0}, // Some("")
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<0x1::string::String>>",
+			arg:               "0x0100",
+			expected:          []byte{1, 0}, // Some([])
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<0x1::string::String>",
+			arg:               "not_hex",
+			wantErr:           true,
+			compatibilityMode: true,
+		},
+		{
+			strTag:            "0x1::option::Option<vector<0x1::string::String>>",
+			arg:               "not_hex",
+			wantErr:           true,
 			compatibilityMode: true,
 		},
 		{
 			strTag:            "vector<u8>",
 			arg:               "0x00",
-			expected:          []byte{1, 0},
+			expected:          []byte{4, 48, 120, 48, 48}, // "0x00" as bytes
 			compatibilityMode: false,
 		},
 		{
 			strTag:            "vector<u8>",
 			arg:               "0x00",
-			expected:          []byte{4, 0x30, 0x78, 0x30, 0x30},
+			expected:          []byte{4, 48, 120, 48, 48}, // "0x00" as bytes
 			compatibilityMode: true,
 		},
 	}
@@ -826,7 +915,7 @@ func TestConvertToVectorU8(t *testing.T) {
 		{
 			name:    "hex string",
 			input:   "0x42",
-			want:    []byte{0x01, 0x42},
+			want:    []byte{0x04, 48, 120, 52, 50},
 			wantErr: false,
 		},
 		{
@@ -838,12 +927,6 @@ func TestConvertToVectorU8(t *testing.T) {
 		{
 			name:    "nil bytes",
 			input:   []byte(nil),
-			want:    nil,
-			wantErr: true,
-		},
-		{
-			name:    "invalid hex string",
-			input:   "invalid",
 			want:    nil,
 			wantErr: true,
 		},

@@ -311,27 +311,17 @@ func ConvertToAddress(arg any) (*AccountAddress, error) {
 
 // ConvertToVectorU8 returns the BCS encoded version of the bytes
 func ConvertToVectorU8(arg any, options ...any) ([]byte, error) {
-	compatibilityMode := false
-	for _, option := range options {
-		if compatMode, ok := option.(CompatibilityMode); ok {
-			compatibilityMode = bool(compatMode)
-		}
-	}
-
 	// Convert input to normalized byte array
 	switch arg := arg.(type) {
 	// Special case, handle hex string
 	case string:
-		// Parse string as UTF-8 bytes, in compatibility mode
-		if compatibilityMode {
-			return bcs.SerializeBytes([]byte(arg))
+		return bcs.SerializeBytes([]byte(arg))
+	case []byte:
+		// []byte{nil} is not allowed
+		if arg == nil {
+			return nil, errors.New("cannot convert nil bytes to vector<u8>")
 		}
-
-		bytes, err := util.ParseHex(arg)
-		if err != nil {
-			return nil, err
-		}
-		return bcs.SerializeBytes(bytes)
+		return bcs.SerializeBytes(arg)
 	default:
 		return convertToVectorInner(VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}, arg, []TypeTag{}, options...)
 	}
@@ -398,7 +388,6 @@ func ConvertToVector(vectorTag VectorTag, arg any, generics []TypeTag, options .
 	// We have to switch based on type, thanks Golang
 	switch innerType := vectorTag.TypeParam.Value.(type) {
 	case *U8Tag:
-		// Special case to handle hex
 		return ConvertToVectorU8(arg, options...)
 	case *GenericTag:
 		if innerType.Num >= uint64(len(generics)) {
@@ -524,7 +513,7 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 	return nil, errors.New("failed to convert type argument")
 }
 
-func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer, generics []TypeTag) ([]byte, error) {
+func convertCompatibilitySerializedType(typeParam TypeTag, arg *bcs.Deserializer, generics []TypeTag) ([]byte, error) {
 	switch innerType := typeParam.Value.(type) {
 	case *U8Tag:
 		return bcs.SerializeU8(arg.U8())
@@ -568,7 +557,37 @@ func convertCompatibilitySerializedType(typeParam TypeTag, arg bcs.Deserializer,
 		}
 		return buffer, nil
 	case *StructTag:
-		return convertCompatibilitySerializedType(typeParam, arg, generics)
+		// Handle core stdlib structs used in compatibility mode
+		if innerType.Address == AccountOne {
+			switch innerType.Module {
+			case "string":
+				if innerType.Name == "String" {
+					// Read inner bytes as vector<u8> and re-serialize
+					length := arg.Uleb128()
+					bytes := arg.ReadFixedBytes(int(length))
+					return bcs.SerializeBytes(bytes)
+				} else {
+					return nil, errors.New("unknown string type")
+				}
+			case "object":
+				if innerType.Name == "Object" {
+					// Treat as 32-byte address-like
+					return bcs.SerializeBytes(arg.ReadFixedBytes(32))
+				} else {
+					return nil, errors.New("unknown object type")
+				}
+			case "option":
+				if innerType.Name == "Option" {
+					return convertCompatibilitySerializedType(innerType.TypeParams[0], arg, generics)
+				} else {
+					return nil, errors.New("unknown option type")
+				}
+			default:
+				return nil, errors.New("unknown struct module type")
+			}
+		} else {
+			return nil, errors.New("unknown struct address")
+		}
 	default:
 		return nil, errors.New("unknown type")
 	}
@@ -601,7 +620,7 @@ func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...
 				return bcs.SerializeU8(0)
 			} else {
 				b := []byte{1}
-				buffer, err := convertCompatibilitySerializedType(typeParam, *des, generics)
+				buffer, err := convertCompatibilitySerializedType(typeParam, des, generics)
 				if err != nil {
 					return nil, err
 				}
