@@ -1,7 +1,7 @@
 package aptos
 
 import (
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 )
 
 // AccountResourceRecord DeserializeSequence[AccountResourceRecord](bcs) approximates the Rust side BTreeMap<StructTag,Vec<u8>>

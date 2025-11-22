@@ -3,8 +3,8 @@ package api
 import (
 	"encoding/json"
 
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
+	"github.com/qimeila/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/internal/types"
 )
 
 // SignatureVariant is the JSON representation of the signature types

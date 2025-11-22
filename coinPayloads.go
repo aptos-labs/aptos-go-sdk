@@ -1,6 +1,6 @@
 package aptos
 
-import "github.com/aptos-labs/aptos-go-sdk/bcs"
+import "github.com/qimeila/aptos-go-sdk/bcs"
 
 // CoinTransferPayload builds an EntryFunction payload for transferring coins
 //

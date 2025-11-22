@@ -3,7 +3,7 @@ package aptos
 import (
 	"errors"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 )
 
 type TransactionInnerPayload struct {

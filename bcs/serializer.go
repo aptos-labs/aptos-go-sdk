@@ -8,7 +8,7 @@ import (
 	"math/big"
 	"slices"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 // Serializer is a holding type to serialize a set of items into one shared buffer

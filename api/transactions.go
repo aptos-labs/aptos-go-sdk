@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/types"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/internal/types"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 // TransactionVariant is the type of transaction, all transactions submitted by this SDK are [TransactionVariantUser]

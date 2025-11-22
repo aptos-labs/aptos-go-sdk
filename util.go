@@ -3,7 +3,7 @@ package aptos
 import (
 	"math/big"
 
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 // -- Note these are copied from internal/util/util.go to prevent package loops, but still allow devs to use it

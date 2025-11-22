@@ -3,7 +3,7 @@ package crypto
 import (
 	"testing"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/bcs"
 	"github.com/stretchr/testify/assert"
 )
 
