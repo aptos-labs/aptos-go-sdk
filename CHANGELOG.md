@@ -13,6 +13,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Test`] Enhance type conversion tests for option and vector types with nested structures
 - [`Security`] Upgrade crypto library and graphql client libraries
 - [`Feature`] Support signed integers as arguments
+- [`Fix`] Fix logic issue in batch submit transactions
+- [`Fix`] Ensure addresses are zero'd out before being parsed
 
 # v1.11.0 (9/26/2025)
 

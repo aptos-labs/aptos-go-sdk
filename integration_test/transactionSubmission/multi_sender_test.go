@@ -11,6 +11,9 @@ import (
 )
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSenders(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to devnet")
+	}
 	t.Parallel()
 	const (
 		numSenders     = uint64(3)

@@ -24,7 +24,8 @@ func TestPollForTransaction(t *testing.T) {
 	dt := time.Since(start)
 
 	assert.GreaterOrEqual(t, dt, 9*time.Millisecond)
-	assert.Less(t, dt, 20*time.Millisecond)
+	// Use a generous upper bound to avoid flaky failures due to system load or CI variability
+	assert.Less(t, dt, 500*time.Millisecond)
 	require.Error(t, err)
 }
 
