@@ -102,6 +102,63 @@ func (ser *Serializer) U256(v big.Int) {
 	ser.serializeUBigInt(32, &v)
 }
 
+func serializeInt[T int16 | int32 | int64](ser *Serializer, size uint, v T, serialize func(slice []byte, num T)) {
+	ub := make([]byte, size)
+	serialize(ub, v)
+	ser.out.Write(ub)
+}
+
+func (ser *Serializer) serializeIBigInt(size uint, v *big.Int) {
+	// For signed big integers, we need to handle two's complement
+	toSerialize := new(big.Int).Set(v)
+	if v.Sign() < 0 {
+		// Two's complement: add 2^(size*8) to negative numbers
+		modulus := new(big.Int).Lsh(big.NewInt(1), size*8)
+		toSerialize.Add(toSerialize, modulus)
+	}
+	ub := make([]byte, size)
+	toSerialize.FillBytes(ub)
+	// Reverse, since big.Int outputs bytes in BigEndian
+	slices.Reverse(ub)
+	ser.out.Write(ub)
+}
+
+// I8 serialize a signed 8-bit integer
+func (ser *Serializer) I8(v int8) {
+	ser.out.WriteByte(byte(v))
+}
+
+// I16 serialize a signed 16-bit integer in little-endian format
+func (ser *Serializer) I16(v int16) {
+	serializeInt(ser, 2, v, func(slice []byte, num int16) {
+		binary.LittleEndian.PutUint16(slice, uint16(num)) //nolint gosec
+	})
+}
+
+// I32 serialize a signed 32-bit integer in little-endian format
+func (ser *Serializer) I32(v int32) {
+	serializeInt(ser, 4, v, func(slice []byte, num int32) {
+		binary.LittleEndian.PutUint32(slice, uint32(num)) //nolint gosec
+	})
+}
+
+// I64 serialize a signed 64-bit integer in little-endian format
+func (ser *Serializer) I64(v int64) {
+	serializeInt(ser, 8, v, func(slice []byte, num int64) {
+		binary.LittleEndian.PutUint64(slice, uint64(num)) //nolint gosec
+	})
+}
+
+// I128 serialize a signed 128-bit integer in little-endian format
+func (ser *Serializer) I128(v big.Int) {
+	ser.serializeIBigInt(16, &v)
+}
+
+// I256 serialize a signed 256-bit integer in little-endian format
+func (ser *Serializer) I256(v big.Int) {
+	ser.serializeIBigInt(32, &v)
+}
+
 // Uleb128 serialize an unsigned 32-bit integer as an Uleb128.  This is used specifically for sequence lengths, and enums.
 func (ser *Serializer) Uleb128(val uint32) {
 	for val>>7 != 0 {
@@ -319,6 +376,62 @@ func SerializeU256(input big.Int) ([]byte, error) {
 func SerializeUleb128(input uint32) ([]byte, error) {
 	return SerializeSingle(func(ser *Serializer) {
 		ser.Uleb128(input)
+	})
+}
+
+// SerializeI8 Serializes a single int8
+//
+//	bytes, _ := SerializeI8(int8(-1))
+func SerializeI8(input int8) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I8(input)
+	})
+}
+
+// SerializeI16 Serializes a single int16
+//
+//	bytes, _ := SerializeI16(int16(-1))
+func SerializeI16(input int16) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I16(input)
+	})
+}
+
+// SerializeI32 Serializes a single int32
+//
+//	bytes, _ := SerializeI32(int32(-1))
+func SerializeI32(input int32) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I32(input)
+	})
+}
+
+// SerializeI64 Serializes a single int64
+//
+//	bytes, _ := SerializeI64(int64(-1))
+func SerializeI64(input int64) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I64(input)
+	})
+}
+
+// SerializeI128 Serializes a single int128
+//
+//	i128 := big.NewInt(-1)
+//	bytes, _ := SerializeI128(i128)
+func SerializeI128(input big.Int) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I128(input)
+	})
+}
+
+// SerializeI256 Serializes a single int256
+//
+//	i256 := big.NewInt(-1)
+//	bytes, _ := SerializeI256(i256)
+func SerializeI256(input big.Int) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.I256(input)
 	})
 }
 

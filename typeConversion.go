@@ -269,6 +269,183 @@ func ConvertToU256(arg any) (*big.Int, error) {
 	}
 }
 
+func ConvertToI8(arg any) (int8, error) {
+	switch arg := arg.(type) {
+	case int:
+		if arg < -128 || arg > 127 {
+			return 0, errors.New("value out of range for int8")
+		}
+		return int8(arg), nil
+	case int8:
+		return arg, nil
+	case big.Int:
+		if !arg.IsInt64() || arg.Int64() < -128 || arg.Int64() > 127 {
+			return 0, errors.New("value out of range for int8")
+		}
+		return int8(arg.Int64()), nil //nolint gosec
+	case *big.Int:
+		if arg == nil {
+			return 0, errors.New("cannot convert to int8, input is nil")
+		}
+		if !arg.IsInt64() || arg.Int64() < -128 || arg.Int64() > 127 {
+			return 0, errors.New("value out of range for int8")
+		}
+		return int8(arg.Int64()), nil //nolint gosec
+	case string:
+		i64, err := strconv.ParseInt(arg, 10, 8)
+		if err != nil {
+			return 0, err
+		}
+		return int8(i64), nil
+	default:
+		return 0, fmt.Errorf("cannot convert to int8, input is %T", arg)
+	}
+}
+
+func ConvertToI16(arg any) (int16, error) {
+	switch arg := arg.(type) {
+	case int:
+		if arg < -32768 || arg > 32767 {
+			return 0, errors.New("value out of range for int16")
+		}
+		return int16(arg), nil
+	case int16:
+		return arg, nil
+	case big.Int:
+		if !arg.IsInt64() || arg.Int64() < -32768 || arg.Int64() > 32767 {
+			return 0, errors.New("value out of range for int16")
+		}
+		return int16(arg.Int64()), nil //nolint gosec
+	case *big.Int:
+		if arg == nil {
+			return 0, errors.New("cannot convert to int16, input is nil")
+		}
+		if !arg.IsInt64() || arg.Int64() < -32768 || arg.Int64() > 32767 {
+			return 0, errors.New("value out of range for int16")
+		}
+		return int16(arg.Int64()), nil //nolint gosec
+	case string:
+		i64, err := strconv.ParseInt(arg, 10, 16)
+		if err != nil {
+			return 0, err
+		}
+		return int16(i64), nil
+	default:
+		return 0, fmt.Errorf("cannot convert to int16, input is %T", arg)
+	}
+}
+
+func ConvertToI32(arg any) (int32, error) {
+	switch arg := arg.(type) {
+	case int:
+		if arg < -2147483648 || arg > 2147483647 {
+			return 0, errors.New("value out of range for int32")
+		}
+		return int32(arg), nil
+	case int32:
+		return arg, nil
+	case big.Int:
+		if !arg.IsInt64() || arg.Int64() < -2147483648 || arg.Int64() > 2147483647 {
+			return 0, errors.New("value out of range for int32")
+		}
+		return int32(arg.Int64()), nil //nolint gosec
+	case *big.Int:
+		if arg == nil {
+			return 0, errors.New("cannot convert to int32, input is nil")
+		}
+		if !arg.IsInt64() || arg.Int64() < -2147483648 || arg.Int64() > 2147483647 {
+			return 0, errors.New("value out of range for int32")
+		}
+		return int32(arg.Int64()), nil //nolint gosec
+	case string:
+		i64, err := strconv.ParseInt(arg, 10, 32)
+		if err != nil {
+			return 0, err
+		}
+		return int32(i64), nil
+	default:
+		return 0, fmt.Errorf("cannot convert to int32, input is %T", arg)
+	}
+}
+
+func ConvertToI64(arg any) (int64, error) {
+	switch arg := arg.(type) {
+	case int:
+		return int64(arg), nil
+	case int64:
+		return arg, nil
+	case big.Int:
+		if !arg.IsInt64() {
+			return 0, errors.New("value out of range for int64")
+		}
+		return arg.Int64(), nil
+	case *big.Int:
+		if arg == nil {
+			return 0, errors.New("cannot convert to int64, input is nil")
+		}
+		if !arg.IsInt64() {
+			return 0, errors.New("value out of range for int64")
+		}
+		return arg.Int64(), nil
+	case string:
+		return strconv.ParseInt(arg, 10, 64)
+	default:
+		return 0, fmt.Errorf("cannot convert to int64, input is %T", arg)
+	}
+}
+
+// TODO: Check bounds of bigints for i128
+func ConvertToI128(arg any) (*big.Int, error) {
+	switch arg := arg.(type) {
+	case int:
+		return big.NewInt(int64(arg)), nil
+	case int64:
+		return big.NewInt(arg), nil
+	case big.Int:
+		return &arg, nil
+	case *big.Int:
+		if arg == nil {
+			return nil, errors.New("cannot convert to int128, input is nil")
+		}
+		return arg, nil
+	case string:
+		result := new(big.Int)
+		_, ok := result.SetString(arg, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid string for int128: %s", arg)
+		}
+		return result, nil
+	default:
+		return nil, fmt.Errorf("invalid input type for int128: %T", arg)
+	}
+}
+
+// TODO: Check bounds of bigints for i256
+func ConvertToI256(arg any) (*big.Int, error) {
+	switch arg := arg.(type) {
+	case int:
+		return big.NewInt(int64(arg)), nil
+	case int64:
+		return big.NewInt(arg), nil
+	case big.Int:
+		return &arg, nil
+	case *big.Int:
+		if arg == nil {
+			return nil, errors.New("cannot convert to int256, input is nil")
+		}
+		return arg, nil
+	case string:
+		result := new(big.Int)
+		_, ok := result.SetString(arg, 10)
+		if !ok {
+			return nil, fmt.Errorf("invalid string for int256: %s", arg)
+		}
+		return result, nil
+	default:
+		return nil, fmt.Errorf("invalid input type for int256: %T", arg)
+	}
+}
+
 func ConvertToBool(arg any) (bool, error) {
 	switch arg := arg.(type) {
 	case bool:
@@ -445,6 +622,42 @@ func ConvertArg(typeArg TypeTag, arg any, generics []TypeTag, options ...any) ([
 			return nil, err
 		}
 		return bcs.SerializeU256(*num)
+	case *I8Tag:
+		num, err := ConvertToI8(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI8(num)
+	case *I16Tag:
+		num, err := ConvertToI16(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI16(num)
+	case *I32Tag:
+		num, err := ConvertToI32(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI32(num)
+	case *I64Tag:
+		num, err := ConvertToI64(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI64(num)
+	case *I128Tag:
+		num, err := ConvertToI128(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI128(*num)
+	case *I256Tag:
+		num, err := ConvertToI256(arg)
+		if err != nil {
+			return nil, err
+		}
+		return bcs.SerializeI256(*num)
 	case *BoolTag:
 		bo, err := ConvertToBool(arg)
 		if err != nil {
@@ -527,6 +740,18 @@ func convertCompatibilitySerializedType(typeParam TypeTag, arg *bcs.Deserializer
 		return bcs.SerializeU128(arg.U128())
 	case *U256Tag:
 		return bcs.SerializeU256(arg.U256())
+	case *I8Tag:
+		return bcs.SerializeI8(arg.I8())
+	case *I16Tag:
+		return bcs.SerializeI16(arg.I16())
+	case *I32Tag:
+		return bcs.SerializeI32(arg.I32())
+	case *I64Tag:
+		return bcs.SerializeI64(arg.I64())
+	case *I128Tag:
+		return bcs.SerializeI128(arg.I128())
+	case *I256Tag:
+		return bcs.SerializeI256(arg.I256())
 	case *BoolTag:
 		return bcs.SerializeBool(arg.Bool())
 	case *AddressTag:

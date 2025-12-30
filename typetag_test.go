@@ -38,6 +38,12 @@ func TestTypeTagIdentities(t *testing.T) {
 	checkVariant(t, &U64Tag{}, TypeTagU64, "u64")
 	checkVariant(t, &U128Tag{}, TypeTagU128, "u128")
 	checkVariant(t, &U256Tag{}, TypeTagU256, "u256")
+	checkVariant(t, &I8Tag{}, TypeTagI8, "i8")
+	checkVariant(t, &I16Tag{}, TypeTagI16, "i16")
+	checkVariant(t, &I32Tag{}, TypeTagI32, "i32")
+	checkVariant(t, &I64Tag{}, TypeTagI64, "i64")
+	checkVariant(t, &I128Tag{}, TypeTagI128, "i128")
+	checkVariant(t, &I256Tag{}, TypeTagI256, "i256")
 
 	checkVariant(t, NewVectorTag(&U8Tag{}), TypeTagVector, "vector<u8>")
 	checkVariant(t, NewStringTag(), TypeTagStruct, "0x1::string::String")
@@ -128,6 +134,12 @@ func TestParseTypeTag(t *testing.T) {
 		{"u64 type", "u64", &TypeTag{Value: &U64Tag{}}, false},
 		{"u128 type", "u128", &TypeTag{Value: &U128Tag{}}, false},
 		{"u256 type", "u256", &TypeTag{Value: &U256Tag{}}, false},
+		{"i8 type", "i8", &TypeTag{Value: &I8Tag{}}, false},
+		{"i16 type", "i16", &TypeTag{Value: &I16Tag{}}, false},
+		{"i32 type", "i32", &TypeTag{Value: &I32Tag{}}, false},
+		{"i64 type", "i64", &TypeTag{Value: &I64Tag{}}, false},
+		{"i128 type", "i128", &TypeTag{Value: &I128Tag{}}, false},
+		{"i256 type", "i256", &TypeTag{Value: &I256Tag{}}, false},
 		{"address type", "address", &TypeTag{Value: &AddressTag{}}, false},
 		{"signer type", "signer", &TypeTag{Value: &SignerTag{}}, false},
 
@@ -196,6 +208,12 @@ func TestParseTypeTag(t *testing.T) {
 		{"invalid u64 generic", "u64<T0>", nil, true},
 		{"invalid u128 generic", "u128<T0>", nil, true},
 		{"invalid u256 generic", "u256<T0>", nil, true},
+		{"invalid i8 generic", "i8<T0>", nil, true},
+		{"invalid i16 generic", "i16<T0>", nil, true},
+		{"invalid i32 generic", "i32<T0>", nil, true},
+		{"invalid i64 generic", "i64<T0>", nil, true},
+		{"invalid i128 generic", "i128<T0>", nil, true},
+		{"invalid i256 generic", "i256<T0>", nil, true},
 		{"invalid too large generic", "T256", nil, true},
 	}
 
