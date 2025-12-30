@@ -188,14 +188,24 @@ func Test_I128(t *testing.T) {
 		"01000000000000000000000000000000", // 1
 		"ff000000000000000000000000000000", // 255
 		"ffffffffffffffffffffffffffffffff", // -1
-		"00000000000000000000000000000080", // min i128
+		"feffffffffffffffffffffffffffffff", // -2
+		"00000000000000000000000000000080", // min i128 (-2^127)
+		"ffffffffffffffffffffffffffffff7f", // max i128 (2^127 - 1)
+		"00000000000000010000000000000000", // 2^56 (large positive)
+		"fffffffffffffffeffffffffffffffff", // -(2^56 + 1) (large negative)
+		"01000000000000000000000000000080", // min i128 + 1
 	}
 	deserialized := []*big.Int{
 		big.NewInt(0),
 		big.NewInt(1),
 		big.NewInt(255),
 		big.NewInt(-1),
+		big.NewInt(-2),
 		minI128(),
+		maxI128(),
+		new(big.Int).Lsh(big.NewInt(1), 56), // 2^56
+		new(big.Int).Neg(new(big.Int).Add(new(big.Int).Lsh(big.NewInt(1), 56), big.NewInt(1))), // -(2^56 + 1)
+		new(big.Int).Add(minI128(), big.NewInt(1)),                                             // min + 1
 	}
 
 	helperSignedBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
@@ -213,14 +223,26 @@ func Test_I256(t *testing.T) {
 		"0100000000000000000000000000000000000000000000000000000000000000", // 1
 		"ff00000000000000000000000000000000000000000000000000000000000000", // 255
 		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // -1
-		"0000000000000000000000000000000000000000000000000000000000000080", // min i256
+		"feffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // -2
+		"0000000000000000000000000000000000000000000000000000000000000080", // min i256 (-2^255)
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff7f", // max i256 (2^255 - 1)
+		"0000000000000000000000000000000001000000000000000000000000000000", // 2^128 (large positive)
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff00", // 2^248 - 1 (large positive near max)
+		"0100000000000000000000000000000000000000000000000000000000000080", // min i256 + 1
+		"0000000000000000010000000000000000000000000000000000000000000000", // 2^64 (medium positive)
 	}
 	deserialized := []*big.Int{
 		big.NewInt(0),
 		big.NewInt(1),
 		big.NewInt(255),
 		big.NewInt(-1),
+		big.NewInt(-2),
 		minI256(),
+		maxI256(),
+		new(big.Int).Lsh(big.NewInt(1), 128), // 2^128
+		subtractOne(new(big.Int).Lsh(big.NewInt(1), 248)), // 2^248 - 1 (large positive near max)
+		new(big.Int).Add(minI256(), big.NewInt(1)),        // min + 1
+		new(big.Int).Lsh(big.NewInt(1), 64),               // 2^64
 	}
 
 	helperSignedBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
@@ -680,8 +702,25 @@ func minI128() *big.Int {
 	return result.Neg(result)
 }
 
+// maxI128 returns the maximum value for a signed 128-bit integer: 2^127 - 1
+func maxI128() *big.Int {
+	result := new(big.Int).Lsh(big.NewInt(1), 127)
+	return result.Sub(result, big.NewInt(1))
+}
+
 // minI256 returns the minimum value for a signed 256-bit integer: -2^255
 func minI256() *big.Int {
 	result := new(big.Int).Lsh(big.NewInt(1), 255)
 	return result.Neg(result)
+}
+
+// maxI256 returns the maximum value for a signed 256-bit integer: 2^255 - 1
+func maxI256() *big.Int {
+	result := new(big.Int).Lsh(big.NewInt(1), 255)
+	return result.Sub(result, big.NewInt(1))
+}
+
+// subtractOne returns n - 1
+func subtractOne(n *big.Int) *big.Int {
+	return new(big.Int).Sub(n, big.NewInt(1))
 }
