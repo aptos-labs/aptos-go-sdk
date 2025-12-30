@@ -10,6 +10,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Add nil bytes validation to prevent converting nil bytes to vector<u8>
 - [`Fix`] Improve compatibility mode serialization for nested option and string types
 - [`Test`] Enhance type conversion tests for option and vector types with nested structures
+- [`Security`] Upgrade crypto library and graphql client libraries
 
 # v1.11.0 (9/26/2025)
 - Refactor address internal packages to be more clear
