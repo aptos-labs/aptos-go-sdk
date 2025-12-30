@@ -225,6 +225,9 @@ func testTransactionSimulation(t *testing.T, createAccount CreateSigner, buildTr
 }
 
 func TestAPTTransferTransaction(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
@@ -244,6 +247,9 @@ func TestAPTTransferTransaction(t *testing.T) {
 }
 
 func Test_Indexer(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -283,6 +289,9 @@ func Test_Indexer(t *testing.T) {
 }
 
 func Test_Genesis(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -297,6 +306,9 @@ func Test_Genesis(t *testing.T) {
 }
 
 func Test_Block(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -334,6 +346,9 @@ func Test_Block(t *testing.T) {
 }
 
 func Test_Account(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -348,6 +363,9 @@ func Test_Account(t *testing.T) {
 }
 
 func Test_Transactions(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -391,6 +409,9 @@ func submitAccountTransaction(t *testing.T, client *Client, account *Account, se
 
 func Test_AccountTransactions(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -504,6 +525,9 @@ func Test_AccountTransactions(t *testing.T) {
 }
 
 func Test_Info(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -514,6 +538,9 @@ func Test_Info(t *testing.T) {
 }
 
 func Test_AccountResources(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -564,6 +591,9 @@ func concurrentTxnWaiter(
 }
 
 func Test_Concurrent_Submission(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	const numTxns = uint64(100)
 	const numWaiters = 4
@@ -658,6 +688,9 @@ func Test_Concurrent_Submission(t *testing.T) {
 }
 
 func TestClient_View(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -678,6 +711,9 @@ func TestClient_View(t *testing.T) {
 }
 
 func TestClient_BlockByHeight(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)
@@ -688,6 +724,9 @@ func TestClient_BlockByHeight(t *testing.T) {
 
 func TestClient_NodeAPIHealthCheck(t *testing.T) {
 	t.Parallel()
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	client, err := createTestClient()
 	require.NoError(t, err)
 
@@ -750,6 +789,9 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 }
 
 func TestClient_EntryFunctionWithArgs(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration test expects network connection to localnet")
+	}
 	t.Parallel()
 	client, err := createTestClient()
 	require.NoError(t, err)

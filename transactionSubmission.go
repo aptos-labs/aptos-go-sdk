@@ -135,47 +135,58 @@ func (rc *NodeClient) SubmitTransactions(requests chan TransactionSubmissionRequ
 func (rc *NodeClient) BatchSubmitTransactions(requests chan TransactionSubmissionRequest, responses chan TransactionSubmissionResponse) {
 	defer close(responses)
 
-	inputs := make([]*SignedTransaction, 20)
-	ids := make([]uint64, 20)
+	const batchSize = 20
+	inputs := make([]*SignedTransaction, batchSize)
+	ids := make([]uint64, batchSize)
 	i := uint32(0)
 
-	for request := range requests {
-		// Collect 20 inputs before submitting
-		// TODO: Handle a timeout or something associated for it
-		inputs[i] = request.SignedTxn
-		ids[i] = request.Id
+	submitBatch := func(count uint32) {
+		response, err := rc.BatchSubmitTransaction(inputs[:count])
 
-		if i >= 19 {
-			i = 0
-			response, err := rc.BatchSubmitTransaction(inputs)
-
-			// Process the responses
-			if err != nil {
-				// Error, means all failed
-				for j := range i {
-					responses <- TransactionSubmissionResponse{Id: ids[j], Err: err}
+		// Process the responses
+		if err != nil {
+			// Error, means all failed
+			for j := range count {
+				responses <- TransactionSubmissionResponse{Id: ids[j], Err: err}
+			}
+		} else {
+			// Partial failure, means we need to send errors for those that failed
+			// and responses for those that succeeded
+			for j := range count {
+				failedIdx := -1
+				for k := range len(response.TransactionFailures) {
+					if response.TransactionFailures[k].TransactionIndex == j {
+						failedIdx = k
+						break
+					}
 				}
-			} else {
-				// Partial failure, means we need to send errors for those that failed
-				// and responses for those that succeeded
-
-				for j := range i {
-					failed := -1
-					for k := range len(response.TransactionFailures) {
-						if response.TransactionFailures[k].TransactionIndex == j {
-							failed = k
-							break
-						}
-					}
-					if failed >= 0 {
-						responses <- TransactionSubmissionResponse{Id: ids[j], Response: nil}
-					} else {
-						responses <- TransactionSubmissionResponse{Id: ids[j], Err: fmt.Errorf("transaction failed: %s", response.TransactionFailures[failed].Error.Message)}
-					}
+				if failedIdx >= 0 {
+					// Transaction failed - send error
+					responses <- TransactionSubmissionResponse{Id: ids[j], Err: fmt.Errorf("transaction failed: %s", response.TransactionFailures[failedIdx].Error.Message)}
+				} else {
+					// Transaction succeeded - send nil error
+					responses <- TransactionSubmissionResponse{Id: ids[j], Response: nil}
 				}
 			}
 		}
+	}
+
+	for request := range requests {
+		// Collect batchSize inputs before submitting
+		// TODO: Handle a timeout or something associated for it
+		inputs[i] = request.SignedTxn
+		ids[i] = request.Id
 		i++
+
+		if i >= batchSize {
+			submitBatch(i)
+			i = 0
+		}
+	}
+
+	// Submit any remaining transactions when the channel closes
+	if i > 0 {
+		submitBatch(i)
 	}
 }
 

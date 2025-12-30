@@ -163,10 +163,9 @@ var ErrAddressTooShort = errors.New("AccountAddress too short")
 // ErrAddressTooLong is returned when an AccountAddress is too long
 var ErrAddressTooLong = errors.New("AccountAddress too long")
 
-// ParseStringRelaxed parses a string into an AccountAddress
-// TODO: add strict mode checking
-func (aa *AccountAddress) ParseStringRelaxed(x string) error {
-	x = strings.TrimPrefix(x, "0x")
+// parseHexString is a helper that parses a hex string (without 0x prefix) into an AccountAddress.
+// It validates length, pads odd-length strings, decodes hex, zeros the address, and copies right-aligned.
+func (aa *AccountAddress) parseHexString(x string) error {
 	if len(x) < 1 {
 		return ErrAddressTooShort
 	}
@@ -180,10 +179,17 @@ func (aa *AccountAddress) ParseStringRelaxed(x string) error {
 	if err != nil {
 		return err
 	}
-	// zero-prefix/right-align what bytes we got
+	// Zero out the address first, then copy the parsed bytes right-aligned
+	clear((*aa)[:])
 	copy((*aa)[32-len(bytes):], bytes)
 
 	return nil
+}
+
+// ParseStringRelaxed parses a string into an AccountAddress
+// TODO: add strict mode checking
+func (aa *AccountAddress) ParseStringRelaxed(x string) error {
+	return aa.parseHexString(strings.TrimPrefix(x, "0x"))
 }
 
 // ParseStringWithPrefixRelaxed parses a string into an AccountAddress
@@ -191,22 +197,5 @@ func (aa *AccountAddress) ParseStringWithPrefixRelaxed(x string) error {
 	if !strings.HasPrefix(x, "0x") {
 		return ErrAddressMissing0x
 	}
-	x = x[2:]
-	if len(x) < 1 {
-		return ErrAddressTooShort
-	}
-	if len(x) > 64 {
-		return ErrAddressTooLong
-	}
-	if len(x)%2 != 0 {
-		x = "0" + x
-	}
-	bytes, err := hex.DecodeString(x)
-	if err != nil {
-		return err
-	}
-	// zero-prefix/right-align what bytes we got
-	copy((*aa)[32-len(bytes):], bytes)
-
-	return nil
+	return aa.parseHexString(x[2:])
 }
