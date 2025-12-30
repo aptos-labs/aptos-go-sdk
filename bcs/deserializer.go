@@ -91,8 +91,8 @@ func (des *Deserializer) Bool() bool {
 	return out
 }
 
-func deserializeUint[T uint8 | uint16 | uint32 | uint64](des *Deserializer, typeName string, size int, decode func(slice []byte) T) T {
-	end := des.pos + size
+func deserializeInt[T int8 | int16 | int32 | int64](des *Deserializer, typeName string, size uint8, decode func(slice []byte) T) T {
+	end := des.pos + int(size)
 	if end > len(des.source) {
 		des.setError("not enough bytes remaining to deserialize %s", typeName)
 		return T(0)
@@ -102,8 +102,19 @@ func deserializeUint[T uint8 | uint16 | uint32 | uint64](des *Deserializer, type
 	return out
 }
 
-func (des *Deserializer) deserializeUBigint(typeName string, size int) big.Int {
-	end := des.pos + size
+func deserializeUint[T uint8 | uint16 | uint32 | uint64](des *Deserializer, typeName string, size uint8, decode func(slice []byte) T) T {
+	end := des.pos + int(size)
+	if end > len(des.source) {
+		des.setError("not enough bytes remaining to deserialize %s", typeName)
+		return T(0)
+	}
+	out := decode(des.source[des.pos:end])
+	des.pos = end
+	return out
+}
+
+func (des *Deserializer) deserializeUBigint(typeName string, size uint8) big.Int {
+	end := des.pos + int(size)
 	if end > len(des.source) {
 		des.setError("not enough bytes remaining to deserialize %s", typeName)
 		return *big.NewInt(-1)
@@ -148,6 +159,69 @@ func (des *Deserializer) U128() big.Int {
 // U256 deserializes a single unsigned 256-bit integer
 func (des *Deserializer) U256() big.Int {
 	return des.deserializeUBigint("u256", 32)
+}
+
+func (des *Deserializer) deserializeIBigint(typeName string, size uint8) big.Int {
+	end := des.pos + int(size)
+	if end > len(des.source) {
+		des.setError("not enough bytes remaining to deserialize %s", typeName)
+		return *big.NewInt(0)
+	}
+	bytesBigEndian := make([]byte, size)
+	copy(bytesBigEndian, des.source[des.pos:end])
+	des.pos = end
+	slices.Reverse(bytesBigEndian)
+
+	var out big.Int
+	out.SetBytes(bytesBigEndian)
+
+	// Check if negative (most significant bit is set)
+	if bytesBigEndian[0]&0x80 != 0 {
+		// Two's complement: subtract 2^(size*8)
+		// Note: must cast size to uint before multiplying to avoid uint8 overflow
+		modulus := new(big.Int).Lsh(big.NewInt(1), uint(size)*8)
+		out.Sub(&out, modulus)
+	}
+
+	return out
+}
+
+// I8 deserializes a single signed 8-bit integer
+func (des *Deserializer) I8() int8 {
+	return deserializeInt(des, "i8", 1, func(slice []byte) int8 {
+		return int8(slice[0])
+	})
+}
+
+// I16 deserializes a single signed 16-bit integer
+func (des *Deserializer) I16() int16 {
+	return deserializeInt(des, "i16", 2, func(slice []byte) int16 {
+		return int16(binary.LittleEndian.Uint16(slice)) //nolint gosec
+	})
+}
+
+// I32 deserializes a single signed 32-bit integer
+func (des *Deserializer) I32() int32 {
+	return deserializeInt(des, "i32", 4, func(slice []byte) int32 {
+		return int32(binary.LittleEndian.Uint32(slice)) //nolint gosec
+	})
+}
+
+// I64 deserializes a single signed 64-bit integer
+func (des *Deserializer) I64() int64 {
+	return deserializeInt(des, "i64", 8, func(slice []byte) int64 {
+		return int64(binary.LittleEndian.Uint64(slice)) //nolint gosec
+	})
+}
+
+// I128 deserializes a single signed 128-bit integer
+func (des *Deserializer) I128() big.Int {
+	return des.deserializeIBigint("i128", 16)
+}
+
+// I256 deserializes a single signed 256-bit integer
+func (des *Deserializer) I256() big.Int {
+	return des.deserializeIBigint("i256", 32)
 }
 
 // Uleb128 deserializes a 32-bit integer from a variable length [Unsigned LEB128]

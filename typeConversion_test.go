@@ -204,6 +204,90 @@ func TestConvertArg(t *testing.T) {
 			wantErr:  false,
 		},
 		{
+			name:     "i8 positive",
+			typeArg:  TypeTag{Value: &I8Tag{}},
+			arg:      int8(42),
+			expected: []byte{42},
+			wantErr:  false,
+		},
+		{
+			name:     "i8 negative",
+			typeArg:  TypeTag{Value: &I8Tag{}},
+			arg:      int8(-1),
+			expected: []byte{0xff},
+			wantErr:  false,
+		},
+		{
+			name:     "i16 positive",
+			typeArg:  TypeTag{Value: &I16Tag{}},
+			arg:      int16(1000),
+			expected: []byte{0xe8, 0x03},
+			wantErr:  false,
+		},
+		{
+			name:     "i16 negative",
+			typeArg:  TypeTag{Value: &I16Tag{}},
+			arg:      int16(-1),
+			expected: []byte{0xff, 0xff},
+			wantErr:  false,
+		},
+		{
+			name:     "i32 positive",
+			typeArg:  TypeTag{Value: &I32Tag{}},
+			arg:      int32(100000),
+			expected: []byte{0xa0, 0x86, 0x01, 0x00},
+			wantErr:  false,
+		},
+		{
+			name:     "i32 negative",
+			typeArg:  TypeTag{Value: &I32Tag{}},
+			arg:      int32(-1),
+			expected: []byte{0xff, 0xff, 0xff, 0xff},
+			wantErr:  false,
+		},
+		{
+			name:     "i64 positive",
+			typeArg:  TypeTag{Value: &I64Tag{}},
+			arg:      int64(100000000000),
+			expected: []byte{0x00, 0xe8, 0x76, 0x48, 0x17, 0x00, 0x00, 0x00},
+			wantErr:  false,
+		},
+		{
+			name:     "i64 negative",
+			typeArg:  TypeTag{Value: &I64Tag{}},
+			arg:      int64(-1),
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			wantErr:  false,
+		},
+		{
+			name:     "i128 positive",
+			typeArg:  TypeTag{Value: &I128Tag{}},
+			arg:      big.NewInt(42),
+			expected: []byte{42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "i128 negative",
+			typeArg:  TypeTag{Value: &I128Tag{}},
+			arg:      big.NewInt(-1),
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			wantErr:  false,
+		},
+		{
+			name:     "i256 positive",
+			typeArg:  TypeTag{Value: &I256Tag{}},
+			arg:      big.NewInt(42),
+			expected: []byte{42, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			wantErr:  false,
+		},
+		{
+			name:     "i256 negative",
+			typeArg:  TypeTag{Value: &I256Tag{}},
+			arg:      big.NewInt(-1),
+			expected: []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff},
+			wantErr:  false,
+		},
+		{
 			name:     "bool",
 			typeArg:  TypeTag{Value: &BoolTag{}},
 			arg:      true,
@@ -953,4 +1037,470 @@ func TestConvertToVectorU8(t *testing.T) {
 	}
 }
 
-// ... existing code ...
+func TestConvertToI8(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    int8
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   42,
+			want:    42,
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -42,
+			want:    -42,
+			wantErr: false,
+		},
+		{
+			name:    "int8",
+			input:   int8(-128),
+			want:    -128,
+			wantErr: false,
+		},
+		{
+			name:    "int8 max",
+			input:   int8(127),
+			want:    127,
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-42),
+			want:    -42,
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "string",
+			input:   "-42",
+			want:    -42,
+			wantErr: false,
+		},
+		{
+			name:    "out of range positive",
+			input:   128,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "out of range negative",
+			input:   -129,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid string",
+			input:   "invalid",
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI8(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI8() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("ConvertToI8() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToI16(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    int16
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   1000,
+			want:    1000,
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -1000,
+			want:    -1000,
+			wantErr: false,
+		},
+		{
+			name:    "int16 min",
+			input:   int16(-32768),
+			want:    -32768,
+			wantErr: false,
+		},
+		{
+			name:    "int16 max",
+			input:   int16(32767),
+			want:    32767,
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-1000),
+			want:    -1000,
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "string",
+			input:   "-1000",
+			want:    -1000,
+			wantErr: false,
+		},
+		{
+			name:    "out of range positive",
+			input:   32768,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "out of range negative",
+			input:   -32769,
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI16(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI16() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("ConvertToI16() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToI32(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    int32
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   100000,
+			want:    100000,
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -100000,
+			want:    -100000,
+			wantErr: false,
+		},
+		{
+			name:    "int32 min",
+			input:   int32(-2147483648),
+			want:    -2147483648,
+			wantErr: false,
+		},
+		{
+			name:    "int32 max",
+			input:   int32(2147483647),
+			want:    2147483647,
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-100000),
+			want:    -100000,
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "string",
+			input:   "-100000",
+			want:    -100000,
+			wantErr: false,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI32(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI32() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("ConvertToI32() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToI64(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    int64
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   100000000000,
+			want:    100000000000,
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -100000000000,
+			want:    -100000000000,
+			wantErr: false,
+		},
+		{
+			name:    "int64",
+			input:   int64(-9223372036854775808),
+			want:    -9223372036854775808,
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-100000000000),
+			want:    -100000000000,
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    0,
+			wantErr: true,
+		},
+		{
+			name:    "string",
+			input:   "-100000000000",
+			want:    -100000000000,
+			wantErr: false,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    0,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI64(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI64() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got != tt.want {
+				t.Errorf("ConvertToI64() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToI128(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    *big.Int
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   42,
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -42,
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "int64",
+			input:   int64(-9223372036854775808),
+			want:    big.NewInt(-9223372036854775808),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-42),
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string positive",
+			input:   "42",
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "string negative",
+			input:   "-42",
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "invalid string",
+			input:   "invalid",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI128(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI128() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got.Cmp(tt.want) != 0 {
+				t.Errorf("ConvertToI128() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToI256(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    *big.Int
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   42,
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "int negative",
+			input:   -42,
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int",
+			input:   big.NewInt(-42),
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string positive",
+			input:   "42",
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "string negative",
+			input:   "-42",
+			want:    big.NewInt(-42),
+			wantErr: false,
+		},
+		{
+			name:    "invalid string",
+			input:   "invalid",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToI256(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToI256() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got.Cmp(tt.want) != 0 {
+				t.Errorf("ConvertToI256() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

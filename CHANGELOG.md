@@ -6,25 +6,30 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # Unreleased
 
 - [`Refactor`] Simplify type conversion logic by removing CompatibilityMode option handling in ConvertToVectorU8
-- [`Fix`] Change string to vector<u8> conversion behavior - strings are now consistently treated as UTF-8 bytes instead of hex strings
+- [`Fix`] Change string to vector<u8> conversion behavior - strings are now consistently treated as UTF-8 bytes instead
+  of hex strings
 - [`Fix`] Add nil bytes validation to prevent converting nil bytes to vector<u8>
 - [`Fix`] Improve compatibility mode serialization for nested option and string types
 - [`Test`] Enhance type conversion tests for option and vector types with nested structures
 - [`Security`] Upgrade crypto library and graphql client libraries
+- [`Feature`] Support signed integers as arguments
 
 # v1.11.0 (9/26/2025)
+
 - Refactor address internal packages to be more clear
 - [`Feature`] Add AccountAddress.StringShort() for short string representation.
 - Upgrade dependencies
 
 # v1.10.0 (6/20/2025)
+
 - [`Feature`] Add orderless transaction support
 
 # v1.9.0 (6/8/2025)
 
 - [`Breaking`] Change how plain text arguments are parsed from inputs. All inputs now have to be []any and will work
   nested properly.
-- [`Feature`] Add `CompatibilityMode` to `ConvertArg` so that it can be used to convert arguments similar to the original TS SDK.
+- [`Feature`] Add `CompatibilityMode` to `ConvertArg` so that it can be used to convert arguments similar to the
+  original TS SDK.
 
 # v1.8.0 (6/3/2025)
 

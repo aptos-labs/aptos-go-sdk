@@ -27,6 +27,12 @@ const (
 	TypeTagU16       TypeTagVariant = 8   // Represents the u16 type in Move U16Tag
 	TypeTagU32       TypeTagVariant = 9   // Represents the u32 type in Move U32Tag
 	TypeTagU256      TypeTagVariant = 10  // Represents the u256 type in Move U256Tag
+	TypeTagI8        TypeTagVariant = 11  // Represents the i8 type in Move I8Tag
+	TypeTagI16       TypeTagVariant = 12  // Represents the i16 type in Move I16Tag
+	TypeTagI32       TypeTagVariant = 13  // Represents the i32 type in Move I32Tag
+	TypeTagI64       TypeTagVariant = 14  // Represents the i64 type in Move I64Tag
+	TypeTagI128      TypeTagVariant = 15  // Represents the i128 type in Move I128Tag
+	TypeTagI256      TypeTagVariant = 16  // Represents the i256 type in Move I256Tag
 	TypeTagGeneric   TypeTagVariant = 254 // Represents a generic type in Move GenericTag
 	TypeTagReference TypeTagVariant = 255 // Represents the reference type in Move ReferenceTag
 )
@@ -231,6 +237,36 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 			return nil, errors.New("invalid type tag, primitive with generics")
 		}
 		return &TypeTag{Value: &U256Tag{}}, nil
+	case "i8":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I8Tag{}}, nil
+	case "i16":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I16Tag{}}, nil
+	case "i32":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I32Tag{}}, nil
+	case "i64":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I64Tag{}}, nil
+	case "i128":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I128Tag{}}, nil
+	case "i256":
+		if len(types) > 0 {
+			return nil, errors.New("invalid type tag, primitive with generics")
+		}
+		return &TypeTag{Value: &I256Tag{}}, nil
 	case "address":
 		if len(types) > 0 {
 			return nil, errors.New("invalid type tag, primitive with generics")
@@ -344,6 +380,18 @@ func (tt *TypeTag) UnmarshalBCS(des *bcs.Deserializer) {
 		tt.Value = &U128Tag{}
 	case TypeTagU256:
 		tt.Value = &U256Tag{}
+	case TypeTagI8:
+		tt.Value = &I8Tag{}
+	case TypeTagI16:
+		tt.Value = &I16Tag{}
+	case TypeTagI32:
+		tt.Value = &I32Tag{}
+	case TypeTagI64:
+		tt.Value = &I64Tag{}
+	case TypeTagI128:
+		tt.Value = &I128Tag{}
+	case TypeTagI256:
+		tt.Value = &I256Tag{}
 	case TypeTagVector:
 		tt.Value = &VectorTag{}
 	case TypeTagStruct:
@@ -561,6 +609,144 @@ func (xt *U256Tag) GetType() TypeTagVariant {
 // region U256Tag bcs.Struct
 func (xt *U256Tag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *U256Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I8Tag
+
+// I8Tag represents the i8 type in Move
+type I8Tag struct{}
+
+// region I8Tag TypeTagImpl
+func (xt *I8Tag) String() string {
+	return "i8"
+}
+
+func (xt *I8Tag) GetType() TypeTagVariant {
+	return TypeTagI8
+}
+
+// endregion
+
+// region I8Tag bcs.Struct
+func (xt *I8Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I8Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I16Tag
+
+// I16Tag represents the i16 type in Move
+type I16Tag struct{}
+
+// region I16Tag TypeTagImpl
+func (xt *I16Tag) String() string {
+	return "i16"
+}
+
+func (xt *I16Tag) GetType() TypeTagVariant {
+	return TypeTagI16
+}
+
+// endregion
+
+// region I16Tag bcs.Struct
+func (xt *I16Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I16Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I32Tag
+
+// I32Tag represents the i32 type in Move
+type I32Tag struct{}
+
+// region I32Tag TypeTagImpl
+func (xt *I32Tag) String() string {
+	return "i32"
+}
+
+func (xt *I32Tag) GetType() TypeTagVariant {
+	return TypeTagI32
+}
+
+// endregion
+
+// region I32Tag bcs.Struct
+func (xt *I32Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I32Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I64Tag
+
+// I64Tag represents the i64 type in Move
+type I64Tag struct{}
+
+// region I64Tag TypeTagImpl
+func (xt *I64Tag) String() string {
+	return "i64"
+}
+
+func (xt *I64Tag) GetType() TypeTagVariant {
+	return TypeTagI64
+}
+
+// endregion
+
+// region I64Tag bcs.Struct
+func (xt *I64Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I64Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I128Tag
+
+// I128Tag represents the i128 type in Move
+type I128Tag struct{}
+
+// region I128Tag TypeTagImpl
+func (xt *I128Tag) String() string {
+	return "i128"
+}
+
+func (xt *I128Tag) GetType() TypeTagVariant {
+	return TypeTagI128
+}
+
+// endregion
+
+// region I128Tag bcs.Struct
+func (xt *I128Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I128Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+// endregion
+// endregion
+
+// region I256Tag
+
+// I256Tag represents the i256 type in Move
+type I256Tag struct{}
+
+// region I256Tag TypeTagImpl
+func (xt *I256Tag) String() string {
+	return "i256"
+}
+
+func (xt *I256Tag) GetType() TypeTagVariant {
+	return TypeTagI256
+}
+
+// endregion
+
+// region I256Tag bcs.Struct
+func (xt *I256Tag) MarshalBCS(_ *bcs.Serializer)     {}
+func (xt *I256Tag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
 // endregion
 // endregion

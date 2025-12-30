@@ -128,6 +128,108 @@ func Test_U256(t *testing.T) {
 	})
 }
 
+func Test_I8(t *testing.T) {
+	t.Parallel()
+	// i8 in little-endian: -128 = 0x80, -1 = 0xff, 0 = 0x00, 1 = 0x01, 127 = 0x7f
+	serialized := []string{"80", "ff", "00", "01", "7f"}
+	deserialized := []int8{-128, -1, 0, 1, 127}
+
+	helperInt(t, serialized, deserialized, func(serializer *Serializer, input int8) {
+		serializer.I8(input)
+	}, func(deserializer *Deserializer) int8 {
+		return deserializer.I8()
+	})
+}
+
+func Test_I16(t *testing.T) {
+	t.Parallel()
+	// i16 in little-endian: -32768 = 0x0080, -1 = 0xffff, 0 = 0x0000, 1 = 0x0100, 32767 = 0xff7f
+	serialized := []string{"0080", "ffff", "0000", "0100", "ff7f"}
+	deserialized := []int16{-32768, -1, 0, 1, 32767}
+
+	helperInt(t, serialized, deserialized, func(serializer *Serializer, input int16) {
+		serializer.I16(input)
+	}, func(deserializer *Deserializer) int16 {
+		return deserializer.I16()
+	})
+}
+
+func Test_I32(t *testing.T) {
+	t.Parallel()
+	// i32 in little-endian
+	serialized := []string{"00000080", "ffffffff", "00000000", "01000000", "ffffff7f"}
+	deserialized := []int32{-2147483648, -1, 0, 1, 2147483647}
+
+	helperInt(t, serialized, deserialized, func(serializer *Serializer, input int32) {
+		serializer.I32(input)
+	}, func(deserializer *Deserializer) int32 {
+		return deserializer.I32()
+	})
+}
+
+func Test_I64(t *testing.T) {
+	t.Parallel()
+	// i64 in little-endian
+	serialized := []string{"0000000000000080", "ffffffffffffffff", "0000000000000000", "0100000000000000", "ffffffffffffff7f"}
+	deserialized := []int64{-9223372036854775808, -1, 0, 1, 9223372036854775807}
+
+	helperInt(t, serialized, deserialized, func(serializer *Serializer, input int64) {
+		serializer.I64(input)
+	}, func(deserializer *Deserializer) int64 {
+		return deserializer.I64()
+	})
+}
+
+func Test_I128(t *testing.T) {
+	t.Parallel()
+	// i128 in little-endian: -1 is all 0xff, 0 is all 0x00, 1 is 0x01 followed by 0x00s
+	serialized := []string{
+		"00000000000000000000000000000000", // 0
+		"01000000000000000000000000000000", // 1
+		"ff000000000000000000000000000000", // 255
+		"ffffffffffffffffffffffffffffffff", // -1
+		"00000000000000000000000000000080", // min i128
+	}
+	deserialized := []*big.Int{
+		big.NewInt(0),
+		big.NewInt(1),
+		big.NewInt(255),
+		big.NewInt(-1),
+		minI128(),
+	}
+
+	helperSignedBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
+		serializer.I128(*input)
+	}, func(deserializer *Deserializer) big.Int {
+		return deserializer.I128()
+	})
+}
+
+func Test_I256(t *testing.T) {
+	t.Parallel()
+	// i256 in little-endian
+	serialized := []string{
+		"0000000000000000000000000000000000000000000000000000000000000000", // 0
+		"0100000000000000000000000000000000000000000000000000000000000000", // 1
+		"ff00000000000000000000000000000000000000000000000000000000000000", // 255
+		"ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff", // -1
+		"0000000000000000000000000000000000000000000000000000000000000080", // min i256
+	}
+	deserialized := []*big.Int{
+		big.NewInt(0),
+		big.NewInt(1),
+		big.NewInt(255),
+		big.NewInt(-1),
+		minI256(),
+	}
+
+	helperSignedBigInt(t, serialized, deserialized, func(serializer *Serializer, input *big.Int) {
+		serializer.I256(*input)
+	}, func(deserializer *Deserializer) big.Int {
+		return deserializer.I256()
+	})
+}
+
 func Test_Uleb128(t *testing.T) {
 	t.Parallel()
 	serialized := []string{"00", "01", "7f", "ff7f", "ffff03", "ffffffff0f"}
@@ -528,4 +630,58 @@ func helperBigInt(t *testing.T, serialized []string, deserialized []*big.Int, se
 		require.NoError(t, deserializer.Error())
 		assert.Equal(t, 0, deserialized[i].Cmp(&actual))
 	}
+}
+
+func helperInt[TYPE int8 | int16 | int32 | int64](t *testing.T, serialized []string, deserialized []TYPE, serialize func(serializer *Serializer, val TYPE), deserialize func(deserializer *Deserializer) TYPE) {
+	t.Helper()
+	// Serializer
+	for i, input := range deserialized {
+		serializer := &Serializer{}
+		serialize(serializer, input)
+		expected, _ := hex.DecodeString(serialized[i])
+		assert.Equal(t, expected, serializer.ToBytes())
+		require.NoError(t, serializer.Error())
+	}
+
+	// Deserializer
+	for i, input := range serialized {
+		bytes, _ := hex.DecodeString(input)
+		deserializer := NewDeserializer(bytes)
+		assert.Equal(t, deserialized[i], deserialize(deserializer))
+		require.NoError(t, deserializer.Error())
+	}
+}
+
+func helperSignedBigInt(t *testing.T, serialized []string, deserialized []*big.Int, serialize func(serializer *Serializer, val *big.Int), deserialize func(deserializer *Deserializer) big.Int) {
+	t.Helper()
+	// Serializer
+	for i, input := range deserialized {
+		serializer := &Serializer{}
+		serialize(serializer, input)
+		expected, _ := hex.DecodeString(serialized[i])
+		bytes := serializer.ToBytes()
+		assert.Equal(t, expected, bytes)
+		require.NoError(t, serializer.Error())
+	}
+
+	// Deserializer
+	for i, input := range serialized {
+		bytes, _ := hex.DecodeString(input)
+		deserializer := NewDeserializer(bytes)
+		actual := deserialize(deserializer)
+		require.NoError(t, deserializer.Error())
+		assert.Equal(t, 0, deserialized[i].Cmp(&actual))
+	}
+}
+
+// minI128 returns the minimum value for a signed 128-bit integer: -2^127
+func minI128() *big.Int {
+	result := new(big.Int).Lsh(big.NewInt(1), 127)
+	return result.Neg(result)
+}
+
+// minI256 returns the minimum value for a signed 256-bit integer: -2^255
+func minI256() *big.Int {
+	result := new(big.Int).Lsh(big.NewInt(1), 255)
+	return result.Neg(result)
 }
