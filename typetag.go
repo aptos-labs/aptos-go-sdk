@@ -955,4 +955,11 @@ var AptosCoinTypeTag = TypeTag{&StructTag{
 	Name:    "AptosCoin",
 }}
 
+// ObjectTypeTag is the TypeTag for 0x1::object::ObjectCore
+var ObjectTypeTag = TypeTag{&StructTag{
+	Address: AccountOne,
+	Module:  "object",
+	Name:    "ObjectCore",
+}}
+
 // endregion
