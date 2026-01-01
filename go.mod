@@ -1,4 +1,4 @@
-module github.com/aptos-labs/aptos-go-sdk
+module github.com/qimeila/aptos-go-sdk
 
 go 1.24.0
 

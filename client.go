@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk/api"
+	"github.com/qimeila/aptos-go-sdk/api"
 	"github.com/hasura/go-graphql-client"
 )
 

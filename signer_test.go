@@ -4,8 +4,8 @@ import (
 	"errors"
 	"math/rand/v2"
 
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 /* This is a collection of test signers, that don't make sense in the real world, but are used for testing */

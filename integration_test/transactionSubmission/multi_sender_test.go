@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aptos-labs/aptos-go-sdk"
-	"github.com/aptos-labs/aptos-go-sdk/internal/testutil"
+	"github.com/qimeila/aptos-go-sdk"
+	"github.com/qimeila/aptos-go-sdk/internal/testutil"
 )
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithMultipleSenders(t *testing.T) {

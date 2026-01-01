@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/internal/util"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/internal/util"
 )
 
 // AccountAuthenticatorImpl an implementation of an authenticator to provide generic verification across multiple types.
@@ -109,6 +109,9 @@ func (ea *AccountAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 		ea.Auth = &SingleKeyAuthenticator{}
 	case AccountAuthenticatorMultiKey:
 		ea.Auth = &MultiKeyAuthenticator{}
+	case AccountAuthenticatorNone:
+		ea.Auth = &NoAuthenticator{}
+		return
 	default:
 		des.SetError(fmt.Errorf("unknown AccountAuthenticator kind: %d", kindNum))
 		return

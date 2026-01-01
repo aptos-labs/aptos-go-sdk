@@ -3,8 +3,8 @@ package aptos
 import (
 	"errors"
 
-	"github.com/aptos-labs/aptos-go-sdk/bcs"
-	"github.com/aptos-labs/aptos-go-sdk/crypto"
+	"github.com/qimeila/aptos-go-sdk/bcs"
+	"github.com/qimeila/aptos-go-sdk/crypto"
 )
 
 // SignedTransactionVariant is the variant for a signed transaction

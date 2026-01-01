@@ -1,7 +1,7 @@
-[![Go Reference](https://pkg.go.dev/badge/github.com/aptos-labs/aptos-go-sdk.svg)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
-[![Go Report Card](https://goreportcard.com/badge/github.com/aptos-labs/aptos-go-sdk)](https://goreportcard.com/report/github.com/aptos-labs/aptos-go-sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/qimeila/aptos-go-sdk.svg)](https://pkg.go.dev/github.com/qimeila/aptos-go-sdk)
+[![Go Report Card](https://goreportcard.com/badge/github.com/qimeila/aptos-go-sdk)](https://goreportcard.com/report/github.com/qimeila/aptos-go-sdk)
 ![GitHub go.mod Go version](https://img.shields.io/github/go-mod/go-version/aptos-labs/aptos-go-sdk)
-[![GitHub Tag](https://img.shields.io/github/v/tag/aptos-labs/aptos-go-sdk?label=Latest%20Version)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
+[![GitHub Tag](https://img.shields.io/github/v/tag/aptos-labs/aptos-go-sdk?label=Latest%20Version)](https://pkg.go.dev/github.com/qimeila/aptos-go-sdk)
 
 # aptos-go-sdk
 
@@ -12,7 +12,7 @@ An SDK for the Aptos blockchain in Go.
 Add go to your `go.mod` file
 
 ```bash
-go get -u  github.com/aptos-labs/aptos-go-sdk
+go get -u  github.com/qimeila/aptos-go-sdk
 ```
 
 ## Where can I see examples?
