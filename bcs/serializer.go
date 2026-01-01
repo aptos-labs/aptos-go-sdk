@@ -131,21 +131,21 @@ func (ser *Serializer) I8(v int8) {
 // I16 serialize a signed 16-bit integer in little-endian format
 func (ser *Serializer) I16(v int16) {
 	serializeInt(ser, 2, v, func(slice []byte, num int16) {
-		binary.LittleEndian.PutUint16(slice, uint16(num)) //nolint gosec
+		binary.LittleEndian.PutUint16(slice, uint16(num)) //nolint:gosec
 	})
 }
 
 // I32 serialize a signed 32-bit integer in little-endian format
 func (ser *Serializer) I32(v int32) {
 	serializeInt(ser, 4, v, func(slice []byte, num int32) {
-		binary.LittleEndian.PutUint32(slice, uint32(num)) //nolint gosec
+		binary.LittleEndian.PutUint32(slice, uint32(num)) //nolint:gosec
 	})
 }
 
 // I64 serialize a signed 64-bit integer in little-endian format
 func (ser *Serializer) I64(v int64) {
 	serializeInt(ser, 8, v, func(slice []byte, num int64) {
-		binary.LittleEndian.PutUint64(slice, uint64(num)) //nolint gosec
+		binary.LittleEndian.PutUint64(slice, uint64(num)) //nolint:gosec
 	})
 }
 

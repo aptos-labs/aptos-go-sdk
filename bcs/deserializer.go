@@ -196,21 +196,21 @@ func (des *Deserializer) I8() int8 {
 // I16 deserializes a single signed 16-bit integer
 func (des *Deserializer) I16() int16 {
 	return deserializeInt(des, "i16", 2, func(slice []byte) int16 {
-		return int16(binary.LittleEndian.Uint16(slice)) //nolint gosec
+		return int16(binary.LittleEndian.Uint16(slice)) //nolint:gosec
 	})
 }
 
 // I32 deserializes a single signed 32-bit integer
 func (des *Deserializer) I32() int32 {
 	return deserializeInt(des, "i32", 4, func(slice []byte) int32 {
-		return int32(binary.LittleEndian.Uint32(slice)) //nolint gosec
+		return int32(binary.LittleEndian.Uint32(slice)) //nolint:gosec
 	})
 }
 
 // I64 deserializes a single signed 64-bit integer
 func (des *Deserializer) I64() int64 {
 	return deserializeInt(des, "i64", 8, func(slice []byte) int64 {
-		return int64(binary.LittleEndian.Uint64(slice)) //nolint gosec
+		return int64(binary.LittleEndian.Uint64(slice)) //nolint:gosec
 	})
 }
 

@@ -282,7 +282,7 @@ func ConvertToI8(arg any) (int8, error) {
 		if !arg.IsInt64() || arg.Int64() < -128 || arg.Int64() > 127 {
 			return 0, errors.New("value out of range for int8")
 		}
-		return int8(arg.Int64()), nil //nolint gosec
+		return int8(arg.Int64()), nil //nolint:gosec
 	case *big.Int:
 		if arg == nil {
 			return 0, errors.New("cannot convert to int8, input is nil")
@@ -290,7 +290,7 @@ func ConvertToI8(arg any) (int8, error) {
 		if !arg.IsInt64() || arg.Int64() < -128 || arg.Int64() > 127 {
 			return 0, errors.New("value out of range for int8")
 		}
-		return int8(arg.Int64()), nil //nolint gosec
+		return int8(arg.Int64()), nil //nolint:gosec
 	case string:
 		i64, err := strconv.ParseInt(arg, 10, 8)
 		if err != nil {
@@ -315,7 +315,7 @@ func ConvertToI16(arg any) (int16, error) {
 		if !arg.IsInt64() || arg.Int64() < -32768 || arg.Int64() > 32767 {
 			return 0, errors.New("value out of range for int16")
 		}
-		return int16(arg.Int64()), nil //nolint gosec
+		return int16(arg.Int64()), nil //nolint:gosec
 	case *big.Int:
 		if arg == nil {
 			return 0, errors.New("cannot convert to int16, input is nil")
@@ -323,7 +323,7 @@ func ConvertToI16(arg any) (int16, error) {
 		if !arg.IsInt64() || arg.Int64() < -32768 || arg.Int64() > 32767 {
 			return 0, errors.New("value out of range for int16")
 		}
-		return int16(arg.Int64()), nil //nolint gosec
+		return int16(arg.Int64()), nil //nolint:gosec
 	case string:
 		i64, err := strconv.ParseInt(arg, 10, 16)
 		if err != nil {
@@ -348,7 +348,7 @@ func ConvertToI32(arg any) (int32, error) {
 		if !arg.IsInt64() || arg.Int64() < -2147483648 || arg.Int64() > 2147483647 {
 			return 0, errors.New("value out of range for int32")
 		}
-		return int32(arg.Int64()), nil //nolint gosec
+		return int32(arg.Int64()), nil //nolint:gosec
 	case *big.Int:
 		if arg == nil {
 			return 0, errors.New("cannot convert to int32, input is nil")
@@ -356,7 +356,7 @@ func ConvertToI32(arg any) (int32, error) {
 		if !arg.IsInt64() || arg.Int64() < -2147483648 || arg.Int64() > 2147483647 {
 			return 0, errors.New("value out of range for int32")
 		}
-		return int32(arg.Int64()), nil //nolint gosec
+		return int32(arg.Int64()), nil //nolint:gosec
 	case string:
 		i64, err := strconv.ParseInt(arg, 10, 32)
 		if err != nil {
