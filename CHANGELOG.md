@@ -3,18 +3,42 @@
 All notable changes to the Aptos Go SDK will be captured in this file. This changelog is written by hand for now. It
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-# Unreleased
+# Unreleased (v1.x)
 
 - [`Refactor`] Simplify type conversion logic by removing CompatibilityMode option handling in ConvertToVectorU8
 - [`Fix`] Change string to vector<u8> conversion behavior - strings are now consistently treated as UTF-8 bytes instead
   of hex strings
 - [`Fix`] Add nil bytes validation to prevent converting nil bytes to vector<u8>
 - [`Fix`] Improve compatibility mode serialization for nested option and string types
-- [`Test`] Enhance type conversion tests for option and vector types with nested structures
-- [`Security`] Upgrade crypto library and graphql client libraries
-- [`Feature`] Support signed integers as arguments
 - [`Fix`] Fix logic issue in batch submit transactions
 - [`Fix`] Ensure addresses are zero'd out before being parsed
+- [`Test`] Enhance type conversion tests for option and vector types with nested structures
+- [`Security`] Upgrade crypto library and graphql client libraries
+
+# V2 (Unreleased)
+
+## New Features
+- [`Feature`] Add `codegen` package for generating type-safe Go bindings from Move ABIs
+  - Generate Go structs from Move struct definitions
+  - Generate entry function wrappers with automatic argument encoding
+  - Generate view function helpers with typed return values
+  - New `aptosgen` CLI tool for code generation
+- [`Feature`] Add OpenTelemetry `telemetry` package for tracing and metrics instrumentation
+  - Distributed tracing for all API calls
+  - Request duration, count, and error metrics
+  - Customizable tracer and meter providers
+- [`Feature`] Add ANS (Aptos Names Service) client for `.apt` domain management
+  - Name resolution (name → address)
+  - Reverse lookup (address → primary name)
+  - Registration, renewal, and subdomain management payloads
+  - Support for mainnet and testnet router addresses
+- [`Feature`] Support signed integers (i8, i16, i32, i64, i128, i256) as arguments
+
+## Improvements
+- [`Doc`] Comprehensive documentation improvements across all packages
+  - Enhanced main package docs with examples
+  - Updated README with feature highlights and usage examples
+  - Improved godoc comments for all public APIs
 
 # v1.11.0 (9/26/2025)
 
