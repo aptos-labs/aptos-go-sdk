@@ -81,7 +81,8 @@ func TestSecp256k1Keys(t *testing.T) {
 	expectedPublicKeyBytes, err := util.ParseHex(testSecp256k1PublicKey)
 	require.NoError(t, err)
 	// Need to prepend the length
-	expectedBcsPublicKeyBytes := []byte{Secp256k1PublicKeyLength}
+	expectedBcsPublicKeyBytes := make([]byte, 0, 1+len(expectedPublicKeyBytes))
+	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, Secp256k1PublicKeyLength)
 	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, expectedPublicKeyBytes...)
 	assert.Equal(t, append([]byte{0x1}, expectedBcsPublicKeyBytes...), publicKeyBytes)
 

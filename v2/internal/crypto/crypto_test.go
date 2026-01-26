@@ -272,3 +272,417 @@ func TestMultiKeyBitmap(t *testing.T) {
 	err = bm.AddKey(32)
 	require.Error(t, err)
 }
+
+// Additional tests for improved coverage
+
+func TestEd25519PublicKey_AuthKey(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	authKey := pubKey.AuthKey()
+	assert.Len(t, authKey.Bytes(), 32)
+}
+
+func TestEd25519PublicKey_Scheme(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	assert.Equal(t, Ed25519Scheme, pubKey.Scheme())
+}
+
+func TestEd25519PublicKey_ToHex(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	hex := pubKey.ToHex()
+	assert.NotEmpty(t, hex)
+	assert.True(t, len(hex) > 2)
+}
+
+func TestEd25519PublicKey_FromHex(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	hex := pubKey.ToHex()
+	pubKey2 := &Ed25519PublicKey{}
+	err = pubKey2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestEd25519Signature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	ed25519Sig, ok := sig.(*Ed25519Signature)
+	require.True(t, ok)
+
+	// Serialize
+	data, err := bcs.Serialize(ed25519Sig)
+	require.NoError(t, err)
+
+	// Deserialize
+	sig2 := &Ed25519Signature{}
+	err = bcs.Deserialize(sig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, ed25519Sig.Bytes(), sig2.Bytes())
+}
+
+func TestEd25519Signature_ToHex(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	ed25519Sig, ok := sig.(*Ed25519Signature)
+	require.True(t, ok)
+
+	hex := ed25519Sig.ToHex()
+	assert.NotEmpty(t, hex)
+}
+
+func TestEd25519Authenticator_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth, err := key.Sign(msg)
+	require.NoError(t, err)
+
+	ed25519Auth, ok := auth.Auth.(*Ed25519Authenticator)
+	require.True(t, ok)
+
+	// Serialize
+	data, err := bcs.Serialize(ed25519Auth)
+	require.NoError(t, err)
+
+	// Deserialize
+	auth2 := &Ed25519Authenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, ed25519Auth.PubKey.Bytes(), auth2.PubKey.Bytes())
+}
+
+func TestSecp256k1PublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	pubKey, ok := key.VerifyingKey().(*Secp256k1PublicKey)
+	require.True(t, ok)
+
+	// Serialize
+	data, err := bcs.Serialize(pubKey)
+	require.NoError(t, err)
+
+	// Deserialize
+	pubKey2 := &Secp256k1PublicKey{}
+	err = bcs.Deserialize(pubKey2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestSecp256k1Signature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	secpSig, ok := sig.(*Secp256k1Signature)
+	require.True(t, ok)
+
+	// Serialize
+	data, err := bcs.Serialize(secpSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	sig2 := &Secp256k1Signature{}
+	err = bcs.Deserialize(sig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, secpSig.Bytes(), sig2.Bytes())
+}
+
+func TestSecp256k1PrivateKey_ToHex(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	hex := key.ToHex()
+	assert.NotEmpty(t, hex)
+	assert.True(t, len(hex) > 2)
+}
+
+func TestSecp256k1PrivateKey_FromHex(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	hex := key.ToHex()
+	key2 := &Secp256k1PrivateKey{}
+	err = key2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, key.Bytes(), key2.Bytes())
+}
+
+func TestSecp256k1PrivateKey_ToAIP80(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	aip80, err := key.ToAIP80()
+	require.NoError(t, err)
+	assert.Contains(t, aip80, "secp256k1-priv-")
+}
+
+func TestSingleSigner_AuthKey(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	signer := NewSingleSigner(key)
+	authKey := signer.AuthKey()
+	assert.Len(t, authKey.Bytes(), 32)
+}
+
+func TestSingleSigner_PubKey(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	signer := NewSingleSigner(key)
+	pubKey := signer.PubKey()
+	assert.NotNil(t, pubKey)
+}
+
+func TestSingleKeyAuthenticator_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	signer := NewSingleSigner(key)
+	msg := []byte("test message")
+	auth, err := signer.Sign(msg)
+	require.NoError(t, err)
+
+	singleKeyAuth, ok := auth.Auth.(*SingleKeyAuthenticator)
+	require.True(t, ok)
+
+	// Serialize
+	data, err := bcs.Serialize(singleKeyAuth)
+	require.NoError(t, err)
+
+	// Deserialize
+	auth2 := &SingleKeyAuthenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, singleKeyAuth.PubKey.Variant, auth2.PubKey.Variant)
+}
+
+func TestAnyPublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	anyPub, err := ToAnyPublicKey(pubKey)
+	require.NoError(t, err)
+
+	// Serialize
+	data, err := bcs.Serialize(anyPub)
+	require.NoError(t, err)
+
+	// Deserialize
+	anyPub2 := &AnyPublicKey{}
+	err = bcs.Deserialize(anyPub2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, anyPub.Variant, anyPub2.Variant)
+}
+
+func TestAnySignature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	ed25519Sig, ok := sig.(*Ed25519Signature)
+	require.True(t, ok)
+
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantEd25519,
+		Signature: ed25519Sig,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(anySig)
+	require.NoError(t, err)
+
+	// Deserialize
+	anySig2 := &AnySignature{}
+	err = bcs.Deserialize(anySig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, anySig.Variant, anySig2.Variant)
+}
+
+func TestAuthenticationKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	authKey := key.AuthKey()
+
+	// Serialize
+	data, err := bcs.Serialize(authKey)
+	require.NoError(t, err)
+
+	// Deserialize
+	authKey2 := &AuthenticationKey{}
+	err = bcs.Deserialize(authKey2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, authKey.Bytes(), authKey2.Bytes())
+}
+
+func TestAuthenticationKey_FromBytes(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	authKey := key.AuthKey()
+	bytes := authKey.Bytes()
+
+	authKey2 := &AuthenticationKey{}
+	err = authKey2.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, authKey.Bytes(), authKey2.Bytes())
+}
+
+func TestAuthenticationKey_FromBytes_InvalidLength(t *testing.T) {
+	authKey := &AuthenticationKey{}
+	err := authKey.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestEd25519PrivateKey_FromBytes_InvalidLength(t *testing.T) {
+	key := &Ed25519PrivateKey{}
+	err := key.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestEd25519PublicKey_FromBytes_InvalidLength(t *testing.T) {
+	pubKey := &Ed25519PublicKey{}
+	err := pubKey.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestEd25519Signature_FromBytes_InvalidLength(t *testing.T) {
+	sig := &Ed25519Signature{}
+	err := sig.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestSecp256k1PrivateKey_FromBytes_InvalidLength(t *testing.T) {
+	key := &Secp256k1PrivateKey{}
+	err := key.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestSecp256k1PublicKey_FromBytes_InvalidLength(t *testing.T) {
+	pubKey := &Secp256k1PublicKey{}
+	err := pubKey.FromBytes([]byte{1, 2, 3}) // Too short
+	require.Error(t, err)
+}
+
+func TestEd25519PrivateKey_EmptySignature(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	emptySig := key.EmptySignature()
+	assert.NotNil(t, emptySig)
+}
+
+func TestEd25519PrivateKey_String(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	str := key.String()
+	assert.NotEmpty(t, str)
+}
+
+func TestMultiEd25519PublicKey_Bytes(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	bytes := multiKey.Bytes()
+	assert.NotEmpty(t, bytes)
+}
+
+func TestMultiEd25519PublicKey_FromBytes(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	bytes := multiKey.Bytes()
+
+	multiKey2 := &MultiEd25519PublicKey{}
+	err := multiKey2.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, multiKey.SignaturesRequired, multiKey2.SignaturesRequired)
+	assert.Len(t, multiKey2.PubKeys, 2)
+}
+
+func TestFormatPrivateKey(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	formatted, err := FormatPrivateKey(key.Bytes(), PrivateKeyVariantEd25519)
+	require.NoError(t, err)
+	assert.Contains(t, formatted, "ed25519-priv-")
+}
+
+func TestParsePrivateKey(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	formatted, err := FormatPrivateKey(key.Bytes(), PrivateKeyVariantEd25519)
+	require.NoError(t, err)
+
+	parsed, err := ParsePrivateKey(formatted, PrivateKeyVariantEd25519)
+	require.NoError(t, err)
+	assert.Equal(t, key.Bytes(), parsed)
+}

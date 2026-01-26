@@ -98,7 +98,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
 
-	var vec_u16_arg []byte
+	vec_u16_arg := make([]byte, 0, len(vec_u16_len)+len(vec_u16)*2)
 	vec_u16_arg = append(vec_u16_arg, vec_u16_len...)
 	for _, v := range vec_u16 {
 		bytes, err := bcs.SerializeU16(v)
@@ -117,7 +117,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_u32_arg []byte
+	vec_u32_arg := make([]byte, 0, len(vec_u32_len)+len(vec_u32)*4)
 	vec_u32_arg = append(vec_u32_arg, vec_u32_len...)
 	for _, v := range vec_u32 {
 		bytes, err := bcs.SerializeU32(v)
@@ -136,7 +136,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_u64_arg []byte
+	vec_u64_arg := make([]byte, 0, len(vec_u64_len)+len(vec_u64)*8)
 	vec_u64_arg = append(vec_u64_arg, vec_u64_len...)
 	for _, v := range vec_u64 {
 		bytes, err := bcs.SerializeU64(v)
@@ -155,7 +155,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_u128_arg []byte
+	vec_u128_arg := make([]byte, 0, len(vec_u128_len)+len(vec_u128)*16)
 	vec_u128_arg = append(vec_u128_arg, vec_u128_len...)
 	for _, v := range vec_u128 {
 		bytes, err := bcs.SerializeU128(v)
@@ -174,7 +174,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_u256_arg []byte
+	vec_u256_arg := make([]byte, 0, len(vec_u256_len)+len(vec_u256)*32)
 	vec_u256_arg = append(vec_u256_arg, vec_u256_len...)
 	for _, v := range vec_u256 {
 		bytes, err := bcs.SerializeU256(v)
@@ -193,7 +193,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_address_arg []byte
+	vec_address_arg := make([]byte, 0, len(vec_address_len)+len(vec_address)*32)
 	vec_address_arg = append(vec_address_arg, vec_address_len...)
 	for _, v := range vec_address {
 		ser := bcs.Serializer{}
@@ -211,7 +211,7 @@ func runScript(client *aptos.Client, alice *aptos.Account) {
 	if err != nil {
 		panic("Failed to serialize uleb128:" + err.Error())
 	}
-	var vec_string_arg []byte
+	vec_string_arg := make([]byte, 0, len(vec_string_len)+len(vec_string)*10) // estimate avg string length
 	vec_string_arg = append(vec_string_arg, vec_string_len...)
 
 	for _, v := range vec_string {

@@ -248,3 +248,117 @@ func TestSimulationAuthenticator(t *testing.T) {
 		t.Error("SimulationAuthenticator() returned nil")
 	}
 }
+
+func TestAccountSignMessage(t *testing.T) {
+	t.Parallel()
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	msg := []byte("test message")
+	sig, err := acc.SignMessage(msg)
+	if err != nil {
+		t.Fatalf("SignMessage() error = %v", err)
+	}
+	if sig == nil {
+		t.Error("SignMessage() returned nil signature")
+	}
+}
+
+func TestAccountPubKey(t *testing.T) {
+	t.Parallel()
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	pubKey := acc.PubKey()
+	if pubKey == nil {
+		t.Error("PubKey() returned nil")
+	}
+}
+
+func TestAccountSigner(t *testing.T) {
+	t.Parallel()
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	signer := acc.Signer()
+	if signer == nil {
+		t.Error("Signer() returned nil")
+	}
+
+	// Verify that the signer can sign
+	msg := []byte("test")
+	auth, err := signer.Sign(msg)
+	if err != nil {
+		t.Fatalf("Signer.Sign() error = %v", err)
+	}
+	if auth == nil {
+		t.Error("Signer.Sign() returned nil authenticator")
+	}
+}
+
+func TestNewEd25519SingleKey(t *testing.T) {
+	t.Parallel()
+	acc, err := NewEd25519SingleKey()
+	if err != nil {
+		t.Fatalf("NewEd25519SingleKey() error = %v", err)
+	}
+
+	// Verify the account works
+	msg := []byte("test message")
+	auth, err := acc.Sign(msg)
+	if err != nil {
+		t.Fatalf("Sign() error = %v", err)
+	}
+	if auth == nil {
+		t.Error("Sign() returned nil authenticator")
+	}
+	if !auth.Verify(msg) {
+		t.Error("Signature verification failed")
+	}
+}
+
+func TestAccountToAIP80(t *testing.T) {
+	t.Parallel()
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	aip80, err := acc.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() error = %v", err)
+	}
+	if aip80 == "" {
+		t.Error("ToAIP80() returned empty string")
+	}
+
+	// Should be able to recreate the account from AIP-80
+	acc2, err := FromAIP80(aip80)
+	if err != nil {
+		t.Fatalf("FromAIP80() error = %v", err)
+	}
+
+	if !bytes.Equal(acc.AuthKey()[:], acc2.AuthKey()[:]) {
+		t.Error("Round-trip failed: AuthKey mismatch")
+	}
+}
+
+func TestSecp256k1ToAIP80_NotSupported(t *testing.T) {
+	t.Parallel()
+	acc, err := NewSecp256k1()
+	if err != nil {
+		t.Fatalf("NewSecp256k1() error = %v", err)
+	}
+
+	// Secp256k1 wrapped in SingleSigner doesn't support ToAIP80
+	_, err = acc.ToAIP80()
+	if err == nil {
+		t.Error("Expected error for SingleSigner ToAIP80")
+	}
+}
