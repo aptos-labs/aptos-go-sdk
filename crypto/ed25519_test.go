@@ -73,7 +73,8 @@ func TestEd25519Keys(t *testing.T) {
 	expectedPublicKeyBytes, err := util.ParseHex(testEd25519PublicKey)
 	require.NoError(t, err)
 	// Need to prepend the length
-	expectedBcsPublicKeyBytes := []byte{ed25519.PublicKeySize}
+	expectedBcsPublicKeyBytes := make([]byte, 0, 1+len(expectedPublicKeyBytes))
+	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, ed25519.PublicKeySize)
 	expectedBcsPublicKeyBytes = append(expectedBcsPublicKeyBytes, expectedPublicKeyBytes...)
 	assert.Equal(t, expectedBcsPublicKeyBytes, publicKeyBytes)
 
