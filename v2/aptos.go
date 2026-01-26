@@ -1,7 +1,10 @@
 package aptos
 
-// Version is the current version of the Aptos Go SDK v2.
-const Version = "2.0.0-alpha.1"
+// Version is the version of the Aptos Go SDK v2.
+// It can be overridden at build time via ldflags:
+//
+//	go build -ldflags "-X github.com/aptos-labs/aptos-go-sdk/v2.Version=2.0.0"
+var Version = "2.0.0-alpha.1"
 
 // Re-export commonly used types from internal packages for convenience.
 // Users can import just "github.com/aptos-labs/aptos-go-sdk/v2" for most use cases.

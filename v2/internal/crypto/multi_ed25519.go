@@ -29,6 +29,9 @@ type MultiEd25519PublicKey struct {
 
 // Verify verifies a multi-ed25519 signature against a message.
 //
+// The bitmap in the signature indicates which public keys were used to sign.
+// Each bit corresponds to a public key index - if set, that key signed.
+//
 // Implements [VerifyingKey].
 func (key *MultiEd25519PublicKey) Verify(msg []byte, signature Signature) bool {
 	sig, ok := signature.(*MultiEd25519Signature)
@@ -37,14 +40,33 @@ func (key *MultiEd25519PublicKey) Verify(msg []byte, signature Signature) bool {
 	}
 
 	verified := uint8(0)
-	// TODO: Use bitmap for verification
+	sigIndex := 0
+
+	// Use bitmap to determine which public keys signed and map them to signatures.
 	for i, pubKey := range key.PubKeys {
-		if i >= len(sig.Signatures) {
-			break
+		byteIndex := i / 8
+		bitIndex := uint(7 - (i % 8)) // Bitmap is big-endian within each byte
+
+		// If the bitmap does not have a byte for this index, treat as not signed.
+		if byteIndex >= len(sig.Bitmap) {
+			continue
 		}
-		if pubKey.Verify(msg, sig.Signatures[i]) {
+
+		if ((sig.Bitmap[byteIndex] >> bitIndex) & 0x1) == 0 {
+			// This public key did not participate in signing.
+			continue
+		}
+
+		// This public key is indicated as a signer; use the next signature.
+		if sigIndex >= len(sig.Signatures) {
+			// Malformed: bitmap indicates more signers than provided signatures.
+			return false
+		}
+
+		if pubKey.Verify(msg, sig.Signatures[sigIndex]) {
 			verified++
 		}
+		sigIndex++
 	}
 
 	return verified >= key.SignaturesRequired
