@@ -1,7 +1,6 @@
 package benchmark
 
 import (
-	"bytes"
 	"testing"
 
 	bcsv1 "github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -9,14 +8,6 @@ import (
 	bcsv2 "github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	cryptov2 "github.com/aptos-labs/aptos-go-sdk/v2/internal/crypto"
 )
-
-// Use a deterministic seed for reproducible benchmarks
-var deterministicSeed = bytes.NewReader([]byte{
-	0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-	0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10,
-	0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18,
-	0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f, 0x20,
-})
 
 // Benchmark Ed25519 key generation
 
@@ -194,19 +185,25 @@ func BenchmarkCrypto_V2_Ed25519_ToAIP80(b *testing.B) {
 
 func BenchmarkCrypto_V1_Ed25519_PubKey_BCS(b *testing.B) {
 	key, _ := cryptov1.GenerateEd25519PrivateKey()
-	pubKey := key.PubKey().(*cryptov1.Ed25519PublicKey)
+	pubKey, ok := key.PubKey().(*cryptov1.Ed25519PublicKey)
+	if !ok {
+		b.Fatal("expected Ed25519PublicKey")
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv1.Serialize(pubKey)
+		_, _ = bcsv1.Serialize(pubKey)
 	}
 }
 
 func BenchmarkCrypto_V2_Ed25519_PubKey_BCS(b *testing.B) {
 	key, _ := cryptov2.GenerateEd25519PrivateKey()
-	pubKey := key.PubKey().(*cryptov2.Ed25519PublicKey)
+	pubKey, ok := key.PubKey().(*cryptov2.Ed25519PublicKey)
+	if !ok {
+		b.Fatal("expected Ed25519PublicKey")
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv2.Serialize(pubKey)
+		_, _ = bcsv2.Serialize(pubKey)
 	}
 }
 
@@ -214,10 +211,13 @@ func BenchmarkCrypto_V1_Ed25519_Signature_BCS(b *testing.B) {
 	key, _ := cryptov1.GenerateEd25519PrivateKey()
 	msg := []byte("test message")
 	sig, _ := key.SignMessage(msg)
-	ed25519Sig := sig.(*cryptov1.Ed25519Signature)
+	ed25519Sig, ok := sig.(*cryptov1.Ed25519Signature)
+	if !ok {
+		b.Fatal("expected Ed25519Signature")
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv1.Serialize(ed25519Sig)
+		_, _ = bcsv1.Serialize(ed25519Sig)
 	}
 }
 
@@ -225,10 +225,13 @@ func BenchmarkCrypto_V2_Ed25519_Signature_BCS(b *testing.B) {
 	key, _ := cryptov2.GenerateEd25519PrivateKey()
 	msg := []byte("test message")
 	sig, _ := key.SignMessage(msg)
-	ed25519Sig := sig.(*cryptov2.Ed25519Signature)
+	ed25519Sig, ok := sig.(*cryptov2.Ed25519Signature)
+	if !ok {
+		b.Fatal("expected Ed25519Signature")
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv2.Serialize(ed25519Sig)
+		_, _ = bcsv2.Serialize(ed25519Sig)
 	}
 }
 
@@ -240,7 +243,7 @@ func BenchmarkCrypto_V1_Ed25519_Authenticator_BCS(b *testing.B) {
 	auth, _ := key.Sign(msg)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv1.Serialize(auth)
+		_, _ = bcsv1.Serialize(auth)
 	}
 }
 
@@ -250,6 +253,6 @@ func BenchmarkCrypto_V2_Ed25519_Authenticator_BCS(b *testing.B) {
 	auth, _ := key.Sign(msg)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv2.Serialize(auth)
+		_, _ = bcsv2.Serialize(auth)
 	}
 }

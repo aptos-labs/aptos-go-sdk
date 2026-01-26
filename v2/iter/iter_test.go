@@ -29,7 +29,7 @@ func TestFilter_WithError(t *testing.T) {
 	filtered := Filter(it, func(n int) bool { return n%2 == 0 })
 	result, err := Collect(filtered)
 
-	assert.ErrorIs(t, err, testErr)
+	require.ErrorIs(t, err, testErr)
 	assert.Equal(t, []int{2}, result)
 }
 
@@ -55,7 +55,7 @@ func TestMapErr(t *testing.T) {
 	})
 
 	result, err := Collect(transformed)
-	assert.ErrorIs(t, err, testErr)
+	require.ErrorIs(t, err, testErr)
 	assert.Equal(t, []int{2, 4, 6}, result)
 }
 
@@ -139,7 +139,7 @@ func TestForEachErr(t *testing.T) {
 		return nil
 	})
 
-	assert.ErrorIs(t, err, testErr)
+	require.ErrorIs(t, err, testErr)
 	assert.Equal(t, []int{1, 2, 3}, processed)
 }
 
@@ -263,7 +263,7 @@ func TestEnumerate(t *testing.T) {
 	input := FromSlice([]string{"a", "b", "c"})
 	enumerated := Enumerate(input)
 
-	var result []IndexedValue[string]
+	result := make([]IndexedValue[string], 0, 3)
 	for v, err := range enumerated {
 		require.NoError(t, err)
 		result = append(result, v)
@@ -325,7 +325,7 @@ func TestOnce(t *testing.T) {
 func TestOnceErr(t *testing.T) {
 	testErr := errors.New("test error")
 	result, err := Collect(OnceErr[int](testErr))
-	assert.ErrorIs(t, err, testErr)
+	require.ErrorIs(t, err, testErr)
 	assert.Empty(t, result)
 }
 

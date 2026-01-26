@@ -44,23 +44,24 @@ func (m *mockHTTPDoer) Do(*http.Request) (*http.Response, error) {
 func TestRetryClient_Success(t *testing.T) {
 	mock := &mockHTTPDoer{
 		responses: []*http.Response{
-			{StatusCode: http.StatusOK},
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
 		},
 	}
 
 	client := NewRetryClient(mock, DefaultRetryConfig(), nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&mock.calls))
 }
 
 func TestRetryClient_RetryOnError(t *testing.T) {
 	mock := &mockHTTPDoer{
-		responses: []*http.Response{nil, nil, {StatusCode: http.StatusOK}},
+		responses: []*http.Response{nil, nil, {StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 		errors:    []error{errors.New("network error"), errors.New("network error"), nil},
 	}
 
@@ -68,10 +69,11 @@ func TestRetryClient_RetryOnError(t *testing.T) {
 	config.InitialBackoff = 1 * time.Millisecond
 	client := NewRetryClient(mock, config, nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, int32(3), atomic.LoadInt32(&mock.calls))
 }
@@ -80,7 +82,7 @@ func TestRetryClient_RetryOn429(t *testing.T) {
 	mock := &mockHTTPDoer{
 		responses: []*http.Response{
 			{StatusCode: http.StatusTooManyRequests, Body: io.NopCloser(strings.NewReader(""))},
-			{StatusCode: http.StatusOK},
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
 		},
 	}
 
@@ -88,10 +90,11 @@ func TestRetryClient_RetryOn429(t *testing.T) {
 	config.InitialBackoff = 1 * time.Millisecond
 	client := NewRetryClient(mock, config, nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	assert.Equal(t, int32(2), atomic.LoadInt32(&mock.calls))
 }
@@ -99,17 +102,18 @@ func TestRetryClient_RetryOn429(t *testing.T) {
 func TestRetryClient_NoRetryOnClientError(t *testing.T) {
 	mock := &mockHTTPDoer{
 		responses: []*http.Response{
-			{StatusCode: http.StatusBadRequest},
+			{StatusCode: http.StatusBadRequest, Body: io.NopCloser(strings.NewReader(""))},
 		},
 	}
 
 	config := DefaultRetryConfig()
 	client := NewRetryClient(mock, config, nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 
 	require.NoError(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	assert.Equal(t, int32(1), atomic.LoadInt32(&mock.calls))
 }
@@ -129,11 +133,12 @@ func TestRetryClient_ExhaustedRetries(t *testing.T) {
 	config.InitialBackoff = 1 * time.Millisecond
 	client := NewRetryClient(mock, config, nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 
 	// Should return error and last response after exhausting retries
-	assert.Error(t, err)
+	require.Error(t, err)
+	defer resp.Body.Close()
 	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
 	assert.Equal(t, int32(3), atomic.LoadInt32(&mock.calls)) // initial + 2 retries
 }
@@ -152,8 +157,11 @@ func TestRetryClient_ContextCancellation(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
 	defer cancel()
 
-	req, _ := http.NewRequestWithContext(ctx, "GET", "http://example.com", nil)
-	_, err := client.Do(req)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
+	resp, err := client.Do(req)
+	if resp != nil && resp.Body != nil {
+		defer resp.Body.Close()
+	}
 
 	assert.ErrorIs(t, err, context.DeadlineExceeded)
 }
@@ -190,7 +198,7 @@ func TestRateLimiter_ContextCancellation(t *testing.T) {
 func TestHeaderClient(t *testing.T) {
 	var capturedReq *http.Request
 	mock := &mockHTTPDoer{
-		responses: []*http.Response{{StatusCode: http.StatusOK}},
+		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 	}
 	// Wrap mock to capture request
 	wrapper := &struct {
@@ -203,11 +211,12 @@ func TestHeaderClient(t *testing.T) {
 	}
 	client := NewHeaderClient(wrapper, headers)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	capturedReq = req // Capture before Do modifies it
 
-	_, err := client.Do(req)
+	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 
 	assert.Equal(t, "custom-value", capturedReq.Header.Get("X-Custom-Header"))
 	assert.Equal(t, "Bearer token", capturedReq.Header.Get("Authorization"))
@@ -216,27 +225,29 @@ func TestHeaderClient(t *testing.T) {
 func TestTimeoutClient(t *testing.T) {
 	// Mock that delays
 	mock := &mockHTTPDoer{
-		responses: []*http.Response{{StatusCode: http.StatusOK}},
+		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 	}
 
 	client := NewTimeoutClient(mock, 5*time.Second)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
-	_, err := client.Do(req)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	resp, err := client.Do(req)
 	require.NoError(t, err)
+	defer resp.Body.Close()
 }
 
 func TestLoggingClient(t *testing.T) {
 	mock := &mockHTTPDoer{
-		responses: []*http.Response{{StatusCode: http.StatusOK}},
+		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 	}
 
 	client := NewLoggingClient(mock, nil)
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
-
 	require.NoError(t, err)
+	defer resp.Body.Close()
+
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
@@ -246,7 +257,7 @@ func TestDefaultRetryConfig(t *testing.T) {
 	assert.Equal(t, 3, config.MaxRetries)
 	assert.Equal(t, 100*time.Millisecond, config.InitialBackoff)
 	assert.Equal(t, 10*time.Second, config.MaxBackoff)
-	assert.Equal(t, 2.0, config.Multiplier)
+	assert.InDelta(t, 2.0, config.Multiplier, 0.001)
 	assert.Contains(t, config.RetryableStatusCodes, http.StatusTooManyRequests)
 	assert.Contains(t, config.RetryableStatusCodes, http.StatusServiceUnavailable)
 }

@@ -149,7 +149,7 @@ func BenchmarkAddress_V1_BCS_Serialize(b *testing.B) {
 	_ = addr.ParseStringRelaxed("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv1.Serialize(addr)
+		_, _ = bcsv1.Serialize(addr)
 	}
 }
 
@@ -157,7 +157,7 @@ func BenchmarkAddress_V2_BCS_Serialize(b *testing.B) {
 	addr, _ := typesv2.ParseAddress("0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef")
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		bcsv2.Serialize(&addr)
+		_, _ = bcsv2.Serialize(&addr)
 	}
 }
 

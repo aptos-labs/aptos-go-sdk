@@ -220,19 +220,12 @@ func processFile(filename string) error {
 		return fmt.Errorf("parsing %s: %w", filename, err)
 	}
 
-	// Track what changes we made
-	changed := false
-
 	// Fix imports
-	if fixImports(fset, file) {
-		changed = true
-	}
+	changed := fixImports(fset, file)
 
 	// Apply other transformations unless -imports flag is set
-	if !*importsOnly {
-		if fixAST(file) {
-			changed = true
-		}
+	if !*importsOnly && fixAST(file) {
+		changed = true
 	}
 
 	if !changed {

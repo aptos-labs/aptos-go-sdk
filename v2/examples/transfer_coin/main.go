@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
@@ -68,7 +69,7 @@ func main() {
 		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "aptos_account"},
 		Function: "transfer",
 		TypeArgs: nil,
-		Args:     []any{bob.String(), fmt.Sprintf("%d", TransferAmount)},
+		Args:     []any{bob.String(), strconv.FormatUint(TransferAmount, 10)},
 	}
 
 	// Build the transaction with gas estimation

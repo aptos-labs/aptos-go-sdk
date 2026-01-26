@@ -13,14 +13,14 @@ func TestBuilder_Validate(t *testing.T) {
 	t.Run("empty builder fails", func(t *testing.T) {
 		b := New()
 		err := b.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "sender is required")
 	})
 
 	t.Run("missing payload fails", func(t *testing.T) {
 		b := New().Sender(aptos.AccountOne)
 		err := b.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "payload is required")
 	})
 
@@ -38,10 +38,11 @@ func TestBuilder_EntryFunction(t *testing.T) {
 		b := New().
 			Sender(aptos.AccountOne).
 			EntryFunction("0x1::coin::transfer", nil)
-		assert.NoError(t, b.Validate())
+		require.NoError(t, b.Validate())
 		assert.IsType(t, &aptos.EntryFunctionPayload{}, b.payload)
 
-		payload := b.payload.(*aptos.EntryFunctionPayload)
+		payload, ok := b.payload.(*aptos.EntryFunctionPayload)
+		require.True(t, ok, "expected EntryFunctionPayload")
 		assert.Equal(t, aptos.AccountOne, payload.Module.Address)
 		assert.Equal(t, "coin", payload.Module.Name)
 		assert.Equal(t, "transfer", payload.Function)
@@ -52,7 +53,7 @@ func TestBuilder_EntryFunction(t *testing.T) {
 			Sender(aptos.AccountOne).
 			EntryFunction("invalid", nil)
 		err := b.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid")
 	})
 
@@ -60,9 +61,10 @@ func TestBuilder_EntryFunction(t *testing.T) {
 		b := New().
 			Sender(aptos.AccountOne).
 			EntryFunction("0x1::coin::transfer", []aptos.TypeTag{}, "arg1", uint64(100))
-		assert.NoError(t, b.Validate())
+		require.NoError(t, b.Validate())
 
-		payload := b.payload.(*aptos.EntryFunctionPayload)
+		payload, ok := b.payload.(*aptos.EntryFunctionPayload)
+		require.True(t, ok, "expected EntryFunctionPayload")
 		assert.Len(t, payload.Args, 2)
 	})
 }
@@ -174,10 +176,11 @@ func TestBuilder_Script(t *testing.T) {
 			Sender(aptos.AccountOne).
 			Script(bytecode, nil, "arg1")
 
-		assert.NoError(t, b.Validate())
+		require.NoError(t, b.Validate())
 		assert.IsType(t, &aptos.ScriptPayload{}, b.payload)
 
-		payload := b.payload.(*aptos.ScriptPayload)
+		payload, ok := b.payload.(*aptos.ScriptPayload)
+		require.True(t, ok, "expected ScriptPayload")
 		assert.Equal(t, bytecode, payload.Code)
 		assert.Len(t, payload.Args, 1)
 	})
@@ -191,7 +194,7 @@ func TestBuilder_ExpirationTimestamp(t *testing.T) {
 			EntryFunction("0x1::coin::transfer", nil).
 			ExpirationTimestamp(futureTime)
 
-		assert.NoError(t, b.Validate())
+		require.NoError(t, b.Validate())
 		assert.NotNil(t, b.expiration)
 	})
 
@@ -203,7 +206,7 @@ func TestBuilder_ExpirationTimestamp(t *testing.T) {
 			ExpirationTimestamp(pastTime)
 
 		err := b.Validate()
-		assert.Error(t, err)
+		require.Error(t, err)
 		assert.Contains(t, err.Error(), "past")
 	})
 }
@@ -263,9 +266,10 @@ func TestTransferAPT(t *testing.T) {
 
 	assert.Equal(t, &from, b.sender)
 	assert.NotNil(t, b.payload)
-	assert.NoError(t, b.Validate())
+	require.NoError(t, b.Validate())
 
-	payload := b.payload.(*aptos.EntryFunctionPayload)
+	payload, ok := b.payload.(*aptos.EntryFunctionPayload)
+	require.True(t, ok, "expected EntryFunctionPayload")
 	assert.Equal(t, "aptos_account", payload.Module.Name)
 	assert.Equal(t, "transfer", payload.Function)
 }
@@ -282,9 +286,10 @@ func TestTransferCoins(t *testing.T) {
 
 	assert.Equal(t, &from, b.sender)
 	assert.NotNil(t, b.payload)
-	assert.NoError(t, b.Validate())
+	require.NoError(t, b.Validate())
 
-	payload := b.payload.(*aptos.EntryFunctionPayload)
+	payload, ok := b.payload.(*aptos.EntryFunctionPayload)
+	require.True(t, ok, "expected EntryFunctionPayload")
 	assert.Equal(t, "coin", payload.Module.Name)
 	assert.Equal(t, "transfer", payload.Function)
 	assert.Len(t, payload.TypeArgs, 1)
