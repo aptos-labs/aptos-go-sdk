@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"log"
 	"strings"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
@@ -76,8 +77,7 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) ([]by
 			}
 			// Warn about non-AIP-80 compliance by default
 			if strictness == nil {
-				// TODO: Use proper logging instead of println
-				println("[Aptos SDK] It is recommended that private keys are AIP-80 compliant (https://github.com/aptos-foundation/AIPs/blob/main/aips/aip-80.md)")
+				log.Println("[Aptos SDK] It is recommended that private keys are AIP-80 compliant (https://github.com/aptos-foundation/AIPs/blob/main/aips/aip-80.md)")
 			}
 			return bytes, nil
 		} else if strings.HasPrefix(v, prefix) {
