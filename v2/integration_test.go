@@ -8,6 +8,8 @@ package aptos
 
 import (
 	"context"
+	"errors"
+	"net/http"
 	"os"
 	"testing"
 	"time"
@@ -63,7 +65,6 @@ func TestIntegration_ClientCreation(t *testing.T) {
 
 	networks := []NetworkConfig{Mainnet, Testnet, Devnet}
 	for _, network := range networks {
-		network := network // capture for parallel
 		t.Run(network.Name, func(t *testing.T) {
 			t.Parallel()
 			_, err := NewClient(network)
@@ -180,9 +181,9 @@ func TestIntegration_AccountNotFound(t *testing.T) {
 	// This may or may not fail depending on network state
 	// The test verifies proper error handling when it does fail
 	if err != nil {
-		apiErr, ok := err.(*APIError)
-		if ok {
-			assert.Equal(t, 404, apiErr.StatusCode, "should be 404 not found")
+		var apiErr *APIError
+		if errors.As(err, &apiErr) {
+			assert.Equal(t, http.StatusNotFound, apiErr.StatusCode, "should be 404 not found")
 			t.Logf("Correctly received 404 for non-existent account")
 		} else {
 			t.Logf("Received non-API error: %v", err)
@@ -251,8 +252,8 @@ func TestIntegration_AccountBalance(t *testing.T) {
 	balance, err := client.AccountBalance(ctx, AccountOne)
 	if err != nil {
 		// Check if it's a "resource not found" error (expected on FA-based networks)
-		apiErr, ok := err.(*APIError)
-		if ok && apiErr.StatusCode == 404 {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == http.StatusNotFound {
 			t.Log("0x1 does not have CoinStore (uses fungible assets)")
 			return
 		}

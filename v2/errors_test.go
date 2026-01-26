@@ -80,9 +80,9 @@ func TestAPIError_Unwrap(t *testing.T) {
 			t.Parallel()
 			err := &APIError{StatusCode: tt.statusCode, Message: "test"}
 			if tt.expected != nil {
-				assert.True(t, errors.Is(err, tt.expected))
+				assert.ErrorIs(t, err, tt.expected)
 			} else {
-				assert.Nil(t, err.Unwrap())
+				assert.NoError(t, err.Unwrap())
 			}
 		})
 	}
@@ -123,7 +123,7 @@ func TestTransactionError(t *testing.T) {
 	assert.Contains(t, err.Error(), "0x123")
 	assert.Contains(t, err.Error(), "execution failed")
 	assert.Contains(t, err.Error(), "move_abort")
-	assert.True(t, errors.Is(err, ErrTransactionFailed))
+	assert.ErrorIs(t, err, ErrTransactionFailed)
 }
 
 func TestTransactionError_WithoutVMStatus(t *testing.T) {
@@ -136,7 +136,7 @@ func TestTransactionError_WithoutVMStatus(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "0x456")
 	assert.Contains(t, err.Error(), "unknown error")
-	assert.True(t, errors.Is(err, ErrTransactionFailed))
+	assert.ErrorIs(t, err, ErrTransactionFailed)
 }
 
 func TestSerializationError(t *testing.T) {
@@ -152,7 +152,7 @@ func TestSerializationError(t *testing.T) {
 	assert.Contains(t, err.Error(), "Transaction")
 	assert.Contains(t, err.Error(), "MaxGasAmount")
 	assert.Contains(t, err.Error(), "overflow")
-	assert.True(t, errors.Is(err, ErrSerialization))
+	assert.ErrorIs(t, err, ErrSerialization)
 }
 
 func TestSerializationError_NoField(t *testing.T) {
@@ -166,7 +166,7 @@ func TestSerializationError_NoField(t *testing.T) {
 
 	assert.Contains(t, err.Error(), "AccountAddress")
 	assert.NotContains(t, err.Error(), ".")
-	assert.True(t, errors.Is(err, ErrSerialization))
+	assert.ErrorIs(t, err, ErrSerialization)
 }
 
 func TestDeserializationError(t *testing.T) {
@@ -184,21 +184,21 @@ func TestDeserializationError(t *testing.T) {
 	assert.Contains(t, err.Error(), "Payload")
 	assert.Contains(t, err.Error(), "42")
 	assert.Contains(t, err.Error(), "unexpected EOF")
-	assert.True(t, errors.Is(err, ErrDeserialization))
+	assert.ErrorIs(t, err, ErrDeserialization)
 }
 
 func TestWrapError(t *testing.T) {
 	t.Parallel()
 
 	// Nil error returns nil
-	assert.Nil(t, WrapError(nil, "should not appear"))
+	require.NoError(t, WrapError(nil, "should not appear"))
 
 	// Wraps error with message
 	original := ErrNotFound
 	wrapped := WrapError(original, "failed to get account")
-	require.NotNil(t, wrapped)
+	require.Error(t, wrapped)
 	assert.Contains(t, wrapped.Error(), "failed to get account")
-	assert.True(t, errors.Is(wrapped, ErrNotFound))
+	assert.ErrorIs(t, wrapped, ErrNotFound)
 }
 
 func TestErrorHelpers(t *testing.T) {
@@ -257,7 +257,7 @@ func TestSentinelErrors(t *testing.T) {
 	for i, e1 := range sentinels {
 		for j, e2 := range sentinels {
 			if i != j {
-				assert.False(t, errors.Is(e1, e2), "expected %v to not be %v", e1, e2)
+				assert.NotErrorIs(t, e1, e2)
 			}
 		}
 	}

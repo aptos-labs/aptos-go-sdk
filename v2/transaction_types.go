@@ -3,6 +3,7 @@ package aptos
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -82,7 +83,7 @@ func (txn *SignedTransaction) MarshalBCS(ser *bcs.Serializer) {
 	if txn.Authenticator != nil {
 		txn.Authenticator.MarshalBCS(ser)
 	} else {
-		ser.SetError(fmt.Errorf("nil authenticator"))
+		ser.SetError(errors.New("nil authenticator"))
 	}
 }
 
@@ -260,7 +261,7 @@ func serializeArg(arg any) ([]byte, error) {
 		return v[:], nil
 	case *AccountAddress:
 		if v == nil {
-			return nil, fmt.Errorf("nil address")
+			return nil, errors.New("nil address")
 		}
 		return (*v)[:], nil
 	case bcs.Marshaler:
@@ -423,17 +424,10 @@ func (a *Ed25519TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 // serializeAuthenticator serializes an AccountAuthenticator to BCS.
 func serializeAuthenticator(ser *bcs.Serializer, auth *AccountAuthenticator) {
 	if auth == nil {
-		ser.SetError(fmt.Errorf("nil authenticator"))
+		ser.SetError(errors.New("nil authenticator"))
 		return
 	}
 	auth.MarshalBCS(ser)
-}
-
-// deserializeAuthenticator deserializes an AccountAuthenticator from BCS.
-func deserializeAuthenticator(des *bcs.Deserializer) *AccountAuthenticator {
-	auth := &AccountAuthenticator{}
-	auth.UnmarshalBCS(des)
-	return auth
 }
 
 // deserializeTransactionAuthenticator deserializes a TransactionAuthenticator from BCS.

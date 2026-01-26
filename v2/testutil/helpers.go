@@ -3,6 +3,7 @@ package testutil
 import (
 	"crypto/rand"
 	"fmt"
+	"strconv"
 	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
@@ -127,7 +128,7 @@ func SampleCoinStoreResource(coinType string, balance uint64) aptos.Resource {
 		Type: fmt.Sprintf("0x1::coin::CoinStore<%s>", coinType),
 		Data: map[string]any{
 			"coin": map[string]any{
-				"value": fmt.Sprintf("%d", balance),
+				"value": strconv.FormatUint(balance, 10),
 			},
 			"deposit_events": map[string]any{
 				"counter": "0",

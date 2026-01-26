@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"iter"
@@ -99,7 +100,7 @@ func (c *nodeClient) ChainID(ctx context.Context) (uint8, error) {
 // Account returns information about an account.
 func (c *nodeClient) Account(ctx context.Context, address AccountAddress) (*AccountInfo, error) {
 	var info AccountInfo
-	path := fmt.Sprintf("accounts/%s", address.String())
+	path := "accounts/" + address.String()
 	if err := c.get(ctx, path, &info); err != nil {
 		return nil, err
 	}
@@ -153,12 +154,12 @@ func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress,
 
 	coin, ok := resource.Data["coin"].(map[string]any)
 	if !ok {
-		return 0, fmt.Errorf("unexpected coin data format")
+		return 0, errors.New("unexpected coin data format")
 	}
 
 	valueStr, ok := coin["value"].(string)
 	if !ok {
-		return 0, fmt.Errorf("unexpected value format")
+		return 0, errors.New("unexpected value format")
 	}
 
 	return strconv.ParseUint(valueStr, 10, 64)
@@ -253,7 +254,7 @@ func (c *nodeClient) SimulateTransaction(ctx context.Context, txn *RawTransactio
 	}
 
 	if len(results) == 0 {
-		return nil, fmt.Errorf("simulation returned no results")
+		return nil, errors.New("simulation returned no results")
 	}
 
 	return results[0], nil
@@ -340,7 +341,7 @@ func (c *nodeClient) WaitForTransaction(ctx context.Context, hash string, opts .
 // Transaction returns a transaction by hash.
 func (c *nodeClient) Transaction(ctx context.Context, hash string) (*Transaction, error) {
 	var txn Transaction
-	path := fmt.Sprintf("transactions/by_hash/%s", hash)
+	path := "transactions/by_hash/" + hash
 	if err := c.get(ctx, path, &txn); err != nil {
 		return nil, err
 	}
@@ -594,7 +595,7 @@ func (c *nodeClient) EventsByCreationNumber(ctx context.Context, address Account
 // Fund requests tokens from the faucet.
 func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount uint64) error {
 	if c.config.network.FaucetURL == "" {
-		return fmt.Errorf("faucet not available for this network")
+		return errors.New("faucet not available for this network")
 	}
 
 	faucetURL, err := url.Parse(c.config.network.FaucetURL)
@@ -735,11 +736,7 @@ func (c *nodeClient) doRequest(ctx context.Context, req *http.Request, result an
 
 // isAPIError checks if err is an APIError and assigns it to target if so.
 func isAPIError(err error, target **APIError) bool {
-	apiErr, ok := err.(*APIError)
-	if ok {
-		*target = apiErr
-	}
-	return ok
+	return errors.As(err, target)
 }
 
 // Ensure nodeClient implements Client

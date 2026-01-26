@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"crypto/ed25519"
+	"errors"
 	"fmt"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -83,7 +84,7 @@ func (key *MultiEd25519PublicKey) Bytes() []byte {
 // Implements [CryptoMaterial].
 func (key *MultiEd25519PublicKey) FromBytes(bytes []byte) error {
 	if len(bytes) < ed25519.PublicKeySize+1 {
-		return fmt.Errorf("multi-ed25519 public key too short")
+		return errors.New("multi-ed25519 public key too short")
 	}
 
 	numKeys := (len(bytes) - 1) / ed25519.PublicKeySize
@@ -168,7 +169,7 @@ func (e *MultiEd25519Signature) Bytes() []byte {
 // Implements [CryptoMaterial].
 func (e *MultiEd25519Signature) FromBytes(bytes []byte) error {
 	if len(bytes) < ed25519.SignatureSize+MultiEd25519BitmapLen {
-		return fmt.Errorf("multi-ed25519 signature too short")
+		return errors.New("multi-ed25519 signature too short")
 	}
 
 	numSigs := (len(bytes) - MultiEd25519BitmapLen) / ed25519.SignatureSize

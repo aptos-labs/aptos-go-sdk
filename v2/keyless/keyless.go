@@ -94,7 +94,9 @@ func (e *EphemeralKeyPair) Nonce() string {
 		expiryBytes[i] = byte(timestamp >> (8 * (7 - i)))
 	}
 
-	nonceData := append(pubKeyBytes, expiryBytes...)
+	nonceData := make([]byte, 0, len(pubKeyBytes)+len(expiryBytes)+len(e.blinder))
+	nonceData = append(nonceData, pubKeyBytes...)
+	nonceData = append(nonceData, expiryBytes...)
 	nonceData = append(nonceData, e.blinder...)
 
 	return base64.RawURLEncoding.EncodeToString(nonceData)
@@ -174,7 +176,7 @@ func ParseJWT(token string) (*JWTClaims, error) {
 
 	var claims JWTClaims
 	if err := json.Unmarshal(payload, &claims); err != nil {
-		return nil, fmt.Errorf("%w: failed to parse claims: %v", ErrInvalidJWT, err)
+		return nil, fmt.Errorf("%w: failed to parse claims: %w", ErrInvalidJWT, err)
 	}
 
 	// Validate required claims
@@ -209,15 +211,12 @@ func (c *JWTClaims) IsExpired() bool {
 }
 
 // KeylessAccount represents an account derived from keyless authentication.
+// Note: jwt, proof, uidKey, uidVal, and pepper are reserved for future implementation
+// but are not currently used for signing or verification.
 type KeylessAccount struct {
 	address          aptos.AccountAddress
 	ephemeralKeyPair *EphemeralKeyPair
-	jwt              string
 	claims           *JWTClaims
-	proof            *ZKProof
-	uidKey           string
-	uidVal           string
-	pepper           []byte
 }
 
 // ZKProof represents a zero-knowledge proof for keyless authentication.

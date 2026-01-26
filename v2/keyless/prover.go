@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -84,10 +85,10 @@ type ProveResponse struct {
 func (p *ProverClient) GetProof(ctx context.Context, req *ProveRequest) (*ProveResponse, error) {
 	// Validate request
 	if req.JWT == "" {
-		return nil, fmt.Errorf("JWT is required")
+		return nil, errors.New("JWT is required")
 	}
 	if len(req.EphemeralPublicKey) == 0 {
-		return nil, fmt.Errorf("ephemeral public key is required")
+		return nil, errors.New("ephemeral public key is required")
 	}
 	if req.UIDKey == "" {
 		req.UIDKey = "sub"
@@ -198,10 +199,10 @@ type PepperResponse struct {
 func (p *PepperClient) GetPepper(ctx context.Context, req *PepperRequest) (*PepperResponse, error) {
 	// Validate request
 	if req.JWT == "" {
-		return nil, fmt.Errorf("JWT is required")
+		return nil, errors.New("JWT is required")
 	}
 	if len(req.EphemeralPublicKey) == 0 {
-		return nil, fmt.Errorf("ephemeral public key is required")
+		return nil, errors.New("ephemeral public key is required")
 	}
 	if req.UIDKey == "" {
 		req.UIDKey = "sub"

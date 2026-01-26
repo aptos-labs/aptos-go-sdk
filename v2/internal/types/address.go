@@ -45,7 +45,7 @@ func ParseAddress(s string) (AccountAddress, error) {
 
 	bytes, err := hex.DecodeString(s)
 	if err != nil {
-		return addr, fmt.Errorf("%w: %v", ErrAddressInvalidHex, err)
+		return addr, fmt.Errorf("%w: %w", ErrAddressInvalidHex, err)
 	}
 
 	// Copy right-aligned (addresses are big-endian)

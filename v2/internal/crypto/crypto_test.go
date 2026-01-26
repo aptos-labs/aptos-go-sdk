@@ -25,8 +25,10 @@ func TestEd25519SignAndVerify(t *testing.T) {
 	require.NoError(t, err)
 
 	pubKey := key.PubKey()
-	assert.True(t, pubKey.(*Ed25519PublicKey).Verify(msg, sig))
-	assert.False(t, pubKey.(*Ed25519PublicKey).Verify([]byte("wrong message"), sig))
+	ed25519PubKey, ok := pubKey.(*Ed25519PublicKey)
+	require.True(t, ok, "expected Ed25519PublicKey")
+	assert.True(t, ed25519PubKey.Verify(msg, sig))
+	assert.False(t, ed25519PubKey.Verify([]byte("wrong message"), sig))
 }
 
 func TestEd25519AccountAuthenticator(t *testing.T) {
@@ -55,7 +57,7 @@ func TestEd25519HexSerialization(t *testing.T) {
 	require.NoError(t, err)
 
 	hex := key.ToHex()
-	assert.True(t, len(hex) > 0)
+	assert.NotEmpty(t, hex)
 	assert.Equal(t, "0x", hex[:2])
 
 	key2 := &Ed25519PrivateKey{}
@@ -70,7 +72,7 @@ func TestEd25519AIP80Format(t *testing.T) {
 
 	aip80, err := key.ToAIP80()
 	require.NoError(t, err)
-	assert.True(t, len(aip80) > 0)
+	assert.NotEmpty(t, aip80)
 	assert.Contains(t, aip80, "ed25519-priv-")
 }
 
@@ -91,8 +93,10 @@ func TestSecp256k1SignAndVerify(t *testing.T) {
 	require.NoError(t, err)
 
 	pubKey := key.VerifyingKey()
-	assert.True(t, pubKey.(*Secp256k1PublicKey).Verify(msg, sig))
-	assert.False(t, pubKey.(*Secp256k1PublicKey).Verify([]byte("wrong message"), sig))
+	secp256k1Pub, ok := pubKey.(*Secp256k1PublicKey)
+	require.True(t, ok, "expected Secp256k1PublicKey")
+	assert.True(t, secp256k1Pub.Verify(msg, sig))
+	assert.False(t, secp256k1Pub.Verify([]byte("wrong message"), sig))
 }
 
 func TestSingleSignerWithSecp256k1(t *testing.T) {
@@ -146,7 +150,8 @@ func TestEd25519BCSRoundTrip(t *testing.T) {
 	key, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)
 
-	pubKey := key.PubKey().(*Ed25519PublicKey)
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok, "expected Ed25519PublicKey")
 
 	// Serialize
 	data, err := bcs.Serialize(pubKey)
@@ -211,14 +216,16 @@ func TestNoAccountAuthenticator(t *testing.T) {
 func TestAnyPublicKeyConversion(t *testing.T) {
 	// Ed25519
 	ed25519Key, _ := GenerateEd25519PrivateKey()
-	ed25519PubKey := ed25519Key.PubKey().(*Ed25519PublicKey)
+	ed25519PubKey, ok := ed25519Key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok, "expected Ed25519PublicKey")
 	anyPubKey, err := ToAnyPublicKey(ed25519PubKey)
 	require.NoError(t, err)
 	assert.Equal(t, AnyPublicKeyVariantEd25519, anyPubKey.Variant)
 
 	// Secp256k1
 	secpKey, _ := GenerateSecp256k1Key()
-	secpPubKey := secpKey.VerifyingKey().(*Secp256k1PublicKey)
+	secpPubKey, ok := secpKey.VerifyingKey().(*Secp256k1PublicKey)
+	require.True(t, ok, "expected Secp256k1PublicKey")
 	anyPubKey2, err := ToAnyPublicKey(secpPubKey)
 	require.NoError(t, err)
 	assert.Equal(t, AnyPublicKeyVariantSecp256k1, anyPubKey2.Variant)
@@ -230,7 +237,7 @@ func TestAuthenticationKeyHex(t *testing.T) {
 
 	authKey := key.AuthKey()
 	hex := authKey.ToHex()
-	assert.True(t, len(hex) > 0)
+	assert.NotEmpty(t, hex)
 
 	authKey2 := &AuthenticationKey{}
 	err = authKey2.FromHex(hex)
@@ -259,9 +266,9 @@ func TestMultiKeyBitmap(t *testing.T) {
 
 	// Cannot add duplicate
 	err := bm.AddKey(0)
-	assert.Error(t, err)
+	require.Error(t, err)
 
 	// Cannot add beyond max
 	err = bm.AddKey(32)
-	assert.Error(t, err)
+	require.Error(t, err)
 }

@@ -347,6 +347,6 @@ func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
 	des.ReadFixedBytesInto(bm.inner)
 }
 
-func keyIndices(index uint8) (byte uint8, bit uint8) {
+func keyIndices(index uint8) (uint8, uint8) {
 	return index / 8, index % 8
 }

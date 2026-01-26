@@ -192,7 +192,7 @@ func (c *Client) GetNameInfo(ctx context.Context, name Name) (*NameInfo, error) 
 	// The view function returns Option<address>
 	optResult, ok := result[0].(map[string]interface{})
 	if !ok {
-		return nil, fmt.Errorf("unexpected response format")
+		return nil, errors.New("unexpected response format")
 	}
 
 	vecData, ok := optResult["vec"].([]interface{})
@@ -202,7 +202,7 @@ func (c *Client) GetNameInfo(ctx context.Context, name Name) (*NameInfo, error) 
 
 	addrStr, ok := vecData[0].(string)
 	if !ok {
-		return nil, fmt.Errorf("unexpected address format")
+		return nil, errors.New("unexpected address format")
 	}
 
 	target, err := aptos.ParseAddress(addrStr)
@@ -238,13 +238,13 @@ func (c *Client) getExpiration(ctx context.Context, name Name) (time.Time, error
 	}
 
 	if len(result) == 0 {
-		return time.Time{}, fmt.Errorf("no expiration returned")
+		return time.Time{}, errors.New("no expiration returned")
 	}
 
 	// Parse expiration timestamp
 	expStr, ok := result[0].(string)
 	if !ok {
-		return time.Time{}, fmt.Errorf("unexpected expiration format")
+		return time.Time{}, errors.New("unexpected expiration format")
 	}
 
 	var expSecs int64
@@ -276,7 +276,7 @@ func (c *Client) GetPrimaryName(ctx context.Context, address aptos.AccountAddres
 	// Result is [domain_option, subdomain_option]
 	domainOpt, ok := result[0].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("unexpected domain format")
+		return "", errors.New("unexpected domain format")
 	}
 
 	domainVec, ok := domainOpt["vec"].([]interface{})
@@ -286,7 +286,7 @@ func (c *Client) GetPrimaryName(ctx context.Context, address aptos.AccountAddres
 
 	domain, ok := domainVec[0].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected domain string format")
+		return "", errors.New("unexpected domain string format")
 	}
 
 	// Check for subdomain

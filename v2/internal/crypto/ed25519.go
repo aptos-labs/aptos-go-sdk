@@ -57,7 +57,10 @@ func (key *Ed25519PrivateKey) Sign(msg []byte) (*AccountAuthenticator, error) {
 		return nil, errors.New("expected Ed25519Signature")
 	}
 
-	pubKey := key.PubKey().(*Ed25519PublicKey)
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	if !ok {
+		return nil, errors.New("failed to get Ed25519PublicKey")
+	}
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorEd25519,
 		Auth: &Ed25519Authenticator{
@@ -79,7 +82,10 @@ func (key *Ed25519PrivateKey) SignMessage(msg []byte) (Signature, error) {
 //
 // Implements [Signer].
 func (key *Ed25519PrivateKey) SimulationAuthenticator() *AccountAuthenticator {
-	pubKey := key.PubKey().(*Ed25519PublicKey)
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	if !ok {
+		return nil
+	}
 	return &AccountAuthenticator{
 		Variant: AccountAuthenticatorEd25519,
 		Auth: &Ed25519Authenticator{

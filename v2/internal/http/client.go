@@ -142,7 +142,7 @@ func (c *RetryClient) Do(req *http.Request) (*http.Response, error) {
 
 			// Close response body to allow reuse of connection
 			if resp.Body != nil {
-				io.Copy(io.Discard, resp.Body)
+				_, _ = io.Copy(io.Discard, resp.Body)
 				resp.Body.Close()
 			}
 

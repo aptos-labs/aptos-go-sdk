@@ -118,10 +118,10 @@ func TestParseJWT(t *testing.T) {
 
 	t.Run("rejects invalid JWT format", func(t *testing.T) {
 		_, err := ParseJWT("not.a.valid.jwt")
-		assert.ErrorIs(t, err, ErrInvalidJWT)
+		require.ErrorIs(t, err, ErrInvalidJWT)
 
 		_, err = ParseJWT("invalid")
-		assert.ErrorIs(t, err, ErrInvalidJWT)
+		require.ErrorIs(t, err, ErrInvalidJWT)
 	})
 
 	t.Run("rejects missing required claims", func(t *testing.T) {

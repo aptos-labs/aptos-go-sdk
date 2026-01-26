@@ -176,7 +176,7 @@ func TestDefaultRetryConfig(t *testing.T) {
 	assert.Equal(t, 3, config.MaxRetries)
 	assert.Equal(t, 100*time.Millisecond, config.InitialBackoff)
 	assert.Equal(t, 10*time.Second, config.MaxBackoff)
-	assert.Equal(t, 2.0, config.BackoffMultiplier)
+	assert.InDelta(t, 2.0, config.BackoffMultiplier, 0.001)
 	assert.Contains(t, config.RetryableStatusCodes, 429)
 	assert.Contains(t, config.RetryableStatusCodes, 503)
 }

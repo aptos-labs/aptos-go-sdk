@@ -93,10 +93,7 @@ func GenerateModule(module *api.MoveModule, opts Options) (*GeneratedCode, error
 			if s.IsNative {
 				continue // Skip native types
 			}
-			sd, err := convertStruct(s)
-			if err != nil {
-				return nil, fmt.Errorf("converting struct %s: %w", s.Name, err)
-			}
+			sd := convertStruct(s)
 			data.Structs = append(data.Structs, sd)
 		}
 	}
@@ -107,10 +104,7 @@ func GenerateModule(module *api.MoveModule, opts Options) (*GeneratedCode, error
 			continue
 		}
 
-		fd, err := convertFunction(f, module.Name)
-		if err != nil {
-			return nil, fmt.Errorf("converting function %s: %w", f.Name, err)
-		}
+		fd := convertFunction(f, module.Name)
 
 		if f.IsEntry && opts.GenerateEntryFunctions {
 			data.EntryFuncs = append(data.EntryFuncs, fd)
@@ -239,7 +233,7 @@ func formatModuleAddress(module *api.MoveModule, opts Options) string {
 }
 
 // convertStruct converts a Move struct to Go struct data.
-func convertStruct(s *api.MoveStruct) (structData, error) {
+func convertStruct(s *api.MoveStruct) structData {
 	sd := structData{
 		Name:      s.Name,
 		GoName:    toGoPublicName(s.Name),
@@ -266,11 +260,11 @@ func convertStruct(s *api.MoveStruct) (structData, error) {
 		sd.Fields = append(sd.Fields, fd)
 	}
 
-	return sd, nil
+	return sd
 }
 
 // convertFunction converts a Move function to Go function data.
-func convertFunction(f *api.MoveFunction, moduleName string) (funcData, error) {
+func convertFunction(f *api.MoveFunction, moduleName string) funcData {
 	fd := funcData{
 		Name:    f.Name,
 		GoName:  toGoPublicName(f.Name),
@@ -279,11 +273,7 @@ func convertFunction(f *api.MoveFunction, moduleName string) (funcData, error) {
 	}
 
 	// Build Move signature for comment
-	var sigParts []string
-	for _, p := range f.Params {
-		sigParts = append(sigParts, p)
-	}
-	fd.MoveSignature = fmt.Sprintf("%s::%s(%s)", moduleName, f.Name, strings.Join(sigParts, ", "))
+	fd.MoveSignature = fmt.Sprintf("%s::%s(%s)", moduleName, f.Name, strings.Join(f.Params, ", "))
 
 	// Convert generic type params
 	for range f.GenericTypeParams {
@@ -327,7 +317,7 @@ func convertFunction(f *api.MoveFunction, moduleName string) (funcData, error) {
 		fd.Comment = fmt.Sprintf("%s calls the view function %s", fd.GoName, fd.MoveSignature)
 	}
 
-	return fd, nil
+	return fd
 }
 
 // moveTypeToGoType converts a Move type string to a Go type.
@@ -337,9 +327,7 @@ func moveTypeToGoType(moveType string) string {
 	// Handle reference types
 	if strings.HasPrefix(moveType, "&") {
 		inner := strings.TrimPrefix(moveType, "&")
-		if strings.HasPrefix(inner, "mut ") {
-			inner = strings.TrimPrefix(inner, "mut ")
-		}
+		inner = strings.TrimPrefix(inner, "mut ")
 		return moveTypeToGoType(inner)
 	}
 
