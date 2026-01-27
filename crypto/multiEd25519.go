@@ -37,15 +37,32 @@ type MultiEd25519PublicKey struct {
 func (key *MultiEd25519PublicKey) Verify(msg []byte, signature Signature) bool {
 	switch sig := signature.(type) {
 	case *MultiEd25519Signature:
-		verified := uint8(0)
-		// TODO: Verify with bitmap, and check that this works properly
-		for i, pubKey := range key.PubKeys {
-			if pubKey.Verify(msg, sig.Signatures[i]) {
-				verified++
+		// Get the indices of keys that signed from the bitmap
+		keyIndices := sig.BitmapIndices()
+
+		// The number of signatures must match the number of set bits in bitmap
+		if len(sig.Signatures) != len(keyIndices) {
+			return false
+		}
+
+		// Check we have enough signatures
+		if len(sig.Signatures) < int(key.SignaturesRequired) {
+			return false
+		}
+
+		// Verify each signature against the correct public key
+		for sigIdx, keyIdx := range keyIndices {
+			// Ensure key index is within bounds
+			if int(keyIdx) >= len(key.PubKeys) {
+				return false
+			}
+
+			if !key.PubKeys[keyIdx].Verify(msg, sig.Signatures[sigIdx]) {
+				return false
 			}
 		}
 
-		return verified >= key.SignaturesRequired
+		return true
 	default:
 		return false
 	}
@@ -263,6 +280,24 @@ const MultiEd25519BitmapLen = 4
 type MultiEd25519Signature struct {
 	Signatures []*Ed25519Signature
 	Bitmap     [MultiEd25519BitmapLen]byte
+}
+
+// BitmapIndices returns the indices of the keys that signed, based on the bitmap.
+// Each bit in the bitmap represents whether the corresponding key signed (1) or not (0).
+// The bitmap is read from the most significant bit to least significant bit.
+func (e *MultiEd25519Signature) BitmapIndices() []uint8 {
+	indices := make([]uint8, 0)
+	for byteIdx := range MultiEd25519BitmapLen {
+		for bitIdx := range uint8(8) {
+			// Check if the bit is set (reading from MSB to LSB)
+			if (e.Bitmap[byteIdx] & (0x80 >> bitIdx)) != 0 {
+				// byteIdx is at most 3, so byteIdx*8 is at most 24, which fits in uint8
+				keyIdx := uint8(byteIdx*8) + bitIdx //nolint:gosec
+				indices = append(indices, keyIdx)
+			}
+		}
+	}
+	return indices
 }
 
 // region MultiEd25519Signature CryptoMaterial implementation

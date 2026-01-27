@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
@@ -191,17 +190,24 @@ func (key *Ed25519PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantEd25519)
 }
 
-// String returns the string representation of the [Ed25519PrivateKey] in the AIP-80 format
+// String returns a redacted string representation of the [Ed25519PrivateKey]
 //
-// If an error occurs during formatting, it returns a placeholder string.
+// This method intentionally does not expose the private key material to prevent
+// accidental logging or exposure. Use [Ed25519PrivateKey.ToAIP80] or [Ed25519PrivateKey.ToHex]
+// when you explicitly need the key value.
 func (key *Ed25519PrivateKey) String() string {
-	s, err := key.ToAIP80()
-	if err != nil {
-		// This should never happen
-		log.Printf("Error formatting Ed25519PrivateKey: %v", err)
-		return "<error formatting Ed25519PrivateKey>"
+	return "<redacted Ed25519PrivateKey>"
+}
+
+// Clear zeros out the private key material from memory.
+// This should be called when the key is no longer needed to minimize
+// the window where key material is available in memory.
+func (key *Ed25519PrivateKey) Clear() {
+	if key.Inner != nil {
+		for i := range key.Inner {
+			key.Inner[i] = 0
+		}
 	}
-	return s
 }
 
 // FromHex sets the [Ed25519PrivateKey] to the bytes represented by the hex string, with or without a leading 0x

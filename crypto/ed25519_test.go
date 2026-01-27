@@ -108,7 +108,30 @@ func TestEd25519Key_String(t *testing.T) {
 	privateKey := &Ed25519PrivateKey{}
 	err := privateKey.FromHex(testEd25519PrivateKeyHex)
 	require.NoError(t, err)
-	assert.Equal(t, testEd25519PrivateKey, privateKey.String())
+	// String() should return redacted value for security
+	assert.Equal(t, "<redacted Ed25519PrivateKey>", privateKey.String())
+	// ToAIP80() should return the actual formatted key when explicitly needed
+	aip80, err := privateKey.ToAIP80()
+	require.NoError(t, err)
+	assert.Equal(t, testEd25519PrivateKey, aip80)
+}
+
+func TestEd25519PrivateKey_Clear(t *testing.T) {
+	t.Parallel()
+	privateKey := &Ed25519PrivateKey{}
+	err := privateKey.FromHex(testEd25519PrivateKeyHex)
+	require.NoError(t, err)
+
+	// Verify key is valid before clear
+	assert.NotNil(t, privateKey.Inner)
+
+	// Clear the key
+	privateKey.Clear()
+
+	// Verify key bytes are zeroed
+	for _, b := range privateKey.Inner {
+		assert.Equal(t, byte(0), b)
+	}
 }
 
 func TestEd25519PrivateKeyWrongLength(t *testing.T) {
