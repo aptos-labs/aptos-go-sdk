@@ -362,3 +362,190 @@ func TestSecp256k1ToAIP80_NotSupported(t *testing.T) {
 		t.Error("Expected error for SingleSigner ToAIP80")
 	}
 }
+
+func TestFromPrivateKeyHex_Ed25519(t *testing.T) {
+	t.Parallel()
+
+	// Create an Ed25519 account first
+	original, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	// Get the private key hex
+	privateKeyHex := original.signer.(*crypto.Ed25519PrivateKey).ToHex()
+
+	// Recreate from hex
+	acc, err := FromPrivateKeyHex(privateKeyHex)
+	if err != nil {
+		t.Fatalf("FromPrivateKeyHex() error = %v", err)
+	}
+
+	if !bytes.Equal(original.AuthKey()[:], acc.AuthKey()[:]) {
+		t.Error("AuthKey mismatch after FromPrivateKeyHex")
+	}
+}
+
+func TestFromPrivateKeyHex_Secp256k1(t *testing.T) {
+	t.Parallel()
+
+	// Create a Secp256k1 account
+	secpKey, err := crypto.GenerateSecp256k1Key()
+	if err != nil {
+		t.Fatalf("GenerateSecp256k1Key() error = %v", err)
+	}
+
+	privateKeyHex := secpKey.ToHex()
+
+	// Recreate from hex
+	acc, err := FromPrivateKeyHex(privateKeyHex)
+	if err != nil {
+		t.Fatalf("FromPrivateKeyHex() error = %v", err)
+	}
+
+	if acc == nil {
+		t.Error("FromPrivateKeyHex returned nil account")
+	}
+}
+
+func TestFromPrivateKeyHex_Invalid(t *testing.T) {
+	t.Parallel()
+
+	// Test with invalid hex
+	_, err := FromPrivateKeyHex("not-valid-hex")
+	if err == nil {
+		t.Error("Expected error for invalid hex")
+	}
+
+	// Test with too short hex
+	_, err = FromPrivateKeyHex("0x1234")
+	if err == nil {
+		t.Error("Expected error for too short hex")
+	}
+}
+
+func TestFromAIP80_Ed25519(t *testing.T) {
+	t.Parallel()
+
+	// Create an Ed25519 account
+	original, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	aip80Key, err := original.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() error = %v", err)
+	}
+
+	// Parse it back
+	acc, err := FromAIP80(aip80Key)
+	if err != nil {
+		t.Fatalf("FromAIP80() error = %v", err)
+	}
+
+	if !bytes.Equal(original.AuthKey()[:], acc.AuthKey()[:]) {
+		t.Error("AuthKey mismatch after FromAIP80")
+	}
+}
+
+func TestFromAIP80_Secp256k1(t *testing.T) {
+	t.Parallel()
+
+	// Create a Secp256k1 key and format it as AIP-80 manually
+	secpKey, err := crypto.GenerateSecp256k1Key()
+	if err != nil {
+		t.Fatalf("GenerateSecp256k1Key() error = %v", err)
+	}
+
+	aip80Key, err := crypto.FormatPrivateKey(secpKey.Bytes(), crypto.PrivateKeyVariantSecp256k1)
+	if err != nil {
+		t.Fatalf("FormatPrivateKey() error = %v", err)
+	}
+
+	// Parse it
+	acc, err := FromAIP80(aip80Key)
+	if err != nil {
+		t.Fatalf("FromAIP80() error = %v", err)
+	}
+
+	if acc == nil {
+		t.Error("FromAIP80 returned nil account")
+	}
+}
+
+func TestFromAIP80_InvalidPrefix(t *testing.T) {
+	t.Parallel()
+
+	_, err := FromAIP80("invalid-prefix-0x1234")
+	if err == nil {
+		t.Error("Expected error for invalid AIP-80 prefix")
+	}
+}
+
+func TestFromAIP80_InvalidFormat(t *testing.T) {
+	t.Parallel()
+
+	// Valid prefix but invalid key data
+	_, err := FromAIP80("ed25519-priv-invalid")
+	if err == nil {
+		t.Error("Expected error for invalid key data")
+	}
+}
+
+func TestFromAIP80_TooShort(t *testing.T) {
+	t.Parallel()
+
+	// Too short for any key type
+	_, err := FromAIP80("short")
+	if err == nil {
+		t.Error("Expected error for too short input")
+	}
+}
+
+func TestNewEd25519_Error(t *testing.T) {
+	// This tests the normal path which should succeed
+	t.Parallel()
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() unexpected error = %v", err)
+	}
+	if acc == nil {
+		t.Error("NewEd25519() returned nil account")
+	}
+}
+
+func TestNewSecp256k1_Valid(t *testing.T) {
+	t.Parallel()
+	acc, err := NewSecp256k1()
+	if err != nil {
+		t.Fatalf("NewSecp256k1() error = %v", err)
+	}
+	if acc == nil {
+		t.Error("NewSecp256k1() returned nil account")
+	}
+
+	// Verify address is populated
+	addr := acc.Address()
+	var zeroAddr [32]byte
+	if bytes.Equal(addr[:], zeroAddr[:]) {
+		t.Error("Account address is empty")
+	}
+}
+
+func TestAccount_String(t *testing.T) {
+	t.Parallel()
+
+	acc, err := NewEd25519()
+	if err != nil {
+		t.Fatalf("NewEd25519() error = %v", err)
+	}
+
+	str := acc.String()
+	if str == "" {
+		t.Error("String() returned empty")
+	}
+	if !bytes.Contains([]byte(str), []byte("Account{")) {
+		t.Error("String() should contain 'Account{'")
+	}
+}

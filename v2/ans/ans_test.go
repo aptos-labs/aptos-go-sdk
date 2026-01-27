@@ -2,6 +2,7 @@ package ans
 
 import (
 	"testing"
+	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/stretchr/testify/assert"
@@ -251,5 +252,90 @@ func TestClient_AddSubdomainPayload(t *testing.T) {
 	t.Run("rejects invalid subdomain", func(t *testing.T) {
 		_, err := client.AddSubdomainPayload("alice.apt", "ab", target)
 		assert.ErrorIs(t, err, ErrInvalidName)
+	})
+}
+
+func TestNameInfo_IsExpired(t *testing.T) {
+	t.Run("not expired", func(t *testing.T) {
+		info := &NameInfo{
+			ExpiresAt: time.Now().Add(time.Hour),
+		}
+		assert.False(t, info.IsExpired())
+	})
+
+	t.Run("expired", func(t *testing.T) {
+		info := &NameInfo{
+			ExpiresAt: time.Now().Add(-time.Hour),
+		}
+		assert.True(t, info.IsExpired())
+	})
+}
+
+func TestClient_SetTargetAddressPayload_InvalidName(t *testing.T) {
+	client := NewClient(nil)
+	target := aptos.MustParseAddress("0x123")
+
+	_, err := client.SetTargetAddressPayload("ab", target)
+	assert.ErrorIs(t, err, ErrInvalidName)
+}
+
+func TestClient_SetPrimaryNamePayload_InvalidName(t *testing.T) {
+	client := NewClient(nil)
+
+	_, err := client.SetPrimaryNamePayload("ab")
+	assert.ErrorIs(t, err, ErrInvalidName)
+}
+
+func TestClient_RenewPayload_InvalidName(t *testing.T) {
+	client := NewClient(nil)
+
+	_, err := client.RenewPayload("ab", 1)
+	assert.ErrorIs(t, err, ErrInvalidName)
+}
+
+func TestClient_AddSubdomainPayload_InvalidDomain(t *testing.T) {
+	client := NewClient(nil)
+	target := aptos.MustParseAddress("0x456")
+
+	_, err := client.AddSubdomainPayload("ab", "wallet", target)
+	assert.ErrorIs(t, err, ErrInvalidName)
+}
+
+func TestName_HasSubdomain(t *testing.T) {
+	t.Run("has subdomain", func(t *testing.T) {
+		name := &Name{Domain: "alice", Subdomain: "wallet"}
+		assert.NotEmpty(t, name.Subdomain)
+	})
+
+	t.Run("no subdomain", func(t *testing.T) {
+		name := &Name{Domain: "alice"}
+		assert.Empty(t, name.Subdomain)
+	})
+}
+
+func TestParseName_EdgeCases(t *testing.T) {
+	t.Run("long domain name", func(t *testing.T) {
+		// Names up to 63 characters should be valid
+		longName := "abcdefghijklmnopqrstuvwxyz0123456789abcdefghijklmnopqrstuvwxyz0"
+		_, err := ParseName(longName)
+		require.NoError(t, err)
+	})
+
+	t.Run("hyphenated name is valid", func(t *testing.T) {
+		name, err := ParseName("my-test-name.apt")
+		require.NoError(t, err)
+		assert.Equal(t, "my-test-name", name.Domain)
+	})
+
+	t.Run("numeric name", func(t *testing.T) {
+		name, err := ParseName("123.apt")
+		require.NoError(t, err)
+		assert.Equal(t, "123", name.Domain)
+	})
+
+	t.Run("mixed alphanumeric", func(t *testing.T) {
+		name, err := ParseName("test123abc.apt")
+		require.NoError(t, err)
+		assert.Equal(t, "test123abc", name.Domain)
 	})
 }
