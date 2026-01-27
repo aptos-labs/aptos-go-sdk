@@ -701,3 +701,231 @@ func TestSignedTransaction_BCSRoundTrip(t *testing.T) {
 	assert.Equal(t, signed.Transaction.Sender, signed2.Transaction.Sender)
 	assert.Equal(t, signed.Transaction.SequenceNumber, signed2.Transaction.SequenceNumber)
 }
+
+func TestSingleSenderAuthenticator_UnmarshalBCS(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth, err := key.Sign(msg)
+	require.NoError(t, err)
+
+	singleAuth := &SingleSenderAuthenticator{Sender: auth}
+
+	// Serialize
+	data, err := bcs.Serialize(singleAuth)
+	require.NoError(t, err)
+
+	// Deserialize - note: UnmarshalBCS doesn't read variant, so skip it
+	des := bcs.NewDeserializer(data)
+	_ = des.Uleb128() // Skip variant
+
+	singleAuth2 := &SingleSenderAuthenticator{}
+	singleAuth2.UnmarshalBCS(des)
+
+	require.NoError(t, des.Error())
+	assert.True(t, singleAuth2.Verify(msg))
+}
+
+func TestEd25519TransactionAuthenticator_UnmarshalBCS(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth, err := key.Sign(msg)
+	require.NoError(t, err)
+
+	ed25519Auth := &Ed25519TransactionAuthenticator{Sender: auth}
+
+	// Serialize
+	data, err := bcs.Serialize(ed25519Auth)
+	require.NoError(t, err)
+
+	// Deserialize - note: UnmarshalBCS doesn't read variant, so skip it
+	des := bcs.NewDeserializer(data)
+	_ = des.Uleb128() // Skip variant
+
+	ed25519Auth2 := &Ed25519TransactionAuthenticator{}
+	ed25519Auth2.UnmarshalBCS(des)
+
+	require.NoError(t, des.Error())
+	assert.True(t, ed25519Auth2.Verify(msg))
+}
+
+func TestMultiAgentAuthenticator_UnmarshalBCS(t *testing.T) {
+	key1, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	key2, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth1, err := key1.Sign(msg)
+	require.NoError(t, err)
+	auth2, err := key2.Sign(msg)
+	require.NoError(t, err)
+
+	multiAuth := &MultiAgentAuthenticator{
+		Sender:                   auth1,
+		SecondarySignerAddresses: []AccountAddress{AccountTwo},
+		SecondarySigners:         []*AccountAuthenticator{auth2},
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(multiAuth)
+	require.NoError(t, err)
+
+	// Deserialize - note: UnmarshalBCS doesn't read variant, so skip it
+	des := bcs.NewDeserializer(data)
+	_ = des.Uleb128() // Skip variant
+
+	multiAuth2 := &MultiAgentAuthenticator{}
+	multiAuth2.UnmarshalBCS(des)
+
+	require.NoError(t, des.Error())
+	assert.True(t, multiAuth2.Verify(msg))
+}
+
+func TestFeePayerAuthenticator_UnmarshalBCS(t *testing.T) {
+	senderKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayerKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	senderAuth, err := senderKey.Sign(msg)
+	require.NoError(t, err)
+	feePayerAuth, err := feePayerKey.Sign(msg)
+	require.NoError(t, err)
+
+	feeAuth := &FeePayerAuthenticator{
+		Sender:                   senderAuth,
+		SecondarySignerAddresses: []AccountAddress{},
+		SecondarySigners:         []*AccountAuthenticator{},
+		FeePayerAddress:          AccountThree,
+		FeePayerAuth:             feePayerAuth,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(feeAuth)
+	require.NoError(t, err)
+
+	// Deserialize - note: UnmarshalBCS doesn't read variant, so skip it
+	des := bcs.NewDeserializer(data)
+	_ = des.Uleb128() // Skip variant
+
+	feeAuth2 := &FeePayerAuthenticator{}
+	feeAuth2.UnmarshalBCS(des)
+
+	require.NoError(t, des.Error())
+	assert.True(t, feeAuth2.Verify(msg))
+}
+
+func TestDeserializeTransactionAuthenticator_Ed25519(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth, err := key.Sign(msg)
+	require.NoError(t, err)
+
+	ed25519Auth := &Ed25519TransactionAuthenticator{Sender: auth}
+
+	// Serialize
+	data, err := bcs.Serialize(ed25519Auth)
+	require.NoError(t, err)
+
+	// Deserialize using the function
+	des := bcs.NewDeserializer(data)
+	result := deserializeTransactionAuthenticator(des)
+
+	require.NoError(t, des.Error())
+	require.NotNil(t, result)
+	assert.True(t, result.Verify(msg))
+}
+
+func TestDeserializeTransactionAuthenticator_SingleSender(t *testing.T) {
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth, err := key.Sign(msg)
+	require.NoError(t, err)
+
+	singleAuth := &SingleSenderAuthenticator{Sender: auth}
+
+	// Serialize
+	data, err := bcs.Serialize(singleAuth)
+	require.NoError(t, err)
+
+	// Deserialize using the function
+	des := bcs.NewDeserializer(data)
+	result := deserializeTransactionAuthenticator(des)
+
+	require.NoError(t, des.Error())
+	require.NotNil(t, result)
+	assert.True(t, result.Verify(msg))
+}
+
+func TestDeserializeTransactionAuthenticator_MultiAgent(t *testing.T) {
+	key1, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	key2, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	auth1, err := key1.Sign(msg)
+	require.NoError(t, err)
+	auth2, err := key2.Sign(msg)
+	require.NoError(t, err)
+
+	multiAuth := &MultiAgentAuthenticator{
+		Sender:                   auth1,
+		SecondarySignerAddresses: []AccountAddress{AccountTwo},
+		SecondarySigners:         []*AccountAuthenticator{auth2},
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(multiAuth)
+	require.NoError(t, err)
+
+	// Deserialize using the function
+	des := bcs.NewDeserializer(data)
+	result := deserializeTransactionAuthenticator(des)
+
+	require.NoError(t, des.Error())
+	require.NotNil(t, result)
+	assert.True(t, result.Verify(msg))
+}
+
+func TestDeserializeTransactionAuthenticator_FeePayer(t *testing.T) {
+	senderKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayerKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	senderAuth, err := senderKey.Sign(msg)
+	require.NoError(t, err)
+	feePayerAuth, err := feePayerKey.Sign(msg)
+	require.NoError(t, err)
+
+	feeAuth := &FeePayerAuthenticator{
+		Sender:                   senderAuth,
+		SecondarySignerAddresses: []AccountAddress{},
+		SecondarySigners:         []*AccountAuthenticator{},
+		FeePayerAddress:          AccountThree,
+		FeePayerAuth:             feePayerAuth,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(feeAuth)
+	require.NoError(t, err)
+
+	// Deserialize using the function
+	des := bcs.NewDeserializer(data)
+	result := deserializeTransactionAuthenticator(des)
+
+	require.NoError(t, des.Error())
+	require.NotNil(t, result)
+	assert.True(t, result.Verify(msg))
+}

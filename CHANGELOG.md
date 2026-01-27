@@ -14,6 +14,16 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Ensure addresses are zero'd out before being parsed
 - [`Test`] Enhance type conversion tests for option and vector types with nested structures
 - [`Security`] Upgrade crypto library and graphql client libraries
+- [`Security`][`Breaking`] Private key `String()` methods now return redacted output to prevent accidental logging; use
+  `ToAIP80()` or `ToHex()` when explicit key access is needed
+- [`Security`] Add `Clear()` methods to `Ed25519PrivateKey` and `Secp256k1PrivateKey` for zeroing key material from
+  memory
+- [`Security`] Add explicit TLS 1.2 minimum version configuration to HTTP client
+- [`Security`] Add mutex protection for thread-safe header access in `NodeClient`
+- [`Security`] Limit HTTP error response body reads to prevent memory exhaustion from malicious servers
+- [`Fix`] Fix `MultiEd25519PublicKey.Verify()` to properly use bitmap for signature verification; add `BitmapIndices()`
+  helper method
+- [`Fix`] Replace `println` with `slog.Warn` for AIP-80 compliance warnings in private key parsing
 
 # V2 (Unreleased)
 

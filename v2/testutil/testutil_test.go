@@ -3,6 +3,7 @@ package testutil
 import (
 	"context"
 	"testing"
+	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/stretchr/testify/assert"
@@ -225,4 +226,121 @@ func TestWellKnownAddresses(t *testing.T) {
 	assert.Equal(t, aptos.AccountOne, WellKnownAddresses.One)
 	assert.Equal(t, aptos.AccountTwo, WellKnownAddresses.Two)
 	assert.Equal(t, aptos.AccountThree, WellKnownAddresses.Three)
+}
+
+func TestSampleAccountInfo(t *testing.T) {
+	info := SampleAccountInfo(42)
+	assert.Equal(t, uint64(42), info.SequenceNumber)
+	assert.NotEmpty(t, info.AuthenticationKey)
+	assert.Contains(t, info.AuthenticationKey, "0x")
+}
+
+func TestSampleNodeInfo(t *testing.T) {
+	info := SampleNodeInfo()
+	assert.Equal(t, uint8(4), info.ChainID)
+	assert.Equal(t, "full_node", info.NodeRole)
+	assert.NotEmpty(t, info.GitHash)
+	assert.Greater(t, info.LedgerVersion, uint64(0))
+}
+
+func TestSampleGasEstimate(t *testing.T) {
+	estimate := SampleGasEstimate()
+	assert.Equal(t, uint64(100), estimate.GasEstimate)
+	assert.Equal(t, uint64(50), estimate.DeprioritizedGasEstimate)
+	assert.Equal(t, uint64(150), estimate.PrioritizedGasEstimate)
+}
+
+func TestSampleResource(t *testing.T) {
+	t.Run("with data", func(t *testing.T) {
+		data := map[string]any{"key": "value"}
+		resource := SampleResource("0x1::test::Resource", data)
+		assert.Equal(t, "0x1::test::Resource", resource.Type)
+		assert.Equal(t, "value", resource.Data["key"])
+	})
+
+	t.Run("without data", func(t *testing.T) {
+		resource := SampleResource("0x1::test::Resource", nil)
+		assert.Equal(t, "0x1::test::Resource", resource.Type)
+		assert.NotNil(t, resource.Data)
+	})
+}
+
+func TestSampleEvent(t *testing.T) {
+	event := SampleEvent("0x1::coin::DepositEvent", map[string]any{"amount": 100})
+	assert.Equal(t, "0x1::coin::DepositEvent", event.Type)
+	assert.NotEmpty(t, event.GUID.AccountAddress)
+	assert.Equal(t, uint64(0), event.SequenceNumber)
+
+	data, ok := event.Data.(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, 100, data["amount"])
+}
+
+func TestAssertEventually(t *testing.T) {
+	t.Run("returns true when condition passes", func(t *testing.T) {
+		counter := 0
+		result := AssertEventually(func() bool {
+			counter++
+			return counter >= 3
+		}, 100*time.Millisecond, 10*time.Millisecond)
+		assert.True(t, result)
+	})
+
+	t.Run("returns false on timeout", func(t *testing.T) {
+		result := AssertEventually(func() bool {
+			return false
+		}, 50*time.Millisecond, 10*time.Millisecond)
+		assert.False(t, result)
+	})
+}
+
+func TestFakeClient_WithNodeInfo(t *testing.T) {
+	info := SampleNodeInfo()
+	info.ChainID = 42
+
+	client := NewFakeClient().WithNodeInfo(info)
+	ctx := context.Background()
+
+	result, err := client.Info(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, uint8(42), result.ChainID)
+}
+
+func TestFakeClient_ChainID(t *testing.T) {
+	info := SampleNodeInfo()
+	info.ChainID = 99
+
+	client := NewFakeClient().WithNodeInfo(info)
+	ctx := context.Background()
+
+	chainID, err := client.ChainID(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, uint8(99), chainID)
+}
+
+func TestFakeClient_WithGasEstimate(t *testing.T) {
+	estimate := SampleGasEstimate()
+	estimate.GasEstimate = 500
+
+	client := NewFakeClient().WithGasEstimate(estimate)
+	ctx := context.Background()
+
+	result, err := client.EstimateGasPrice(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(500), result.GasEstimate)
+}
+
+func TestFakeClient_WithResources(t *testing.T) {
+	addr := RandomAddress()
+	resources := []aptos.Resource{
+		SampleCoinStoreResource("0x1::aptos_coin::AptosCoin", 1000),
+		SampleResource("0x1::test::TestResource", nil),
+	}
+
+	client := NewFakeClient().WithResources(addr, resources)
+	ctx := context.Background()
+
+	result, err := client.AccountResources(ctx, addr)
+	require.NoError(t, err)
+	assert.Len(t, result, 2)
 }

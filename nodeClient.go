@@ -3,6 +3,7 @@ package aptos
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"net/url"
 	"sort"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/aptos-labs/aptos-go-sdk/api"
@@ -37,10 +39,11 @@ const ContentTypeAptosViewFunctionBcs = "application/x.aptos.view_function+bcs"
 
 // NodeClient is a client for interacting with an Aptos node API
 type NodeClient struct {
-	client  *http.Client      // HTTP client to use for requests
-	baseUrl *url.URL          // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
-	chainId uint8             // Chain ID of the network e.g. 2 for Testnet
-	headers map[string]string // Headers to be added to every transaction
+	client     *http.Client      // HTTP client to use for requests
+	baseUrl    *url.URL          // Base URL of the node e.g. https://fullnode.testnet.aptoslabs.com/v1
+	chainId    uint8             // Chain ID of the network e.g. 2 for Testnet
+	headers    map[string]string // Headers to be added to every transaction
+	headersMux sync.RWMutex      // Mutex to protect concurrent access to headers
 }
 
 // NewNodeClient creates a new client for interacting with an Aptos node API
@@ -54,6 +57,11 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 	defaultClient := &http.Client{
 		Jar:     jar,
 		Timeout: 60 * time.Second,
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			},
+		},
 	}
 
 	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
@@ -84,6 +92,8 @@ func (rc *NodeClient) SetTimeout(timeout time.Duration) {
 //
 //	client.SetHeader("Authorization", "Bearer abcde")
 func (rc *NodeClient) SetHeader(key string, value string) {
+	rc.headersMux.Lock()
+	defer rc.headersMux.Unlock()
 	rc.headers[key] = value
 }
 
@@ -91,6 +101,8 @@ func (rc *NodeClient) SetHeader(key string, value string) {
 //
 //	client.RemoveHeader("Authorization")
 func (rc *NodeClient) RemoveHeader(key string) {
+	rc.headersMux.Lock()
+	defer rc.headersMux.Unlock()
 	delete(rc.headers, key)
 }
 
@@ -1241,6 +1253,15 @@ func (rc *NodeClient) BuildSignAndSubmitTransaction(sender TransactionSigner, pa
 	return rc.SubmitTransaction(signedTxn)
 }
 
+// setHeaders safely copies headers from the NodeClient to the request
+func (rc *NodeClient) setHeaders(req *http.Request) {
+	rc.headersMux.RLock()
+	defer rc.headersMux.RUnlock()
+	for key, value := range rc.headers {
+		req.Header.Set(key, value)
+	}
+}
+
 // Get makes a GET request to the endpoint and parses the response into the given type with JSON
 func Get[T any](rc *NodeClient, getUrl string) (T, error) {
 	var out T
@@ -1251,9 +1272,7 @@ func Get[T any](rc *NodeClient, getUrl string) (T, error) {
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
 	// Set all preset headers
-	for key, value := range rc.headers {
-		req.Header.Set(key, value)
-	}
+	rc.setHeaders(req)
 
 	response, err := rc.client.Do(req)
 	if err != nil {
@@ -1287,9 +1306,7 @@ func (rc *NodeClient) GetBCS(getUrl string) ([]byte, error) {
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
 	// Set all preset headers
-	for key, value := range rc.headers {
-		req.Header.Set(key, value)
-	}
+	rc.setHeaders(req)
 
 	response, err := rc.client.Do(req)
 	if err != nil {
@@ -1320,9 +1337,7 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 	req.Header.Set(ClientHeader, ClientHeaderValue)
 
 	// Set all preset headers
-	for key, value := range rc.headers {
-		req.Header.Set(key, value)
-	}
+	rc.setHeaders(req)
 
 	response, err := rc.client.Do(req)
 	if err != nil {

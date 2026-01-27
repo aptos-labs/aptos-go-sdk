@@ -686,3 +686,571 @@ func TestParsePrivateKey(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, key.Bytes(), parsed)
 }
+
+// ============ MultiEd25519 Comprehensive Tests ============
+
+func TestMultiEd25519PublicKey_Verify(t *testing.T) {
+	// Create 3 keys for a 2-of-3 multisig
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+	key3, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+	pub3, _ := key3.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2, pub3},
+		SignaturesRequired: 2,
+	}
+
+	msg := []byte("test message")
+
+	// Create signatures from key1 and key2
+	sig1, _ := key1.SignMessage(msg)
+	sig2, _ := key2.SignMessage(msg)
+
+	// Bitmap: 0b11000000 = 0xC0 (keys 0 and 1 signed)
+	multiSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{sig1.(*Ed25519Signature), sig2.(*Ed25519Signature)},
+		Bitmap:     [MultiEd25519BitmapLen]byte{0xC0, 0, 0, 0},
+	}
+
+	assert.True(t, multiKey.Verify(msg, multiSig))
+
+	// Test with wrong signature type
+	wrongSig := &Ed25519Signature{}
+	assert.False(t, multiKey.Verify(msg, wrongSig))
+
+	// Test with insufficient signatures
+	singleSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{sig1.(*Ed25519Signature)},
+		Bitmap:     [MultiEd25519BitmapLen]byte{0x80, 0, 0, 0}, // Only key 0
+	}
+	assert.False(t, multiKey.Verify(msg, singleSig))
+}
+
+func TestMultiEd25519PublicKey_AuthKey(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	authKey := multiKey.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey.Bytes(), AuthenticationKeyLength)
+}
+
+func TestMultiEd25519PublicKey_Scheme(t *testing.T) {
+	multiKey := &MultiEd25519PublicKey{}
+	assert.Equal(t, MultiEd25519Scheme, multiKey.Scheme())
+}
+
+func TestMultiEd25519PublicKey_HexRoundTrip(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 2,
+	}
+
+	hex := multiKey.ToHex()
+	assert.NotEmpty(t, hex)
+
+	multiKey2 := &MultiEd25519PublicKey{}
+	err := multiKey2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, multiKey.SignaturesRequired, multiKey2.SignaturesRequired)
+	assert.Len(t, multiKey2.PubKeys, 2)
+}
+
+func TestMultiEd25519PublicKey_BCSRoundTrip(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	data, err := bcs.Serialize(multiKey)
+	require.NoError(t, err)
+
+	multiKey2 := &MultiEd25519PublicKey{}
+	err = bcs.Deserialize(multiKey2, data)
+	require.NoError(t, err)
+	assert.Equal(t, multiKey.SignaturesRequired, multiKey2.SignaturesRequired)
+}
+
+func TestMultiEd25519Signature_HexRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	multiSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{sig.(*Ed25519Signature)},
+		Bitmap:     [MultiEd25519BitmapLen]byte{0x80, 0, 0, 0},
+	}
+
+	hex := multiSig.ToHex()
+	assert.NotEmpty(t, hex)
+
+	multiSig2 := &MultiEd25519Signature{}
+	err := multiSig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Len(t, multiSig2.Signatures, 1)
+}
+
+func TestMultiEd25519Signature_BCSRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	multiSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{sig.(*Ed25519Signature)},
+		Bitmap:     [MultiEd25519BitmapLen]byte{0x80, 0, 0, 0},
+	}
+
+	data, err := bcs.Serialize(multiSig)
+	require.NoError(t, err)
+
+	multiSig2 := &MultiEd25519Signature{}
+	err = bcs.Deserialize(multiSig2, data)
+	require.NoError(t, err)
+	assert.Len(t, multiSig2.Signatures, 1)
+}
+
+func TestMultiEd25519Authenticator(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateEd25519PrivateKey()
+
+	pub1, _ := key1.PubKey().(*Ed25519PublicKey)
+	pub2, _ := key2.PubKey().(*Ed25519PublicKey)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	msg := []byte("test message")
+	sig1, _ := key1.SignMessage(msg)
+
+	multiSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{sig1.(*Ed25519Signature)},
+		Bitmap:     [MultiEd25519BitmapLen]byte{0x80, 0, 0, 0},
+	}
+
+	auth := &MultiEd25519Authenticator{
+		PubKey: multiKey,
+		Sig:    multiSig,
+	}
+
+	// Test interface methods
+	assert.Equal(t, multiKey, auth.PublicKey())
+	assert.Equal(t, multiSig, auth.Signature())
+	assert.True(t, auth.Verify(msg))
+	assert.False(t, auth.Verify([]byte("wrong")))
+
+	// Test BCS round-trip
+	data, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+
+	auth2 := &MultiEd25519Authenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+	assert.True(t, auth2.Verify(msg))
+}
+
+// ============ Secp256k1 Authenticator Tests ============
+
+func TestSecp256k1Authenticator(t *testing.T) {
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256k1PublicKey)
+
+	auth := &Secp256k1Authenticator{
+		PubKey: pubKey,
+		Sig:    sig.(*Secp256k1Signature),
+	}
+
+	// Test interface methods
+	assert.Equal(t, pubKey, auth.PublicKey())
+	assert.Equal(t, sig, auth.Signature())
+	assert.True(t, auth.Verify(msg))
+	assert.False(t, auth.Verify([]byte("wrong")))
+
+	// Test BCS round-trip
+	data, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+
+	auth2 := &Secp256k1Authenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+	assert.True(t, auth2.Verify(msg))
+}
+
+func TestSecp256k1Signature_HexRoundTrip(t *testing.T) {
+	key, _ := GenerateSecp256k1Key()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	secpSig := sig.(*Secp256k1Signature)
+	hex := secpSig.ToHex()
+	assert.NotEmpty(t, hex)
+
+	sig2 := &Secp256k1Signature{}
+	err := sig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, secpSig.Bytes(), sig2.Bytes())
+}
+
+func TestSecp256k1PublicKey_ToHex(t *testing.T) {
+	key, _ := GenerateSecp256k1Key()
+	pubKey := key.VerifyingKey().(*Secp256k1PublicKey)
+
+	hex := pubKey.ToHex()
+	assert.NotEmpty(t, hex)
+	assert.Contains(t, hex, "0x")
+}
+
+// ============ Ed25519 Authenticator Tests ============
+
+func TestEd25519Authenticator_PublicKeyAndSignature(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	pubKey := key.PubKey().(*Ed25519PublicKey)
+
+	auth := &Ed25519Authenticator{
+		PubKey: pubKey,
+		Sig:    sig.(*Ed25519Signature),
+	}
+
+	assert.Equal(t, pubKey, auth.PublicKey())
+	assert.Equal(t, sig, auth.Signature())
+}
+
+func TestEd25519Signature_FromHex(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	ed25519Sig := sig.(*Ed25519Signature)
+	hex := ed25519Sig.ToHex()
+
+	sig2 := &Ed25519Signature{}
+	err := sig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, ed25519Sig.Bytes(), sig2.Bytes())
+}
+
+// ============ AnyPublicKey / AnySignature Tests ============
+
+func TestAnyPublicKey_HexRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	pubKey := key.PubKey().(*Ed25519PublicKey)
+
+	anyPub := &AnyPublicKey{
+		Variant: AnyPublicKeyVariantEd25519,
+		PubKey:  pubKey,
+	}
+
+	hex := anyPub.ToHex()
+	assert.NotEmpty(t, hex)
+
+	anyPub2 := &AnyPublicKey{}
+	err := anyPub2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, anyPub.Variant, anyPub2.Variant)
+}
+
+func TestAnyPublicKey_AuthKey(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	pubKey := key.PubKey().(*Ed25519PublicKey)
+
+	anyPub := &AnyPublicKey{
+		Variant: AnyPublicKeyVariantEd25519,
+		PubKey:  pubKey,
+	}
+
+	authKey := anyPub.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey.Bytes(), AuthenticationKeyLength)
+}
+
+func TestAnySignature_HexRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantEd25519,
+		Signature: sig.(*Ed25519Signature),
+	}
+
+	hex := anySig.ToHex()
+	assert.NotEmpty(t, hex)
+
+	anySig2 := &AnySignature{}
+	err := anySig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, anySig.Variant, anySig2.Variant)
+}
+
+// ============ SingleKeyAuthenticator Tests ============
+
+func TestSingleKeyAuthenticator_PublicKeyAndSignature(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	signer := NewSingleSigner(key)
+
+	msg := []byte("test")
+	auth, err := signer.Sign(msg)
+	require.NoError(t, err)
+
+	singleAuth := auth.Auth.(*SingleKeyAuthenticator)
+	assert.NotNil(t, singleAuth.PublicKey())
+	assert.NotNil(t, singleAuth.Signature())
+}
+
+// ============ MultiKey Tests ============
+
+func TestMultiKey_Verify(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	key2, _ := GenerateSecp256k1Key()
+
+	signer1 := NewSingleSigner(key1)
+	signer2 := NewSingleSigner(key2)
+
+	anyPub1, _ := ToAnyPublicKey(signer1.PubKey())
+	anyPub2, _ := ToAnyPublicKey(signer2.PubKey())
+
+	multiKey := &MultiKey{
+		PubKeys:            []*AnyPublicKey{anyPub1, anyPub2},
+		SignaturesRequired: 1,
+	}
+
+	// Test Scheme
+	assert.Equal(t, MultiKeyScheme, multiKey.Scheme())
+
+	// Test AuthKey
+	authKey := multiKey.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey.Bytes(), AuthenticationKeyLength)
+}
+
+func TestMultiKey_HexRoundTrip(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	signer1 := NewSingleSigner(key1)
+	anyPub1, _ := ToAnyPublicKey(signer1.PubKey())
+
+	multiKey := &MultiKey{
+		PubKeys:            []*AnyPublicKey{anyPub1},
+		SignaturesRequired: 1,
+	}
+
+	hex := multiKey.ToHex()
+	assert.NotEmpty(t, hex)
+
+	multiKey2 := &MultiKey{}
+	err := multiKey2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, multiKey.SignaturesRequired, multiKey2.SignaturesRequired)
+}
+
+func TestMultiKey_BCSRoundTrip(t *testing.T) {
+	key1, _ := GenerateEd25519PrivateKey()
+	signer1 := NewSingleSigner(key1)
+	anyPub1, _ := ToAnyPublicKey(signer1.PubKey())
+
+	multiKey := &MultiKey{
+		PubKeys:            []*AnyPublicKey{anyPub1},
+		SignaturesRequired: 1,
+	}
+
+	data, err := bcs.Serialize(multiKey)
+	require.NoError(t, err)
+
+	multiKey2 := &MultiKey{}
+	err = bcs.Deserialize(multiKey2, data)
+	require.NoError(t, err)
+	assert.Equal(t, multiKey.SignaturesRequired, multiKey2.SignaturesRequired)
+}
+
+func TestMultiKeySignature_BCSRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantEd25519,
+		Signature: sig.(*Ed25519Signature),
+	}
+
+	// Use NewMultiKeySignature which properly sets up the bitmap
+	multiSig, err := NewMultiKeySignature([]IndexedAnySignature{
+		{Index: 0, Signature: anySig},
+	})
+	require.NoError(t, err)
+
+	data, err := bcs.Serialize(multiSig)
+	require.NoError(t, err)
+
+	multiSig2 := &MultiKeySignature{}
+	err = bcs.Deserialize(multiSig2, data)
+	require.NoError(t, err)
+	assert.Len(t, multiSig2.Signatures, 1)
+}
+
+func TestMultiKeyAuthenticator_BCSRoundTrip(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	signer := NewSingleSigner(key)
+	anyPub, _ := ToAnyPublicKey(signer.PubKey())
+
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantEd25519,
+		Signature: sig.(*Ed25519Signature),
+	}
+
+	multiKey := &MultiKey{
+		PubKeys:            []*AnyPublicKey{anyPub},
+		SignaturesRequired: 1,
+	}
+
+	multiSig, err := NewMultiKeySignature([]IndexedAnySignature{
+		{Index: 0, Signature: anySig},
+	})
+	require.NoError(t, err)
+
+	auth := &MultiKeyAuthenticator{
+		PubKey: multiKey,
+		Sig:    multiSig,
+	}
+
+	// Test interface methods
+	assert.Equal(t, multiKey, auth.PublicKey())
+	assert.Equal(t, multiSig, auth.Signature())
+
+	// Test BCS round-trip
+	data, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+
+	auth2 := &MultiKeyAuthenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+}
+
+// ============ AccountAuthenticator FromKeyAndSignature Tests ============
+
+func TestAccountAuthenticator_FromKeyAndSignature_Ed25519(t *testing.T) {
+	key, _ := GenerateEd25519PrivateKey()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	signer := NewSingleSigner(key)
+	anyPub, _ := ToAnyPublicKey(signer.PubKey())
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantEd25519,
+		Signature: sig.(*Ed25519Signature),
+	}
+
+	auth := &AccountAuthenticator{}
+	err := auth.FromKeyAndSignature(anyPub, anySig)
+	require.NoError(t, err)
+	assert.True(t, auth.Verify(msg))
+}
+
+func TestAccountAuthenticator_FromKeyAndSignature_Secp256k1(t *testing.T) {
+	key, _ := GenerateSecp256k1Key()
+	msg := []byte("test")
+	sig, _ := key.SignMessage(msg)
+
+	signer := NewSingleSigner(key)
+	anyPub, _ := ToAnyPublicKey(signer.PubKey())
+	anySig := &AnySignature{
+		Variant:   AnySignatureVariantSecp256k1,
+		Signature: sig.(*Secp256k1Signature),
+	}
+
+	auth := &AccountAuthenticator{}
+	err := auth.FromKeyAndSignature(anyPub, anySig)
+	require.NoError(t, err)
+	assert.True(t, auth.Verify(msg))
+}
+
+// ============ Error Path Tests ============
+
+func TestMultiEd25519PublicKey_FromBytes_TooShort(t *testing.T) {
+	multiKey := &MultiEd25519PublicKey{}
+	err := multiKey.FromBytes([]byte{1, 2, 3})
+	require.Error(t, err)
+}
+
+func TestMultiEd25519Signature_FromBytes_TooShort(t *testing.T) {
+	multiSig := &MultiEd25519Signature{}
+	err := multiSig.FromBytes([]byte{1, 2, 3})
+	require.Error(t, err)
+}
+
+func TestMultiEd25519PublicKey_FromHex_Invalid(t *testing.T) {
+	multiKey := &MultiEd25519PublicKey{}
+	err := multiKey.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestMultiEd25519Signature_FromHex_Invalid(t *testing.T) {
+	multiSig := &MultiEd25519Signature{}
+	err := multiSig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSecp256k1Signature_FromHex_Invalid(t *testing.T) {
+	sig := &Secp256k1Signature{}
+	err := sig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestAnyPublicKey_FromHex_Invalid(t *testing.T) {
+	anyPub := &AnyPublicKey{}
+	err := anyPub.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestAnySignature_FromHex_Invalid(t *testing.T) {
+	anySig := &AnySignature{}
+	err := anySig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestMultiKey_FromHex_Invalid(t *testing.T) {
+	multiKey := &MultiKey{}
+	err := multiKey.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestEd25519Signature_FromHex_Invalid(t *testing.T) {
+	sig := &Ed25519Signature{}
+	err := sig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}

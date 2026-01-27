@@ -3,6 +3,7 @@ package keyless
 import (
 	"encoding/base64"
 	"encoding/json"
+	"math/big"
 	"testing"
 	"time"
 
@@ -268,4 +269,185 @@ func TestZKProof_JSON(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t, proof.Variant, decoded.Variant)
+}
+
+func TestKeylessAccount_Address(t *testing.T) {
+	ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+
+	claims := &JWTClaims{
+		Issuer:    "https://accounts.google.com",
+		Subject:   "test_user_id",
+		Audience:  "test_client_id",
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	}
+
+	pepper := make([]byte, 31)
+	address, _ := DeriveAddress(claims, "sub", pepper)
+
+	account := &KeylessAccount{
+		address:          address,
+		ephemeralKeyPair: ephKp,
+		claims:           claims,
+	}
+
+	assert.Equal(t, address, account.Address())
+}
+
+func TestKeylessAccount_IsExpired(t *testing.T) {
+	t.Run("not expired", func(t *testing.T) {
+		ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			},
+		}
+		assert.False(t, account.IsExpired())
+	})
+
+	t.Run("expired due to JWT", func(t *testing.T) {
+		ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				ExpiresAt: time.Now().Add(-time.Hour).Unix(),
+			},
+		}
+		assert.True(t, account.IsExpired())
+	})
+
+	t.Run("expired due to ephemeral key", func(t *testing.T) {
+		ephKp, _ := GenerateEphemeralKeyPair(-time.Hour)
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			},
+		}
+		assert.True(t, account.IsExpired())
+	})
+}
+
+func TestKeylessAccount_Provider(t *testing.T) {
+	ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+
+	t.Run("google provider", func(t *testing.T) {
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				Issuer: "https://accounts.google.com",
+			},
+		}
+		provider, found := account.Provider()
+		assert.True(t, found)
+		assert.Equal(t, ProviderGoogle, provider)
+	})
+
+	t.Run("unknown provider", func(t *testing.T) {
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				Issuer: "https://unknown.example.com",
+			},
+		}
+		_, found := account.Provider()
+		assert.False(t, found)
+	})
+}
+
+func TestKeylessAccount_AuthKey(t *testing.T) {
+	ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+
+	claims := &JWTClaims{
+		Issuer:    "https://accounts.google.com",
+		Subject:   "test_user_id",
+		Audience:  "test_client_id",
+		ExpiresAt: time.Now().Add(time.Hour).Unix(),
+	}
+
+	pepper := make([]byte, 31)
+	address, _ := DeriveAddress(claims, "sub", pepper)
+
+	account := &KeylessAccount{
+		address:          address,
+		ephemeralKeyPair: ephKp,
+		claims:           claims,
+	}
+
+	authKey := account.AuthKey()
+	assert.NotNil(t, authKey)
+}
+
+func TestKeylessAccount_PubKey(t *testing.T) {
+	ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+
+	account := &KeylessAccount{
+		ephemeralKeyPair: ephKp,
+		claims:           &JWTClaims{},
+	}
+
+	pubKey := account.PubKey()
+	assert.NotNil(t, pubKey)
+}
+
+func TestKeylessAccount_Sign_Expired(t *testing.T) {
+	t.Run("fails when ephemeral key expired", func(t *testing.T) {
+		ephKp, _ := GenerateEphemeralKeyPair(-time.Hour)
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				ExpiresAt: time.Now().Add(time.Hour).Unix(),
+			},
+		}
+		_, err := account.Sign([]byte("test"))
+		assert.ErrorIs(t, err, ErrEphemeralKeyExpired)
+	})
+
+	t.Run("fails when JWT expired", func(t *testing.T) {
+		ephKp, _ := GenerateEphemeralKeyPair(time.Hour)
+		account := &KeylessAccount{
+			ephemeralKeyPair: ephKp,
+			claims: &JWTClaims{
+				ExpiresAt: time.Now().Add(-time.Hour).Unix(),
+			},
+		}
+		_, err := account.Sign([]byte("test"))
+		assert.ErrorIs(t, err, ErrJWTExpired)
+	})
+}
+
+func TestPepperFromBigInt(t *testing.T) {
+	t.Run("small number pads to 31 bytes", func(t *testing.T) {
+		small := big.NewInt(12345)
+		pepper := PepperFromBigInt(small)
+		assert.Len(t, pepper, 31)
+	})
+
+	t.Run("large number truncates to 31 bytes", func(t *testing.T) {
+		// Create a number larger than 31 bytes
+		large := new(big.Int)
+		large.SetBytes(make([]byte, 40))
+		large.SetBit(large, 300, 1)
+
+		pepper := PepperFromBigInt(large)
+		assert.Len(t, pepper, 31)
+	})
+}
+
+func TestPadBase64(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected string
+	}{
+		{"ab", "ab=="},     // len % 4 == 2
+		{"abc", "abc="},    // len % 4 == 3
+		{"abcd", "abcd"},   // len % 4 == 0
+		{"a", "a"},         // len % 4 == 1 (no change)
+		{"abcde", "abcde"}, // len % 4 == 1 (no change)
+	}
+
+	for _, tt := range tests {
+		result := padBase64(tt.input)
+		assert.Equal(t, tt.expected, result)
+	}
 }
