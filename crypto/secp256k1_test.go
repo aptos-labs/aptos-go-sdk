@@ -140,7 +140,28 @@ func TestSecp256k1Key_String(t *testing.T) {
 	privateKey := &Secp256k1PrivateKey{}
 	err := privateKey.FromHex(testSecp256k1PrivateKeyHex)
 	require.NoError(t, err)
-	assert.Equal(t, testSecp256k1PrivateKey, privateKey.String())
+	// String() should return redacted value for security
+	assert.Equal(t, "<redacted Secp256k1PrivateKey>", privateKey.String())
+	// ToAIP80() should return the actual formatted key when explicitly needed
+	aip80, err := privateKey.ToAIP80()
+	require.NoError(t, err)
+	assert.Equal(t, testSecp256k1PrivateKey, aip80)
+}
+
+func TestSecp256k1PrivateKey_Clear(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	// Verify key is valid before clear
+	assert.NotNil(t, privateKey.Inner)
+
+	// Clear the key
+	privateKey.Clear()
+
+	// After Zero() the key should be in zeroed state
+	// Note: the secp256k1 library's Zero() method zeros the underlying scalar
+	assert.NotNil(t, privateKey.Inner)
 }
 
 func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {

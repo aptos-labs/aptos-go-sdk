@@ -10,6 +10,10 @@ import (
 // HttpErrSummaryLength is the maximum length of the body to include in the error message
 const HttpErrSummaryLength = 1000
 
+// HttpErrMaxBodyRead is the maximum bytes to read from an error response body
+// to prevent memory exhaustion from malicious or buggy servers
+const HttpErrMaxBodyRead = HttpErrSummaryLength + 100
+
 // HttpError is an error type that represents an error from a http request
 type HttpError struct {
 	Status     string      // HTTP status e.g. "200 OK"
@@ -22,7 +26,8 @@ type HttpError struct {
 
 // NewHttpError creates a new HttpError from a http.Response
 func NewHttpError(response *http.Response) *HttpError {
-	body, _ := io.ReadAll(response.Body)
+	// Limit the body read to prevent memory exhaustion
+	body, _ := io.ReadAll(io.LimitReader(response.Body, HttpErrMaxBodyRead))
 	_ = response.Body.Close()
 	return &HttpError{
 		Status:     response.Status,
