@@ -269,6 +269,10 @@ func (ea *MultiEd25519Authenticator) UnmarshalBCS(des *bcs.Deserializer) {
 // MultiEd25519BitmapLen is number of bytes in the bitmap representing who signed the transaction
 const MultiEd25519BitmapLen = 4
 
+// Compile-time assertion: ensure bitmap indices fit in uint8.
+// Maximum index is (MultiEd25519BitmapLen * 8 - 1) = 31 for the current value of 4.
+const _ = uint8(MultiEd25519BitmapLen*8 - 1)
+
 // MultiEd25519Signature is a signature for off-chain multi-sig
 //
 // Implements:
@@ -291,7 +295,7 @@ func (e *MultiEd25519Signature) BitmapIndices() []uint8 {
 		for bitIdx := range uint8(8) {
 			// Check if the bit is set (reading from MSB to LSB)
 			if (e.Bitmap[byteIdx] & (0x80 >> bitIdx)) != 0 {
-				// byteIdx is at most 3, so byteIdx*8 is at most 24, which fits in uint8
+				// Safety: the compile-time assertion above guarantees this fits in uint8
 				keyIdx := uint8(byteIdx*8) + bitIdx //nolint:gosec
 				indices = append(indices, keyIdx)
 			}

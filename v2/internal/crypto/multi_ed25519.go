@@ -12,6 +12,10 @@ import (
 // MultiEd25519BitmapLen is the fixed bitmap length for multi-ed25519 signatures.
 const MultiEd25519BitmapLen = 4
 
+// Compile-time assertion: ensure bitmap indices fit in uint8.
+// Maximum index is (MultiEd25519BitmapLen * 8 - 1) = 31 for the current value of 4.
+const _ = uint8(MultiEd25519BitmapLen*8 - 1)
+
 // MultiEd25519PublicKey is an off-chain multi-sig public key using only Ed25519 keys.
 //
 // This is the legacy multi-sig format. For new implementations, consider using
