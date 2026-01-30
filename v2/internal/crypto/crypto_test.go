@@ -1106,7 +1106,7 @@ func TestMultiKeySignature_BCSRoundTrip(t *testing.T) {
 	}
 
 	// Use NewMultiKeySignature which properly sets up the bitmap
-	multiSig, err := NewMultiKeySignature([]IndexedAnySignature{
+	multiSig, err := NewMultiKeySignature(1, []IndexedAnySignature{
 		{Index: 0, Signature: anySig},
 	})
 	require.NoError(t, err)
@@ -1138,7 +1138,7 @@ func TestMultiKeyAuthenticator_BCSRoundTrip(t *testing.T) {
 		SignaturesRequired: 1,
 	}
 
-	multiSig, err := NewMultiKeySignature([]IndexedAnySignature{
+	multiSig, err := NewMultiKeySignature(uint8(len(multiKey.PubKeys)), []IndexedAnySignature{
 		{Index: 0, Signature: anySig},
 	})
 	require.NoError(t, err)
