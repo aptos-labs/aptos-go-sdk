@@ -142,8 +142,12 @@ func (s *SingleSigner) publicKeyVariant() AnyPublicKeyVariant {
 type AnyPublicKeyVariant uint32
 
 const (
-	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0
-	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1
+	AnyPublicKeyVariantEd25519          AnyPublicKeyVariant = 0
+	AnyPublicKeyVariantSecp256k1        AnyPublicKeyVariant = 1
+	AnyPublicKeyVariantSecp256r1        AnyPublicKeyVariant = 2
+	AnyPublicKeyVariantKeyless          AnyPublicKeyVariant = 3
+	AnyPublicKeyVariantFederatedKeyless AnyPublicKeyVariant = 4
+	AnyPublicKeyVariantSlhDsaSha2_128s  AnyPublicKeyVariant = 5
 )
 
 // AnyPublicKey wraps different public key types for use with SingleSigner.
@@ -250,6 +254,18 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 		key.PubKey = &Ed25519PublicKey{}
 	case AnyPublicKeyVariantSecp256k1:
 		key.PubKey = &Secp256k1PublicKey{}
+	case AnyPublicKeyVariantSecp256r1:
+		des.SetError(fmt.Errorf("Secp256r1 public key deserialization not yet implemented"))
+		return
+	case AnyPublicKeyVariantKeyless:
+		des.SetError(fmt.Errorf("Keyless public key deserialization not yet implemented"))
+		return
+	case AnyPublicKeyVariantFederatedKeyless:
+		des.SetError(fmt.Errorf("FederatedKeyless public key deserialization not yet implemented"))
+		return
+	case AnyPublicKeyVariantSlhDsaSha2_128s:
+		des.SetError(fmt.Errorf("SlhDsaSha2_128s public key deserialization not yet implemented"))
+		return
 	default:
 		des.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
 		return
@@ -261,8 +277,11 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 type AnySignatureVariant uint32
 
 const (
-	AnySignatureVariantEd25519   AnySignatureVariant = 0
-	AnySignatureVariantSecp256k1 AnySignatureVariant = 1
+	AnySignatureVariantEd25519         AnySignatureVariant = 0
+	AnySignatureVariantSecp256k1       AnySignatureVariant = 1
+	AnySignatureVariantWebAuthn        AnySignatureVariant = 2
+	AnySignatureVariantKeyless         AnySignatureVariant = 3
+	AnySignatureVariantSlhDsaSha2_128s AnySignatureVariant = 4
 )
 
 // AnySignature wraps different signature types for use with SingleSigner.
@@ -327,6 +346,15 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 		e.Signature = &Ed25519Signature{}
 	case AnySignatureVariantSecp256k1:
 		e.Signature = &Secp256k1Signature{}
+	case AnySignatureVariantWebAuthn:
+		des.SetError(fmt.Errorf("WebAuthn signature deserialization not yet implemented"))
+		return
+	case AnySignatureVariantKeyless:
+		des.SetError(fmt.Errorf("Keyless signature deserialization not yet implemented"))
+		return
+	case AnySignatureVariantSlhDsaSha2_128s:
+		des.SetError(fmt.Errorf("SlhDsaSha2_128s signature deserialization not yet implemented"))
+		return
 	default:
 		des.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
 		return

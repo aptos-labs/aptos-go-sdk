@@ -44,6 +44,14 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   - Support for mainnet and testnet router addresses
 - [`Feature`] Support signed integers (i8, i16, i32, i64, i128, i256) as arguments
 
+## Bug Fixes
+- [`Fix`][`Breaking`] Fix `MultiKeyBitmap` serialization to comply with Aptos BitVec specification
+  - Bitmap now correctly serializes `num_bits` as u16 little-endian before the bytes
+  - `NewMultiKeySignature` now requires `numKeys` parameter to ensure correct serialization
+  - Added `NewMultiKeyBitmap(numKeys)` and `SetNumKeys(numKeys)` helpers
+- [`Fix`] Add missing `AnyPublicKey` variants: `Secp256r1` (2), `Keyless` (3), `FederatedKeyless` (4), `SlhDsaSha2_128s` (5)
+- [`Fix`] Add missing `AnySignature` variants: `WebAuthn` (2), `Keyless` (3), `SlhDsaSha2_128s` (4)
+
 ## Improvements
 - [`Doc`] Comprehensive documentation improvements across all packages
   - Enhanced main package docs with examples
