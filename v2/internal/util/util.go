@@ -80,6 +80,9 @@ func Sha3256Hash(inputs [][]byte) []byte {
 		hasher.Write(b)
 	}
 	result := hasher.Sum(nil)
+	// Clear internal state before returning to pool to minimize retention time
+	// of potentially sensitive data in the sponge state
+	hasher.Reset()
 	sha3Pool.Put(hasher)
 	return result
 }

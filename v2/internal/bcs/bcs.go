@@ -104,6 +104,7 @@ func Serialize(v Marshaler) ([]byte, error) {
 
 	if ser.err != nil {
 		err := ser.err
+		ser.Reset() // Clear buffer before returning to pool
 		serializerPool.Put(ser)
 		return nil, err
 	}
@@ -111,6 +112,7 @@ func Serialize(v Marshaler) ([]byte, error) {
 	// Copy result before returning serializer to pool
 	result := make([]byte, len(ser.ToBytes()))
 	copy(result, ser.ToBytes())
+	ser.Reset() // Clear buffer before returning to pool
 	serializerPool.Put(ser)
 
 	return result, nil
