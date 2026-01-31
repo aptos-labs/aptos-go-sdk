@@ -169,6 +169,8 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantEd25519, PubKey: k}, nil
 	case *Secp256k1PublicKey:
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantSecp256k1, PubKey: k}, nil
+	case *SlhDsaPublicKey:
+		return &AnyPublicKey{Variant: AnyPublicKeyVariantSlhDsaSha2_128s, PubKey: k}, nil
 	case *AnyPublicKey:
 		return k, nil
 	default:
@@ -264,8 +266,7 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 		des.SetError(fmt.Errorf("FederatedKeyless public key deserialization not yet implemented"))
 		return
 	case AnyPublicKeyVariantSlhDsaSha2_128s:
-		des.SetError(fmt.Errorf("SlhDsaSha2_128s public key deserialization not yet implemented"))
-		return
+		key.PubKey = &SlhDsaPublicKey{}
 	default:
 		des.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
 		return
@@ -353,8 +354,7 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 		des.SetError(fmt.Errorf("Keyless signature deserialization not yet implemented"))
 		return
 	case AnySignatureVariantSlhDsaSha2_128s:
-		des.SetError(fmt.Errorf("SlhDsaSha2_128s signature deserialization not yet implemented"))
-		return
+		e.Signature = &SlhDsaSignature{}
 	default:
 		des.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
 		return

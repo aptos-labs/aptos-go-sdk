@@ -1254,3 +1254,320 @@ func TestEd25519Signature_FromHex_Invalid(t *testing.T) {
 	err := sig.FromHex("not-valid-hex")
 	require.Error(t, err)
 }
+
+// ============================================================================
+// SLH-DSA Tests
+// ============================================================================
+
+func TestSlhDsaKeyGeneration(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+	assert.NotNil(t, key)
+	assert.NotNil(t, key.VerifyingKey())
+	assert.Len(t, key.Bytes(), SlhDsaPrivateKeySize)
+}
+
+func TestSlhDsaSignAndVerify(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message for post-quantum signing")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+	assert.Len(t, sig.Bytes(), SlhDsaSignatureSize)
+
+	pubKey := key.VerifyingKey()
+	slhDsaPubKey, ok := pubKey.(*SlhDsaPublicKey)
+	require.True(t, ok, "expected SlhDsaPublicKey")
+	assert.True(t, slhDsaPubKey.Verify(msg, sig))
+	assert.False(t, slhDsaPubKey.Verify([]byte("wrong message"), sig))
+}
+
+func TestSlhDsaPublicKey_Bytes(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	bytes := pubKey.Bytes()
+	assert.Len(t, bytes, SlhDsaPublicKeySize)
+}
+
+func TestSlhDsaPublicKey_FromBytes(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	bytes := pubKey.Bytes()
+
+	pubKey2 := &SlhDsaPublicKey{}
+	err = pubKey2.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, bytes, pubKey2.Bytes())
+}
+
+func TestSlhDsaPublicKey_Verify(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	assert.True(t, pubKey.Verify(msg, sig))
+	assert.False(t, pubKey.Verify([]byte("different"), sig))
+}
+
+func TestSlhDsaPublicKey_AuthKey(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	authKey := pubKey.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey.Bytes(), AuthenticationKeyLength)
+}
+
+func TestSlhDsaPublicKey_Scheme(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	assert.Equal(t, SingleKeyScheme, pubKey.Scheme())
+}
+
+func TestSlhDsaPublicKey_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	hex := pubKey.ToHex()
+	assert.True(t, len(hex) > 2) // "0x" + hex bytes
+
+	pubKey2 := &SlhDsaPublicKey{}
+	err = pubKey2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestSlhDsaPublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	data, err := bcs.Serialize(pubKey)
+	require.NoError(t, err)
+
+	pubKey2 := &SlhDsaPublicKey{}
+	err = bcs.Deserialize(pubKey2, data)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestSlhDsaSignature_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	slhSig := sig.(*SlhDsaSignature)
+	hex := slhSig.ToHex()
+
+	slhSig2 := &SlhDsaSignature{}
+	err = slhSig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, slhSig.Bytes(), slhSig2.Bytes())
+}
+
+func TestSlhDsaSignature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	slhSig := sig.(*SlhDsaSignature)
+	data, err := bcs.Serialize(slhSig)
+	require.NoError(t, err)
+
+	slhSig2 := &SlhDsaSignature{}
+	err = bcs.Deserialize(slhSig2, data)
+	require.NoError(t, err)
+	assert.Equal(t, slhSig.Bytes(), slhSig2.Bytes())
+}
+
+func TestSlhDsaAuthenticator(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	slhSig := sig.(*SlhDsaSignature)
+
+	auth := &SlhDsaAuthenticator{
+		PubKey: pubKey,
+		Sig:    slhSig,
+	}
+
+	assert.Equal(t, pubKey, auth.PublicKey())
+	assert.Equal(t, slhSig, auth.Signature())
+	assert.True(t, auth.Verify(msg))
+	assert.False(t, auth.Verify([]byte("wrong")))
+}
+
+func TestSlhDsaAuthenticator_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	auth := &SlhDsaAuthenticator{
+		PubKey: key.VerifyingKey().(*SlhDsaPublicKey),
+		Sig:    sig.(*SlhDsaSignature),
+	}
+
+	data, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+
+	auth2 := &SlhDsaAuthenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, auth.PubKey.Bytes(), auth2.PubKey.Bytes())
+	assert.Equal(t, auth.Sig.Bytes(), auth2.Sig.Bytes())
+	assert.True(t, auth2.Verify(msg))
+}
+
+func TestSlhDsaPrivateKey_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	hex := key.ToHex()
+	assert.True(t, len(hex) > 2)
+
+	key2 := &SlhDsaPrivateKey{}
+	err = key2.FromHex(hex)
+	require.NoError(t, err)
+
+	// Verify they produce the same signatures
+	msg := []byte("test")
+	sig1, _ := key.SignMessage(msg)
+	sig2, _ := key2.SignMessage(msg)
+	assert.Equal(t, sig1.Bytes(), sig2.Bytes())
+}
+
+func TestSlhDsaPrivateKey_String(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	// String() should return redacted output
+	str := key.String()
+	assert.Contains(t, str, "REDACTED")
+	assert.NotContains(t, str, key.ToHex())
+}
+
+func TestSlhDsaPrivateKey_ToAIP80(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	aip80, err := key.ToAIP80()
+	require.NoError(t, err)
+	assert.True(t, len(aip80) > 0)
+	assert.Contains(t, aip80, "slhdsa-priv-")
+}
+
+func TestSlhDsa_ToAnyPublicKey(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	anyPub, err := ToAnyPublicKey(pubKey)
+	require.NoError(t, err)
+	assert.Equal(t, AnyPublicKeyVariantSlhDsaSha2_128s, anyPub.Variant)
+	assert.Equal(t, pubKey, anyPub.PubKey)
+}
+
+func TestSlhDsa_AnyPublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*SlhDsaPublicKey)
+	anyPub, err := ToAnyPublicKey(pubKey)
+	require.NoError(t, err)
+
+	data, err := bcs.Serialize(anyPub)
+	require.NoError(t, err)
+
+	anyPub2 := &AnyPublicKey{}
+	err = bcs.Deserialize(anyPub2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnyPublicKeyVariantSlhDsaSha2_128s, anyPub2.Variant)
+	slhPub, ok := anyPub2.PubKey.(*SlhDsaPublicKey)
+	require.True(t, ok)
+	assert.Equal(t, pubKey.Bytes(), slhPub.Bytes())
+}
+
+func TestSlhDsa_AnySignature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	slhSig := sig.(*SlhDsaSignature)
+	anySig := slhSig.ToAnySignature()
+
+	data, err := bcs.Serialize(anySig)
+	require.NoError(t, err)
+
+	anySig2 := &AnySignature{}
+	err = bcs.Deserialize(anySig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnySignatureVariantSlhDsaSha2_128s, anySig2.Variant)
+	slhSig2, ok := anySig2.Signature.(*SlhDsaSignature)
+	require.True(t, ok)
+	assert.Equal(t, slhSig.Bytes(), slhSig2.Bytes())
+}
+
+func TestSlhDsa_SingleSigner(t *testing.T) {
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+
+	signer := NewSlhDsaSingleSigner(key)
+	assert.NotNil(t, signer)
+
+	msg := []byte("test message")
+	auth, err := signer.Sign(msg)
+	require.NoError(t, err)
+	assert.Equal(t, AccountAuthenticatorSingleSender, auth.Variant)
+	assert.True(t, auth.Verify(msg))
+}
+
+func TestSlhDsaSignature_FromHex_Invalid(t *testing.T) {
+	sig := &SlhDsaSignature{}
+	err := sig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSlhDsaPublicKey_FromHex_Invalid(t *testing.T) {
+	pub := &SlhDsaPublicKey{}
+	err := pub.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSlhDsaPrivateKey_FromHex_Invalid(t *testing.T) {
+	key := &SlhDsaPrivateKey{}
+	err := key.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
