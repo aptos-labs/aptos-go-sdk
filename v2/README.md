@@ -1,5 +1,8 @@
 # Aptos Go SDK v2
 
+[![codecov](https://codecov.io/gh/aptos-labs/aptos-go-sdk/graph/badge.svg?token=YOUR_TOKEN&flag=v2)](https://codecov.io/gh/aptos-labs/aptos-go-sdk)
+[![Go Reference](https://pkg.go.dev/badge/github.com/aptos-labs/aptos-go-sdk/v2.svg)](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk/v2)
+
 A modern, idiomatic Go SDK for the [Aptos blockchain](https://aptos.dev).
 
 ## Features
