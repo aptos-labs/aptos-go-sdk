@@ -1,0 +1,56 @@
+# Codecov configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  precision: 2
+  round: down
+  range: "60...100"
+
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+        informational: true  # Don't block PRs on coverage
+      v2:
+        flags:
+          - v2
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: 60%
+        threshold: 5%
+        informational: true
+
+# Flag management for separate v1/v2 tracking
+flags:
+  v2:
+    paths:
+      - v2/
+    carryforward: true
+  v1:
+    paths:
+      - "!v2/"  # Everything except v2
+    carryforward: true
+
+# Ignore paths that don't need coverage
+ignore:
+  - "**/*_test.go"
+  - "**/doc.go"
+  - "**/examples/**"
+  - "**/benchmark/**"
+  - "**/testutil/**"
+  - "**/cmd/**"
+
+# Comment configuration for PRs
+comment:
+  layout: "reach,diff,flags,files"
+  behavior: default
+  require_changes: true
+  require_base: false
+  require_head: true
+
+# GitHub checks configuration
+github_checks:
+  annotations: true
