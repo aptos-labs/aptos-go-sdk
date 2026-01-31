@@ -121,6 +121,10 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   - Enhanced main package docs with examples
   - Updated README with feature highlights and usage examples
   - Improved godoc comments for all public APIs
+  - Added doc.go files for all internal packages (bcs, crypto, http, types, util)
+  - Internal crypto package documents all key types, authentication schemes, and security considerations
+  - Internal BCS package documents serialization patterns and performance optimizations
+  - Internal HTTP package documents middleware composition patterns
 
 # v1.11.0 (9/26/2025)
 
