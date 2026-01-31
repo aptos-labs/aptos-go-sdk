@@ -188,6 +188,16 @@ func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 	if !ok {
 		return false
 	}
+
+	// WebAuthn signatures require special handling
+	if anySig.Variant == AnySignatureVariantWebAuthn {
+		webAuthnSig, ok := anySig.Signature.(*PartialAuthenticatorAssertionResponse)
+		if !ok {
+			return false
+		}
+		return webAuthnSig.Verify(msg, key)
+	}
+
 	return key.PubKey.Verify(msg, anySig.Signature)
 }
 
@@ -261,11 +271,9 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	case AnyPublicKeyVariantSecp256r1:
 		key.PubKey = &Secp256r1PublicKey{}
 	case AnyPublicKeyVariantKeyless:
-		des.SetError(fmt.Errorf("Keyless public key deserialization not yet implemented"))
-		return
+		key.PubKey = &KeylessPublicKey{}
 	case AnyPublicKeyVariantFederatedKeyless:
-		des.SetError(fmt.Errorf("FederatedKeyless public key deserialization not yet implemented"))
-		return
+		key.PubKey = &FederatedKeylessPublicKey{}
 	case AnyPublicKeyVariantSlhDsaSha2_128s:
 		key.PubKey = &SlhDsaPublicKey{}
 	default:
@@ -349,11 +357,9 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 	case AnySignatureVariantSecp256k1:
 		e.Signature = &Secp256k1Signature{}
 	case AnySignatureVariantWebAuthn:
-		des.SetError(fmt.Errorf("WebAuthn signature deserialization not yet implemented"))
-		return
+		e.Signature = &PartialAuthenticatorAssertionResponse{}
 	case AnySignatureVariantKeyless:
-		des.SetError(fmt.Errorf("Keyless signature deserialization not yet implemented"))
-		return
+		e.Signature = &KeylessSignature{}
 	case AnySignatureVariantSlhDsaSha2_128s:
 		e.Signature = &SlhDsaSignature{}
 	default:

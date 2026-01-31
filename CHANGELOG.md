@@ -28,6 +28,21 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # V2 (Unreleased)
 
 ## New Features
+- [`Feature`] Add Keyless authentication support (OpenID-based)
+  - `KeylessPublicKey`: Contains issuer (`iss_val`) and identity commitment (`idc`)
+  - `FederatedKeylessPublicKey`: For accounts using on-chain JWK addresses
+  - `KeylessSignature`: Contains ephemeral certificate, JWT header, expiry, ephemeral key/signature
+  - `EphemeralCertificate`: Either `ZeroKnowledgeSig` (Groth16 proof) or `OpenIdSig`
+  - `EphemeralPublicKey` and `EphemeralSignature` for short-lived key management
+  - Full BCS serialization/deserialization for all types
+  - Integration with `AnyPublicKey` (variants 3, 4) and `AnySignature` (variant 3)
+- [`Feature`] Add WebAuthn signature support
+  - `PartialAuthenticatorAssertionResponse` and `AssertionSignature` types
+  - Properly handles WebAuthn's SHA-256 verification flow
+  - Extracts and validates challenge from `clientDataJSON`
+  - Full BCS serialization/deserialization support
+  - Integration with `AnySignature` (variant 2)
+  - Security hardening: constant-time challenge comparison, bounds validation
 - [`Feature`] Add Secp256r1 (P-256/prime256v1) signature support
   - `Secp256r1PrivateKey`, `Secp256r1PublicKey`, `Secp256r1Signature` types
   - Full integration with `SingleSigner` and `AnyPublicKey`

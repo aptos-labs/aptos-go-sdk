@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
+	"github.com/aptos-labs/aptos-go-sdk/v2/internal/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -1882,4 +1883,799 @@ func TestSecp256r1Signature_LowS(t *testing.T) {
 		err = sig2.FromBytes(r1Sig.Bytes())
 		require.NoError(t, err)
 	}
+}
+
+// ============================================================================
+// WebAuthn Signature Tests
+// ============================================================================
+
+func TestWebAuthn_AssertionSignature_BCSRoundTrip(t *testing.T) {
+	// Create a Secp256r1 signature for WebAuthn
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message for webauthn")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Create an assertion signature
+	assertionSig := &AssertionSignature{
+		Variant:   AssertionSignatureVariantSecp256r1,
+		Signature: r1Sig,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(assertionSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	assertionSig2 := &AssertionSignature{}
+	err = bcs.Deserialize(assertionSig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AssertionSignatureVariantSecp256r1, assertionSig2.Variant)
+	assert.Equal(t, r1Sig.Bytes(), assertionSig2.Signature.Bytes())
+}
+
+func TestWebAuthn_PartialAuthenticatorAssertionResponse_BCSRoundTrip(t *testing.T) {
+	// Create a Secp256r1 signature for WebAuthn
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message for webauthn")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Create mock authenticator data
+	authenticatorData := []byte{
+		73, 150, 13, 229, 136, 14, 140, 104, 116, 52, 23, 15, 100, 118, 96, 91,
+		143, 228, 174, 185, 162, 134, 50, 199, 153, 92, 243, 186, 131, 29, 151, 99,
+		29, 0, 0, 0, 0,
+	}
+
+	// Create mock client data JSON (simplified for testing)
+	clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"dGVzdCBjaGFsbGVuZ2U","origin":"http://localhost:4000","crossOrigin":false}`)
+
+	// Create the assertion response
+	paar := NewPartialAuthenticatorAssertionResponse(r1Sig, authenticatorData, clientDataJSON)
+
+	// Serialize
+	data, err := bcs.Serialize(paar)
+	require.NoError(t, err)
+
+	// Deserialize
+	paar2 := &PartialAuthenticatorAssertionResponse{}
+	err = bcs.Deserialize(paar2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AssertionSignatureVariantSecp256r1, paar2.Signature.Variant)
+	assert.Equal(t, r1Sig.Bytes(), paar2.Signature.Signature.Bytes())
+	assert.Equal(t, authenticatorData, paar2.AuthenticatorData)
+	assert.Equal(t, clientDataJSON, paar2.ClientDataJSON)
+}
+
+func TestWebAuthn_AnySignature_WebAuthnVariant_BCSRoundTrip(t *testing.T) {
+	// Create a Secp256r1 signature for WebAuthn
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message for webauthn")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Create valid mock authenticator data (minimum 37 bytes: rpIdHash(32) + flags(1) + signCount(4))
+	authenticatorData := []byte{
+		// rpIdHash (32 bytes)
+		73, 150, 13, 229, 136, 14, 140, 104, 116, 52, 23, 15, 100, 118, 96, 91,
+		143, 228, 174, 185, 162, 134, 50, 199, 153, 92, 243, 186, 131, 29, 151, 99,
+		// flags (1 byte)
+		29,
+		// signCount (4 bytes)
+		0, 0, 0, 0,
+	}
+
+	// Create mock client data JSON with a valid 32-byte challenge (base64url encoded)
+	// "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" decodes to 32 zero bytes
+	clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","origin":"http://localhost"}`)
+
+	// Create the assertion response
+	paar := NewPartialAuthenticatorAssertionResponse(r1Sig, authenticatorData, clientDataJSON)
+
+	// Wrap in AnySignature
+	anySig := paar.ToAnySignature()
+	assert.Equal(t, AnySignatureVariantWebAuthn, anySig.Variant)
+
+	// Serialize
+	data, err := bcs.Serialize(anySig)
+	require.NoError(t, err)
+
+	// Deserialize
+	anySig2 := &AnySignature{}
+	err = bcs.Deserialize(anySig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnySignatureVariantWebAuthn, anySig2.Variant)
+	paar2, ok := anySig2.Signature.(*PartialAuthenticatorAssertionResponse)
+	require.True(t, ok)
+	assert.Equal(t, authenticatorData, paar2.AuthenticatorData)
+	assert.Equal(t, clientDataJSON, paar2.ClientDataJSON)
+}
+
+func TestWebAuthn_GetChallenge(t *testing.T) {
+	// Create a signature with known challenge
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	sig, _ := key.SignMessage([]byte("test"))
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Valid authenticator data (37 bytes minimum)
+	authenticatorData := []byte{
+		// rpIdHash (32 bytes)
+		73, 150, 13, 229, 136, 14, 140, 104, 116, 52, 23, 15, 100, 118, 96, 91,
+		143, 228, 174, 185, 162, 134, 50, 199, 153, 92, 243, 186, 131, 29, 151, 99,
+		// flags (1 byte)
+		29,
+		// signCount (4 bytes)
+		0, 0, 0, 0,
+	}
+
+	// Test base64url encoded challenge - must be exactly 32 bytes when decoded
+	// Using hex: 0102030405060708091011121314151617181920212223242526272829303132
+	// base64url: AQIDBAUGBwgJEBESExQVFhcYGSAhIiMkJSYnKCkwMTI
+	expectedChallenge := []byte{
+		0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+		0x09, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16,
+		0x17, 0x18, 0x19, 0x20, 0x21, 0x22, 0x23, 0x24,
+		0x25, 0x26, 0x27, 0x28, 0x29, 0x30, 0x31, 0x32,
+	}
+	clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"AQIDBAUGBwgJEBESExQVFhcYGSAhIiMkJSYnKCkwMTI","origin":"http://localhost"}`)
+
+	paar := NewPartialAuthenticatorAssertionResponse(r1Sig, authenticatorData, clientDataJSON)
+
+	challenge, err := paar.GetChallenge()
+	require.NoError(t, err)
+	assert.Equal(t, expectedChallenge, challenge)
+}
+
+func TestWebAuthn_ToHex_FromHex(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	sig, _ := key.SignMessage([]byte("test"))
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Valid authenticator data (37 bytes minimum)
+	authenticatorData := []byte{
+		// rpIdHash (32 bytes)
+		73, 150, 13, 229, 136, 14, 140, 104, 116, 52, 23, 15, 100, 118, 96, 91,
+		143, 228, 174, 185, 162, 134, 50, 199, 153, 92, 243, 186, 131, 29, 151, 99,
+		// flags (1 byte)
+		29,
+		// signCount (4 bytes)
+		0, 0, 0, 0,
+	}
+	// Valid 32-byte challenge (base64url encoded)
+	clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","origin":"http://localhost"}`)
+
+	paar := NewPartialAuthenticatorAssertionResponse(r1Sig, authenticatorData, clientDataJSON)
+
+	// Convert to hex
+	hex := paar.ToHex()
+	assert.True(t, len(hex) > 0)
+	assert.Equal(t, "0x", hex[:2])
+
+	// Convert back from hex
+	paar2 := &PartialAuthenticatorAssertionResponse{}
+	err = paar2.FromHex(hex)
+	require.NoError(t, err)
+
+	assert.Equal(t, paar.AuthenticatorData, paar2.AuthenticatorData)
+	assert.Equal(t, paar.ClientDataJSON, paar2.ClientDataJSON)
+}
+
+func TestWebAuthn_BoundsValidation(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	sig, _ := key.SignMessage([]byte("test"))
+	r1Sig := sig.(*Secp256r1Signature)
+
+	// Test authenticator data too short (less than 37 bytes)
+	t.Run("authenticator_data_too_short", func(t *testing.T) {
+		shortAuthData := make([]byte, 36) // One byte less than minimum
+		clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","origin":"http://localhost"}`)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, shortAuthData, clientDataJSON)
+
+		data, _ := bcs.Serialize(paar)
+		paar2 := &PartialAuthenticatorAssertionResponse{}
+		err := bcs.Deserialize(paar2, data)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "authenticator data too short")
+	})
+
+	// Test authenticator data too large
+	t.Run("authenticator_data_too_large", func(t *testing.T) {
+		largeAuthData := make([]byte, MaxAuthenticatorDataBytes+1)
+		clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","origin":"http://localhost"}`)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, largeAuthData, clientDataJSON)
+
+		data, _ := bcs.Serialize(paar)
+		paar2 := &PartialAuthenticatorAssertionResponse{}
+		err := bcs.Deserialize(paar2, data)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "authenticator data too large")
+	})
+
+	// Test client data JSON too large
+	t.Run("client_data_json_too_large", func(t *testing.T) {
+		validAuthData := make([]byte, 37)
+		largeClientData := make([]byte, MaxClientDataJSONBytes+1)
+		copy(largeClientData, []byte(`{"type":"webauthn.get","challenge":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA","origin":"http://localhost"}`))
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, validAuthData, largeClientData)
+
+		data, _ := bcs.Serialize(paar)
+		paar2 := &PartialAuthenticatorAssertionResponse{}
+		err := bcs.Deserialize(paar2, data)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "client data JSON too large")
+	})
+
+	// Test empty client data JSON
+	t.Run("client_data_json_empty", func(t *testing.T) {
+		validAuthData := make([]byte, 37)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, validAuthData, []byte{})
+
+		data, _ := bcs.Serialize(paar)
+		paar2 := &PartialAuthenticatorAssertionResponse{}
+		err := bcs.Deserialize(paar2, data)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "client data JSON is empty")
+	})
+}
+
+func TestWebAuthn_InvalidChallenge(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	sig, _ := key.SignMessage([]byte("test"))
+	r1Sig := sig.(*Secp256r1Signature)
+
+	validAuthData := []byte{
+		73, 150, 13, 229, 136, 14, 140, 104, 116, 52, 23, 15, 100, 118, 96, 91,
+		143, 228, 174, 185, 162, 134, 50, 199, 153, 92, 243, 186, 131, 29, 151, 99,
+		29, 0, 0, 0, 0,
+	}
+
+	// Test challenge with wrong length (not 32 bytes)
+	t.Run("challenge_wrong_length", func(t *testing.T) {
+		// "YWJj" = "abc" (3 bytes)
+		clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"YWJj","origin":"http://localhost"}`)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, validAuthData, clientDataJSON)
+
+		_, err := paar.GetChallenge()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid challenge length")
+	})
+
+	// Test invalid base64 in challenge
+	t.Run("challenge_invalid_base64", func(t *testing.T) {
+		clientDataJSON := []byte(`{"type":"webauthn.get","challenge":"!!!invalid!!!","origin":"http://localhost"}`)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, validAuthData, clientDataJSON)
+
+		_, err := paar.GetChallenge()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to decode")
+	})
+
+	// Test malformed JSON
+	t.Run("malformed_json", func(t *testing.T) {
+		clientDataJSON := []byte(`{not valid json}`)
+		paar := NewPartialAuthenticatorAssertionResponse(r1Sig, validAuthData, clientDataJSON)
+
+		_, err := paar.GetChallenge()
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to parse client data JSON")
+	})
+}
+
+// ============================================================================
+// Keyless Authentication Tests
+// ============================================================================
+
+func TestKeyless_IdCommitment_BCSRoundTrip(t *testing.T) {
+	// Create a 32-byte identity commitment
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+
+	idc, err := NewIdCommitment(idcBytes)
+	require.NoError(t, err)
+	assert.Equal(t, idcBytes, idc.Bytes())
+
+	// Serialize
+	data, err := bcs.Serialize(idc)
+	require.NoError(t, err)
+
+	// Deserialize
+	idc2 := &IdCommitment{}
+	err = bcs.Deserialize(idc2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, idc.Bytes(), idc2.Bytes())
+}
+
+func TestKeyless_IdCommitment_InvalidLength(t *testing.T) {
+	// Too short
+	_, err := NewIdCommitment(make([]byte, 31))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid identity commitment length")
+
+	// Too long
+	_, err = NewIdCommitment(make([]byte, 33))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid identity commitment length")
+}
+
+func TestKeyless_Pepper_BCSRoundTrip(t *testing.T) {
+	var pepper Pepper
+	for i := range pepper {
+		pepper[i] = byte(i)
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(&pepper)
+	require.NoError(t, err)
+
+	// Deserialize
+	var pepper2 Pepper
+	err = bcs.Deserialize(&pepper2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, pepper, pepper2)
+}
+
+func TestKeyless_KeylessPublicKey_BCSRoundTrip(t *testing.T) {
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+	idc, _ := NewIdCommitment(idcBytes)
+
+	pk := &KeylessPublicKey{
+		IssVal: "https://accounts.google.com",
+		Idc:    *idc,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(pk)
+	require.NoError(t, err)
+
+	// Deserialize
+	pk2 := &KeylessPublicKey{}
+	err = bcs.Deserialize(pk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, pk.IssVal, pk2.IssVal)
+	assert.Equal(t, pk.Idc.Bytes(), pk2.Idc.Bytes())
+}
+
+func TestKeyless_KeylessPublicKey_HexRoundTrip(t *testing.T) {
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+	idc, _ := NewIdCommitment(idcBytes)
+
+	pk := &KeylessPublicKey{
+		IssVal: "https://accounts.google.com",
+		Idc:    *idc,
+	}
+
+	// To hex
+	hex := pk.ToHex()
+	assert.True(t, len(hex) > 0)
+	assert.Equal(t, "0x", hex[:2])
+
+	// From hex
+	pk2 := &KeylessPublicKey{}
+	err := pk2.FromHex(hex)
+	require.NoError(t, err)
+
+	assert.Equal(t, pk.IssVal, pk2.IssVal)
+	assert.Equal(t, pk.Idc.Bytes(), pk2.Idc.Bytes())
+}
+
+func TestKeyless_FederatedKeylessPublicKey_BCSRoundTrip(t *testing.T) {
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+	idc, _ := NewIdCommitment(idcBytes)
+
+	var jwkAddr types.AccountAddress
+	jwkAddr[31] = 0x01 // Set to address 0x1
+
+	fedPk := &FederatedKeylessPublicKey{
+		JwkAddr: jwkAddr,
+		Pk: KeylessPublicKey{
+			IssVal: "https://accounts.google.com",
+			Idc:    *idc,
+		},
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(fedPk)
+	require.NoError(t, err)
+
+	// Deserialize
+	fedPk2 := &FederatedKeylessPublicKey{}
+	err = bcs.Deserialize(fedPk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, fedPk.JwkAddr, fedPk2.JwkAddr)
+	assert.Equal(t, fedPk.Pk.IssVal, fedPk2.Pk.IssVal)
+	assert.Equal(t, fedPk.Pk.Idc.Bytes(), fedPk2.Pk.Idc.Bytes())
+}
+
+func TestKeyless_AnyPublicKey_KeylessVariant_BCSRoundTrip(t *testing.T) {
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+	idc, _ := NewIdCommitment(idcBytes)
+
+	keylessPk := &KeylessPublicKey{
+		IssVal: "https://accounts.google.com",
+		Idc:    *idc,
+	}
+
+	anyPk := &AnyPublicKey{
+		Variant: AnyPublicKeyVariantKeyless,
+		PubKey:  keylessPk,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(anyPk)
+	require.NoError(t, err)
+
+	// Deserialize
+	anyPk2 := &AnyPublicKey{}
+	err = bcs.Deserialize(anyPk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnyPublicKeyVariantKeyless, anyPk2.Variant)
+	keylessPk2, ok := anyPk2.PubKey.(*KeylessPublicKey)
+	require.True(t, ok)
+	assert.Equal(t, keylessPk.IssVal, keylessPk2.IssVal)
+}
+
+func TestKeyless_AnyPublicKey_FederatedKeylessVariant_BCSRoundTrip(t *testing.T) {
+	idcBytes := make([]byte, IdCommitmentNumBytes)
+	for i := range idcBytes {
+		idcBytes[i] = byte(i)
+	}
+	idc, _ := NewIdCommitment(idcBytes)
+
+	var jwkAddr types.AccountAddress
+	jwkAddr[31] = 0x01
+
+	fedPk := &FederatedKeylessPublicKey{
+		JwkAddr: jwkAddr,
+		Pk: KeylessPublicKey{
+			IssVal: "https://accounts.google.com",
+			Idc:    *idc,
+		},
+	}
+
+	anyPk := &AnyPublicKey{
+		Variant: AnyPublicKeyVariantFederatedKeyless,
+		PubKey:  fedPk,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(anyPk)
+	require.NoError(t, err)
+
+	// Deserialize
+	anyPk2 := &AnyPublicKey{}
+	err = bcs.Deserialize(anyPk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnyPublicKeyVariantFederatedKeyless, anyPk2.Variant)
+	fedPk2, ok := anyPk2.PubKey.(*FederatedKeylessPublicKey)
+	require.True(t, ok)
+	assert.Equal(t, fedPk.JwkAddr, fedPk2.JwkAddr)
+	assert.Equal(t, fedPk.Pk.IssVal, fedPk2.Pk.IssVal)
+}
+
+func TestKeyless_Groth16Proof_BCSRoundTrip(t *testing.T) {
+	var a G1Bytes
+	var b G2Bytes
+	var c G1Bytes
+
+	// Fill with test data
+	for i := range a {
+		a[i] = byte(i)
+	}
+	for i := range b {
+		b[i] = byte(i + 32)
+	}
+	for i := range c {
+		c[i] = byte(i + 96)
+	}
+
+	proof := &Groth16Proof{A: a, B: b, C: c}
+
+	// Serialize
+	data, err := bcs.Serialize(proof)
+	require.NoError(t, err)
+
+	// Deserialize
+	proof2 := &Groth16Proof{}
+	err = bcs.Deserialize(proof2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, proof.A, proof2.A)
+	assert.Equal(t, proof.B, proof2.B)
+	assert.Equal(t, proof.C, proof2.C)
+}
+
+func TestKeyless_ZeroKnowledgeSig_BCSRoundTrip(t *testing.T) {
+	var a G1Bytes
+	var b G2Bytes
+	var c G1Bytes
+
+	zkSig := &ZeroKnowledgeSig{
+		Proof: ZKP{
+			Variant: ZKPVariantGroth16,
+			Proof:   &Groth16Proof{A: a, B: b, C: c},
+		},
+		ExpHorizonSecs:          86400,
+		ExtraField:              nil,
+		OverrideAudVal:          nil,
+		TrainingWheelsSignature: nil,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(zkSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	zkSig2 := &ZeroKnowledgeSig{}
+	err = bcs.Deserialize(zkSig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, zkSig.ExpHorizonSecs, zkSig2.ExpHorizonSecs)
+	assert.Nil(t, zkSig2.ExtraField)
+	assert.Nil(t, zkSig2.OverrideAudVal)
+}
+
+func TestKeyless_ZeroKnowledgeSig_WithOptionalFields_BCSRoundTrip(t *testing.T) {
+	var a G1Bytes
+	var b G2Bytes
+	var c G1Bytes
+
+	extraField := `"key":"value"`
+	overrideAud := "custom-aud"
+
+	zkSig := &ZeroKnowledgeSig{
+		Proof: ZKP{
+			Variant: ZKPVariantGroth16,
+			Proof:   &Groth16Proof{A: a, B: b, C: c},
+		},
+		ExpHorizonSecs:          86400,
+		ExtraField:              &extraField,
+		OverrideAudVal:          &overrideAud,
+		TrainingWheelsSignature: nil,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(zkSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	zkSig2 := &ZeroKnowledgeSig{}
+	err = bcs.Deserialize(zkSig2, data)
+	require.NoError(t, err)
+
+	require.NotNil(t, zkSig2.ExtraField)
+	assert.Equal(t, extraField, *zkSig2.ExtraField)
+	require.NotNil(t, zkSig2.OverrideAudVal)
+	assert.Equal(t, overrideAud, *zkSig2.OverrideAudVal)
+}
+
+func TestKeyless_OpenIdSig_BCSRoundTrip(t *testing.T) {
+	var pepper Pepper
+	for i := range pepper {
+		pepper[i] = byte(i)
+	}
+
+	openIdSig := &OpenIdSig{
+		JwtSig:         []byte("signature-bytes"),
+		JwtPayloadJSON: `{"iss":"https://accounts.google.com","sub":"12345","aud":"app-id","nonce":"abc123"}`,
+		UidKey:         "sub",
+		EpkBlinder:     make([]byte, EpkBlinderNumBytes),
+		Pepper:         pepper,
+		IdcAudVal:      nil,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(openIdSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	openIdSig2 := &OpenIdSig{}
+	err = bcs.Deserialize(openIdSig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, openIdSig.JwtSig, openIdSig2.JwtSig)
+	assert.Equal(t, openIdSig.JwtPayloadJSON, openIdSig2.JwtPayloadJSON)
+	assert.Equal(t, openIdSig.UidKey, openIdSig2.UidKey)
+	assert.Equal(t, openIdSig.Pepper, openIdSig2.Pepper)
+}
+
+func TestKeyless_EphemeralPublicKey_Ed25519_BCSRoundTrip(t *testing.T) {
+	ed25519Key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	ed25519PubKey := ed25519Key.PubKey().(*Ed25519PublicKey)
+
+	epk := &EphemeralPublicKey{
+		Variant: EphemeralPublicKeyVariantEd25519,
+		PubKey:  ed25519PubKey,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(epk)
+	require.NoError(t, err)
+
+	// Deserialize
+	epk2 := &EphemeralPublicKey{}
+	err = bcs.Deserialize(epk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, EphemeralPublicKeyVariantEd25519, epk2.Variant)
+	ed25519Pub2, ok := epk2.PubKey.(*Ed25519PublicKey)
+	require.True(t, ok)
+	assert.Equal(t, ed25519PubKey.Bytes(), ed25519Pub2.Bytes())
+}
+
+func TestKeyless_EphemeralPublicKey_Secp256r1_BCSRoundTrip(t *testing.T) {
+	secp256r1Key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	secp256r1PubKey := secp256r1Key.VerifyingKey().(*Secp256r1PublicKey)
+
+	epk := &EphemeralPublicKey{
+		Variant: EphemeralPublicKeyVariantSecp256r1,
+		PubKey:  secp256r1PubKey,
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(epk)
+	require.NoError(t, err)
+
+	// Deserialize
+	epk2 := &EphemeralPublicKey{}
+	err = bcs.Deserialize(epk2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, EphemeralPublicKeyVariantSecp256r1, epk2.Variant)
+	secp256r1Pub2, ok := epk2.PubKey.(*Secp256r1PublicKey)
+	require.True(t, ok)
+	assert.Equal(t, secp256r1PubKey.Bytes(), secp256r1Pub2.Bytes())
+}
+
+func TestKeyless_KeylessSignature_BCSRoundTrip(t *testing.T) {
+	// Create a minimal keyless signature with OpenIdSig
+	var pepper Pepper
+	for i := range pepper {
+		pepper[i] = byte(i)
+	}
+
+	ed25519Key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	ed25519PubKey := ed25519Key.PubKey().(*Ed25519PublicKey)
+
+	msg := []byte("test message")
+	ed25519Sig, err := ed25519Key.SignMessage(msg)
+	require.NoError(t, err)
+
+	keylessSig := &KeylessSignature{
+		Cert: EphemeralCertificate{
+			Variant: EphemeralCertificateVariantOpenId,
+			Cert: &OpenIdSig{
+				JwtSig:         []byte("signature-bytes"),
+				JwtPayloadJSON: `{"iss":"https://accounts.google.com","sub":"12345"}`,
+				UidKey:         "sub",
+				EpkBlinder:     make([]byte, EpkBlinderNumBytes),
+				Pepper:         pepper,
+				IdcAudVal:      nil,
+			},
+		},
+		JwtHeaderJSON: `{"alg":"RS256","kid":"key-id-1"}`,
+		ExpDateSecs:   1700000000,
+		EphemeralPubkey: EphemeralPublicKey{
+			Variant: EphemeralPublicKeyVariantEd25519,
+			PubKey:  ed25519PubKey,
+		},
+		EphemeralSignature: EphemeralSignature{
+			Variant:   EphemeralSignatureVariantEd25519,
+			Signature: ed25519Sig,
+		},
+	}
+
+	// Serialize
+	data, err := bcs.Serialize(keylessSig)
+	require.NoError(t, err)
+
+	// Deserialize
+	keylessSig2 := &KeylessSignature{}
+	err = bcs.Deserialize(keylessSig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, keylessSig.JwtHeaderJSON, keylessSig2.JwtHeaderJSON)
+	assert.Equal(t, keylessSig.ExpDateSecs, keylessSig2.ExpDateSecs)
+	assert.Equal(t, EphemeralCertificateVariantOpenId, keylessSig2.Cert.Variant)
+}
+
+func TestKeyless_AnySignature_KeylessVariant_BCSRoundTrip(t *testing.T) {
+	var pepper Pepper
+
+	ed25519Key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	ed25519PubKey := ed25519Key.PubKey().(*Ed25519PublicKey)
+
+	msg := []byte("test message")
+	ed25519Sig, err := ed25519Key.SignMessage(msg)
+	require.NoError(t, err)
+
+	keylessSig := &KeylessSignature{
+		Cert: EphemeralCertificate{
+			Variant: EphemeralCertificateVariantOpenId,
+			Cert: &OpenIdSig{
+				JwtSig:         []byte("sig"),
+				JwtPayloadJSON: `{}`,
+				UidKey:         "sub",
+				EpkBlinder:     make([]byte, EpkBlinderNumBytes),
+				Pepper:         pepper,
+				IdcAudVal:      nil,
+			},
+		},
+		JwtHeaderJSON: `{}`,
+		ExpDateSecs:   1700000000,
+		EphemeralPubkey: EphemeralPublicKey{
+			Variant: EphemeralPublicKeyVariantEd25519,
+			PubKey:  ed25519PubKey,
+		},
+		EphemeralSignature: EphemeralSignature{
+			Variant:   EphemeralSignatureVariantEd25519,
+			Signature: ed25519Sig,
+		},
+	}
+
+	anySig := keylessSig.ToAnySignature()
+	assert.Equal(t, AnySignatureVariantKeyless, anySig.Variant)
+
+	// Serialize
+	data, err := bcs.Serialize(anySig)
+	require.NoError(t, err)
+
+	// Deserialize
+	anySig2 := &AnySignature{}
+	err = bcs.Deserialize(anySig2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnySignatureVariantKeyless, anySig2.Variant)
+	keylessSig2, ok := anySig2.Signature.(*KeylessSignature)
+	require.True(t, ok)
+	assert.Equal(t, keylessSig.ExpDateSecs, keylessSig2.ExpDateSecs)
 }
