@@ -47,6 +47,7 @@ package bcs
 
 import (
 	"errors"
+	"sync"
 )
 
 // Common errors for BCS operations.
@@ -60,6 +61,13 @@ var (
 	ErrOverflow         = errors.New("bcs: integer overflow")
 	ErrInvalidOptionLen = errors.New("bcs: option must have 0 or 1 elements")
 )
+
+// serializerPool provides reusable Serializers to reduce allocations.
+var serializerPool = sync.Pool{
+	New: func() interface{} {
+		return &Serializer{}
+	},
+}
 
 // Marshaler is an interface for types that can serialize themselves to BCS.
 //
@@ -87,12 +95,25 @@ func Serialize(v Marshaler) ([]byte, error) {
 	if v == nil {
 		return nil, ErrNilValue
 	}
-	ser := &Serializer{}
+
+	// Get serializer from pool to reduce allocations
+	ser := serializerPool.Get().(*Serializer)
+	ser.Reset()
+
 	v.MarshalBCS(ser)
+
 	if ser.err != nil {
-		return nil, ser.err
+		err := ser.err
+		serializerPool.Put(ser)
+		return nil, err
 	}
-	return ser.ToBytes(), nil
+
+	// Copy result before returning serializer to pool
+	result := make([]byte, len(ser.ToBytes()))
+	copy(result, ser.ToBytes())
+	serializerPool.Put(ser)
+
+	return result, nil
 }
 
 // Deserialize deserializes bytes into an Unmarshaler.

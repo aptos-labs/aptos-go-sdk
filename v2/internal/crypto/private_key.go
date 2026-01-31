@@ -39,6 +39,9 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (string, error)
 		// Remove AIP-80 prefix if present
 		if strings.HasPrefix(v, prefix) {
 			parts := strings.Split(v, "-")
+			if len(parts) != 3 {
+				return "", errors.New("invalid AIP-80 private key format: expected format is type-priv-hex")
+			}
 			v = parts[2]
 		}
 

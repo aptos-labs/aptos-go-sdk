@@ -37,7 +37,16 @@ func (ser *Serializer) ToBytes() []byte {
 }
 
 // Reset clears the serializer for reuse.
+// Zeroes the underlying buffer to prevent sensitive data leakage.
 func (ser *Serializer) Reset() {
+	// Clear sensitive data before resetting
+	// This is important for pooled serializers to prevent data leakage
+	if ser.out.Len() > 0 {
+		buf := ser.out.Bytes()
+		for i := range buf {
+			buf[i] = 0
+		}
+	}
 	ser.out.Reset()
 	ser.err = nil
 }
@@ -58,23 +67,23 @@ func (ser *Serializer) U8(v uint8) {
 
 // U16 serializes an unsigned 16-bit integer in little-endian format.
 func (ser *Serializer) U16(v uint16) {
-	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, v)
-	ser.out.Write(buf)
+	var buf [2]byte
+	binary.LittleEndian.PutUint16(buf[:], v)
+	ser.out.Write(buf[:])
 }
 
 // U32 serializes an unsigned 32-bit integer in little-endian format.
 func (ser *Serializer) U32(v uint32) {
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buf, v)
-	ser.out.Write(buf)
+	var buf [4]byte
+	binary.LittleEndian.PutUint32(buf[:], v)
+	ser.out.Write(buf[:])
 }
 
 // U64 serializes an unsigned 64-bit integer in little-endian format.
 func (ser *Serializer) U64(v uint64) {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, v)
-	ser.out.Write(buf)
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], v)
+	ser.out.Write(buf[:])
 }
 
 // U128 serializes an unsigned 128-bit integer in little-endian format.
@@ -94,23 +103,23 @@ func (ser *Serializer) I8(v int8) {
 
 // I16 serializes a signed 16-bit integer in little-endian format.
 func (ser *Serializer) I16(v int16) {
-	buf := make([]byte, 2)
-	binary.LittleEndian.PutUint16(buf, uint16(v))
-	ser.out.Write(buf)
+	var buf [2]byte
+	binary.LittleEndian.PutUint16(buf[:], uint16(v))
+	ser.out.Write(buf[:])
 }
 
 // I32 serializes a signed 32-bit integer in little-endian format.
 func (ser *Serializer) I32(v int32) {
-	buf := make([]byte, 4)
-	binary.LittleEndian.PutUint32(buf, uint32(v))
-	ser.out.Write(buf)
+	var buf [4]byte
+	binary.LittleEndian.PutUint32(buf[:], uint32(v))
+	ser.out.Write(buf[:])
 }
 
 // I64 serializes a signed 64-bit integer in little-endian format.
 func (ser *Serializer) I64(v int64) {
-	buf := make([]byte, 8)
-	binary.LittleEndian.PutUint64(buf, uint64(v))
-	ser.out.Write(buf)
+	var buf [8]byte
+	binary.LittleEndian.PutUint64(buf[:], uint64(v))
+	ser.out.Write(buf[:])
 }
 
 // I128 serializes a signed 128-bit integer in little-endian format.
