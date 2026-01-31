@@ -191,11 +191,16 @@ func (c *FastHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Respo
 		return nil, err
 	}
 
+	// Copy response body before releasing fresponse to avoid memory leak
+	// and ensure the body remains valid after ReleaseResponse
+	bodyBytes := make([]byte, len(fresponse.Body()))
+	copy(bodyBytes, fresponse.Body())
+
 	// Convert fasthttp response to net/http response
 	resp := &http.Response{
 		StatusCode: fresponse.StatusCode(),
 		Header:     make(http.Header),
-		Body:       io.NopCloser(bytes.NewReader(fresponse.Body())),
+		Body:       io.NopCloser(bytes.NewReader(bodyBytes)),
 		Request:    req,
 	}
 
@@ -203,8 +208,9 @@ func (c *FastHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Respo
 		resp.Header.Add(string(key), string(value))
 	})
 
-	// Note: We need to keep fresponse alive until body is read
-	// In a real implementation, you'd need a custom ReadCloser
+	// Release the fasthttp response now that we've copied all needed data
+	fasthttp.ReleaseResponse(fresponse)
+
 	return resp, nil
 }
 
