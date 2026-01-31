@@ -169,6 +169,8 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantEd25519, PubKey: k}, nil
 	case *Secp256k1PublicKey:
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantSecp256k1, PubKey: k}, nil
+	case *Secp256r1PublicKey:
+		return &AnyPublicKey{Variant: AnyPublicKeyVariantSecp256r1, PubKey: k}, nil
 	case *SlhDsaPublicKey:
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantSlhDsaSha2_128s, PubKey: k}, nil
 	case *AnyPublicKey:
@@ -257,8 +259,7 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 	case AnyPublicKeyVariantSecp256k1:
 		key.PubKey = &Secp256k1PublicKey{}
 	case AnyPublicKeyVariantSecp256r1:
-		des.SetError(fmt.Errorf("Secp256r1 public key deserialization not yet implemented"))
-		return
+		key.PubKey = &Secp256r1PublicKey{}
 	case AnyPublicKeyVariantKeyless:
 		des.SetError(fmt.Errorf("Keyless public key deserialization not yet implemented"))
 		return

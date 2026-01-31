@@ -15,6 +15,7 @@ type PrivateKeyVariant string
 const (
 	PrivateKeyVariantEd25519   PrivateKeyVariant = "ed25519"
 	PrivateKeyVariantSecp256k1 PrivateKeyVariant = "secp256k1"
+	PrivateKeyVariantSecp256r1 PrivateKeyVariant = "secp256r1"
 	PrivateKeyVariantSlhDsa    PrivateKeyVariant = "slhdsa"
 )
 
@@ -23,6 +24,7 @@ const (
 var AIP80Prefixes = map[PrivateKeyVariant]string{
 	PrivateKeyVariantEd25519:   "ed25519-priv-",
 	PrivateKeyVariantSecp256k1: "secp256k1-priv-",
+	PrivateKeyVariantSecp256r1: "secp256r1-priv-",
 	PrivateKeyVariantSlhDsa:    "slhdsa-priv-",
 }
 

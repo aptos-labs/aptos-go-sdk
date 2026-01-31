@@ -28,6 +28,11 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # V2 (Unreleased)
 
 ## New Features
+- [`Feature`] Add Secp256r1 (P-256/prime256v1) signature support
+  - `Secp256r1PrivateKey`, `Secp256r1PublicKey`, `Secp256r1Signature` types
+  - Full integration with `SingleSigner` and `AnyPublicKey`
+  - Uses Go standard library (`crypto/ecdsa`, `crypto/elliptic`)
+  - Commonly used with WebAuthn/passkeys
 - [`Feature`] Add SLH-DSA-SHA2-128s post-quantum signature support
   - `SlhDsaPrivateKey`, `SlhDsaPublicKey`, `SlhDsaSignature` types
   - Full integration with `SingleSigner` and `AnyPublicKey`/`AnySignature`

@@ -1,6 +1,7 @@
 package crypto
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -1570,4 +1571,315 @@ func TestSlhDsaPrivateKey_FromHex_Invalid(t *testing.T) {
 	key := &SlhDsaPrivateKey{}
 	err := key.FromHex("not-valid-hex")
 	require.Error(t, err)
+}
+
+// ============================================================================
+// Secp256r1 (P-256) Tests
+// ============================================================================
+
+func TestSecp256r1KeyGeneration(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+	assert.NotNil(t, key)
+	assert.NotNil(t, key.VerifyingKey())
+	assert.Len(t, key.Bytes(), Secp256r1PrivateKeyLength)
+}
+
+func TestSecp256r1SignAndVerify(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message for P-256 signing")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+	assert.Len(t, sig.Bytes(), Secp256r1SignatureLength)
+
+	pubKey := key.VerifyingKey()
+	r1PubKey, ok := pubKey.(*Secp256r1PublicKey)
+	require.True(t, ok, "expected Secp256r1PublicKey")
+	assert.True(t, r1PubKey.Verify(msg, sig))
+	assert.False(t, r1PubKey.Verify([]byte("wrong message"), sig))
+}
+
+func TestSecp256r1PublicKey_Bytes(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	bytes := pubKey.Bytes()
+	assert.Len(t, bytes, Secp256r1PublicKeyLength)
+	assert.Equal(t, byte(0x04), bytes[0], "uncompressed public key should start with 0x04")
+}
+
+func TestSecp256r1PublicKey_FromBytes(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	bytes := pubKey.Bytes()
+
+	pubKey2 := &Secp256r1PublicKey{}
+	err = pubKey2.FromBytes(bytes)
+	require.NoError(t, err)
+	assert.Equal(t, bytes, pubKey2.Bytes())
+}
+
+func TestSecp256r1PublicKey_Verify(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	assert.True(t, pubKey.Verify(msg, sig))
+	assert.False(t, pubKey.Verify([]byte("different"), sig))
+}
+
+func TestSecp256r1PublicKey_AuthKey(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	authKey := pubKey.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey.Bytes(), AuthenticationKeyLength)
+}
+
+func TestSecp256r1PublicKey_Scheme(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	assert.Equal(t, SingleKeyScheme, pubKey.Scheme())
+}
+
+func TestSecp256r1PublicKey_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	hex := pubKey.ToHex()
+	assert.True(t, len(hex) > 2) // "0x" + hex bytes
+
+	pubKey2 := &Secp256r1PublicKey{}
+	err = pubKey2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestSecp256r1PublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	data, err := bcs.Serialize(pubKey)
+	require.NoError(t, err)
+
+	pubKey2 := &Secp256r1PublicKey{}
+	err = bcs.Deserialize(pubKey2, data)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pubKey2.Bytes())
+}
+
+func TestSecp256r1Signature_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	r1Sig := sig.(*Secp256r1Signature)
+	hex := r1Sig.ToHex()
+
+	r1Sig2 := &Secp256r1Signature{}
+	err = r1Sig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, r1Sig.Bytes(), r1Sig2.Bytes())
+}
+
+func TestSecp256r1Signature_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	r1Sig := sig.(*Secp256r1Signature)
+	data, err := bcs.Serialize(r1Sig)
+	require.NoError(t, err)
+
+	r1Sig2 := &Secp256r1Signature{}
+	err = bcs.Deserialize(r1Sig2, data)
+	require.NoError(t, err)
+	assert.Equal(t, r1Sig.Bytes(), r1Sig2.Bytes())
+}
+
+func TestSecp256r1Authenticator(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	r1Sig := sig.(*Secp256r1Signature)
+
+	auth := &Secp256r1Authenticator{
+		PubKey: pubKey,
+		Sig:    r1Sig,
+	}
+
+	assert.Equal(t, pubKey, auth.PublicKey())
+	assert.Equal(t, r1Sig, auth.Signature())
+	assert.True(t, auth.Verify(msg))
+	assert.False(t, auth.Verify([]byte("wrong")))
+}
+
+func TestSecp256r1Authenticator_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	auth := &Secp256r1Authenticator{
+		PubKey: key.VerifyingKey().(*Secp256r1PublicKey),
+		Sig:    sig.(*Secp256r1Signature),
+	}
+
+	data, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+
+	auth2 := &Secp256r1Authenticator{}
+	err = bcs.Deserialize(auth2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, auth.PubKey.Bytes(), auth2.PubKey.Bytes())
+	assert.Equal(t, auth.Sig.Bytes(), auth2.Sig.Bytes())
+	assert.True(t, auth2.Verify(msg))
+}
+
+func TestSecp256r1PrivateKey_HexRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	hex := key.ToHex()
+	assert.True(t, len(hex) > 2)
+
+	key2 := &Secp256r1PrivateKey{}
+	err = key2.FromHex(hex)
+	require.NoError(t, err)
+
+	// Verify they produce the same public key
+	assert.Equal(t, key.VerifyingKey().(*Secp256r1PublicKey).Bytes(),
+		key2.VerifyingKey().(*Secp256r1PublicKey).Bytes())
+}
+
+func TestSecp256r1PrivateKey_String(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	// String() should return redacted output
+	str := key.String()
+	assert.Contains(t, str, "REDACTED")
+	assert.NotContains(t, str, key.ToHex())
+}
+
+func TestSecp256r1PrivateKey_ToAIP80(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	aip80, err := key.ToAIP80()
+	require.NoError(t, err)
+	assert.True(t, len(aip80) > 0)
+	assert.Contains(t, aip80, "secp256r1-priv-")
+}
+
+func TestSecp256r1_ToAnyPublicKey(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	anyPub, err := ToAnyPublicKey(pubKey)
+	require.NoError(t, err)
+	assert.Equal(t, AnyPublicKeyVariantSecp256r1, anyPub.Variant)
+	assert.Equal(t, pubKey, anyPub.PubKey)
+}
+
+func TestSecp256r1_AnyPublicKey_BCSRoundTrip(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256r1PublicKey)
+	anyPub, err := ToAnyPublicKey(pubKey)
+	require.NoError(t, err)
+
+	data, err := bcs.Serialize(anyPub)
+	require.NoError(t, err)
+
+	anyPub2 := &AnyPublicKey{}
+	err = bcs.Deserialize(anyPub2, data)
+	require.NoError(t, err)
+
+	assert.Equal(t, AnyPublicKeyVariantSecp256r1, anyPub2.Variant)
+	r1Pub, ok := anyPub2.PubKey.(*Secp256r1PublicKey)
+	require.True(t, ok)
+	assert.Equal(t, pubKey.Bytes(), r1Pub.Bytes())
+}
+
+func TestSecp256r1_SingleSigner(t *testing.T) {
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	signer := NewSecp256r1SingleSigner(key)
+	assert.NotNil(t, signer)
+
+	msg := []byte("test message")
+	auth, err := signer.Sign(msg)
+	require.NoError(t, err)
+	assert.Equal(t, AccountAuthenticatorSingleSender, auth.Variant)
+	assert.True(t, auth.Verify(msg))
+}
+
+func TestSecp256r1Signature_FromHex_Invalid(t *testing.T) {
+	sig := &Secp256r1Signature{}
+	err := sig.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSecp256r1PublicKey_FromHex_Invalid(t *testing.T) {
+	pub := &Secp256r1PublicKey{}
+	err := pub.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSecp256r1PrivateKey_FromHex_Invalid(t *testing.T) {
+	key := &Secp256r1PrivateKey{}
+	err := key.FromHex("not-valid-hex")
+	require.Error(t, err)
+}
+
+func TestSecp256r1Signature_LowS(t *testing.T) {
+	// Test that signatures have normalized (low) s values
+	key, err := GenerateSecp256r1Key()
+	require.NoError(t, err)
+
+	// Sign multiple messages and verify s is always in low form
+	for i := 0; i < 10; i++ {
+		msg := []byte(fmt.Sprintf("test message %d", i))
+		sig, err := key.SignMessage(msg)
+		require.NoError(t, err)
+
+		// Verify the signature can be deserialized (which checks low s)
+		r1Sig := sig.(*Secp256r1Signature)
+		sig2 := &Secp256r1Signature{}
+		err = sig2.FromBytes(r1Sig.Bytes())
+		require.NoError(t, err)
+	}
 }
