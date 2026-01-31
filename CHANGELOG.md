@@ -28,6 +28,11 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 # V2 (Unreleased)
 
 ## New Features
+- [`Feature`] Add SLH-DSA-SHA2-128s post-quantum signature support
+  - `SlhDsaPrivateKey`, `SlhDsaPublicKey`, `SlhDsaSignature` types
+  - Full integration with `SingleSigner` and `AnyPublicKey`/`AnySignature`
+  - Uses Cloudflare CIRCL library (FIPS 205 compliant)
+  - 32-byte public keys, 64-byte private keys, 7,856-byte signatures
 - [`Feature`] Add `codegen` package for generating type-safe Go bindings from Move ABIs
   - Generate Go structs from Move struct definitions
   - Generate entry function wrappers with automatic argument encoding
