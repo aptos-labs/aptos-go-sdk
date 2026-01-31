@@ -7,10 +7,15 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
+	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
 )
+
+// Note: We intentionally do NOT pool big.Int values used in cryptographic operations
+// because clearing them properly is difficult and could leak sensitive data between
+// operations. The small allocation overhead is acceptable for security.
 
 // Secp256r1 (P-256/prime256v1) key and signature sizes.
 const (
@@ -31,11 +36,18 @@ const (
 //	signer := crypto.NewSingleSigner(key)
 //	auth, _ := signer.Sign(txnBytes)
 //
+// Secp256r1PrivateKey is safe for concurrent use. Cached values are protected by a mutex.
+//
 // Implements:
 //   - [MessageSigner]
 //   - [CryptoMaterial]
 type Secp256r1PrivateKey struct {
 	Inner *ecdsa.PrivateKey
+
+	// mu protects cached values for concurrent access
+	mu sync.RWMutex
+	// Cached public key to avoid repeated derivation
+	cachedPubKey *Secp256r1PublicKey
 }
 
 // GenerateSecp256r1Key generates a new random Secp256r1 (P-256) key pair.
@@ -75,10 +87,26 @@ func (key *Secp256r1PrivateKey) EmptySignature() Signature {
 }
 
 // VerifyingKey returns the public key for verification.
+// The result is cached after the first call to avoid repeated derivation. Thread-safe.
 //
 // Implements [MessageSigner].
 func (key *Secp256r1PrivateKey) VerifyingKey() VerifyingKey {
-	return &Secp256r1PublicKey{Inner: &key.Inner.PublicKey}
+	key.mu.RLock()
+	if key.cachedPubKey != nil {
+		cached := key.cachedPubKey
+		key.mu.RUnlock()
+		return cached
+	}
+	key.mu.RUnlock()
+
+	key.mu.Lock()
+	defer key.mu.Unlock()
+	// Double-check after acquiring write lock
+	if key.cachedPubKey != nil {
+		return key.cachedPubKey
+	}
+	key.cachedPubKey = &Secp256r1PublicKey{Inner: &key.Inner.PublicKey}
+	return key.cachedPubKey
 }
 
 // Bytes returns the raw private key bytes (32 bytes).
@@ -96,6 +124,7 @@ func (key *Secp256r1PrivateKey) Bytes() []byte {
 }
 
 // FromBytes loads the private key from bytes.
+// This clears any cached public key. Thread-safe.
 //
 // Implements [CryptoMaterial].
 func (key *Secp256r1PrivateKey) FromBytes(bytes []byte) error {
@@ -109,15 +138,25 @@ func (key *Secp256r1PrivateKey) FromBytes(bytes []byte) error {
 
 	curve := elliptic.P256()
 	d := new(big.Int).SetBytes(bytes)
+	one := big.NewInt(1)
+	n := curve.Params().N
 
-	// Validate that d is in valid range
-	if d.Cmp(big.NewInt(1)) < 0 || d.Cmp(curve.Params().N) >= 0 {
+	// Validate that d is in valid range [1, n-1]
+	if d.Cmp(one) < 0 || d.Cmp(n) >= 0 {
 		return errors.New("secp256r1 private key out of range")
+	}
+
+	// Reject weak keys (d = 1 or d = n-1)
+	nMinusOne := new(big.Int).Sub(n, one)
+	if d.Cmp(one) == 0 || d.Cmp(nMinusOne) == 0 {
+		return errors.New("secp256r1 private key is weak")
 	}
 
 	// Derive public key
 	x, y := curve.ScalarBaseMult(bytes)
 
+	key.mu.Lock()
+	defer key.mu.Unlock()
 	key.Inner = &ecdsa.PrivateKey{
 		PublicKey: ecdsa.PublicKey{
 			Curve: curve,
@@ -126,6 +165,8 @@ func (key *Secp256r1PrivateKey) FromBytes(bytes []byte) error {
 		},
 		D: d,
 	}
+	// Clear cached value since key changed
+	key.cachedPubKey = nil
 	return nil
 }
 
@@ -308,11 +349,12 @@ func (s *Secp256r1Signature) FromBytes(bytes []byte) error {
 	r := new(big.Int).SetBytes(bytes[0:32])
 	sVal := new(big.Int).SetBytes(bytes[32:64])
 	n := elliptic.P256().Params().N
+	one := big.NewInt(1)
 
-	if r.Cmp(big.NewInt(1)) < 0 || r.Cmp(n) >= 0 {
+	if r.Cmp(one) < 0 || r.Cmp(n) >= 0 {
 		return errors.New("secp256r1 signature: r out of range")
 	}
-	if sVal.Cmp(big.NewInt(1)) < 0 || sVal.Cmp(n) >= 0 {
+	if sVal.Cmp(one) < 0 || sVal.Cmp(n) >= 0 {
 		return errors.New("secp256r1 signature: s out of range")
 	}
 
@@ -365,13 +407,24 @@ func (s *Secp256r1Signature) UnmarshalBCS(des *bcs.Deserializer) {
 }
 
 // setRS sets the r and s values in the signature.
+// Panics if r or s exceeds 32 bytes (should never happen with valid P-256 values).
 func (s *Secp256r1Signature) setRS(r, sVal *big.Int) {
 	rBytes := r.Bytes()
 	sBytes := sVal.Bytes()
 
-	// Pad r to 32 bytes
+	// Bounds check to prevent buffer underflow
+	if len(rBytes) > 32 || len(sBytes) > 32 {
+		panic("secp256r1: signature component exceeds 32 bytes")
+	}
+
+	// Clear the signature buffer first
+	for i := range s.Inner {
+		s.Inner[i] = 0
+	}
+
+	// Pad r to 32 bytes (right-aligned)
 	copy(s.Inner[32-len(rBytes):32], rBytes)
-	// Pad s to 32 bytes
+	// Pad s to 32 bytes (right-aligned)
 	copy(s.Inner[64-len(sBytes):64], sBytes)
 }
 
@@ -384,6 +437,7 @@ func (s *Secp256r1Signature) getRS() (*big.Int, *big.Int) {
 
 // normalizeS ensures s is in the lower half of the curve order.
 // This prevents signature malleability.
+// Returns a new big.Int if normalization is needed, otherwise returns the original.
 func normalizeS(s *big.Int, n *big.Int) *big.Int {
 	halfN := new(big.Int).Rsh(n, 1)
 	if s.Cmp(halfN) > 0 {

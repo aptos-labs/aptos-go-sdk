@@ -69,6 +69,27 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   - Support for mainnet and testnet router addresses
 - [`Feature`] Support signed integers (i8, i16, i32, i64, i128, i256) as arguments
 
+## Security
+- [`Security`] Add thread-safety to all private key types with proper mutex protection
+  - `Ed25519PrivateKey`, `Secp256k1PrivateKey`, `Secp256r1PrivateKey` now use `sync.RWMutex`
+  - `SingleSigner` now uses `sync.RWMutex` for cached values
+  - Double-checked locking pattern prevents race conditions (documented)
+- [`Security`] Prevent sensitive data leakage in pooled resources
+  - `Serializer.Reset()` now zeroes buffer memory before reuse
+  - Buffer pools validate both length AND capacity before accepting returns
+  - Prevents cryptographic data from leaking between pooled operations
+- [`Security`] Redact private keys in `String()` methods to prevent accidental logging
+  - `Ed25519PrivateKey.String()` and `Secp256k1PrivateKey.String()` now return redacted output
+  - Use `ToAIP80()` to get actual private key string when needed
+- [`Security`] Add bounds checking in `MultiKey.Verify()` to prevent index out-of-bounds panics
+  - Validates bitmap indices against public key array length
+  - Checks for duplicate indices and bitmap/signature count consistency
+- [`Security`] Add weak key rejection in Secp256r1 private key parsing
+  - Rejects d=1 and d=n-1 as weak keys
+- [`Security`] Add bounds checking in `Secp256r1Signature.setRS()` to prevent buffer underflow
+- [`Security`] Fix AIP-80 parsing to validate split results before accessing array elements
+- [`Security`] Improve `MultiKeyBitmap.Indices()` to use `numBits` as iteration limit
+
 ## Bug Fixes
 - [`Fix`][`Breaking`] Fix `MultiKeyBitmap` serialization to comply with Aptos BitVec specification
   - Bitmap now correctly serializes `num_bits` as u16 little-endian before the bytes
@@ -76,6 +97,24 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   - Added `NewMultiKeyBitmap(numKeys)` and `SetNumKeys(numKeys)` helpers
 - [`Fix`] Add missing `AnyPublicKey` variants: `Secp256r1` (2), `Keyless` (3), `FederatedKeyless` (4), `SlhDsaSha2_128s` (5)
 - [`Fix`] Add missing `AnySignature` variants: `WebAuthn` (2), `Keyless` (3), `SlhDsaSha2_128s` (4)
+
+## Performance
+- [`Perf`] Reduce allocations in BCS serialization
+  - Use stack-allocated arrays for U16/U32/U64/I16/I32/I64 serialization
+  - Add `sync.Pool` for `Serializer` reuse in hot paths
+- [`Perf`] Add `sync.Pool` for SHA3-256 hashers in `util.Sha3256Hash`
+- [`Perf`] Pre-allocate exact buffer sizes in `Secp256k1Signature.Bytes()`
+- [`Perf`] Optimize WebAuthn verification data generation
+- [`Perf`] Cache public keys in private key structs (Ed25519, Secp256k1, Secp256r1)
+  - Avoid repeated derivation on `PubKey()` / `VerifyingKey()` calls
+  - Thread-safe with proper mutex protection
+- [`Perf`] Cache authentication keys in `Ed25519PrivateKey` and `SingleSigner`
+  - Avoid repeated SHA3-256 hashing on `AuthKey()` calls
+- [`Perf`] Optimize `AccountAddress.String()` for special addresses
+  - Pre-computed string table for addresses 0x0-0xf avoids `fmt.Sprintf`
+- [`Perf`] Optimize `ParseAddress` to avoid string concatenation for odd-length hex
+- [`Perf`] Optimize `BytesToHex` with direct encoding (avoids `hex.EncodeToString` overhead)
+- [`Perf`] Add byte buffer pools (`GetBuffer32`, `GetBuffer64`) for common sizes
 
 ## Improvements
 - [`Doc`] Comprehensive documentation improvements across all packages

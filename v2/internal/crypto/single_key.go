@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
@@ -13,6 +14,8 @@ import (
 // SingleSigner uses the SingleKeyScheme for address derivation, which supports
 // multiple key types including Ed25519 and Secp256k1.
 //
+// SingleSigner is safe for concurrent use. Cached values are protected by a mutex.
+//
 // Example:
 //
 //	secpKey, _ := crypto.GenerateSecp256k1Key()
@@ -22,6 +25,12 @@ import (
 // Implements [Signer].
 type SingleSigner struct {
 	inner MessageSigner
+
+	// mu protects cached values for concurrent access
+	mu sync.RWMutex
+	// Cached values to avoid repeated computation
+	cachedPubKey  *AnyPublicKey
+	cachedAuthKey *AuthenticationKey
 }
 
 // NewSingleSigner creates a new SingleSigner from a MessageSigner.
@@ -89,23 +98,59 @@ func (s *SingleSigner) SimulationAuthenticator() *AccountAuthenticator {
 }
 
 // AuthKey returns the AuthenticationKey derived from this signer.
+// The result is cached after the first call. Thread-safe.
 //
 // Implements [Signer].
 func (s *SingleSigner) AuthKey() *AuthenticationKey {
+	s.mu.RLock()
+	if s.cachedAuthKey != nil {
+		cached := s.cachedAuthKey
+		s.mu.RUnlock()
+		return cached
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Double-check after acquiring write lock
+	if s.cachedAuthKey != nil {
+		return s.cachedAuthKey
+	}
 	out := &AuthenticationKey{}
-	out.FromPublicKey(s.PubKey())
+	out.FromPublicKey(s.pubKeyLocked())
+	s.cachedAuthKey = out
 	return out
 }
 
 // PubKey returns the AnyPublicKey for this signer.
+// The result is cached after the first call to avoid repeated computation. Thread-safe.
 //
 // Implements [Signer].
 func (s *SingleSigner) PubKey() PublicKey {
+	s.mu.RLock()
+	if s.cachedPubKey != nil {
+		cached := s.cachedPubKey
+		s.mu.RUnlock()
+		return cached
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.pubKeyLocked()
+}
+
+// pubKeyLocked returns the public key, must be called with mu held.
+func (s *SingleSigner) pubKeyLocked() *AnyPublicKey {
+	if s.cachedPubKey != nil {
+		return s.cachedPubKey
+	}
 	innerPubKey := s.inner.VerifyingKey()
-	return &AnyPublicKey{
+	s.cachedPubKey = &AnyPublicKey{
 		Variant: s.publicKeyVariant(),
 		PubKey:  innerPubKey,
 	}
+	return s.cachedPubKey
 }
 
 // EmptySignature returns an empty AnySignature for simulation.

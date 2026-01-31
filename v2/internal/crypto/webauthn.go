@@ -228,13 +228,14 @@ func (p *PartialAuthenticatorAssertionResponse) GetChallenge() ([]byte, error) {
 // generateVerificationData creates the data that was signed by the authenticator.
 // This is the binary concatenation of authenticator_data and SHA-256(client_data_json).
 func (p *PartialAuthenticatorAssertionResponse) generateVerificationData() []byte {
-	// SHA-256 hash of client data JSON
+	// SHA-256 hash of client data JSON (32 bytes)
 	clientDataHash := sha256.Sum256(p.ClientDataJSON)
 
-	// Concatenate authenticator data and client data hash
-	verificationData := make([]byte, len(p.AuthenticatorData)+len(clientDataHash))
-	copy(verificationData, p.AuthenticatorData)
-	copy(verificationData[len(p.AuthenticatorData):], clientDataHash[:])
+	// Pre-allocate exact size: authenticator_data + 32 bytes hash
+	authDataLen := len(p.AuthenticatorData)
+	verificationData := make([]byte, authDataLen+32)
+	copy(verificationData[:authDataLen], p.AuthenticatorData)
+	copy(verificationData[authDataLen:], clientDataHash[:])
 
 	return verificationData
 }

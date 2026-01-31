@@ -44,8 +44,36 @@ func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 		return false
 	}
 
+	// Get bitmap indices and validate consistency
+	bitmapIndices := sig.Bitmap.Indices()
+
+	// Verify bitmap indices count matches signature count
+	if len(bitmapIndices) != len(sig.Signatures) {
+		return false
+	}
+
+	// Verify minimum required signatures
+	if len(bitmapIndices) < int(key.SignaturesRequired) {
+		return false
+	}
+
+	// Check for duplicate indices and verify bounds
+	seen := make(map[uint8]bool, len(bitmapIndices))
+	for _, idx := range bitmapIndices {
+		if seen[idx] {
+			return false // Duplicate index
+		}
+		seen[idx] = true
+		if int(idx) >= len(key.PubKeys) {
+			return false // Index out of bounds
+		}
+	}
+
 	// Verify each signature in the bitmap
-	for sigIndex, keyIndex := range sig.Bitmap.Indices() {
+	for sigIndex, keyIndex := range bitmapIndices {
+		if sigIndex >= len(sig.Signatures) {
+			return false // Signature index out of bounds
+		}
 		auth := &AccountAuthenticator{}
 		err := auth.FromKeyAndSignature(key.PubKeys[keyIndex], sig.Signatures[sigIndex])
 		if err != nil || !auth.Verify(msg) {
@@ -369,7 +397,12 @@ func (bm *MultiKeyBitmap) SetNumKeys(numKeys uint8) {
 // Indices returns the key indices that have signed.
 func (bm *MultiKeyBitmap) Indices() []uint8 {
 	var indices []uint8
-	for i := uint8(0); i < MaxMultiKeySignatures; i++ {
+	// Use numBits as the limit, capped at MaxMultiKeySignatures
+	maxBits := uint8(bm.numBits)
+	if maxBits > MaxMultiKeySignatures {
+		maxBits = MaxMultiKeySignatures
+	}
+	for i := uint8(0); i < maxBits; i++ {
 		if bm.ContainsKey(i) {
 			indices = append(indices, i)
 		}
