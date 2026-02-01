@@ -15,11 +15,11 @@ jobs:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ env.GIT_SHA }}
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v6
         with:
           go-version: ">=1.24"
 
@@ -37,7 +37,7 @@ jobs:
 
       # Upload v2 coverage to Codecov
       - name: Upload v2 coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         with:
           files: ./v2/coverage.out
           flags: v2
@@ -49,7 +49,7 @@ jobs:
 
       # Upload v1 coverage to Codecov (if available)
       - name: Upload v1 coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v5
         if: hashFiles('coverage-v1.out') != ''
         with:
           files: ./coverage-v1.out
