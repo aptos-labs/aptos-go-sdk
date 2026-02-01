@@ -1841,11 +1841,22 @@ func TestSecp256r1_SingleSigner(t *testing.T) {
 	signer := NewSecp256r1SingleSigner(key)
 	assert.NotNil(t, signer)
 
+	// Secp256r1 cannot be used for direct signing - must use WebAuthn
 	msg := []byte("test message")
-	auth, err := signer.Sign(msg)
-	require.NoError(t, err)
-	assert.Equal(t, AccountAuthenticatorSingleSender, auth.Variant)
-	assert.True(t, auth.Verify(msg))
+	_, err = signer.Sign(msg)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "secp256r1 keys cannot be used for direct signing")
+
+	// But public key derivation should work
+	pubKey := signer.PubKey()
+	assert.NotNil(t, pubKey)
+	anyPubKey, ok := pubKey.(*AnyPublicKey)
+	require.True(t, ok)
+	assert.Equal(t, AnyPublicKeyVariantSecp256r1, anyPubKey.Variant)
+
+	// Auth key derivation should also work
+	authKey := signer.AuthKey()
+	assert.NotNil(t, authKey)
 }
 
 func TestSecp256r1Signature_FromHex_Invalid(t *testing.T) {
