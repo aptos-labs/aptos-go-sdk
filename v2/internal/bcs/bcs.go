@@ -110,8 +110,9 @@ func Serialize(v Marshaler) ([]byte, error) {
 	}
 
 	// Copy result before returning serializer to pool
-	result := make([]byte, len(ser.ToBytes()))
-	copy(result, ser.ToBytes())
+	b := ser.ToBytes()
+	result := make([]byte, len(b))
+	copy(result, b)
 	ser.Reset() // Clear buffer before returning to pool
 	serializerPool.Put(ser)
 

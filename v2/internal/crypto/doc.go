@@ -61,10 +61,14 @@
 // # Thread Safety
 //
 // Private key types (Ed25519PrivateKey, Secp256k1PrivateKey, Secp256r1PrivateKey)
-// are thread-safe. Cached public keys and authentication keys are protected by
-// sync.RWMutex using double-checked locking.
+// are safe for concurrent read-only use (e.g., signing and verification) after
+// initialization. Callers must not concurrently mutate the underlying key material
+// (for example via FromBytes) while performing cryptographic operations. Cached
+// public keys and authentication keys are protected internally by sync.RWMutex
+// using double-checked locking.
 //
-// Public key and signature types are immutable after creation and safe to share.
+// Public key and signature types are immutable after creation and safe to share
+// across goroutines.
 //
 // # Security Considerations
 //

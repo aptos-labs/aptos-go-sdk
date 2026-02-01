@@ -48,6 +48,13 @@ const (
 
 	// MaxIssValLen is the maximum length of an issuer value.
 	MaxIssValLen = 200
+
+	// MaxExtraFieldLen is the maximum length of the ZKP extra field (DoS protection).
+	MaxExtraFieldLen = 512
+
+	// MaxJwtHeaderLen is the maximum length of a JWT header JSON (DoS protection).
+	// JWT headers are typically small, containing algorithm and key ID.
+	MaxJwtHeaderLen = 1024
 )
 
 // Pepper is used to create a hiding identity commitment (IDC) when deriving a keyless address.
@@ -407,13 +414,19 @@ func (z *ZeroKnowledgeSig) UnmarshalBCS(des *bcs.Deserializer) {
 
 	// Optional extra field
 	if des.Bool() {
-		s := des.ReadString()
+		s := des.ReadBoundedString(MaxExtraFieldLen)
+		if des.Error() != nil {
+			return
+		}
 		z.ExtraField = &s
 	}
 
 	// Optional override aud val
 	if des.Bool() {
-		s := des.ReadString()
+		s := des.ReadBoundedString(MaxAudValLen)
+		if des.Error() != nil {
+			return
+		}
 		z.OverrideAudVal = &s
 	}
 
@@ -682,7 +695,7 @@ func (s *KeylessSignature) UnmarshalBCS(des *bcs.Deserializer) {
 		return
 	}
 
-	s.JwtHeaderJSON = des.ReadString()
+	s.JwtHeaderJSON = des.ReadBoundedString(MaxJwtHeaderLen)
 	if des.Error() != nil {
 		return
 	}
