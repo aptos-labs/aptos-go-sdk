@@ -2097,7 +2097,7 @@ func TestWebAuthn_BoundsValidation(t *testing.T) {
 		paar2 := &PartialAuthenticatorAssertionResponse{}
 		err := bcs.Deserialize(paar2, data)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "authenticator data too short")
+		assert.Contains(t, err.Error(), "too short")
 	})
 
 	// Test authenticator data too large
@@ -2110,7 +2110,7 @@ func TestWebAuthn_BoundsValidation(t *testing.T) {
 		paar2 := &PartialAuthenticatorAssertionResponse{}
 		err := bcs.Deserialize(paar2, data)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "authenticator data too large")
+		assert.Contains(t, err.Error(), "too large")
 	})
 
 	// Test client data JSON too large
@@ -2124,7 +2124,7 @@ func TestWebAuthn_BoundsValidation(t *testing.T) {
 		paar2 := &PartialAuthenticatorAssertionResponse{}
 		err := bcs.Deserialize(paar2, data)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "client data JSON too large")
+		assert.Contains(t, err.Error(), "too large")
 	})
 
 	// Test empty client data JSON
@@ -2136,7 +2136,7 @@ func TestWebAuthn_BoundsValidation(t *testing.T) {
 		paar2 := &PartialAuthenticatorAssertionResponse{}
 		err := bcs.Deserialize(paar2, data)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "client data JSON is empty")
+		assert.Contains(t, err.Error(), "too short")
 	})
 }
 

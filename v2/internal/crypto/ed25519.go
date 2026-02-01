@@ -18,7 +18,9 @@ import (
 // to be wrapped with SingleSigner). This uses the legacy Ed25519Scheme for
 // backward compatibility.
 //
-// Ed25519PrivateKey is safe for concurrent use. Cached values are protected by a mutex.
+// Ed25519PrivateKey protects its cached values with a mutex for concurrent reads.
+// The underlying key material in Inner must not be mutated concurrently with
+// operations that read it (such as signing).
 //
 // Implements:
 //   - [Signer]
