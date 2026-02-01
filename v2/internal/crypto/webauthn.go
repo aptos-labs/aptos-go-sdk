@@ -158,33 +158,15 @@ func (p *PartialAuthenticatorAssertionResponse) UnmarshalBCS(des *bcs.Deserializ
 		return
 	}
 
-	p.AuthenticatorData = des.ReadBytes()
+	// Use bounded read to validate size BEFORE allocation (DoS protection)
+	p.AuthenticatorData = des.ReadBoundedBytes(MinAuthenticatorDataBytes, MaxAuthenticatorDataBytes)
 	if des.Error() != nil {
 		return
 	}
 
-	// Validate authenticator data bounds
-	if len(p.AuthenticatorData) < MinAuthenticatorDataBytes {
-		des.SetError(fmt.Errorf("authenticator data too short: %d < %d", len(p.AuthenticatorData), MinAuthenticatorDataBytes))
-		return
-	}
-	if len(p.AuthenticatorData) > MaxAuthenticatorDataBytes {
-		des.SetError(fmt.Errorf("authenticator data too large: %d > %d", len(p.AuthenticatorData), MaxAuthenticatorDataBytes))
-		return
-	}
-
-	p.ClientDataJSON = des.ReadBytes()
+	// Use bounded read for client data JSON (DoS protection)
+	p.ClientDataJSON = des.ReadBoundedBytes(1, MaxClientDataJSONBytes)
 	if des.Error() != nil {
-		return
-	}
-
-	// Validate client data JSON bounds
-	if len(p.ClientDataJSON) == 0 {
-		des.SetError(fmt.Errorf("client data JSON is empty"))
-		return
-	}
-	if len(p.ClientDataJSON) > MaxClientDataJSONBytes {
-		des.SetError(fmt.Errorf("client data JSON too large: %d > %d", len(p.ClientDataJSON), MaxClientDataJSONBytes))
 		return
 	}
 }
@@ -281,7 +263,9 @@ func (p *PartialAuthenticatorAssertionResponse) Verify(msg []byte, pubKey *AnyPu
 		if !ok {
 			return false
 		}
-		// For WebAuthn, we verify directly over the verification data without additional hashing
+		// For WebAuthn (ES256), the signature is over SHA-256(authenticatorData || clientDataHash).
+		// Here, verificationData is (authenticatorData || clientDataHash), and verifySecp256r1Raw
+		// performs the required SHA-256 before calling ecdsa.Verify.
 		return p.verifySecp256r1Raw(verificationData, secp256r1PubKey)
 	default:
 		return false

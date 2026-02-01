@@ -31,6 +31,23 @@ const (
 
 	// EpkBlinderNumBytes is the size of the EPK blinder.
 	EpkBlinderNumBytes = 31
+
+	// MaxJwtSigLen is the maximum length of a JWT signature (DoS protection).
+	// RSA-4096 signatures are 512 bytes; this allows room for future algorithms.
+	MaxJwtSigLen = 1024
+
+	// MaxJwtPayloadLen is the maximum length of a JWT payload JSON (DoS protection).
+	// Standard JWTs should be under 8KB.
+	MaxJwtPayloadLen = 16384
+
+	// MaxUidKeyLen is the maximum length of a uid key string.
+	MaxUidKeyLen = 128
+
+	// MaxAudValLen is the maximum length of an audience value override.
+	MaxAudValLen = 512
+
+	// MaxIssValLen is the maximum length of an issuer value.
+	MaxIssValLen = 200
 )
 
 // Pepper is used to create a hiding identity commitment (IDC) when deriving a keyless address.
@@ -53,16 +70,26 @@ type IdCommitment struct {
 }
 
 // NewIdCommitment creates a new identity commitment from bytes.
+// The input bytes are copied to prevent external mutation after construction.
 func NewIdCommitment(bytes []byte) (*IdCommitment, error) {
 	if len(bytes) != IdCommitmentNumBytes {
 		return nil, fmt.Errorf("invalid identity commitment length: expected %d, got %d", IdCommitmentNumBytes, len(bytes))
 	}
-	return &IdCommitment{inner: bytes}, nil
+	// Defensively copy the input bytes so callers cannot mutate the commitment after construction
+	inner := make([]byte, IdCommitmentNumBytes)
+	copy(inner, bytes)
+	return &IdCommitment{inner: inner}, nil
 }
 
-// Bytes returns the raw bytes of the identity commitment.
+// Bytes returns a copy of the raw bytes of the identity commitment.
+// The returned slice is a copy to prevent external mutation.
 func (idc *IdCommitment) Bytes() []byte {
-	return idc.inner
+	if idc == nil || idc.inner == nil {
+		return nil
+	}
+	out := make([]byte, len(idc.inner))
+	copy(out, idc.inner)
+	return out
 }
 
 // MarshalBCS serializes the identity commitment to BCS.
@@ -155,7 +182,8 @@ func (key *KeylessPublicKey) MarshalBCS(ser *bcs.Serializer) {
 
 // UnmarshalBCS deserializes the keyless public key from BCS.
 func (key *KeylessPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
-	key.IssVal = des.ReadString()
+	// Use bounded read for issuer value (DoS protection)
+	key.IssVal = des.ReadBoundedString(MaxIssValLen)
 	if des.Error() != nil {
 		return
 	}
@@ -436,23 +464,26 @@ func (o *OpenIdSig) MarshalBCS(ser *bcs.Serializer) {
 }
 
 // UnmarshalBCS deserializes the OpenIdSig from BCS.
+// Uses bounded reads to prevent DoS attacks from oversized payloads.
 func (o *OpenIdSig) UnmarshalBCS(des *bcs.Deserializer) {
-	o.JwtSig = des.ReadBytes()
+	// Use bounded reads to validate size BEFORE allocation (DoS protection)
+	o.JwtSig = des.ReadBoundedBytes(1, MaxJwtSigLen)
 	if des.Error() != nil {
 		return
 	}
 
-	o.JwtPayloadJSON = des.ReadString()
+	o.JwtPayloadJSON = des.ReadBoundedString(MaxJwtPayloadLen)
 	if des.Error() != nil {
 		return
 	}
 
-	o.UidKey = des.ReadString()
+	o.UidKey = des.ReadBoundedString(MaxUidKeyLen)
 	if des.Error() != nil {
 		return
 	}
 
-	o.EpkBlinder = des.ReadBytes()
+	// EPK blinder has a fixed size
+	o.EpkBlinder = des.ReadBoundedBytes(EpkBlinderNumBytes, EpkBlinderNumBytes)
 	if des.Error() != nil {
 		return
 	}
@@ -464,7 +495,7 @@ func (o *OpenIdSig) UnmarshalBCS(des *bcs.Deserializer) {
 
 	// Optional idc_aud_val
 	if des.Bool() {
-		s := des.ReadString()
+		s := des.ReadBoundedString(MaxAudValLen)
 		o.IdcAudVal = &s
 	}
 }

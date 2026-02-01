@@ -27,7 +27,10 @@ const (
 //	signer := crypto.NewSingleSigner(key)
 //	auth, _ := signer.Sign(txnBytes)
 //
-// Secp256k1PrivateKey is safe for concurrent use. Cached values are protected by a mutex.
+// Secp256k1PrivateKey supports concurrent read-only use after initialization.
+// The mutex protects cached values (such as the derived public key), but callers
+// must not mutate the underlying key material (e.g., via FromBytes) concurrently
+// with signing or other operations that use the key.
 //
 // Implements:
 //   - [MessageSigner]

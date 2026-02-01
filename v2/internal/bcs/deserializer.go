@@ -248,6 +248,53 @@ func (des *Deserializer) ReadBytes() []byte {
 	return des.ReadFixedBytes(int(length))
 }
 
+// ReadBoundedBytes deserializes a byte slice with bounds checking BEFORE allocation.
+// This provides DoS protection by rejecting oversized payloads before allocating memory.
+// Returns nil and sets error if length is outside [minLen, maxLen].
+func (des *Deserializer) ReadBoundedBytes(minLen, maxLen int) []byte {
+	if des.err != nil {
+		return nil
+	}
+
+	length := des.Uleb128()
+	if des.err != nil {
+		return nil
+	}
+
+	// Validate bounds BEFORE allocation to prevent DoS
+	if int(length) < minLen {
+		des.SetError(fmt.Errorf("byte slice too short: %d < %d", length, minLen))
+		return nil
+	}
+	if int(length) > maxLen {
+		des.SetError(fmt.Errorf("byte slice too large: %d > %d", length, maxLen))
+		return nil
+	}
+
+	return des.ReadFixedBytes(int(length))
+}
+
+// ReadBoundedString deserializes a string with bounds checking BEFORE allocation.
+// This provides DoS protection by rejecting oversized payloads before allocating memory.
+func (des *Deserializer) ReadBoundedString(maxLen int) string {
+	if des.err != nil {
+		return ""
+	}
+
+	length := des.Uleb128()
+	if des.err != nil {
+		return ""
+	}
+
+	// Validate bounds BEFORE allocation
+	if int(length) > maxLen {
+		des.SetError(fmt.Errorf("string too large: %d > %d", length, maxLen))
+		return ""
+	}
+
+	return string(des.ReadFixedBytes(int(length)))
+}
+
 // ReadString deserializes a UTF-8 string with a ULEB128 length prefix.
 func (des *Deserializer) ReadString() string {
 	return string(des.ReadBytes())
