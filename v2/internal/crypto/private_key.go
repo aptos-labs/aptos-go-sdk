@@ -15,6 +15,8 @@ type PrivateKeyVariant string
 const (
 	PrivateKeyVariantEd25519   PrivateKeyVariant = "ed25519"
 	PrivateKeyVariantSecp256k1 PrivateKeyVariant = "secp256k1"
+	PrivateKeyVariantSecp256r1 PrivateKeyVariant = "secp256r1"
+	PrivateKeyVariantSlhDsa    PrivateKeyVariant = "slhdsa"
 )
 
 // AIP80Prefixes maps key variants to their AIP-80 prefix strings.
@@ -22,6 +24,8 @@ const (
 var AIP80Prefixes = map[PrivateKeyVariant]string{
 	PrivateKeyVariantEd25519:   "ed25519-priv-",
 	PrivateKeyVariantSecp256k1: "secp256k1-priv-",
+	PrivateKeyVariantSecp256r1: "secp256r1-priv-",
+	PrivateKeyVariantSlhDsa:    "slhdsa-priv-",
 }
 
 // FormatPrivateKey formats a private key to AIP-80 compliant string.
@@ -35,6 +39,9 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (string, error)
 		// Remove AIP-80 prefix if present
 		if strings.HasPrefix(v, prefix) {
 			parts := strings.Split(v, "-")
+			if len(parts) != 3 {
+				return "", errors.New("invalid AIP-80 private key format: expected format is type-priv-hex")
+			}
 			v = parts[2]
 		}
 

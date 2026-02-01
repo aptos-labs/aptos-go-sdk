@@ -44,8 +44,36 @@ func (key *MultiKey) Verify(msg []byte, signature Signature) bool {
 		return false
 	}
 
+	// Get bitmap indices and validate consistency
+	bitmapIndices := sig.Bitmap.Indices()
+
+	// Verify bitmap indices count matches signature count
+	if len(bitmapIndices) != len(sig.Signatures) {
+		return false
+	}
+
+	// Verify minimum required signatures
+	if len(bitmapIndices) < int(key.SignaturesRequired) {
+		return false
+	}
+
+	// Check for duplicate indices and verify bounds
+	seen := make(map[uint8]bool, len(bitmapIndices))
+	for _, idx := range bitmapIndices {
+		if seen[idx] {
+			return false // Duplicate index
+		}
+		seen[idx] = true
+		if int(idx) >= len(key.PubKeys) {
+			return false // Index out of bounds
+		}
+	}
+
 	// Verify each signature in the bitmap
-	for sigIndex, keyIndex := range sig.Bitmap.Indices() {
+	for sigIndex, keyIndex := range bitmapIndices {
+		if sigIndex >= len(sig.Signatures) {
+			return false // Signature index out of bounds
+		}
 		auth := &AccountAuthenticator{}
 		err := auth.FromKeyAndSignature(key.PubKeys[keyIndex], sig.Signatures[sigIndex])
 		if err != nil || !auth.Verify(msg) {
@@ -156,15 +184,29 @@ type MultiKeySignature struct {
 }
 
 // NewMultiKeySignature creates a MultiKeySignature from indexed signatures.
+// numKeys is the total number of public keys in the MultiKey.
 // Signatures are automatically sorted by index.
-func NewMultiKeySignature(signatures []IndexedAnySignature) (*MultiKeySignature, error) {
+func NewMultiKeySignature(numKeys uint8, signatures []IndexedAnySignature) (*MultiKeySignature, error) {
+	if numKeys == 0 {
+		return nil, fmt.Errorf("numKeys must be > 0")
+	}
+	if numKeys > MaxMultiKeySignatures {
+		return nil, fmt.Errorf("numKeys %d exceeds maximum %d", numKeys, MaxMultiKeySignatures)
+	}
+
 	// Sort by index
 	sort.Slice(signatures, func(i, j int) bool {
 		return signatures[i].Index < signatures[j].Index
 	})
 
-	sig := &MultiKeySignature{}
+	sig := &MultiKeySignature{
+		Bitmap: *NewMultiKeyBitmap(numKeys),
+	}
+
 	for _, s := range signatures {
+		if s.Index >= numKeys {
+			return nil, fmt.Errorf("signature index %d >= numKeys %d", s.Index, numKeys)
+		}
 		sig.Signatures = append(sig.Signatures, s.Signature)
 		if err := sig.Bitmap.AddKey(s.Index); err != nil {
 			return nil, err
@@ -280,10 +322,23 @@ func (ea *MultiKeyAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 }
 
 // MultiKeyBitmap tracks which keys in a MultiKey have signed.
+// The bitmap format follows the Aptos BitVec specification:
+// - num_bits: u16 (little-endian) - total number of bits (keys)
+// - bytes: Vec<u8> - packed bits where bit 0 is MSB of first byte
 //
 // Implements [bcs.Struct].
 type MultiKeyBitmap struct {
-	inner []byte
+	numBits uint16 // Total number of bits (number of public keys)
+	inner   []byte // Packed bits
+}
+
+// NewMultiKeyBitmap creates a new bitmap for a MultiKey with the given number of public keys.
+func NewMultiKeyBitmap(numKeys uint8) *MultiKeyBitmap {
+	numBytes := (numKeys + 7) / 8
+	return &MultiKeyBitmap{
+		numBits: uint16(numKeys),
+		inner:   make([]byte, numBytes),
+	}
 }
 
 // ContainsKey returns true if the key at index has signed.
@@ -317,13 +372,37 @@ func (bm *MultiKeyBitmap) AddKey(index uint8) error {
 	}
 
 	bm.inner[numByte] |= 128 >> numBit
+
+	// Update numBits if this index extends beyond current range
+	if uint16(index+1) > bm.numBits {
+		bm.numBits = uint16(index + 1)
+	}
+
 	return nil
+}
+
+// SetNumKeys sets the total number of keys (bits) in the bitmap.
+// This should be called after all keys are added to ensure proper serialization.
+func (bm *MultiKeyBitmap) SetNumKeys(numKeys uint8) {
+	bm.numBits = uint16(numKeys)
+	// Ensure inner slice is large enough
+	numBytes := (numKeys + 7) / 8
+	if len(bm.inner) < int(numBytes) {
+		newInner := make([]byte, numBytes)
+		copy(newInner, bm.inner)
+		bm.inner = newInner
+	}
 }
 
 // Indices returns the key indices that have signed.
 func (bm *MultiKeyBitmap) Indices() []uint8 {
 	var indices []uint8
-	for i := uint8(0); i < MaxMultiKeySignatures; i++ {
+	// Use numBits as the limit, capped at MaxMultiKeySignatures
+	maxBits := uint8(bm.numBits)
+	if maxBits > MaxMultiKeySignatures {
+		maxBits = MaxMultiKeySignatures
+	}
+	for i := uint8(0); i < maxBits; i++ {
 		if bm.ContainsKey(i) {
 			indices = append(indices, i)
 		}
@@ -331,14 +410,28 @@ func (bm *MultiKeyBitmap) Indices() []uint8 {
 	return indices
 }
 
-// MarshalBCS serializes the bitmap to BCS.
+// MarshalBCS serializes the bitmap to BCS following the Aptos BitVec format:
+// - num_bits as u16 little-endian
+// - bytes as Vec<u8> (ULEB128 length + bytes)
 func (bm *MultiKeyBitmap) MarshalBCS(ser *bcs.Serializer) {
+	ser.U16(bm.numBits)
 	ser.WriteBytes(bm.inner)
 }
 
-// UnmarshalBCS deserializes the bitmap from BCS.
+// UnmarshalBCS deserializes the bitmap from BCS following the Aptos BitVec format.
 func (bm *MultiKeyBitmap) UnmarshalBCS(des *bcs.Deserializer) {
+	bm.numBits = des.U16()
+	if bm.numBits > uint16(MaxMultiKeySignatures) {
+		des.SetError(fmt.Errorf("bitmap num_bits %d exceeds maximum %d", bm.numBits, MaxMultiKeySignatures))
+		return
+	}
+
 	length := des.Uleb128()
+	expectedLen := (uint32(bm.numBits) + 7) / 8
+	if length != expectedLen {
+		des.SetError(fmt.Errorf("bitmap bytes length mismatch: expected %d for %d bits, got %d", expectedLen, bm.numBits, length))
+		return
+	}
 	if length > uint32(MaxMultiKeyBitmapBytes) {
 		des.SetError(fmt.Errorf("bitmap must be at most %d bytes, got %d", MaxMultiKeyBitmapBytes, length))
 		return

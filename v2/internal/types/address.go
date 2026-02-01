@@ -38,19 +38,48 @@ func ParseAddress(s string) (AccountAddress, error) {
 		return addr, ErrAddressTooLong
 	}
 
-	// Pad with leading zeros if necessary
-	if len(s)%2 != 0 {
-		s = "0" + s
+	// Handle odd-length hex strings without string concatenation
+	// by decoding into a temporary buffer with proper offset
+	hexLen := len(s)
+	byteLen := (hexLen + 1) / 2
+	offset := 32 - byteLen
+
+	if hexLen%2 != 0 {
+		// Odd length: decode first nibble separately, then rest
+		firstNibble, ok := hexDigitValue(s[0])
+		if !ok {
+			return addr, fmt.Errorf("%w: invalid character at position 0", ErrAddressInvalidHex)
+		}
+		addr[offset] = firstNibble
+		if hexLen > 1 {
+			_, err := hex.Decode(addr[offset+1:], []byte(s[1:]))
+			if err != nil {
+				return addr, fmt.Errorf("%w: %w", ErrAddressInvalidHex, err)
+			}
+		}
+	} else {
+		// Even length: decode directly
+		_, err := hex.Decode(addr[offset:], []byte(s))
+		if err != nil {
+			return addr, fmt.Errorf("%w: %w", ErrAddressInvalidHex, err)
+		}
 	}
 
-	bytes, err := hex.DecodeString(s)
-	if err != nil {
-		return addr, fmt.Errorf("%w: %w", ErrAddressInvalidHex, err)
-	}
-
-	// Copy right-aligned (addresses are big-endian)
-	copy(addr[32-len(bytes):], bytes)
 	return addr, nil
+}
+
+// hexDigitValue returns the numeric value of a hex digit.
+func hexDigitValue(c byte) (byte, bool) {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0', true
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10, true
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10, true
+	default:
+		return 0, false
+	}
 }
 
 // MustParseAddress parses a hex string into an AccountAddress, panicking on error.
@@ -74,11 +103,17 @@ func (a AccountAddress) IsSpecial() bool {
 	return a[31] < 0x10
 }
 
+// specialAddressStrings contains pre-computed strings for special addresses 0x0-0xf.
+var specialAddressStrings = [16]string{
+	"0x0", "0x1", "0x2", "0x3", "0x4", "0x5", "0x6", "0x7",
+	"0x8", "0x9", "0xa", "0xb", "0xc", "0xd", "0xe", "0xf",
+}
+
 // String returns the canonical string representation of the address.
 // Special addresses (0x0-0xf) use short form, others use full 64-character hex.
 func (a AccountAddress) String() string {
 	if a.IsSpecial() {
-		return fmt.Sprintf("0x%x", a[31])
+		return specialAddressStrings[a[31]]
 	}
 	return "0x" + hex.EncodeToString(a[:])
 }

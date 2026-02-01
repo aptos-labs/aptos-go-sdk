@@ -1,0 +1,61 @@
+name: "Code Coverage"
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+
+env:
+  GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+jobs:
+  coverage:
+    name: Generate Coverage Report
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ env.GIT_SHA }}
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version: ">=1.24"
+
+      # Run v2 SDK tests with coverage
+      - name: Run v2 SDK tests with coverage
+        working-directory: v2
+        run: |
+          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      # Run v1 SDK tests with coverage (optional, for overall repo coverage)
+      - name: Run v1 SDK tests with coverage
+        run: |
+          go test -race -coverprofile=coverage-v1.out -covermode=atomic ./...
+        continue-on-error: true  # Don't fail if v1 tests need localnet
+
+      # Upload v2 coverage to Codecov
+      - name: Upload v2 coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          files: ./v2/coverage.out
+          flags: v2
+          name: v2-sdk
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+      # Upload v1 coverage to Codecov (if available)
+      - name: Upload v1 coverage to Codecov
+        uses: codecov/codecov-action@v5
+        if: hashFiles('coverage-v1.out') != ''
+        with:
+          files: ./coverage-v1.out
+          flags: v1
+          name: v1-sdk
+          fail_ci_if_error: false
+          verbose: true
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}

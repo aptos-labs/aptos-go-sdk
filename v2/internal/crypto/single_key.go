@@ -3,6 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
@@ -13,6 +14,8 @@ import (
 // SingleSigner uses the SingleKeyScheme for address derivation, which supports
 // multiple key types including Ed25519 and Secp256k1.
 //
+// SingleSigner is safe for concurrent use. Cached values are protected by a mutex.
+//
 // Example:
 //
 //	secpKey, _ := crypto.GenerateSecp256k1Key()
@@ -22,6 +25,12 @@ import (
 // Implements [Signer].
 type SingleSigner struct {
 	inner MessageSigner
+
+	// mu protects cached values for concurrent access
+	mu sync.RWMutex
+	// Cached values to avoid repeated computation
+	cachedPubKey  *AnyPublicKey
+	cachedAuthKey *AuthenticationKey
 }
 
 // NewSingleSigner creates a new SingleSigner from a MessageSigner.
@@ -89,23 +98,59 @@ func (s *SingleSigner) SimulationAuthenticator() *AccountAuthenticator {
 }
 
 // AuthKey returns the AuthenticationKey derived from this signer.
+// The result is cached after the first call. Thread-safe.
 //
 // Implements [Signer].
 func (s *SingleSigner) AuthKey() *AuthenticationKey {
+	s.mu.RLock()
+	if s.cachedAuthKey != nil {
+		cached := s.cachedAuthKey
+		s.mu.RUnlock()
+		return cached
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Double-check after acquiring write lock
+	if s.cachedAuthKey != nil {
+		return s.cachedAuthKey
+	}
 	out := &AuthenticationKey{}
-	out.FromPublicKey(s.PubKey())
+	out.FromPublicKey(s.pubKeyLocked())
+	s.cachedAuthKey = out
 	return out
 }
 
 // PubKey returns the AnyPublicKey for this signer.
+// The result is cached after the first call to avoid repeated computation. Thread-safe.
 //
 // Implements [Signer].
 func (s *SingleSigner) PubKey() PublicKey {
+	s.mu.RLock()
+	if s.cachedPubKey != nil {
+		cached := s.cachedPubKey
+		s.mu.RUnlock()
+		return cached
+	}
+	s.mu.RUnlock()
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.pubKeyLocked()
+}
+
+// pubKeyLocked returns the public key, must be called with mu held.
+func (s *SingleSigner) pubKeyLocked() *AnyPublicKey {
+	if s.cachedPubKey != nil {
+		return s.cachedPubKey
+	}
 	innerPubKey := s.inner.VerifyingKey()
-	return &AnyPublicKey{
+	s.cachedPubKey = &AnyPublicKey{
 		Variant: s.publicKeyVariant(),
 		PubKey:  innerPubKey,
 	}
+	return s.cachedPubKey
 }
 
 // EmptySignature returns an empty AnySignature for simulation.
@@ -142,8 +187,12 @@ func (s *SingleSigner) publicKeyVariant() AnyPublicKeyVariant {
 type AnyPublicKeyVariant uint32
 
 const (
-	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0
-	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1
+	AnyPublicKeyVariantEd25519          AnyPublicKeyVariant = 0
+	AnyPublicKeyVariantSecp256k1        AnyPublicKeyVariant = 1
+	AnyPublicKeyVariantSecp256r1        AnyPublicKeyVariant = 2
+	AnyPublicKeyVariantKeyless          AnyPublicKeyVariant = 3
+	AnyPublicKeyVariantFederatedKeyless AnyPublicKeyVariant = 4
+	AnyPublicKeyVariantSlhDsaSha2_128s  AnyPublicKeyVariant = 5
 )
 
 // AnyPublicKey wraps different public key types for use with SingleSigner.
@@ -165,6 +214,10 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantEd25519, PubKey: k}, nil
 	case *Secp256k1PublicKey:
 		return &AnyPublicKey{Variant: AnyPublicKeyVariantSecp256k1, PubKey: k}, nil
+	case *Secp256r1PublicKey:
+		return &AnyPublicKey{Variant: AnyPublicKeyVariantSecp256r1, PubKey: k}, nil
+	case *SlhDsaPublicKey:
+		return &AnyPublicKey{Variant: AnyPublicKeyVariantSlhDsaSha2_128s, PubKey: k}, nil
 	case *AnyPublicKey:
 		return k, nil
 	default:
@@ -180,6 +233,16 @@ func (key *AnyPublicKey) Verify(msg []byte, sig Signature) bool {
 	if !ok {
 		return false
 	}
+
+	// WebAuthn signatures require special handling
+	if anySig.Variant == AnySignatureVariantWebAuthn {
+		webAuthnSig, ok := anySig.Signature.(*PartialAuthenticatorAssertionResponse)
+		if !ok {
+			return false
+		}
+		return webAuthnSig.Verify(msg, key)
+	}
+
 	return key.PubKey.Verify(msg, anySig.Signature)
 }
 
@@ -250,6 +313,14 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 		key.PubKey = &Ed25519PublicKey{}
 	case AnyPublicKeyVariantSecp256k1:
 		key.PubKey = &Secp256k1PublicKey{}
+	case AnyPublicKeyVariantSecp256r1:
+		key.PubKey = &Secp256r1PublicKey{}
+	case AnyPublicKeyVariantKeyless:
+		key.PubKey = &KeylessPublicKey{}
+	case AnyPublicKeyVariantFederatedKeyless:
+		key.PubKey = &FederatedKeylessPublicKey{}
+	case AnyPublicKeyVariantSlhDsaSha2_128s:
+		key.PubKey = &SlhDsaPublicKey{}
 	default:
 		des.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
 		return
@@ -261,8 +332,11 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 type AnySignatureVariant uint32
 
 const (
-	AnySignatureVariantEd25519   AnySignatureVariant = 0
-	AnySignatureVariantSecp256k1 AnySignatureVariant = 1
+	AnySignatureVariantEd25519         AnySignatureVariant = 0
+	AnySignatureVariantSecp256k1       AnySignatureVariant = 1
+	AnySignatureVariantWebAuthn        AnySignatureVariant = 2
+	AnySignatureVariantKeyless         AnySignatureVariant = 3
+	AnySignatureVariantSlhDsaSha2_128s AnySignatureVariant = 4
 )
 
 // AnySignature wraps different signature types for use with SingleSigner.
@@ -327,6 +401,12 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 		e.Signature = &Ed25519Signature{}
 	case AnySignatureVariantSecp256k1:
 		e.Signature = &Secp256k1Signature{}
+	case AnySignatureVariantWebAuthn:
+		e.Signature = &PartialAuthenticatorAssertionResponse{}
+	case AnySignatureVariantKeyless:
+		e.Signature = &KeylessSignature{}
+	case AnySignatureVariantSlhDsaSha2_128s:
+		e.Signature = &SlhDsaSignature{}
 	default:
 		des.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
 		return

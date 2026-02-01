@@ -3,7 +3,7 @@ package crypto
 import (
 	"errors"
 	"fmt"
-	"log"
+	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
@@ -27,11 +27,21 @@ const (
 //	signer := crypto.NewSingleSigner(key)
 //	auth, _ := signer.Sign(txnBytes)
 //
+// Secp256k1PrivateKey supports concurrent read-only use after initialization.
+// The mutex protects cached values (such as the derived public key), but callers
+// must not mutate the underlying key material (e.g., via FromBytes) concurrently
+// with signing or other operations that use the key.
+//
 // Implements:
 //   - [MessageSigner]
 //   - [CryptoMaterial]
 type Secp256k1PrivateKey struct {
 	Inner *secp256k1.PrivateKey
+
+	// mu protects cached values for concurrent access
+	mu sync.RWMutex
+	// Cached public key to avoid repeated derivation
+	cachedPubKey *Secp256k1PublicKey
 }
 
 // GenerateSecp256k1Key generates a new random Secp256k1 key pair.
@@ -63,10 +73,26 @@ func (key *Secp256k1PrivateKey) EmptySignature() Signature {
 }
 
 // VerifyingKey returns the public key for verification.
+// The result is cached after the first call to avoid repeated derivation. Thread-safe.
 //
 // Implements [MessageSigner].
 func (key *Secp256k1PrivateKey) VerifyingKey() VerifyingKey {
-	return &Secp256k1PublicKey{Inner: key.Inner.PubKey()}
+	key.mu.RLock()
+	if key.cachedPubKey != nil {
+		cached := key.cachedPubKey
+		key.mu.RUnlock()
+		return cached
+	}
+	key.mu.RUnlock()
+
+	key.mu.Lock()
+	defer key.mu.Unlock()
+	// Double-check after acquiring write lock
+	if key.cachedPubKey != nil {
+		return key.cachedPubKey
+	}
+	key.cachedPubKey = &Secp256k1PublicKey{Inner: key.Inner.PubKey()}
+	return key.cachedPubKey
 }
 
 // Bytes returns the raw private key bytes.
@@ -77,6 +103,7 @@ func (key *Secp256k1PrivateKey) Bytes() []byte {
 }
 
 // FromBytes loads the private key from bytes.
+// This clears any cached public key. Thread-safe.
 //
 // Implements [CryptoMaterial].
 func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) error {
@@ -87,7 +114,12 @@ func (key *Secp256k1PrivateKey) FromBytes(bytes []byte) error {
 	if len(bytes) != Secp256k1PrivateKeyLength {
 		return fmt.Errorf("secp256k1 private key must be %d bytes", Secp256k1PrivateKeyLength)
 	}
+
+	key.mu.Lock()
+	defer key.mu.Unlock()
 	key.Inner = secp256k1.PrivKeyFromBytes(bytes)
+	// Clear cached value since key changed
+	key.cachedPubKey = nil
 	return nil
 }
 
@@ -114,14 +146,10 @@ func (key *Secp256k1PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantSecp256k1)
 }
 
-// String returns the AIP-80 formatted private key.
+// String returns a redacted representation to prevent accidental logging of private keys.
+// Use ToAIP80() to get the actual private key string.
 func (key *Secp256k1PrivateKey) String() string {
-	s, err := key.ToAIP80()
-	if err != nil {
-		log.Printf("Error formatting Secp256k1PrivateKey: %v", err)
-		return "<error formatting Secp256k1PrivateKey>"
-	}
-	return s
+	return "<Secp256k1PrivateKey:REDACTED>"
 }
 
 // Secp256k1PublicKey is a Secp256k1 public key for signature verification.
@@ -228,7 +256,12 @@ func (e *Secp256k1Signature) Bytes() []byte {
 	s := e.Inner.S()
 	rBytes := r.Bytes()
 	sBytes := s.Bytes()
-	return append(rBytes[:], sBytes[:]...)
+
+	// Pre-allocate the exact size needed to avoid append reallocation
+	result := make([]byte, Secp256k1SignatureLength)
+	copy(result[0:32], rBytes[:])
+	copy(result[32:64], sBytes[:])
+	return result
 }
 
 // FromBytes loads the signature from bytes.

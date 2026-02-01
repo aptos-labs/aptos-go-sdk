@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
+	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/util"
@@ -18,12 +18,22 @@ import (
 // to be wrapped with SingleSigner). This uses the legacy Ed25519Scheme for
 // backward compatibility.
 //
+// Ed25519PrivateKey protects its cached values with a mutex for concurrent reads.
+// The underlying key material in Inner must not be mutated concurrently with
+// operations that read it (such as signing).
+//
 // Implements:
 //   - [Signer]
 //   - [MessageSigner]
 //   - [CryptoMaterial]
 type Ed25519PrivateKey struct {
 	Inner ed25519.PrivateKey
+
+	// mu protects cached values for concurrent access
+	mu sync.RWMutex
+	// Cached values to avoid repeated derivation
+	cachedPubKey  *Ed25519PublicKey
+	cachedAuthKey *AuthenticationKey
 }
 
 // GenerateEd25519PrivateKey generates a new random Ed25519 key pair.
@@ -96,23 +106,67 @@ func (key *Ed25519PrivateKey) SimulationAuthenticator() *AccountAuthenticator {
 }
 
 // AuthKey returns the AuthenticationKey derived from this key.
+// The result is cached after the first call. Thread-safe.
+//
+// Uses double-checked locking pattern which is safe in Go because:
+//  1. RLock/RUnlock provides happens-before relationship for reads
+//  2. Lock/Unlock provides happens-before relationship for writes
+//  3. The double-check after Lock prevents races where another goroutine
+//     computed the value between RUnlock and Lock
 //
 // Implements [Signer].
 func (key *Ed25519PrivateKey) AuthKey() *AuthenticationKey {
+	// Fast path: check if already cached (read lock)
+	key.mu.RLock()
+	if key.cachedAuthKey != nil {
+		cached := key.cachedAuthKey
+		key.mu.RUnlock()
+		return cached
+	}
+	key.mu.RUnlock()
+
+	// Slow path: compute and cache (write lock)
+	key.mu.Lock()
+	defer key.mu.Unlock()
+	// Double-check: another goroutine may have computed while we waited for lock
+	if key.cachedAuthKey != nil {
+		return key.cachedAuthKey
+	}
 	out := &AuthenticationKey{}
-	out.FromPublicKey(key.PubKey())
+	out.FromPublicKey(key.pubKeyLocked())
+	key.cachedAuthKey = out
 	return out
 }
 
 // PubKey returns the Ed25519PublicKey for signature verification.
+// The result is cached after the first call to avoid repeated derivation. Thread-safe.
 //
 // Implements [Signer].
 func (key *Ed25519PrivateKey) PubKey() PublicKey {
+	key.mu.RLock()
+	if key.cachedPubKey != nil {
+		cached := key.cachedPubKey
+		key.mu.RUnlock()
+		return cached
+	}
+	key.mu.RUnlock()
+
+	key.mu.Lock()
+	defer key.mu.Unlock()
+	return key.pubKeyLocked()
+}
+
+// pubKeyLocked returns the public key, must be called with mu held.
+func (key *Ed25519PrivateKey) pubKeyLocked() *Ed25519PublicKey {
+	if key.cachedPubKey != nil {
+		return key.cachedPubKey
+	}
 	pubKey, ok := key.Inner.Public().(ed25519.PublicKey)
 	if !ok {
 		return nil
 	}
-	return &Ed25519PublicKey{Inner: pubKey}
+	key.cachedPubKey = &Ed25519PublicKey{Inner: pubKey}
+	return key.cachedPubKey
 }
 
 // EmptySignature returns an empty signature for simulation.
@@ -137,6 +191,7 @@ func (key *Ed25519PrivateKey) Bytes() []byte {
 }
 
 // FromBytes loads the private key from seed bytes.
+// This clears any cached public key and authentication key. Thread-safe.
 //
 // Implements [CryptoMaterial].
 func (key *Ed25519PrivateKey) FromBytes(bytes []byte) error {
@@ -147,7 +202,13 @@ func (key *Ed25519PrivateKey) FromBytes(bytes []byte) error {
 	if len(bytes) != ed25519.SeedSize {
 		return fmt.Errorf("ed25519 private key must be %d bytes, got %d", ed25519.SeedSize, len(bytes))
 	}
+
+	key.mu.Lock()
+	defer key.mu.Unlock()
 	key.Inner = ed25519.NewKeyFromSeed(bytes)
+	// Clear cached values since key changed
+	key.cachedPubKey = nil
+	key.cachedAuthKey = nil
 	return nil
 }
 
@@ -174,14 +235,10 @@ func (key *Ed25519PrivateKey) ToAIP80() (string, error) {
 	return FormatPrivateKey(key.ToHex(), PrivateKeyVariantEd25519)
 }
 
-// String returns the AIP-80 formatted private key.
+// String returns a redacted representation to prevent accidental logging of private keys.
+// Use ToAIP80() to get the actual private key string.
 func (key *Ed25519PrivateKey) String() string {
-	s, err := key.ToAIP80()
-	if err != nil {
-		log.Printf("Error formatting Ed25519PrivateKey: %v", err)
-		return "<error formatting Ed25519PrivateKey>"
-	}
-	return s
+	return "<Ed25519PrivateKey:REDACTED>"
 }
 
 // Ed25519PublicKey is an Ed25519 public key for signature verification.
