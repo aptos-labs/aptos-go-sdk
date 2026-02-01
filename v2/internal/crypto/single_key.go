@@ -68,8 +68,17 @@ func (s *SingleSigner) Sign(msg []byte) (*AccountAuthenticator, error) {
 
 // SignMessage signs a message and returns an AnySignature.
 //
+// Note: Secp256r1 keys cannot be used for direct signing through SingleSigner.
+// Secp256r1 is only supported on Aptos through WebAuthn authentication.
+// Use WebAuthn-specific signing flows for Secp256r1 keys.
+//
 // Implements [Signer].
 func (s *SingleSigner) SignMessage(msg []byte) (Signature, error) {
+	// Secp256r1 is not supported for direct signing - must use WebAuthn
+	if _, ok := s.inner.(*Secp256r1PrivateKey); ok {
+		return nil, errors.New("secp256r1 keys cannot be used for direct signing; use WebAuthn authentication instead")
+	}
+
 	sig, err := s.inner.SignMessage(msg)
 	if err != nil {
 		return nil, err
@@ -167,8 +176,16 @@ func (s *SingleSigner) signatureVariant() AnySignatureVariant {
 		return AnySignatureVariantEd25519
 	case *Secp256k1PrivateKey:
 		return AnySignatureVariantSecp256k1
+	case *Secp256r1PrivateKey:
+		// Secp256r1 is not supported for direct signing - must use WebAuthn.
+		// This case should not be reached as SignMessage returns an error early.
+		panic("secp256r1 keys cannot be used for direct signing; use WebAuthn authentication instead")
+	case *SlhDsaPrivateKey:
+		return AnySignatureVariantSlhDsaSha2_128s
 	default:
-		return AnySignatureVariantEd25519
+		// Panic on unknown types to catch programming errors early
+		// rather than silently producing invalid signatures
+		panic(fmt.Sprintf("unknown private key type for signature variant: %T", s.inner))
 	}
 }
 
@@ -178,8 +195,14 @@ func (s *SingleSigner) publicKeyVariant() AnyPublicKeyVariant {
 		return AnyPublicKeyVariantEd25519
 	case *Secp256k1PrivateKey:
 		return AnyPublicKeyVariantSecp256k1
+	case *Secp256r1PrivateKey:
+		return AnyPublicKeyVariantSecp256r1
+	case *SlhDsaPrivateKey:
+		return AnyPublicKeyVariantSlhDsaSha2_128s
 	default:
-		return AnyPublicKeyVariantEd25519
+		// Panic on unknown types to catch programming errors early
+		// rather than silently producing invalid public keys
+		panic(fmt.Sprintf("unknown private key type for public key variant: %T", s.inner))
 	}
 }
 
