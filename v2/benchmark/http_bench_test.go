@@ -1,3 +1,7 @@
+//go:build benchmark
+
+// Package benchmark contains HTTP client benchmarks.
+// Run with: go test -tags=benchmark -bench=. ./benchmark/...
 package benchmark
 
 import (

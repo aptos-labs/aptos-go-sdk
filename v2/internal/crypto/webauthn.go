@@ -188,11 +188,12 @@ func (p *PartialAuthenticatorAssertionResponse) GetChallenge() ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse client data JSON: %w", err)
 	}
 
-	// WebAuthn spec requires base64url encoding (RFC 4648 Section 5) without padding
-	// We strictly enforce this for security - no fallback to other encodings
+	// WebAuthn spec requires base64url encoding (RFC 4648 Section 5) without padding.
+	// We first try the strict unpadded variant, then fall back to padded base64url
+	// for compatibility with implementations that include padding.
 	challenge, err := base64.RawURLEncoding.DecodeString(clientData.Challenge)
 	if err != nil {
-		// Try with padding as some implementations include it
+		// Fallback to base64url with padding, as some implementations include it
 		challenge, err = base64.URLEncoding.DecodeString(clientData.Challenge)
 		if err != nil {
 			return nil, fmt.Errorf("failed to decode base64url challenge: %w", err)

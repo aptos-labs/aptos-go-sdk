@@ -39,12 +39,15 @@ func (ser *Serializer) ToBytes() []byte {
 // Reset clears the serializer for reuse.
 // Zeroes the underlying buffer to prevent sensitive data leakage.
 func (ser *Serializer) Reset() {
-	// Clear sensitive data before resetting
-	// This is important for pooled serializers to prevent data leakage
-	if ser.out.Len() > 0 {
-		buf := ser.out.Bytes()
-		for i := range buf {
-			buf[i] = 0
+	// Clear sensitive data before resetting.
+	// This is important for pooled serializers to prevent data leakage.
+	// We clear up to capacity, not just length, since bytes.Buffer's internal
+	// slice can be resliced to expose previously written data.
+	buf := ser.out.Bytes()
+	if cap(buf) > 0 {
+		full := buf[:cap(buf)]
+		for i := range full {
+			full[i] = 0
 		}
 	}
 	ser.out.Reset()
