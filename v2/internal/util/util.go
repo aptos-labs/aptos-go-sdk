@@ -70,18 +70,18 @@ func PutBuffer64(buf *[]byte) {
 // Sha3256Hash hashes the input byte slices using SHA3-256.
 // Uses a pool of hashers to minimize allocations in hot paths.
 //
-// Security note: hash.Hash.Reset() is guaranteed by the Go crypto interface
-// to return the hasher to its initial state, clearing all internal buffers.
-// SHA3 (Keccak) specifically zeros its state on Reset().
+// Note: hash.Hash.Reset() returns the hasher to its initial state per the Go
+// interface contract. While this effectively discards references to previously
+// written data, the Go crypto interface does not guarantee zeroing internal memory.
+// For most use cases, this provides adequate isolation between pooled uses.
 func Sha3256Hash(inputs [][]byte) []byte {
 	hasher := sha3Pool.Get().(hash.Hash)
-	hasher.Reset() // Clears all internal state per hash.Hash contract
+	hasher.Reset() // Returns hasher to initial state
 	for _, b := range inputs {
 		hasher.Write(b)
 	}
 	result := hasher.Sum(nil)
-	// Clear internal state before returning to pool to minimize retention time
-	// of potentially sensitive data in the sponge state
+	// Reset before returning to pool to discard references to written data
 	hasher.Reset()
 	sha3Pool.Put(hasher)
 	return result
