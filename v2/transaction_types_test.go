@@ -1,6 +1,8 @@
 package aptos
 
 import (
+	"bytes"
+	"crypto/sha256"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -65,6 +67,20 @@ func TestRawTransaction_SigningMessage(t *testing.T) {
 	assert.NotEmpty(t, msg)
 	// The signing message should start with the prehash (32 bytes)
 	assert.GreaterOrEqual(t, len(msg), 32)
+
+	// Verify the message starts with the expected prehash prefix
+	// The prehash is SHA-256("APTOS::RawTransaction")
+	expectedPrehash := sha256.Sum256([]byte(RawTransactionSalt))
+	assert.True(t, bytes.HasPrefix(msg, expectedPrehash[:]),
+		"signing message should start with SHA-256 of RawTransactionSalt")
+
+	// The message should be longer than just the prehash (prehash + serialized txn)
+	assert.Greater(t, len(msg), 32, "signing message should contain prehash + serialized transaction")
+
+	// Signing the same transaction twice should produce identical messages
+	msg2, err := txn.SigningMessage()
+	require.NoError(t, err)
+	assert.Equal(t, msg, msg2, "signing message should be deterministic")
 }
 
 func TestSignedTransaction_Hash(t *testing.T) {
@@ -659,12 +675,34 @@ func TestSimulationAuthenticator(t *testing.T) {
 	require.NoError(t, err)
 
 	auth := SimulationAuthenticator(key)
-	assert.NotNil(t, auth)
+	require.NotNil(t, auth)
+
+	// Ed25519 private key should produce Ed25519 authenticator variant
+	assert.Equal(t, AccountAuthenticatorEd25519, auth.Variant,
+		"Ed25519 key should produce Ed25519 authenticator variant")
+
+	// The authenticator should contain a valid public key
+	pubKey := auth.PubKey()
+	assert.NotNil(t, pubKey, "simulation authenticator should contain a public key")
+
+	// The public key should match the key's verifying key
+	expectedPubKey := key.VerifyingKey()
+	assert.Equal(t, expectedPubKey.Bytes(), pubKey.Bytes(),
+		"simulation authenticator public key should match the signer's public key")
 }
 
 func TestRawTransactionWithDataPrehash(t *testing.T) {
 	prehash := RawTransactionWithDataPrehash()
 	assert.Len(t, prehash, 32)
+
+	// Verify the prehash matches the expected SHA-256 of the salt
+	expectedHash := sha256.Sum256([]byte(RawTransactionWithDataSalt))
+	assert.Equal(t, expectedHash[:], prehash,
+		"prehash should equal SHA-256 of RawTransactionWithDataSalt")
+
+	// Calling again should return the same value (deterministic)
+	prehash2 := RawTransactionWithDataPrehash()
+	assert.Equal(t, prehash, prehash2, "prehash should be deterministic")
 }
 
 func TestSignedTransaction_BCSRoundTrip(t *testing.T) {

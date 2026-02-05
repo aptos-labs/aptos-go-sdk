@@ -11,6 +11,7 @@ import (
 	"errors"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -601,15 +602,18 @@ func TestIntegration_Timeout(t *testing.T) {
 	skipIfShort(t)
 	t.Parallel()
 
-	// Create client with very short timeout
+	// Create client with very short timeout (1ns is effectively instant)
 	client, err := NewClient(testNetwork(), WithTimeout(1*time.Nanosecond))
 	require.NoError(t, err)
 
 	ctx := testContext(t)
 	_, err = client.Info(ctx)
-	// This should timeout (though may succeed if very fast)
-	// The important thing is the client doesn't panic
-	_ = err
+	// With a 1-nanosecond timeout, the request should fail with a deadline/timeout error
+	require.Error(t, err, "request with 1ns timeout should fail")
+	assert.True(t,
+		errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline"),
+		"expected a timeout-related error, got: %v", err,
+	)
 }
 
 // TestIntegration_ConcurrentRequests tests concurrent API calls.

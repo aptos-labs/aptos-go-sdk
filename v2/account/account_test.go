@@ -234,6 +234,15 @@ func TestAccountString(t *testing.T) {
 	if str == "" {
 		t.Error("String() returned empty string")
 	}
+
+	// Verify format contains "Account{" prefix and the account address
+	addrStr := acc.Address().String()
+	if !bytes.Contains([]byte(str), []byte("Account{")) {
+		t.Error("String() should contain 'Account{'")
+	}
+	if !bytes.Contains([]byte(str), []byte(addrStr)) {
+		t.Errorf("String() should contain the account address %s, got: %s", addrStr, str)
+	}
 }
 
 func TestSimulationAuthenticator(t *testing.T) {
@@ -245,7 +254,18 @@ func TestSimulationAuthenticator(t *testing.T) {
 
 	auth := acc.SimulationAuthenticator()
 	if auth == nil {
-		t.Error("SimulationAuthenticator() returned nil")
+		t.Fatal("SimulationAuthenticator() returned nil")
+	}
+
+	// Ed25519 accounts should produce Ed25519 authenticator variant
+	if auth.Variant != crypto.AccountAuthenticatorEd25519 {
+		t.Errorf("Expected variant %d (Ed25519), got %d", crypto.AccountAuthenticatorEd25519, auth.Variant)
+	}
+
+	// The authenticator should contain a valid public key
+	pubKey := auth.PubKey()
+	if pubKey == nil {
+		t.Error("SimulationAuthenticator should contain a public key")
 	}
 }
 
@@ -262,7 +282,26 @@ func TestAccountSignMessage(t *testing.T) {
 		t.Fatalf("SignMessage() error = %v", err)
 	}
 	if sig == nil {
-		t.Error("SignMessage() returned nil signature")
+		t.Fatal("SignMessage() returned nil signature")
+	}
+
+	// Verify the signature is non-empty
+	sigBytes := sig.Bytes()
+	if len(sigBytes) == 0 {
+		t.Error("Signature bytes should not be empty")
+	}
+
+	// Verify the signature actually verifies against the message using the public key
+	pubKey := acc.PubKey()
+	if pubKey == nil {
+		t.Fatal("PubKey() returned nil")
+	}
+	verifyingKey, ok := pubKey.(crypto.VerifyingKey)
+	if !ok {
+		t.Fatal("PubKey() should implement VerifyingKey")
+	}
+	if !verifyingKey.Verify(msg, sig) {
+		t.Error("Signature should verify against the original message")
 	}
 }
 
@@ -275,7 +314,26 @@ func TestAccountPubKey(t *testing.T) {
 
 	pubKey := acc.PubKey()
 	if pubKey == nil {
-		t.Error("PubKey() returned nil")
+		t.Fatal("PubKey() returned nil")
+	}
+
+	// Public key should have non-empty bytes
+	pubKeyBytes := pubKey.Bytes()
+	if len(pubKeyBytes) == 0 {
+		t.Error("PubKey().Bytes() should not be empty")
+	}
+
+	// The auth key derived from the public key should match the account's auth key
+	derivedAuthKey := pubKey.AuthKey()
+	accountAuthKey := acc.AuthKey()
+	if !bytes.Equal(derivedAuthKey[:], accountAuthKey[:]) {
+		t.Error("PubKey().AuthKey() should match account AuthKey()")
+	}
+
+	// Calling PubKey() again should return a consistent result
+	pubKey2 := acc.PubKey()
+	if !bytes.Equal(pubKey.Bytes(), pubKey2.Bytes()) {
+		t.Error("PubKey() should return consistent results")
 	}
 }
 
@@ -288,17 +346,27 @@ func TestAccountSigner(t *testing.T) {
 
 	signer := acc.Signer()
 	if signer == nil {
-		t.Error("Signer() returned nil")
+		t.Fatal("Signer() returned nil")
 	}
 
-	// Verify that the signer can sign
+	// Verify that the signer can sign and the result verifies
 	msg := []byte("test")
 	auth, err := signer.Sign(msg)
 	if err != nil {
 		t.Fatalf("Signer.Sign() error = %v", err)
 	}
 	if auth == nil {
-		t.Error("Signer.Sign() returned nil authenticator")
+		t.Fatal("Signer.Sign() returned nil authenticator")
+	}
+	if !auth.Verify(msg) {
+		t.Error("Signer.Sign() authenticator should verify against original message")
+	}
+
+	// The signer's auth key should match the account's auth key
+	signerAuthKey := signer.AuthKey()
+	accountAuthKey := acc.AuthKey()
+	if !bytes.Equal(signerAuthKey[:], accountAuthKey[:]) {
+		t.Error("Signer().AuthKey() should match account AuthKey()")
 	}
 }
 
@@ -402,9 +470,18 @@ func TestFromPrivateKeyHex_Secp256k1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FromPrivateKeyHex() error = %v", err)
 	}
-
 	if acc == nil {
-		t.Error("FromPrivateKeyHex returned nil account")
+		t.Fatal("FromPrivateKeyHex returned nil account")
+	}
+
+	// Verify the reconstructed account can sign and verify
+	msg := []byte("secp256k1 roundtrip test")
+	auth, err := acc.Sign(msg)
+	if err != nil {
+		t.Fatalf("Sign() error = %v", err)
+	}
+	if !auth.Verify(msg) {
+		t.Error("Signature from reconstructed Secp256k1 account should verify")
 	}
 }
 
@@ -468,9 +545,18 @@ func TestFromAIP80_Secp256k1(t *testing.T) {
 	if err != nil {
 		t.Fatalf("FromAIP80() error = %v", err)
 	}
-
 	if acc == nil {
-		t.Error("FromAIP80 returned nil account")
+		t.Fatal("FromAIP80 returned nil account")
+	}
+
+	// Verify the reconstructed account can sign and verify
+	msg := []byte("secp256k1 aip80 roundtrip test")
+	auth, err := acc.Sign(msg)
+	if err != nil {
+		t.Fatalf("Sign() error = %v", err)
+	}
+	if !auth.Verify(msg) {
+		t.Error("Signature from AIP-80 Secp256k1 account should verify")
 	}
 }
 
@@ -503,15 +589,14 @@ func TestFromAIP80_TooShort(t *testing.T) {
 	}
 }
 
-func TestNewEd25519_Error(t *testing.T) {
-	// This tests the normal path which should succeed
+func TestNewEd25519_DeterministicWithBadReader(t *testing.T) {
 	t.Parallel()
-	acc, err := NewEd25519()
-	if err != nil {
-		t.Fatalf("NewEd25519() unexpected error = %v", err)
-	}
-	if acc == nil {
-		t.Error("NewEd25519() returned nil account")
+
+	// Passing a reader with insufficient bytes should produce an error
+	shortReader := bytes.NewReader([]byte{1, 2, 3}) // only 3 bytes, need 32
+	_, err := NewEd25519(shortReader)
+	if err == nil {
+		t.Error("NewEd25519() with insufficient reader should return an error")
 	}
 }
 
@@ -522,7 +607,7 @@ func TestNewSecp256k1_Valid(t *testing.T) {
 		t.Fatalf("NewSecp256k1() error = %v", err)
 	}
 	if acc == nil {
-		t.Error("NewSecp256k1() returned nil account")
+		t.Fatal("NewSecp256k1() returned nil account")
 	}
 
 	// Verify address is populated
@@ -530,6 +615,21 @@ func TestNewSecp256k1_Valid(t *testing.T) {
 	var zeroAddr [32]byte
 	if bytes.Equal(addr[:], zeroAddr[:]) {
 		t.Error("Account address is empty")
+	}
+
+	// Verify signing and verification work end-to-end
+	msg := []byte("secp256k1 test message")
+	auth, err := acc.Sign(msg)
+	if err != nil {
+		t.Fatalf("Sign() error = %v", err)
+	}
+	if !auth.Verify(msg) {
+		t.Error("Secp256k1 signature verification failed")
+	}
+
+	// Verify it uses SingleSender authenticator (since Secp256k1 uses SingleKey scheme)
+	if auth.Variant != crypto.AccountAuthenticatorSingleSender {
+		t.Errorf("Expected variant %d (SingleSender), got %d", crypto.AccountAuthenticatorSingleSender, auth.Variant)
 	}
 }
 
@@ -547,5 +647,17 @@ func TestAccount_String(t *testing.T) {
 	}
 	if !bytes.Contains([]byte(str), []byte("Account{")) {
 		t.Error("String() should contain 'Account{'")
+	}
+
+	// Verify the address is present in the string representation
+	addrStr := acc.Address().String()
+	if !bytes.Contains([]byte(str), []byte(addrStr)) {
+		t.Errorf("String() should contain the account address %s, got: %s", addrStr, str)
+	}
+
+	// Verify the expected format: "Account{address: 0x...}"
+	expected := "Account{address: " + addrStr + "}"
+	if str != expected {
+		t.Errorf("String() format mismatch: expected %q, got %q", expected, str)
 	}
 }
