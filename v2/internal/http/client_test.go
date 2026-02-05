@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"strings"
 	"sync/atomic"
@@ -223,7 +224,6 @@ func TestHeaderClient(t *testing.T) {
 }
 
 func TestTimeoutClient(t *testing.T) {
-	// Mock that delays
 	mock := &mockHTTPDoer{
 		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 	}
@@ -234,21 +234,54 @@ func TestTimeoutClient(t *testing.T) {
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
+
+	// Verify response status code is forwarded correctly
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Verify the mock was called exactly once
+	assert.Equal(t, int32(1), atomic.LoadInt32(&mock.calls))
 }
 
-func TestLoggingClient(t *testing.T) {
+func TestTimeoutClient_RespectsExistingDeadline(t *testing.T) {
 	mock := &mockHTTPDoer{
 		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))}},
 	}
 
-	client := NewLoggingClient(mock, nil)
+	client := NewTimeoutClient(mock, 5*time.Second)
 
-	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	// Create request with a pre-existing deadline - the timeout client should not override it
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
 	resp, err := client.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestLoggingClient(t *testing.T) {
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader("response body"))}},
+	}
+
+	// Use a custom logger with a buffer to verify logging occurs
+	var logBuf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+
+	client := NewLoggingClient(mock, logger)
+
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+
+	// Verify that the logger captured request/response info
+	logOutput := logBuf.String()
+	assert.Contains(t, logOutput, "sending request", "Logger should log the outgoing request")
+	assert.Contains(t, logOutput, "http://example.com/test", "Logger should log the request URL")
 }
 
 func TestDefaultRetryConfig(t *testing.T) {
