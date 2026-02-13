@@ -27,6 +27,25 @@ type Signature struct {
 	Inner SignatureImpl    // Inner is the actual signature
 }
 
+// MarshalJSON marshals the [Signature] to JSON including the type discriminator
+func (o *Signature) MarshalJSON() ([]byte, error) {
+	if o.Inner == nil {
+		return []byte("null"), nil
+	}
+	switch inner := o.Inner.(type) {
+	case *UnknownSignature:
+		if inner.Payload != nil {
+			return json.Marshal(inner.Payload)
+		}
+		return json.Marshal(map[string]any{"type": inner.Type})
+	case *SingleSenderSignature:
+		// SingleSenderSignature is a map[string]any that already includes the type field
+		return json.Marshal(inner)
+	default:
+		return marshalWithType(string(o.Type), o.Inner)
+	}
+}
+
 // UnmarshalJSON unmarshals the [Signature] from JSON handling conversion between types
 func (o *Signature) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -72,6 +91,22 @@ type UnknownSignature struct {
 // Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the [crypto.AccountAuthenticator].
 // It's poorly named Ed25519Signature in the API spec
 type Ed25519Signature crypto.Ed25519Authenticator
+
+// MarshalJSON serializes an [Ed25519Signature] to JSON
+func (o *Ed25519Signature) MarshalJSON() ([]byte, error) {
+	type inner struct {
+		PublicKey HexBytes `json:"public_key"`
+		Signature HexBytes `json:"signature"`
+	}
+	data := &inner{}
+	if o.PubKey != nil {
+		data.PublicKey = o.PubKey.Bytes()
+	}
+	if o.Sig != nil {
+		data.Signature = o.Sig.Bytes()
+	}
+	return json.Marshal(data)
+}
 
 // UnmarshalJSON deserializes a JSON data blob into an [Ed25519Signature]
 func (o *Ed25519Signature) UnmarshalJSON(b []byte) error {
@@ -123,6 +158,29 @@ type MultiEd25519Signature struct {
 	Signatures []*crypto.Ed25519Signature
 	Threshold  uint8
 	Bitmap     []byte
+}
+
+// MarshalJSON serializes a [MultiEd25519Signature] to JSON
+func (o *MultiEd25519Signature) MarshalJSON() ([]byte, error) {
+	type inner struct {
+		PublicKeys []HexBytes `json:"public_keys"`
+		Signatures []HexBytes `json:"signatures"`
+		Threshold  uint8      `json:"threshold"`
+		Bitmap     HexBytes   `json:"bitmap"`
+	}
+	data := &inner{
+		PublicKeys: make([]HexBytes, len(o.PublicKeys)),
+		Signatures: make([]HexBytes, len(o.Signatures)),
+		Threshold:  o.Threshold,
+		Bitmap:     o.Bitmap,
+	}
+	for i, key := range o.PublicKeys {
+		data.PublicKeys[i] = key.Bytes()
+	}
+	for i, sig := range o.Signatures {
+		data.Signatures[i] = sig.Bytes()
+	}
+	return json.Marshal(data)
 }
 
 // UnmarshalJSON deserializes a JSON data blob into a [MultiEd25519Signature]

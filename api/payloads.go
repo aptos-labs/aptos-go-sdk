@@ -26,6 +26,20 @@ type TransactionPayload struct {
 	Inner TransactionPayloadImpl    // Inner is the actual payload
 }
 
+// MarshalJSON marshals the [TransactionPayload] to JSON including the type discriminator
+func (o *TransactionPayload) MarshalJSON() ([]byte, error) {
+	if o.Inner == nil {
+		return []byte("null"), nil
+	}
+	if unknown, ok := o.Inner.(*TransactionPayloadUnknown); ok {
+		if unknown.Payload != nil {
+			return json.Marshal(unknown.Payload)
+		}
+		return json.Marshal(map[string]any{"type": unknown.Type})
+	}
+	return marshalWithType(string(o.Type), o.Inner)
+}
+
 // UnmarshalJSON unmarshals the [TransactionPayload] from JSON handling conversion between types
 func (o *TransactionPayload) UnmarshalJSON(b []byte) error {
 	type inner struct {

@@ -2,6 +2,8 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
+	"strconv"
 
 	"github.com/aptos-labs/aptos-go-sdk/internal/types"
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
@@ -13,6 +15,18 @@ import (
 type GUID struct {
 	CreationNumber uint64                // CreationNumber is the number of the GUID
 	AccountAddress *types.AccountAddress // AccountAddress is the account address of the creator of the GUID
+}
+
+// MarshalJSON serializes a [GUID] to JSON
+func (o *GUID) MarshalJSON() ([]byte, error) {
+	type inner struct {
+		CreationNumber U64                   `json:"creation_number"`
+		AccountAddress *types.AccountAddress `json:"account_address"`
+	}
+	return json.Marshal(&inner{
+		CreationNumber: U64(o.CreationNumber),
+		AccountAddress: o.AccountAddress,
+	})
 }
 
 // UnmarshalJSON deserializes a JSON data blob into a [GUIDId]
@@ -34,6 +48,11 @@ func (o *GUID) UnmarshalJSON(b []byte) error {
 
 // U64 is a type for handling JSON string representations of the uint64
 type U64 uint64
+
+// MarshalJSON serializes a [U64] to JSON as a string representation
+func (u U64) MarshalJSON() ([]byte, error) {
+	return json.Marshal(strconv.FormatUint(uint64(u), 10))
+}
 
 // UnmarshalJSON deserializes a JSON data blob into a [U64]
 func (u *U64) UnmarshalJSON(b []byte) error {
@@ -99,3 +118,31 @@ func (u *HexBytes) MarshalJSON() ([]byte, error) {
 //
 //	0xf4d07fdb8b5151971886a910e516d418a790dd5f6e068b0588066518a395a600
 type Hash = string // TODO: do we make this a 32 byte array? or byte array?
+
+// marshalWithType marshals v to JSON and injects a "type" field at the beginning of the JSON object.
+// This is used for polymorphic types where the type discriminator must be included in the output.
+func marshalWithType(typeStr string, v interface{}) ([]byte, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+	if len(b) < 2 || b[0] != '{' {
+		return nil, fmt.Errorf("expected JSON object, got: %s", string(b))
+	}
+	typeJSON, err := json.Marshal(typeStr)
+	if err != nil {
+		return nil, err
+	}
+	// Build: {"type":TYPE_JSON,...rest}
+	result := make([]byte, 0, len(b)+len(typeJSON)+9)
+	result = append(result, '{')
+	result = append(result, `"type":`...)
+	result = append(result, typeJSON...)
+	if len(b) > 2 {
+		result = append(result, ',')
+		result = append(result, b[1:]...) // skip opening '{'
+	} else {
+		result = append(result, '}')
+	}
+	return result, nil
+}

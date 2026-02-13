@@ -47,6 +47,42 @@ const (
 	AnyDataName = "__any_data__"
 )
 
+// MarshalJSON serializes an Event to JSON with proper type encoding
+func (o *Event) MarshalJSON() ([]byte, error) {
+	// Handle the case where data was a non-map type wrapped in AnyDataName
+	if anyData, ok := o.Data[AnyDataName]; ok && len(o.Data) == 1 {
+		type inner struct {
+			Version        U64    `json:"version,omitempty"`
+			Type           string `json:"type"`
+			Guid           *GUID  `json:"guid"`
+			SequenceNumber U64    `json:"sequence_number"`
+			Data           any    `json:"data"`
+		}
+		return json.Marshal(&inner{
+			Version:        U64(o.Version),
+			Type:           o.Type,
+			Guid:           o.Guid,
+			SequenceNumber: U64(o.SequenceNumber),
+			Data:           anyData,
+		})
+	}
+
+	type inner struct {
+		Version        U64            `json:"version,omitempty"`
+		Type           string         `json:"type"`
+		Guid           *GUID          `json:"guid"`
+		SequenceNumber U64            `json:"sequence_number"`
+		Data           map[string]any `json:"data"`
+	}
+	return json.Marshal(&inner{
+		Version:        U64(o.Version),
+		Type:           o.Type,
+		Guid:           o.Guid,
+		SequenceNumber: U64(o.SequenceNumber),
+		Data:           o.Data,
+	})
+}
+
 // UnmarshalJSON deserializes a JSON data blob into an Event
 func (o *Event) UnmarshalJSON(b []byte) error {
 	// In order to handle non-map types of data, we will give a new field name for it

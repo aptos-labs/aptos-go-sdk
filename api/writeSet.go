@@ -21,6 +21,20 @@ type WriteSet struct {
 	Inner WriteSetImpl    // Inner is the actual write set
 }
 
+// MarshalJSON marshals the [WriteSet] to JSON including the type discriminator
+func (o *WriteSet) MarshalJSON() ([]byte, error) {
+	if o.Inner == nil {
+		return []byte("null"), nil
+	}
+	if unknown, ok := o.Inner.(*UnknownWriteSet); ok {
+		if unknown.Payload != nil {
+			return json.Marshal(unknown.Payload)
+		}
+		return json.Marshal(map[string]any{"type": unknown.Type})
+	}
+	return marshalWithType(string(o.Type), o.Inner)
+}
+
 // UnmarshalJSON unmarshals the [WriteSet] from JSON handling conversion between types
 func (o *WriteSet) UnmarshalJSON(b []byte) error {
 	type inner struct {
@@ -86,6 +100,20 @@ const (
 type WriteSetChange struct {
 	Type  WriteSetChangeVariant // Type of the write set change, if the write set change isn't recognized, it will be [WriteSetChangeVariantUnknown]
 	Inner WriteSetChangeImpl    // Inner is the actual write set change
+}
+
+// MarshalJSON marshals the [WriteSetChange] to JSON including the type discriminator
+func (o *WriteSetChange) MarshalJSON() ([]byte, error) {
+	if o.Inner == nil {
+		return []byte("null"), nil
+	}
+	if unknown, ok := o.Inner.(*WriteSetChangeUnknown); ok {
+		if unknown.Payload != nil {
+			return json.Marshal(unknown.Payload)
+		}
+		return json.Marshal(map[string]any{"type": unknown.Type})
+	}
+	return marshalWithType(string(o.Type), o.Inner)
 }
 
 // UnmarshalJSON unmarshals the [WriteSetChange] from JSON handling conversion between types
