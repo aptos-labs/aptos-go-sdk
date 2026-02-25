@@ -476,11 +476,11 @@ type AptosIndexerClient interface {
 	//
 	//	var out []CoinBalance
 	//	var q struct {
-	//		Current_coin_balances []struct {
-	//			CoinType     string `graphql:"coin_type"`
+	//		CurrentFungibleAssetBalances []struct {
+	//			AssetType    string `graphql:"asset_type"`
 	//			Amount       uint64
 	//			OwnerAddress string `graphql:"owner_address"`
-	//		} `graphql:"current_coin_balances(where: {owner_address: {_eq: $address}})"`
+	//		} `graphql:"current_fungible_asset_balances(where: {owner_address: {_eq: $address}})"`
 	//	}
 	//	variables := map[string]any{
 	//		"address": address.StringLong(),
@@ -490,9 +490,9 @@ type AptosIndexerClient interface {
 	//		return nil, err
 	//	}
 	//
-	//	for _, coin := range q.Current_coin_balances {
+	//	for _, coin := range q.CurrentFungibleAssetBalances {
 	//		out = append(out, CoinBalance{
-	//			CoinType: coin.CoinType,
+	//			CoinType: coin.AssetType,
 	//			Amount:   coin.Amount,
 	//	})
 	//	}
@@ -951,11 +951,11 @@ func (client *Client) AccountAPTBalance(address AccountAddress, ledgerVersion ..
 //
 //	var out []CoinBalance
 //	var q struct {
-//		Current_coin_balances []struct {
-//			CoinType     string `graphql:"coin_type"`
+//		CurrentFungibleAssetBalances []struct {
+//			AssetType    string `graphql:"asset_type"`
 //			Amount       uint64
 //			OwnerAddress string `graphql:"owner_address"`
-//		} `graphql:"current_coin_balances(where: {owner_address: {_eq: $address}})"`
+//		} `graphql:"current_fungible_asset_balances(where: {owner_address: {_eq: $address}})"`
 //	}
 //	variables := map[string]any{
 //		"address": address.StringLong(),
@@ -965,9 +965,9 @@ func (client *Client) AccountAPTBalance(address AccountAddress, ledgerVersion ..
 //		return nil, err
 //	}
 //
-//	for _, coin := range q.Current_coin_balances {
+//	for _, coin := range q.CurrentFungibleAssetBalances {
 //		out = append(out, CoinBalance{
-//			CoinType: coin.CoinType,
+//			CoinType: coin.AssetType,
 //			Amount:   coin.Amount,
 //	})
 //	}

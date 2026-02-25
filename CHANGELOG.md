@@ -24,6 +24,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Fix `MultiEd25519PublicKey.Verify()` to properly use bitmap for signature verification; add `BitmapIndices()`
   helper method
 - [`Fix`] Replace `println` with `slog.Warn` for AIP-80 compliance warnings in private key parsing
+- [`Fix`] Update `GetCoinBalances` to use `current_fungible_asset_balances` indexer query instead of removed
+  `current_coin_balances`
 
 # v1.11.0 (9/26/2025)
 
