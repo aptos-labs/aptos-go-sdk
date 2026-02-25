@@ -1274,7 +1274,7 @@ func Get[T any](rc *NodeClient, getUrl string) (T, error) {
 	// Set all preset headers
 	rc.setHeaders(req)
 
-	response, err := rc.client.Do(req)
+	response, err := rc.client.Do(req) //nolint:gosec // URL is provided by SDK user via configuration
 	if err != nil {
 		err = fmt.Errorf("GET %s, %w", getUrl, err)
 		return out, err
@@ -1308,7 +1308,7 @@ func (rc *NodeClient) GetBCS(getUrl string) ([]byte, error) {
 	// Set all preset headers
 	rc.setHeaders(req)
 
-	response, err := rc.client.Do(req)
+	response, err := rc.client.Do(req) //nolint:gosec // URL is provided by SDK user via configuration
 	if err != nil {
 		return nil, fmt.Errorf("GET %s, %w", getUrl, err)
 	}
@@ -1339,7 +1339,7 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 	// Set all preset headers
 	rc.setHeaders(req)
 
-	response, err := rc.client.Do(req)
+	response, err := rc.client.Do(req) //nolint:gosec // URL is provided by SDK user via configuration
 	if err != nil {
 		err = fmt.Errorf("POST %s, %w", postUrl, err)
 		return data, err

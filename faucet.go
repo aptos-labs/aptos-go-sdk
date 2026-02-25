@@ -47,7 +47,7 @@ func (faucetClient *FaucetClient) Fund(address AccountAddress, amount uint64) er
 	}
 
 	// Wait for fund transactions to go through
-	slog.Debug("FundAccount wait for transactions", "number of transactions", len(txnHashes))
+	slog.Debug("FundAccount wait for transactions", "number of transactions", len(txnHashes)) //nolint:gosec // len() returns int, not user-controlled data
 	if len(txnHashes) == 1 {
 		_, err = faucetClient.nodeClient.WaitForTransaction(txnHashes[0])
 		return err
