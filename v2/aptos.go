@@ -4,7 +4,7 @@ package aptos
 // It can be overridden at build time via ldflags:
 //
 //	go build -ldflags "-X github.com/aptos-labs/aptos-go-sdk/v2.Version=2.0.0"
-var Version = "2.0.0-alpha.1"
+var Version = "2.0.0"
 
 // Re-export commonly used types from internal packages for convenience.
 // Users can import just "github.com/aptos-labs/aptos-go-sdk/v2" for most use cases.
