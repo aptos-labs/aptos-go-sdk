@@ -25,7 +25,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   helper method
 - [`Fix`] Replace `println` with `slog.Warn` for AIP-80 compliance warnings in private key parsing
 
-# V2 (Unreleased)
+# v2.0.0 (2/25/2026)
 
 ## New Features
 - [`Feature`] Add Keyless authentication support (OpenID-based)
