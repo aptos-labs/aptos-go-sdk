@@ -125,7 +125,7 @@ func (ser *Serializer) serializeIBigInt(size uint, v *big.Int) {
 
 // I8 serialize a signed 8-bit integer
 func (ser *Serializer) I8(v int8) {
-	ser.out.WriteByte(byte(v))
+	ser.out.WriteByte(byte(v)) //nolint:gosec // Intentional two's complement conversion for BCS serialization
 }
 
 // I16 serialize a signed 16-bit integer in little-endian format
