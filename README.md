@@ -7,6 +7,14 @@
 
 A comprehensive Go SDK for building applications on the [Aptos blockchain](https://aptos.dev).
 
+> **Looking for v2?** The [Aptos Go SDK v2](v2/) is a modern, idiomatic rewrite with `context.Context` support, functional options, Go 1.24+ features, and a fluent transaction builder. **New projects should use v2.**
+>
+> ```bash
+> go get github.com/aptos-labs/aptos-go-sdk/v2
+> ```
+>
+> See the [v2 README](v2/README.md) and [v2 GoDocs](https://godocs.io/github.com/aptos-labs/aptos-go-sdk/v2) for details.
+
 ## Features
 
 - 🔐 **Multiple Key Types** - Ed25519, Secp256k1, MultiKey, and MultiEd25519 support
@@ -182,8 +190,15 @@ aptosgen -abi coin.json -package coin -output coin/
 
 ## Documentation
 
+### v2 (recommended)
+- [v2 Go Package Documentation](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk/v2)
+- [v2 GoDocs](https://godocs.io/github.com/aptos-labs/aptos-go-sdk/v2)
+
+### v1
 - [Go Package Documentation](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
 - [GoDocs](https://godocs.io/github.com/aptos-labs/aptos-go-sdk)
+
+### General
 - [Aptos Developer Docs](https://aptos.dev)
 - [Go SDK Guide](https://aptos.dev/sdks/go-sdk/)
 
