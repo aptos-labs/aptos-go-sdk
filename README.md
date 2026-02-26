@@ -183,6 +183,7 @@ aptosgen -abi coin.json -package coin -output coin/
 ## Documentation
 
 - [Go Package Documentation](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk)
+- [GoDocs](https://godocs.io/github.com/aptos-labs/aptos-go-sdk)
 - [Aptos Developer Docs](https://aptos.dev)
 - [Go SDK Guide](https://aptos.dev/sdks/go-sdk/)
 

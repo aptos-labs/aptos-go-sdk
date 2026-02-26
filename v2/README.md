@@ -298,6 +298,12 @@ type MyStruct struct {
 data, err := bcs.Marshal(&MyStruct{Value: 42, Name: "test"})
 ```
 
+## Documentation
+
+- [Go Package Documentation](https://pkg.go.dev/github.com/aptos-labs/aptos-go-sdk/v2)
+- [GoDocs](https://godocs.io/github.com/aptos-labs/aptos-go-sdk/v2)
+- [Aptos Developer Docs](https://aptos.dev)
+
 ## Contributing
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
