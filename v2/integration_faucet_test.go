@@ -1,6 +1,6 @@
 // Package aptos faucet integration tests verify faucet functionality.
 //
-// These tests require network connectivity and fund accounts on testnet/devnet.
+// These tests require network connectivity and fund accounts on testnet.
 // They should be run sparingly and are skipped by default unless APTOS_TEST_FAUCET=1.
 //
 // Run with: APTOS_TEST_FAUCET=1 go test -v -run IntegrationFaucet ./v2/...
@@ -27,15 +27,9 @@ func skipIfNoFaucetTests(t *testing.T) {
 	}
 }
 
-// testNetworkWithFaucet returns a network that has a faucet (testnet or devnet).
+// testNetworkWithFaucet returns a network that has a faucet (testnet).
 func testNetworkWithFaucet() NetworkConfig {
-	network := os.Getenv("APTOS_NETWORK")
-	switch network {
-	case "devnet":
-		return Devnet
-	default:
-		return Testnet
-	}
+	return Testnet
 }
 
 // generateRandomAddress generates a random-looking address for testing.
