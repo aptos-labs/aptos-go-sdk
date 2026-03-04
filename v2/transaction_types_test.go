@@ -1014,7 +1014,7 @@ func TestDeserializePayload_UnknownVariant(t *testing.T) {
 	des := bcs.NewDeserializer(data)
 	result := deserializePayload(des)
 	assert.Nil(t, result)
-	assert.Error(t, des.Error())
+	require.Error(t, des.Error())
 	assert.Contains(t, des.Error().Error(), "unknown payload variant")
 }
 

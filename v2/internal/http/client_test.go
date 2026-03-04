@@ -327,7 +327,10 @@ func TestRateLimitedClient_ContextCancellation(t *testing.T) {
 	defer cancel()
 
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
-	_, err := client.Do(req)
+	resp, err := client.Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
 	assert.Error(t, err) // Should fail due to context deadline
 }
 
@@ -343,7 +346,10 @@ func TestLoggingClient_Error(t *testing.T) {
 	client := NewLoggingClient(mock, logger)
 
 	req, _ := http.NewRequest(http.MethodGet, "http://example.com/test", nil)
-	_, err := client.Do(req)
+	resp, err := client.Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
 
 	require.ErrorIs(t, err, testErr)
 	logOutput := logBuf.String()

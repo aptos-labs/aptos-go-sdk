@@ -10,9 +10,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Run a specific test: `go test ./... -run TestName`
 - Run tests in specific directories: `go test ./examples/...`
 
-### Code Quality
+### Code Quality (must pass before committing)
 - Format code: `gofumpt -l -w .`
 - Run linter: `golangci-lint run`
+- **Both checks must be run and pass before creating any commit.**
 - All examples run as unit tests in CI to ensure they work correctly
 
 ### Build
