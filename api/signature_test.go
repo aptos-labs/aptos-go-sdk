@@ -41,6 +41,7 @@ func TestAccountAuthenticator_Ed25519(t *testing.T) {
 	expectedPubKey := crypto.Ed25519PublicKey{}
 	err = expectedPubKey.FromHex("0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f")
 	require.NoError(t, err)
+	assert.Equal(t, expectedPubKey, *auth.PubKey)
 
 	expectedSignature := crypto.Ed25519Signature{}
 	err = expectedSignature.FromHex("0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609")
@@ -114,6 +115,14 @@ func TestAccountAuthenticator_FeePayer(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, SignatureVariantFeePayer, data.Type)
 
-	// TODO: verify some parsing
-	// auth := data.Inner.(*FeePayerSignature)
+	auth, ok := data.Inner.(*FeePayerSignature)
+	require.True(t, ok)
+	require.NotNil(t, auth.Sender)
+	assert.Equal(t, SignatureVariantEd25519, auth.Sender.Type)
+	require.NotNil(t, auth.FeePayerAddress)
+	assert.Equal(t, "0xc1d18520beffe36d104232f455d5cc83b991bde0d1425a735aea1c0c2df60e0b", auth.FeePayerAddress.StringLong())
+	require.NotNil(t, auth.FeePayerSigner)
+	assert.Equal(t, SignatureVariantEd25519, auth.FeePayerSigner.Type)
+	assert.Empty(t, auth.SecondarySignerAddresses)
+	assert.Empty(t, auth.SecondarySigners)
 }

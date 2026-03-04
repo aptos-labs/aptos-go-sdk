@@ -59,8 +59,11 @@ func TestSerialized_SerializedForScriptFunction(t *testing.T) {
 	// Script function prepends ULEB128(9) before the WriteBytes call
 	// ULEB128(9) = 0x09
 	assert.Equal(t, byte(0x09), bytes[0])
-	// Then the rest is WriteBytes output (length-prefixed)
-	assert.Greater(t, len(bytes), 1)
+	// Then the rest is WriteBytes output (length-prefixed: ULEB128(2) + 0x01 + 0x02)
+	assert.Equal(t, byte(0x02), bytes[1], "length prefix should be 2")
+	assert.Equal(t, byte(0x01), bytes[2])
+	assert.Equal(t, byte(0x02), bytes[3])
+	assert.Len(t, bytes, 4)
 }
 
 func TestSerialized_EmptyValue(t *testing.T) {

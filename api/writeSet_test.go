@@ -232,8 +232,9 @@ func TestWriteSet_ScriptWriteSet(t *testing.T) {
 	err := json.Unmarshal([]byte(testJson), data)
 	require.NoError(t, err)
 	assert.Equal(t, WriteSetVariantScript, data.Type)
-	_, ok := data.Inner.(*ScriptWriteSet)
-	assert.True(t, ok)
+	inner, ok := data.Inner.(*ScriptWriteSet)
+	require.True(t, ok)
+	assert.Equal(t, "0x1", inner.ExecuteAs.String())
 }
 
 func TestWriteSet_UnknownType(t *testing.T) {

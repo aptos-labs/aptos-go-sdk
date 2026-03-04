@@ -118,6 +118,12 @@ func TestMultiKeySignature_Bytes_FromBytes_ToHex_FromHex(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, signature2.Signatures, len(signature.Signatures))
+	// Verify bitmap survived the round-trip
+	sig2Bytes, err := bcs.Serialize(signature2)
+	require.NoError(t, err)
+	origSigBytes, err := bcs.Serialize(signature)
+	require.NoError(t, err)
+	assert.Equal(t, origSigBytes, sig2Bytes, "BCS-serialized bytes should match after FromBytes round-trip")
 
 	// Test ToHex / FromHex
 	hexStr := signature.ToHex()
@@ -127,6 +133,9 @@ func TestMultiKeySignature_Bytes_FromBytes_ToHex_FromHex(t *testing.T) {
 	err = signature3.FromHex(hexStr)
 	require.NoError(t, err)
 	assert.Len(t, signature3.Signatures, len(signature.Signatures))
+	sig3Bytes, err := bcs.Serialize(signature3)
+	require.NoError(t, err)
+	assert.Equal(t, origSigBytes, sig3Bytes, "BCS-serialized bytes should match after FromHex round-trip")
 }
 
 func TestMultiKeyBitmap_MarshalBCS_UnmarshalBCS(t *testing.T) {
