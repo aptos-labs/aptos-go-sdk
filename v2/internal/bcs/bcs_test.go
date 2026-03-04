@@ -2042,3 +2042,124 @@ func TestBoolWithPreError(t *testing.T) {
 	result := des.Bool()
 	assert.False(t, result)
 }
+
+// Tests for ReadBoundedBytes
+
+func TestReadBoundedBytes(t *testing.T) {
+	t.Parallel()
+
+	t.Run("within bounds", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteBytes([]byte{1, 2, 3})
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedBytes(1, 10)
+		require.NoError(t, des.Error())
+		assert.Equal(t, []byte{1, 2, 3}, result)
+	})
+
+	t.Run("exact min boundary", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteBytes([]byte{1, 2, 3})
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedBytes(3, 10)
+		require.NoError(t, des.Error())
+		assert.Equal(t, []byte{1, 2, 3}, result)
+	})
+
+	t.Run("exact max boundary", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteBytes([]byte{1, 2, 3})
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedBytes(1, 3)
+		require.NoError(t, des.Error())
+		assert.Equal(t, []byte{1, 2, 3}, result)
+	})
+
+	t.Run("below min", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteBytes([]byte{1})
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedBytes(5, 10)
+		assert.Nil(t, result)
+		assert.Error(t, des.Error())
+		assert.Contains(t, des.Error().Error(), "too short")
+	})
+
+	t.Run("above max", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteBytes([]byte{1, 2, 3, 4, 5})
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedBytes(1, 3)
+		assert.Nil(t, result)
+		assert.Error(t, des.Error())
+		assert.Contains(t, des.Error().Error(), "too large")
+	})
+
+	t.Run("with pre-existing error", func(t *testing.T) {
+		t.Parallel()
+		des := NewDeserializer([]byte{3, 1, 2, 3})
+		des.SetError(ErrNilValue)
+		result := des.ReadBoundedBytes(0, 10)
+		assert.Nil(t, result)
+	})
+}
+
+// Tests for ReadBoundedString
+
+func TestReadBoundedString(t *testing.T) {
+	t.Parallel()
+
+	t.Run("within max", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteString("hello")
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedString(100)
+		require.NoError(t, des.Error())
+		assert.Equal(t, "hello", result)
+	})
+
+	t.Run("exact boundary", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteString("abc")
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedString(3)
+		require.NoError(t, des.Error())
+		assert.Equal(t, "abc", result)
+	})
+
+	t.Run("empty string", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteString("")
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedString(10)
+		require.NoError(t, des.Error())
+		assert.Equal(t, "", result)
+	})
+
+	t.Run("exceeding max", func(t *testing.T) {
+		t.Parallel()
+		ser := NewSerializer()
+		ser.WriteString("hello world")
+		des := NewDeserializer(ser.ToBytes())
+		result := des.ReadBoundedString(5)
+		assert.Equal(t, "", result)
+		assert.Error(t, des.Error())
+		assert.Contains(t, des.Error().Error(), "too large")
+	})
+
+	t.Run("with pre-existing error", func(t *testing.T) {
+		t.Parallel()
+		des := NewDeserializer([]byte{5, 'h', 'e', 'l', 'l', 'o'})
+		des.SetError(ErrNilValue)
+		result := des.ReadBoundedString(100)
+		assert.Equal(t, "", result)
+	})
+}

@@ -967,3 +967,74 @@ func TestDeserializeTransactionAuthenticator_FeePayer(t *testing.T) {
 	require.NotNil(t, result)
 	assert.True(t, result.Verify(msg))
 }
+
+func TestPayloadType_ViewPayload(t *testing.T) {
+	t.Parallel()
+	p := &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+	}
+	assert.Equal(t, "view_function", p.payloadType())
+}
+
+func TestPayloadType_EntryFunctionPayload(t *testing.T) {
+	t.Parallel()
+	p := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "transfer",
+	}
+	assert.Equal(t, "entry_function_payload", p.payloadType())
+}
+
+func TestPayloadType_ScriptPayload(t *testing.T) {
+	t.Parallel()
+	p := &ScriptPayload{Code: []byte{0x01}}
+	assert.Equal(t, "script_payload", p.payloadType())
+}
+
+func TestDeserializeTransactionAuthenticator_UnknownVariant(t *testing.T) {
+	t.Parallel()
+	ser := bcs.NewSerializer()
+	ser.Uleb128(99) // Unknown variant
+	data := ser.ToBytes()
+
+	des := bcs.NewDeserializer(data)
+	result := deserializeTransactionAuthenticator(des)
+	assert.Nil(t, result)
+	assert.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown transaction authenticator variant")
+}
+
+func TestDeserializePayload_UnknownVariant(t *testing.T) {
+	t.Parallel()
+	ser := bcs.NewSerializer()
+	ser.Uleb128(99) // Unknown variant
+	data := ser.ToBytes()
+
+	des := bcs.NewDeserializer(data)
+	result := deserializePayload(des)
+	assert.Nil(t, result)
+	assert.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown payload variant")
+}
+
+func TestSerializePayload_UnsupportedType(t *testing.T) {
+	t.Parallel()
+	ser := bcs.NewSerializer()
+	serializePayload(ser, &ViewPayload{}) // ViewPayload is not supported in BCS serialization
+	assert.Error(t, ser.Error())
+	assert.Contains(t, ser.Error().Error(), "unsupported payload type")
+}
+
+func TestDeserializeScriptArg_UnknownVariant(t *testing.T) {
+	t.Parallel()
+	ser := bcs.NewSerializer()
+	ser.U8(255) // Unknown variant
+	data := ser.ToBytes()
+
+	des := bcs.NewDeserializer(data)
+	result := deserializeScriptArg(des)
+	assert.Nil(t, result)
+	assert.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown script argument variant")
+}

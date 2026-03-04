@@ -2690,3 +2690,48 @@ func TestKeyless_AnySignature_KeylessVariant_BCSRoundTrip(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, keylessSig.ExpDateSecs, keylessSig2.ExpDateSecs)
 }
+
+func TestSecp256k1PrivateKey_String_Redacted(t *testing.T) {
+	t.Parallel()
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+	assert.Equal(t, "<Secp256k1PrivateKey:REDACTED>", key.String())
+}
+
+func TestSecp256k1PublicKey_FromHex_RoundTrip(t *testing.T) {
+	t.Parallel()
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	pubKey := key.VerifyingKey().(*Secp256k1PublicKey)
+	hex := pubKey.ToHex()
+	var pk2 Secp256k1PublicKey
+	err = pk2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, pubKey.Bytes(), pk2.Bytes())
+}
+
+func TestSecp256k1PublicKey_FromHex_InvalidHex(t *testing.T) {
+	t.Parallel()
+	var pk Secp256k1PublicKey
+	err := pk.FromHex("0xzzzz")
+	assert.Error(t, err)
+}
+
+func TestSecp256k1Signature_FromHex_RoundTrip(t *testing.T) {
+	t.Parallel()
+	key, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test message")
+	sig, err := key.SignMessage(msg)
+	require.NoError(t, err)
+
+	secpSig := sig.(*Secp256k1Signature)
+	hex := secpSig.ToHex()
+
+	var sig2 Secp256k1Signature
+	err = sig2.FromHex(hex)
+	require.NoError(t, err)
+	assert.Equal(t, secpSig.Bytes(), sig2.Bytes())
+}

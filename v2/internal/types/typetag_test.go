@@ -196,3 +196,179 @@ func TestNewTypeTag_Helpers(t *testing.T) {
 func TestAptosCoinTypeTag(t *testing.T) {
 	assert.Equal(t, "0x1::aptos_coin::AptosCoin", AptosCoinTypeTag.String())
 }
+
+func TestTypeTag_AllPrimitiveBCSRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tags := []struct {
+		name string
+		tag  TypeTag
+	}{
+		{"bool", TypeTag{Value: &BoolTag{}}},
+		{"u8", TypeTag{Value: &U8Tag{}}},
+		{"u16", TypeTag{Value: &U16Tag{}}},
+		{"u32", TypeTag{Value: &U32Tag{}}},
+		{"u64", TypeTag{Value: &U64Tag{}}},
+		{"u128", TypeTag{Value: &U128Tag{}}},
+		{"u256", TypeTag{Value: &U256Tag{}}},
+		{"address", TypeTag{Value: &AddressTag{}}},
+		{"signer", TypeTag{Value: &SignerTag{}}},
+	}
+
+	for _, tc := range tags {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := bcs.Serialize(&tc.tag)
+			require.NoError(t, err)
+
+			var result TypeTag
+			err = bcs.Deserialize(&result, data)
+			require.NoError(t, err)
+			assert.Equal(t, tc.tag.String(), result.String())
+			assert.Equal(t, tc.tag.Value.GetType(), result.Value.GetType())
+		})
+	}
+}
+
+func TestTypeTag_VectorBCSRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	t.Run("vector<u8>", func(t *testing.T) {
+		t.Parallel()
+		tag := TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}}
+		data, err := bcs.Serialize(&tag)
+		require.NoError(t, err)
+
+		var result TypeTag
+		err = bcs.Deserialize(&result, data)
+		require.NoError(t, err)
+		assert.Equal(t, "vector<u8>", result.String())
+	})
+
+	t.Run("nested vector<vector<u8>>", func(t *testing.T) {
+		t.Parallel()
+		inner := TypeTag{Value: &VectorTag{TypeParam: TypeTag{Value: &U8Tag{}}}}
+		tag := TypeTag{Value: &VectorTag{TypeParam: inner}}
+		data, err := bcs.Serialize(&tag)
+		require.NoError(t, err)
+
+		var result TypeTag
+		err = bcs.Deserialize(&result, data)
+		require.NoError(t, err)
+		assert.Equal(t, "vector<vector<u8>>", result.String())
+	})
+}
+
+func TestTypeTag_StructBCSRoundTripWithTypeParams(t *testing.T) {
+	t.Parallel()
+
+	tag := TypeTag{Value: &StructTag{
+		Address: AccountOne,
+		Module:  "coin",
+		Name:    "Coin",
+		TypeParams: []TypeTag{
+			{Value: &StructTag{
+				Address: AccountOne,
+				Module:  "aptos_coin",
+				Name:    "AptosCoin",
+			}},
+		},
+	}}
+
+	data, err := bcs.Serialize(&tag)
+	require.NoError(t, err)
+
+	var result TypeTag
+	err = bcs.Deserialize(&result, data)
+	require.NoError(t, err)
+	assert.Equal(t, tag.String(), result.String())
+}
+
+func TestReferenceTag_StringAndGetType(t *testing.T) {
+	t.Parallel()
+
+	ref := &ReferenceTag{TypeParam: TypeTag{Value: &U8Tag{}}}
+	assert.Equal(t, "&u8", ref.String())
+	assert.Equal(t, TypeTagReference, ref.GetType())
+}
+
+func TestGenericTag_StringAndGetType(t *testing.T) {
+	t.Parallel()
+
+	t.Run("T0", func(t *testing.T) {
+		t.Parallel()
+		g := &GenericTag{Num: 0}
+		assert.Equal(t, "T0", g.String())
+		assert.Equal(t, TypeTagGeneric, g.GetType())
+	})
+
+	t.Run("T3", func(t *testing.T) {
+		t.Parallel()
+		g := &GenericTag{Num: 3}
+		assert.Equal(t, "T3", g.String())
+		assert.Equal(t, TypeTagGeneric, g.GetType())
+	})
+}
+
+func TestTypeTag_UnmarshalBCS_UnknownVariant(t *testing.T) {
+	t.Parallel()
+
+	// Create data with an unknown variant number (99)
+	ser := bcs.NewSerializer()
+	ser.Uleb128(99)
+	data := ser.ToBytes()
+
+	var tag TypeTag
+	err := bcs.Deserialize(&tag, data)
+	assert.Error(t, err)
+}
+
+func TestTypeTag_SignedIntegerBCSRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	tags := []struct {
+		name string
+		tag  TypeTag
+	}{
+		{"i8", TypeTag{Value: &I8Tag{}}},
+		{"i16", TypeTag{Value: &I16Tag{}}},
+		{"i32", TypeTag{Value: &I32Tag{}}},
+		{"i64", TypeTag{Value: &I64Tag{}}},
+		{"i128", TypeTag{Value: &I128Tag{}}},
+		{"i256", TypeTag{Value: &I256Tag{}}},
+	}
+
+	for _, tc := range tags {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			data, err := bcs.Serialize(&tc.tag)
+			require.NoError(t, err)
+
+			var result TypeTag
+			err = bcs.Deserialize(&result, data)
+			require.NoError(t, err)
+			assert.Equal(t, tc.tag.String(), result.String())
+			assert.Equal(t, tc.tag.Value.GetType(), result.Value.GetType())
+		})
+	}
+}
+
+func TestPrimitiveTag_DirectMarshalUnmarshal(t *testing.T) {
+	t.Parallel()
+
+	// Exercise MarshalBCS and UnmarshalBCS directly on each tag type
+	tags := []TypeTagImpl{
+		&BoolTag{}, &U8Tag{}, &U16Tag{}, &U32Tag{}, &U64Tag{},
+		&U128Tag{}, &U256Tag{}, &I8Tag{}, &I16Tag{}, &I32Tag{},
+		&I64Tag{}, &I128Tag{}, &I256Tag{}, &AddressTag{}, &SignerTag{},
+		&ReferenceTag{TypeParam: TypeTag{Value: &U8Tag{}}},
+		&GenericTag{Num: 0},
+	}
+
+	ser := bcs.NewSerializer()
+	des := bcs.NewDeserializer(nil)
+	for _, tag := range tags {
+		tag.MarshalBCS(ser)
+		tag.UnmarshalBCS(des)
+	}
+}
