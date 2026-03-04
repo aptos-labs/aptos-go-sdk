@@ -171,7 +171,8 @@ func TestRawTransactionWithData_SetFeePayer(t *testing.T) {
 		ok := txnWithData.SetFeePayer(newFeePayer)
 		assert.True(t, ok, "SetFeePayer should succeed for MultiAgentWithFeePayer variant")
 
-		inner := txnWithData.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
+		inner, ok2 := txnWithData.Inner.(*MultiAgentWithFeePayerRawTransactionWithData)
+		require.True(t, ok2)
 		assert.Equal(t, newFeePayer, *inner.FeePayer)
 	})
 
@@ -277,8 +278,10 @@ func TestRawTransactionWithData_BCS_RoundTrip(t *testing.T) {
 	assert.Equal(t, txnWithData.Variant, deserialized.Variant)
 
 	// Verify the inner data matches by comparing the raw transaction fields.
-	originalInner := txnWithData.Inner.(*MultiAgentRawTransactionWithData)
-	deserializedInner := deserialized.Inner.(*MultiAgentRawTransactionWithData)
+	originalInner, ok := txnWithData.Inner.(*MultiAgentRawTransactionWithData)
+	require.True(t, ok)
+	deserializedInner, ok := deserialized.Inner.(*MultiAgentRawTransactionWithData)
+	require.True(t, ok)
 
 	assert.Equal(t, originalInner.RawTxn.Sender, deserializedInner.RawTxn.Sender)
 	assert.Equal(t, originalInner.RawTxn.SequenceNumber, deserializedInner.RawTxn.SequenceNumber)

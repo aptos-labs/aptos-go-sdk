@@ -10,7 +10,12 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 )
 
-func test_Multisig(t *testing.T, buildTransaction CreateSingleSignerPayload) {
+// test_Multisig is an integration test helper that requires a running local network.
+// It is invoked by integration test suites, not directly.
+var _ = test_Multisig //nolint:unused
+
+func test_Multisig(t *testing.T, _ CreateSingleSignerPayload) {
+	t.Helper()
 	client, _ := createTestClient()
 
 	recipient, err := NewEd25519Account()
@@ -106,9 +111,6 @@ func test_Multisig(t *testing.T, buildTransaction CreateSingleSignerPayload) {
 	println("Multisig setup and transactions complete.")
 }
 
-func example(networkConfig NetworkConfig) {
-}
-
 func assertBalance(client *Client, address AccountAddress, expectedBalance uint64) {
 	amount, err := client.AccountAPTBalance(address)
 	if err != nil {
@@ -121,7 +123,7 @@ func assertBalance(client *Client, address AccountAddress, expectedBalance uint6
 
 func generateOwnerAccounts() []*Account {
 	accounts := make([]*Account, 3)
-	for i := 0; i < 3; i++ {
+	for i := range 3 {
 		account, err := NewEd25519Account()
 		if err != nil {
 			panic("Failed to create account " + err.Error())
@@ -196,15 +198,24 @@ func multisigResource(client *Client, multisigAddress *AccountAddress) (uint64, 
 		panic("Failed to get resource for multisig account: " + err.Error())
 	}
 	// TODO: Add JSON types
-	resourceData := resource["data"].(map[string]any)
+	resourceData, ok := resource["data"].(map[string]any)
+	if !ok {
+		panic("Failed to cast resource data")
+	}
 
-	numSigsRequiredStr := resourceData["num_signatures_required"].(string)
+	numSigsRequiredStr, ok := resourceData["num_signatures_required"].(string)
+	if !ok {
+		panic("Failed to cast num_signatures_required")
+	}
 
 	numSigsRequired, err := StrToUint64(numSigsRequiredStr)
 	if err != nil {
 		panic("Failed to convert string to u64: " + err.Error())
 	}
-	ownersArray := resourceData["owners"].([]any)
+	ownersArray, ok := resourceData["owners"].([]any)
+	if !ok {
+		panic("Failed to cast owners array")
+	}
 
 	return numSigsRequired, ownersArray
 }
@@ -316,7 +327,10 @@ func submitAndWait(client *Client, sender *Account, payload TransactionPayloadIm
 	// TODO: make this a function on the user transaction
 	for _, event := range txn.Events {
 		if event.Type == "0x1::multisig_account::TransactionExecutionFailed" {
-			eventStr, _ := json.Marshal(event)
+			eventStr, marshalErr := json.Marshal(event)
+			if marshalErr != nil {
+				panic("Failed to marshal event: " + marshalErr.Error())
+			}
 			panic(fmt.Sprintf("Multisig transaction failed. details: %s", eventStr))
 		}
 	}
