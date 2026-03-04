@@ -238,3 +238,53 @@ func TestParseTypeTag(t *testing.T) {
 		})
 	}
 }
+
+func TestReferenceTag_GetType_String(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		inner      TypeTagImpl
+		wantType   TypeTagVariant
+		wantString string
+	}{
+		{"ref u8", &U8Tag{}, TypeTagReference, "&u8"},
+		{"ref bool", &BoolTag{}, TypeTagReference, "&bool"},
+		{"ref address", &AddressTag{}, TypeTagReference, "&address"},
+		{"ref signer", &SignerTag{}, TypeTagReference, "&signer"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			ref := &ReferenceTag{TypeParam: TypeTag{Value: tc.inner}}
+			assert.Equal(t, tc.wantType, ref.GetType())
+			assert.Equal(t, tc.wantString, ref.String())
+		})
+	}
+}
+
+func TestGenericTag_GetType_String(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		num        uint64
+		wantType   TypeTagVariant
+		wantString string
+	}{
+		{"T0", 0, TypeTagGeneric, "T0"},
+		{"T1", 1, TypeTagGeneric, "T1"},
+		{"T5", 5, TypeTagGeneric, "T5"},
+		{"T255", 255, TypeTagGeneric, "T255"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			g := &GenericTag{Num: tc.num}
+			assert.Equal(t, tc.wantType, g.GetType())
+			assert.Equal(t, tc.wantString, g.String())
+		})
+	}
+}

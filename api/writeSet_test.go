@@ -211,3 +211,60 @@ func TestWriteSet_DeleteTableItem(t *testing.T) {
 	assert.Equal(t, "0x18cca5d121ebb854e2f16bd2892d0aad9ae0460e21250bc25daa2cdd6f93a070", inner.Handle)
 	assert.Equal(t, "0x0000000000000000", inner.Key)
 }
+
+func TestWriteSet_DirectWriteSet(t *testing.T) {
+	t.Parallel()
+	testJson := `{"type": "direct_write_set", "changes": [], "events": []}`
+	data := &WriteSet{}
+	err := json.Unmarshal([]byte(testJson), data)
+	require.NoError(t, err)
+	assert.Equal(t, WriteSetVariantDirect, data.Type)
+	inner, ok := data.Inner.(*DirectWriteSet)
+	assert.True(t, ok)
+	assert.Empty(t, inner.Changes)
+	assert.Empty(t, inner.Events)
+}
+
+func TestWriteSet_ScriptWriteSet(t *testing.T) {
+	t.Parallel()
+	testJson := `{"type": "script_write_set", "execute_as": "0x1", "script": {"code": {"bytecode": "0x00"}, "type_arguments": [], "arguments": []}}`
+	data := &WriteSet{}
+	err := json.Unmarshal([]byte(testJson), data)
+	require.NoError(t, err)
+	assert.Equal(t, WriteSetVariantScript, data.Type)
+	_, ok := data.Inner.(*ScriptWriteSet)
+	assert.True(t, ok)
+}
+
+func TestWriteSet_UnknownType(t *testing.T) {
+	t.Parallel()
+	testJson := `{"type": "future_write_set", "foo": "bar"}`
+	data := &WriteSet{}
+	err := json.Unmarshal([]byte(testJson), data)
+	require.NoError(t, err)
+	assert.Equal(t, WriteSetVariantUnknown, data.Type)
+	inner, ok := data.Inner.(*UnknownWriteSet)
+	require.True(t, ok)
+	assert.Equal(t, "future_write_set", inner.Type)
+}
+
+func TestWriteSetChange_UnknownType(t *testing.T) {
+	t.Parallel()
+	testJson := `{"type": "future_change", "foo": "bar"}`
+	data := &WriteSetChange{}
+	err := json.Unmarshal([]byte(testJson), data)
+	require.NoError(t, err)
+	assert.Equal(t, WriteSetChangeVariantUnknown, data.Type)
+}
+
+func TestWriteSet_DeleteModule(t *testing.T) {
+	t.Parallel()
+	testJson := `{"address": "0x1", "state_key_hash": "0xabc", "module": "0x1::test::Module", "type": "delete_module"}`
+	data := &WriteSetChange{}
+	err := json.Unmarshal([]byte(testJson), data)
+	require.NoError(t, err)
+	assert.Equal(t, WriteSetChangeVariantDeleteModule, data.Type)
+	inner, ok := data.Inner.(*WriteSetChangeDeleteModule)
+	require.True(t, ok)
+	assert.Equal(t, "0x1::test::Module", inner.Module)
+}

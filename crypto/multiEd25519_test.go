@@ -92,6 +92,32 @@ func TestMultiEd25519Signature_BitmapIndices(t *testing.T) {
 	assert.Equal(t, []uint8{}, sig4.BitmapIndices())
 }
 
+func TestMultiEd25519Signature_ToHex_FromHex(t *testing.T) {
+	t.Parallel()
+	key1, key2, _ := createMultiEd25519Key(t)
+
+	message := []byte("round trip test")
+	signature := createMultiEd25519Signature(t, key1, key2, message)
+
+	// Convert to hex and back
+	hexStr := signature.ToHex()
+	assert.NotEmpty(t, hexStr)
+
+	signature2 := &MultiEd25519Signature{}
+	err := signature2.FromHex(hexStr)
+	require.NoError(t, err)
+
+	assert.Equal(t, signature.Bitmap, signature2.Bitmap)
+	assert.Len(t, signature2.Signatures, len(signature.Signatures))
+
+	// Verify bytes round-trip too
+	sigBytes := signature.Bytes()
+	signature3 := &MultiEd25519Signature{}
+	err = signature3.FromBytes(sigBytes)
+	require.NoError(t, err)
+	assert.Equal(t, signature.Bitmap, signature3.Bitmap)
+}
+
 func createMultiEd25519Key(t *testing.T) (
 	*Ed25519PrivateKey,
 	*Ed25519PrivateKey,

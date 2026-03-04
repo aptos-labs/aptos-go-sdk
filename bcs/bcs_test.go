@@ -254,8 +254,8 @@ func Test_I256(t *testing.T) {
 
 func Test_Uleb128(t *testing.T) {
 	t.Parallel()
-	serialized := []string{"00", "01", "7f", "ff7f", "ffff03", "ffffffff0f"}
-	deserialized := []uint32{0, 1, 127, 16383, 65535, 0xffffffff}
+	serialized := []string{"00", "01", "7f", "8001", "ff7f", "ffff03", "808004", "ffffffff0f"}
+	deserialized := []uint32{0, 1, 127, 128, 16383, 65535, 65536, 0xffffffff}
 
 	helper(t, serialized, deserialized, func(serializer *Serializer, input uint32) {
 		serializer.Uleb128(input)
@@ -564,6 +564,60 @@ func Test_ConvenienceFunctions(t *testing.T) {
 	serializedBytes, err := SerializeBytes([]byte{0x05})
 	require.NoError(t, err)
 	assert.Equal(t, []byte{0x01, 0x05}, serializedBytes)
+
+	// Signed integer convenience functions
+	serializedI8, err := SerializeI8(-1)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xff}, serializedI8)
+
+	serializedI16, err := SerializeI16(-1)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xff, 0xff}, serializedI16)
+
+	serializedI32, err := SerializeI32(-1)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff}, serializedI32)
+
+	serializedI64, err := SerializeI64(-1)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}, serializedI64)
+
+	serializedI128, err := SerializeI128(*big.NewInt(-1))
+	require.NoError(t, err)
+	expected128 := make([]byte, 16)
+	for i := range expected128 {
+		expected128[i] = 0xff
+	}
+	assert.Equal(t, expected128, serializedI128)
+
+	serializedI256, err := SerializeI256(*big.NewInt(-1))
+	require.NoError(t, err)
+	expected256 := make([]byte, 32)
+	for i := range expected256 {
+		expected256[i] = 0xff
+	}
+	assert.Equal(t, expected256, serializedI256)
+
+	// ULEB128 convenience function
+	serializedUleb, err := SerializeUleb128(128)
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0x80, 0x01}, serializedUleb)
+
+	// Serializer.Serialized and SerializeSerialized
+	ser := &Serializer{}
+	ser.Serialized(Serialized{Value: []byte{0xAA, 0xBB}})
+	require.NoError(t, ser.Error())
+	assert.Equal(t, []byte{0x02, 0xAA, 0xBB}, ser.ToBytes())
+
+	ssBuf, err := SerializeSerialized(Serialized{Value: []byte{0xCC}})
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0xCC}, ssBuf)
+
+	// Deserializer.Serialized
+	des := NewDeserializer([]byte{0x02, 0xAA, 0xBB})
+	s := des.Serialized()
+	require.NoError(t, des.Error())
+	assert.Equal(t, []byte{0xAA, 0xBB}, s.Value)
 }
 
 func Test_SerializeOptional(t *testing.T) {
