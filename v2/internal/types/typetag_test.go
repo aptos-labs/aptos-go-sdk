@@ -356,19 +356,40 @@ func TestTypeTag_SignedIntegerBCSRoundTrip(t *testing.T) {
 func TestPrimitiveTag_DirectMarshalUnmarshal(t *testing.T) {
 	t.Parallel()
 
-	// Exercise MarshalBCS and UnmarshalBCS directly on each tag type
-	tags := []TypeTagImpl{
-		&BoolTag{}, &U8Tag{}, &U16Tag{}, &U32Tag{}, &U64Tag{},
-		&U128Tag{}, &U256Tag{}, &I8Tag{}, &I16Tag{}, &I32Tag{},
-		&I64Tag{}, &I128Tag{}, &I256Tag{}, &AddressTag{}, &SignerTag{},
-		&ReferenceTag{TypeParam: TypeTag{Value: &U8Tag{}}},
-		&GenericTag{Num: 0},
+	tests := []struct {
+		tag     TypeTagImpl
+		str     string
+		variant TypeTagVariant
+	}{
+		{&BoolTag{}, "bool", TypeTagBool},
+		{&U8Tag{}, "u8", TypeTagU8},
+		{&U16Tag{}, "u16", TypeTagU16},
+		{&U32Tag{}, "u32", TypeTagU32},
+		{&U64Tag{}, "u64", TypeTagU64},
+		{&U128Tag{}, "u128", TypeTagU128},
+		{&U256Tag{}, "u256", TypeTagU256},
+		{&I8Tag{}, "i8", TypeTagI8},
+		{&I16Tag{}, "i16", TypeTagI16},
+		{&I32Tag{}, "i32", TypeTagI32},
+		{&I64Tag{}, "i64", TypeTagI64},
+		{&I128Tag{}, "i128", TypeTagI128},
+		{&I256Tag{}, "i256", TypeTagI256},
+		{&AddressTag{}, "address", TypeTagAddress},
+		{&SignerTag{}, "signer", TypeTagSigner},
+		{&ReferenceTag{TypeParam: TypeTag{Value: &U8Tag{}}}, "&u8", TypeTagReference},
+		{&GenericTag{Num: 0}, "T0", TypeTagGeneric},
 	}
 
-	ser := bcs.NewSerializer()
-	des := bcs.NewDeserializer(nil)
-	for _, tag := range tags {
-		tag.MarshalBCS(ser)
-		tag.UnmarshalBCS(des)
+	for _, tc := range tests {
+		ser := bcs.NewSerializer()
+		tc.tag.MarshalBCS(ser)
+		require.NoError(t, ser.Error(), "MarshalBCS failed for %s", tc.str)
+
+		des := bcs.NewDeserializer(nil)
+		tc.tag.UnmarshalBCS(des)
+		require.NoError(t, des.Error(), "UnmarshalBCS failed for %s", tc.str)
+
+		assert.Equal(t, tc.str, tc.tag.String())
+		assert.Equal(t, tc.variant, tc.tag.GetType())
 	}
 }

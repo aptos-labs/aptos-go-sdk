@@ -26,8 +26,6 @@ func testNetwork() NetworkConfig {
 	switch network {
 	case "mainnet":
 		return Mainnet
-	case "devnet":
-		return Devnet
 	case "localnet":
 		return Localnet
 	default:
@@ -64,7 +62,7 @@ func TestIntegration_ClientCreation(t *testing.T) {
 	skipIfShort(t)
 	t.Parallel()
 
-	networks := []NetworkConfig{Mainnet, Testnet, Devnet}
+	networks := []NetworkConfig{Mainnet, Testnet}
 	for _, network := range networks {
 		t.Run(network.Name, func(t *testing.T) {
 			t.Parallel()
@@ -143,7 +141,7 @@ func TestIntegration_ChainID(t *testing.T) {
 
 	// Verify it matches expected for the network
 	network := testNetwork()
-	if network.ChainID != 0 { // 0 means dynamic (devnet)
+	if network.ChainID != 0 { // 0 means dynamic (e.g. localnet)
 		assert.Equal(t, network.ChainID, chainID, "chain ID should match network config")
 	}
 
@@ -670,22 +668,4 @@ func TestIntegration_Testnet(t *testing.T) {
 
 	assert.Equal(t, uint8(2), info.ChainID, "testnet chain ID should be 2")
 	t.Logf("Testnet: ledger_version=%d, block_height=%d", info.LedgerVersion, info.BlockHeight)
-}
-
-// TestIntegration_Devnet tests connectivity to devnet specifically.
-func TestIntegration_Devnet(t *testing.T) {
-	skipIfShort(t)
-	t.Parallel()
-
-	client, err := NewClient(Devnet)
-	require.NoError(t, err)
-
-	ctx := testContext(t)
-	info, err := client.Info(ctx)
-	require.NoError(t, err)
-
-	// Devnet chain ID varies, just check we got a response
-	assert.NotZero(t, info.ChainID, "devnet should have a chain ID")
-	t.Logf("Devnet: chain_id=%d, ledger_version=%d, block_height=%d",
-		info.ChainID, info.LedgerVersion, info.BlockHeight)
 }

@@ -13,8 +13,8 @@ import (
 func Example_basicUsage() {
 	ctx := context.Background()
 
-	// Create a client for devnet
-	client, err := aptos.NewClient(aptos.Devnet)
+	// Create a client for testnet
+	client, err := aptos.NewClient(aptos.Testnet)
 	if err != nil {
 		panic(err)
 	}
@@ -41,7 +41,7 @@ func Example_clientOptions() {
 func Example_accountOperations() {
 	ctx := context.Background()
 
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	// Parse an address
 	address := aptos.MustParseAddress("0x1")
@@ -67,7 +67,7 @@ func Example_accountOperations() {
 func Example_transactionBuilder() {
 	ctx := context.Background()
 
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	sender := aptos.MustParseAddress("0x123")
 	recipient := aptos.MustParseAddress("0x456")
@@ -94,7 +94,7 @@ func Example_transactionBuilder() {
 
 func Example_transferAPT() {
 	ctx := context.Background()
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	sender := aptos.MustParseAddress("0x123")
 	recipient := aptos.MustParseAddress("0x456")
@@ -112,7 +112,7 @@ func Example_transferAPT() {
 
 func Example_viewFunction() {
 	ctx := context.Background()
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	// Call a view function
 	result, err := client.View(ctx, &aptos.ViewPayload{
@@ -130,7 +130,7 @@ func Example_viewFunction() {
 
 func Example_iterators() {
 	ctx := context.Background()
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	// Stream transactions
 	for txn, err := range client.TransactionsIter(ctx, nil) {
@@ -156,7 +156,7 @@ func Example_iterators() {
 
 func Example_errorHandling() {
 	ctx := context.Background()
-	client, _ := aptos.NewClient(aptos.Devnet)
+	client, _ := aptos.NewClient(aptos.Testnet)
 
 	address := aptos.MustParseAddress("0xnonexistent")
 

@@ -12,7 +12,7 @@ import (
 
 func TestBuildSignAndSubmitTransactionsWithSignFnAndWorkerPoolWithOneSender(t *testing.T) {
 	if testing.Short() {
-		t.Skip("integration test expects network connection to devnet")
+		t.Skip("integration test expects network connection to localnet")
 	}
 	t.Parallel()
 	const (

@@ -334,12 +334,10 @@ func TestPutBuffer32(t *testing.T) {
 		}
 		PutBuffer32(buf)
 
-		// Get it back from pool - should be zeroed
-		buf2 := GetBuffer32()
-		for _, b := range *buf2 {
+		// Verify the buffer was zeroed in place by PutBuffer32
+		for _, b := range *buf {
 			assert.Equal(t, byte(0), b)
 		}
-		PutBuffer32(buf2)
 	})
 
 	t.Run("nil buffer rejected", func(t *testing.T) {
@@ -376,11 +374,10 @@ func TestPutBuffer64(t *testing.T) {
 		}
 		PutBuffer64(buf)
 
-		buf2 := GetBuffer64()
-		for _, b := range *buf2 {
+		// Verify the buffer was zeroed in place by PutBuffer64
+		for _, b := range *buf {
 			assert.Equal(t, byte(0), b)
 		}
-		PutBuffer64(buf2)
 	})
 
 	t.Run("nil buffer rejected", func(t *testing.T) {

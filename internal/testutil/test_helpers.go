@@ -13,11 +13,11 @@ type TestClients struct {
 }
 
 func CreateTestClient() (*aptos.Client, error) {
-	return aptos.NewClient(aptos.DevnetConfig)
+	return aptos.NewClient(aptos.LocalnetConfig)
 }
 
 func CreateTestNodeClient() (*aptos.NodeClient, error) {
-	return aptos.NewNodeClient(aptos.DevnetConfig.NodeUrl, aptos.DevnetConfig.ChainId)
+	return aptos.NewNodeClient(aptos.LocalnetConfig.NodeUrl, aptos.LocalnetConfig.ChainId)
 }
 
 func SetupTestClients(t *testing.T) *TestClients {

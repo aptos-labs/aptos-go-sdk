@@ -138,11 +138,13 @@ func TestGasStation_SponsorTransaction_RateLimited(t *testing.T) {
 	gs := NewGasStation(server.URL, "test-key")
 	rawTxn := makeTestRawTransaction()
 
-	privKey, _ := crypto.GenerateEd25519PrivateKey()
+	privKey, err := crypto.GenerateEd25519PrivateKey()
+	require.NoError(t, err)
 	auth := &aptos.AccountAuthenticator{}
-	_ = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	err = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	require.NoError(t, err)
 
-	_, _, err := gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
+	_, _, err = gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
 	assert.ErrorIs(t, err, ErrRateLimited)
 }
 
@@ -161,11 +163,13 @@ func TestGasStation_SponsorTransaction_Rejected(t *testing.T) {
 	gs := NewGasStation(server.URL, "test-key")
 	rawTxn := makeTestRawTransaction()
 
-	privKey, _ := crypto.GenerateEd25519PrivateKey()
+	privKey, err := crypto.GenerateEd25519PrivateKey()
+	require.NoError(t, err)
 	auth := &aptos.AccountAuthenticator{}
-	_ = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	err = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	require.NoError(t, err)
 
-	_, _, err := gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
+	_, _, err = gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
 	assert.ErrorIs(t, err, ErrSponsorRejected)
 }
 
@@ -184,11 +188,13 @@ func TestGasStation_SponsorTransaction_InsufficientFunds(t *testing.T) {
 	gs := NewGasStation(server.URL, "test-key")
 	rawTxn := makeTestRawTransaction()
 
-	privKey, _ := crypto.GenerateEd25519PrivateKey()
+	privKey, err := crypto.GenerateEd25519PrivateKey()
+	require.NoError(t, err)
 	auth := &aptos.AccountAuthenticator{}
-	_ = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	err = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	require.NoError(t, err)
 
-	_, _, err := gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
+	_, _, err = gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
 	assert.ErrorIs(t, err, ErrInsufficientFunds)
 }
 
@@ -203,11 +209,13 @@ func TestGasStation_SponsorTransaction_MalformedResponse(t *testing.T) {
 	gs := NewGasStation(server.URL, "test-key")
 	rawTxn := makeTestRawTransaction()
 
-	privKey, _ := crypto.GenerateEd25519PrivateKey()
+	privKey, err := crypto.GenerateEd25519PrivateKey()
+	require.NoError(t, err)
 	auth := &aptos.AccountAuthenticator{}
-	_ = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	err = auth.FromKeyAndSignature(privKey.PubKey(), &crypto.Ed25519Signature{})
+	require.NoError(t, err)
 
-	_, _, err := gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
+	_, _, err = gs.SponsorTransaction(context.Background(), rawTxn, auth, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse response")
 }

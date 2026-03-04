@@ -170,8 +170,7 @@ func TestOldestBlockHeight(t *testing.T) {
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
 }
 
-func TestLedgerTimestamp(t *testing.T) {
-	t.Parallel()
+func TestLedgerTimestamp(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
