@@ -164,6 +164,56 @@ func TestSecp256k1PrivateKey_Clear(t *testing.T) {
 	assert.NotNil(t, privateKey.Inner)
 }
 
+func TestSecp256k1Authenticator_Verify(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	message := []byte("test authenticator verify")
+	signer := NewSingleSigner(privateKey)
+	authenticator, err := signer.Sign(message)
+	require.NoError(t, err)
+
+	// Build a Secp256k1Authenticator from the components
+	assert.True(t, authenticator.Verify(message))
+	assert.False(t, authenticator.Verify([]byte("wrong message")))
+}
+
+func TestSecp256k1Authenticator_BCS_RoundTrip(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	message := []byte("bcs round trip test")
+	signer := NewSingleSigner(privateKey)
+	authenticator, err := signer.Sign(message)
+	require.NoError(t, err)
+
+	// Serialize
+	authBytes, err := bcs.Serialize(authenticator)
+	require.NoError(t, err)
+
+	// Deserialize
+	auth2 := &AccountAuthenticator{}
+	err = bcs.Deserialize(auth2, authBytes)
+	require.NoError(t, err)
+
+	assert.Equal(t, authenticator.Variant, auth2.Variant)
+	assert.Equal(t, authenticator.Auth.PublicKey(), auth2.Auth.PublicKey())
+	assert.Equal(t, authenticator.Auth.Signature().ToHex(), auth2.Auth.Signature().ToHex())
+}
+
+func TestSecp256k1PrivateKey_EmptySignature(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	emptySig := privateKey.EmptySignature()
+	require.NotNil(t, emptySig)
+	_, ok := emptySig.(*Secp256k1Signature)
+	assert.True(t, ok)
+}
+
 func TestSecp256k1Signature_RecoverPublicKey(t *testing.T) {
 	t.Parallel()
 	privateKey := &Secp256k1PrivateKey{}
@@ -246,4 +296,93 @@ func TestSecp256k1Signature_RecoverPublicKeyFromSignatureWithRecoveryBit(t *test
 	// Verify the signature with the key
 	assert.True(t, recoveredKey.Verify(message, signature))
 	assert.Equal(t, publicKey.ToHex(), recoveredKey.ToHex())
+}
+
+func TestSecp256k1Authenticator_PublicKey(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test authenticator public key")
+	sig, err := privateKey.SignMessage(msg)
+	require.NoError(t, err)
+
+	secpPubKey, ok := privateKey.VerifyingKey().(*Secp256k1PublicKey)
+	require.True(t, ok)
+	secpSig, ok := sig.(*Secp256k1Signature)
+	require.True(t, ok)
+
+	auth := &Secp256k1Authenticator{
+		PubKey: secpPubKey,
+		Sig:    secpSig,
+	}
+
+	// PublicKey() should return the same key
+	returnedKey := auth.PublicKey()
+	assert.Equal(t, secpPubKey, returnedKey)
+	assert.Equal(t, secpPubKey.ToHex(), returnedKey.ToHex())
+}
+
+func TestSecp256k1Authenticator_Signature(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test authenticator signature")
+	sig, err := privateKey.SignMessage(msg)
+	require.NoError(t, err)
+
+	secpPubKey, ok := privateKey.VerifyingKey().(*Secp256k1PublicKey)
+	require.True(t, ok)
+	secpSig, ok := sig.(*Secp256k1Signature)
+	require.True(t, ok)
+
+	auth := &Secp256k1Authenticator{
+		PubKey: secpPubKey,
+		Sig:    secpSig,
+	}
+
+	// Signature() should return the same signature
+	returnedSig := auth.Signature()
+	assert.NotNil(t, returnedSig)
+	assert.Equal(t, secpSig, returnedSig)
+	assert.Equal(t, secpSig.ToHex(), returnedSig.ToHex())
+}
+
+func TestSecp256k1Authenticator_MarshalBCS_UnmarshalBCS(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateSecp256k1Key()
+	require.NoError(t, err)
+
+	msg := []byte("test secp256k1 authenticator bcs round trip")
+	sig, err := privateKey.SignMessage(msg)
+	require.NoError(t, err)
+
+	secpPubKey, ok := privateKey.VerifyingKey().(*Secp256k1PublicKey)
+	require.True(t, ok)
+	secpSig, ok := sig.(*Secp256k1Signature)
+	require.True(t, ok)
+
+	auth := &Secp256k1Authenticator{
+		PubKey: secpPubKey,
+		Sig:    secpSig,
+	}
+
+	// Verify the authenticator works before serialization
+	assert.True(t, auth.Verify(msg))
+
+	// Serialize
+	serialized, err := bcs.Serialize(auth)
+	require.NoError(t, err)
+	assert.NotEmpty(t, serialized)
+
+	// Deserialize
+	auth2 := &Secp256k1Authenticator{}
+	err = bcs.Deserialize(auth2, serialized)
+	require.NoError(t, err)
+
+	// Verify round-trip preserves the data
+	assert.Equal(t, auth.PubKey.ToHex(), auth2.PubKey.ToHex())
+	assert.Equal(t, auth.Sig.ToHex(), auth2.Sig.ToHex())
+	assert.True(t, auth2.Verify(msg))
 }

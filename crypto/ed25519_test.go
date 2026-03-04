@@ -134,6 +134,43 @@ func TestEd25519PrivateKey_Clear(t *testing.T) {
 	}
 }
 
+func TestEd25519PrivateKey_SimulationAuthenticator(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	auth := privateKey.SimulationAuthenticator()
+	require.NotNil(t, auth)
+	assert.Equal(t, AccountAuthenticatorEd25519, auth.Variant)
+
+	// The signature should be an empty (zero) signature
+	ed25519Auth, ok := auth.Auth.(*Ed25519Authenticator)
+	require.True(t, ok)
+	assert.Equal(t, &Ed25519Signature{}, ed25519Auth.Sig)
+	assert.Equal(t, privateKey.PubKey().ToHex(), ed25519Auth.PubKey.ToHex())
+}
+
+func TestEd25519PrivateKey_EmptySignature(t *testing.T) {
+	t.Parallel()
+	privateKey, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	emptySig := privateKey.EmptySignature()
+	require.NotNil(t, emptySig)
+	_, ok := emptySig.(*Ed25519Signature)
+	assert.True(t, ok)
+}
+
+func TestEd25519PublicKey_AuthKey(t *testing.T) {
+	t.Parallel()
+	privateKey := &Ed25519PrivateKey{}
+	err := privateKey.FromHex(testEd25519PrivateKeyHex)
+	require.NoError(t, err)
+
+	authKey := privateKey.AuthKey()
+	assert.Equal(t, testEd25519Address, authKey.ToHex())
+}
+
 func TestEd25519PrivateKeyWrongLength(t *testing.T) {
 	t.Parallel()
 	privateKey := &Ed25519PrivateKey{}
@@ -153,4 +190,21 @@ func TestEd25519SignatureWrongLength(t *testing.T) {
 	sig := &Ed25519Signature{}
 	err := sig.FromBytes([]byte{0x01})
 	require.Error(t, err)
+}
+
+func TestEd25519PublicKey_AuthKey_FromGenerated(t *testing.T) {
+	t.Parallel()
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	// Get AuthKey through the PublicKey interface
+	pubKey, ok := key.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+	authKey := pubKey.AuthKey()
+	assert.NotNil(t, authKey)
+	assert.Len(t, authKey[:], 32)
+
+	// AuthKey from the private key should match AuthKey from the public key
+	privateKeyAuthKey := key.AuthKey()
+	assert.Equal(t, privateKeyAuthKey, authKey)
 }

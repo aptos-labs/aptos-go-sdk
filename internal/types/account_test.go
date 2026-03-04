@@ -195,3 +195,66 @@ func TestAccount_ExtractPrivateKeyString(t *testing.T) {
 	require.Error(t, err)
 	assert.Empty(t, out)
 }
+
+func TestAccount_SimulationAuthenticator(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	simAuth := account.SimulationAuthenticator()
+	require.NotNil(t, simAuth)
+	assert.Equal(t, crypto.AccountAuthenticatorEd25519, simAuth.Variant)
+}
+
+func TestAccount_AccountAddress(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	addr := account.AccountAddress()
+	assert.Equal(t, account.Address, addr)
+}
+
+func TestAccount_PubKey(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	pubKey := account.PubKey()
+	assert.NotNil(t, pubKey)
+}
+
+func TestAccount_AuthKey(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	authKey := account.AuthKey()
+	require.NotNil(t, authKey)
+	assert.Len(t, authKey[:], 32)
+}
+
+func TestAccount_Sign(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	message := []byte("test message for signing")
+	authenticator, err := account.Sign(message)
+	require.NoError(t, err)
+	require.NotNil(t, authenticator)
+	assert.Equal(t, crypto.AccountAuthenticatorEd25519, authenticator.Variant)
+	assert.True(t, authenticator.Auth.Verify(message))
+}
+
+func TestAccount_SignMessage(t *testing.T) {
+	t.Parallel()
+	account, err := NewEd25519Account()
+	require.NoError(t, err)
+
+	message := []byte("test message for signing")
+	signature, err := account.SignMessage(message)
+	require.NoError(t, err)
+	assert.NotNil(t, signature)
+	assert.True(t, account.PubKey().Verify(message, signature))
+}

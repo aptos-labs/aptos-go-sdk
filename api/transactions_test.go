@@ -859,6 +859,78 @@ func TestTransaction_UnknownTransaction(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestUnknownTransaction_MissingFields(t *testing.T) {
+	t.Parallel()
+
+	t.Run("missing hash", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"version": "10",
+				"success": true,
+			},
+		}
+		assert.Equal(t, Hash(""), txn.TxnHash())
+	})
+
+	t.Run("missing success", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"hash":    "0xabc",
+				"version": "5",
+			},
+		}
+		assert.Nil(t, txn.TxnSuccess())
+	})
+
+	t.Run("success not bool", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"success": "yes",
+			},
+		}
+		assert.Nil(t, txn.TxnSuccess())
+	})
+
+	t.Run("missing version", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"hash": "0xdef",
+			},
+		}
+		assert.Nil(t, txn.TxnVersion())
+	})
+
+	t.Run("invalid version string", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"version": "not_a_number",
+			},
+		}
+		assert.Nil(t, txn.TxnVersion())
+	})
+
+	t.Run("version not string", func(t *testing.T) {
+		t.Parallel()
+		txn := &UnknownTransaction{
+			Type: "custom",
+			Payload: map[string]any{
+				"version": 42,
+			},
+		}
+		assert.Nil(t, txn.TxnVersion())
+	})
+}
+
 func TestTransaction_WithReplayNonce(t *testing.T) {
 	t.Parallel()
 	testJson := `{

@@ -169,3 +169,17 @@ func TestOldestBlockHeight(t *testing.T) {
 	assert.Equal(t, uint64(0), info.OldestBlockHeight())
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
 }
+
+func TestLedgerTimestamp(t *testing.T) {
+	t.Parallel()
+	lc := setupTestLogging()
+	defer restoreNormalLogging(t, lc)
+
+	info := NodeInfo{
+		LedgerTimestampStr: "1000000",
+	}
+	assert.Equal(t, uint64(1000000), info.LedgerTimestamp())
+	info.LedgerTimestampStr = "garbage"
+	assert.Equal(t, uint64(0), info.LedgerTimestamp())
+	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
+}

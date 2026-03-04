@@ -102,6 +102,56 @@ func TestMultiKey_Serialization_CrossPlatform(t *testing.T) {
 	assert.Equal(t, serializedBytes, reserialized)
 }
 
+func TestMultiKeySignature_Bytes_FromBytes_ToHex_FromHex(t *testing.T) {
+	t.Parallel()
+	key1, _, key3, _ := createMultiKey(t)
+
+	message := []byte("multi key round trip")
+	signature := createMultiKeySignature(t, 0, key1, 2, key3, message)
+
+	// Test Bytes / FromBytes
+	sigBytes := signature.Bytes()
+	assert.NotEmpty(t, sigBytes)
+
+	signature2 := &MultiKeySignature{}
+	err := signature2.FromBytes(sigBytes)
+	require.NoError(t, err)
+
+	assert.Len(t, signature2.Signatures, len(signature.Signatures))
+
+	// Test ToHex / FromHex
+	hexStr := signature.ToHex()
+	assert.NotEmpty(t, hexStr)
+
+	signature3 := &MultiKeySignature{}
+	err = signature3.FromHex(hexStr)
+	require.NoError(t, err)
+	assert.Len(t, signature3.Signatures, len(signature.Signatures))
+}
+
+func TestMultiKeyBitmap_MarshalBCS_UnmarshalBCS(t *testing.T) {
+	t.Parallel()
+
+	bitmap := MultiKeyBitmap{}
+	err := bitmap.AddKey(0)
+	require.NoError(t, err)
+	err = bitmap.AddKey(2)
+	require.NoError(t, err)
+
+	// BCS round-trip should preserve the raw bytes
+	serialized, err := bcs.Serialize(&bitmap)
+	require.NoError(t, err)
+
+	bitmap2 := &MultiKeyBitmap{}
+	err = bcs.Deserialize(bitmap2, serialized)
+	require.NoError(t, err)
+
+	// Verify re-serialization produces the same bytes
+	reserialized, err := bcs.Serialize(bitmap2)
+	require.NoError(t, err)
+	assert.Equal(t, serialized, reserialized)
+}
+
 func createMultiKey(t *testing.T) (
 	*SingleSigner,
 	*SingleSigner,

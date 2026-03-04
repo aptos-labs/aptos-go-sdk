@@ -48,6 +48,49 @@ func TestAccountAuthenticator_Ed25519(t *testing.T) {
 	assert.Equal(t, expectedSignature, *auth.Sig)
 }
 
+func TestAccountAuthenticator_MultiEd25519(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+      "public_keys": [
+        "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",
+        "0xcfbeb24598919df85ecb827b24bf70e082fd08fdefef8a4b470da16e633a8dee"
+      ],
+      "signatures": [
+        "0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609"
+      ],
+      "threshold": 1,
+      "bitmap": "0x80000000",
+      "type": "multi_ed25519_signature"
+	}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantMultiEd25519, data.Type)
+	auth, ok := data.Inner.(*MultiEd25519Signature)
+	require.True(t, ok)
+
+	assert.Len(t, auth.PublicKeys, 2)
+	assert.Len(t, auth.Signatures, 1)
+	assert.Equal(t, uint8(1), auth.Threshold)
+	assert.Equal(t, []byte{0x80, 0x00, 0x00, 0x00}, auth.Bitmap)
+}
+
+func TestAccountAuthenticator_MultiEd25519_InvalidKey(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+      "public_keys": [
+        "0xinvalidhex"
+      ],
+      "signatures": [],
+      "threshold": 1,
+      "bitmap": "0x80000000",
+      "type": "multi_ed25519_signature"
+	}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.Error(t, err)
+}
+
 func TestAccountAuthenticator_FeePayer(t *testing.T) {
 	t.Parallel()
 	testJson := `{
