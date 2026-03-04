@@ -351,9 +351,9 @@ func TestFakeClient_SimulateTransaction(t *testing.T) {
 	ctx := context.Background()
 
 	txn := &aptos.RawTransaction{
-		Sender:   aptos.AccountOne,
-		ChainID:  4,
-		Payload:  &aptos.EntryFunctionPayload{Module: aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"}, Function: "transfer"},
+		Sender:  aptos.AccountOne,
+		ChainID: 4,
+		Payload: &aptos.EntryFunctionPayload{Module: aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"}, Function: "transfer"},
 	}
 
 	signer := RandomSigner()

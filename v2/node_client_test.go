@@ -12,7 +12,7 @@ import (
 )
 
 // newTestClient creates a nodeClient pointing at a test server.
-func newTestClient(t *testing.T, handler http.Handler) (*nodeClient, *httptest.Server) {
+func newTestClient(t *testing.T, handler http.Handler) *nodeClient {
 	t.Helper()
 	server := httptest.NewServer(handler)
 	t.Cleanup(server.Close)
@@ -26,20 +26,19 @@ func newTestClient(t *testing.T, handler http.Handler) (*nodeClient, *httptest.S
 		timeout: 0, // no timeout for tests
 	})
 	require.NoError(t, err)
-	return client, server
+	return client
 }
 
-func jsonHandler(statusCode int, body any) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+func jsonHandler(body any) http.HandlerFunc {
+	return func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(statusCode)
-		json.NewEncoder(w).Encode(body)
+		_ = json.NewEncoder(w).Encode(body)
 	}
 }
 
 func TestNodeClient_HealthCheck(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, jsonHandler(http.StatusOK, HealthCheckResponse{Message: "aptos-node:ok"}))
+	client := newTestClient(t, jsonHandler(HealthCheckResponse{Message: "aptos-node:ok"}))
 	resp, err := client.HealthCheck(context.Background())
 	require.NoError(t, err)
 	assert.Contains(t, resp.Message, "ok")
@@ -47,10 +46,10 @@ func TestNodeClient_HealthCheck(t *testing.T) {
 
 func TestNodeClient_HealthCheck_WithDuration(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.RawQuery, "duration_secs=30")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(HealthCheckResponse{Message: "aptos-node:ok"})
+		_ = json.NewEncoder(w).Encode(HealthCheckResponse{Message: "aptos-node:ok"})
 	}))
 	resp, err := client.HealthCheck(context.Background(), 30)
 	require.NoError(t, err)
@@ -63,7 +62,7 @@ func TestNodeClient_AccountModule(t *testing.T) {
 		Bytecode: "0xdeadbeef",
 		ABI:      &ModuleABI{Address: AccountOne.String(), Name: "coin"},
 	}
-	client, _ := newTestClient(t, jsonHandler(http.StatusOK, module))
+	client := newTestClient(t, jsonHandler(module))
 
 	result, err := client.AccountModule(context.Background(), AccountOne, "coin")
 	require.NoError(t, err)
@@ -74,7 +73,7 @@ func TestNodeClient_AccountModule(t *testing.T) {
 func TestNodeClient_AccountTransactions(t *testing.T) {
 	t.Parallel()
 	txns := []*Transaction{{Hash: "0xabc", Type: "user_transaction"}}
-	client, _ := newTestClient(t, jsonHandler(http.StatusOK, txns))
+	client := newTestClient(t, jsonHandler(txns))
 
 	result, err := client.AccountTransactions(context.Background(), AccountOne, nil, nil)
 	require.NoError(t, err)
@@ -84,11 +83,11 @@ func TestNodeClient_AccountTransactions(t *testing.T) {
 
 func TestNodeClient_AccountTransactions_WithParams(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.RawQuery, "start=5")
 		assert.Contains(t, r.URL.RawQuery, "limit=10")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode([]*Transaction{})
+		_ = json.NewEncoder(w).Encode([]*Transaction{})
 	}))
 
 	start := uint64(5)
@@ -100,7 +99,7 @@ func TestNodeClient_AccountTransactions_WithParams(t *testing.T) {
 func TestNodeClient_EventsByCreationNumber(t *testing.T) {
 	t.Parallel()
 	events := []Event{{Type: "0x1::coin::DepositEvent", SequenceNumber: 0}}
-	client, _ := newTestClient(t, jsonHandler(http.StatusOK, events))
+	client := newTestClient(t, jsonHandler(events))
 
 	result, err := client.EventsByCreationNumber(context.Background(), AccountOne, 0, nil, nil)
 	require.NoError(t, err)
@@ -110,11 +109,11 @@ func TestNodeClient_EventsByCreationNumber(t *testing.T) {
 func TestNodeClient_SimulateTransaction(t *testing.T) {
 	t.Parallel()
 	simResult := []*SimulationResult{{Success: true, VMStatus: "Executed successfully", GasUsed: 500}}
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "transactions/simulate")
 		assert.Equal(t, "application/x.aptos.signed_transaction+bcs", r.Header.Get("Content-Type"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(simResult)
+		_ = json.NewEncoder(w).Encode(simResult)
 	}))
 
 	key, err := GenerateEd25519PrivateKey()
@@ -142,11 +141,11 @@ func TestNodeClient_SimulateTransaction(t *testing.T) {
 func TestNodeClient_SubmitTransaction(t *testing.T) {
 	t.Parallel()
 	submitResult := SubmitResult{Hash: "0xsubmitted"}
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "/transactions", r.URL.Path)
 		assert.Equal(t, "application/x.aptos.signed_transaction+bcs", r.Header.Get("Content-Type"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(submitResult)
+		_ = json.NewEncoder(w).Encode(submitResult)
 	}))
 
 	key, err := GenerateEd25519PrivateKey()
@@ -176,7 +175,7 @@ func TestNodeClient_SubmitTransaction(t *testing.T) {
 func TestNodeClient_WaitForTransaction_Immediate(t *testing.T) {
 	t.Parallel()
 	txn := Transaction{Hash: "0xhash", Type: "user_transaction", Success: true}
-	client, _ := newTestClient(t, jsonHandler(http.StatusOK, txn))
+	client := newTestClient(t, jsonHandler(txn))
 
 	result, err := client.WaitForTransaction(context.Background(), "0xhash")
 	require.NoError(t, err)
@@ -185,7 +184,7 @@ func TestNodeClient_WaitForTransaction_Immediate(t *testing.T) {
 
 func TestNodeClient_Fund(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "/mint")
 		assert.Contains(t, r.URL.RawQuery, "address=")
 		assert.Contains(t, r.URL.RawQuery, "amount=100000000")
@@ -198,9 +197,9 @@ func TestNodeClient_Fund(t *testing.T) {
 
 func TestNodeClient_Fund_Error(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("internal error"))
+		_, _ = w.Write([]byte("internal error"))
 	}))
 
 	err := client.Fund(context.Background(), AccountOne, 100)
@@ -226,10 +225,10 @@ func TestNodeClient_Fund_NoFaucet(t *testing.T) {
 func TestNodeClient_BatchSubmitTransaction(t *testing.T) {
 	t.Parallel()
 	batchResult := BatchSubmitResult{}
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Contains(t, r.URL.Path, "transactions/batch")
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(batchResult)
+		_ = json.NewEncoder(w).Encode(batchResult)
 	}))
 
 	key, err := GenerateEd25519PrivateKey()
@@ -259,11 +258,11 @@ func TestNodeClient_BatchSubmitTransaction(t *testing.T) {
 func TestNodeClient_PostBCS(t *testing.T) {
 	t.Parallel()
 	// Test that postBCS correctly sends BCS-encoded data
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, http.MethodPost, r.Method)
 		assert.Equal(t, "application/x.aptos.signed_transaction+bcs", r.Header.Get("Content-Type"))
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(SubmitResult{Hash: "0xtest"})
+		_ = json.NewEncoder(w).Encode(SubmitResult{Hash: "0xtest"})
 	}))
 
 	var result SubmitResult
@@ -274,10 +273,10 @@ func TestNodeClient_PostBCS(t *testing.T) {
 
 func TestNodeClient_APIError(t *testing.T) {
 	t.Parallel()
-	client, _ := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{
+		_ = json.NewEncoder(w).Encode(map[string]string{
 			"message":    "Account not found",
 			"error_code": "account_not_found",
 		})

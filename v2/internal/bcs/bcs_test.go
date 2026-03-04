@@ -1552,11 +1552,7 @@ func TestMarshalArrayU64(t *testing.T) {
 func TestSerializeWithError(t *testing.T) {
 	t.Parallel()
 
-	// Create a struct that implements Marshaler but sets error
-	type ErrorMarshaler struct{}
-	// Can't easily test this without modifying the struct
-
-	// Instead test that error in serializer propagates
+	// Test that error in serializer propagates
 	ser := NewSerializer()
 	ser.SetError(ErrNilValue)
 	SerializeSequence(ser, []*TestStruct{{Num: 1}})
@@ -1648,17 +1644,6 @@ func TestSerializeSequenceFuncWithItemError(t *testing.T) {
 		s.U64(uint64(v))
 	})
 	assert.ErrorIs(t, ser.Error(), ErrNilValue)
-}
-
-func TestSerializeSequenceWithItemError(t *testing.T) {
-	t.Parallel()
-
-	// Create a struct that sets error during Marshal
-	type ErrorStruct struct {
-		fail bool
-	}
-	// Can't easily test this, but we can test nil in sequence
-	// Actually nil will be skipped, let's just verify sequence handles errors
 }
 
 func TestMarshalSliceOfSlice(t *testing.T) {
@@ -2141,7 +2126,7 @@ func TestReadBoundedString(t *testing.T) {
 		des := NewDeserializer(ser.ToBytes())
 		result := des.ReadBoundedString(10)
 		require.NoError(t, des.Error())
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 	})
 
 	t.Run("exceeding max", func(t *testing.T) {
@@ -2150,7 +2135,7 @@ func TestReadBoundedString(t *testing.T) {
 		ser.WriteString("hello world")
 		des := NewDeserializer(ser.ToBytes())
 		result := des.ReadBoundedString(5)
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 		assert.Error(t, des.Error())
 		assert.Contains(t, des.Error().Error(), "too large")
 	})
@@ -2160,6 +2145,6 @@ func TestReadBoundedString(t *testing.T) {
 		des := NewDeserializer([]byte{5, 'h', 'e', 'l', 'l', 'o'})
 		des.SetError(ErrNilValue)
 		result := des.ReadBoundedString(100)
-		assert.Equal(t, "", result)
+		assert.Empty(t, result)
 	})
 }

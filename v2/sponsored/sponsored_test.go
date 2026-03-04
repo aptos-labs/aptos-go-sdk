@@ -114,7 +114,7 @@ func TestGasStation_SponsorTransaction_Success(t *testing.T) {
 			SponsorAuthBCS: authBCS,
 		}
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -154,7 +154,7 @@ func TestGasStation_SponsorTransaction_Rejected(t *testing.T) {
 			ErrorCode:    "REJECTED",
 			ErrorMessage: "not allowed",
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -177,7 +177,7 @@ func TestGasStation_SponsorTransaction_InsufficientFunds(t *testing.T) {
 			ErrorCode:    "INSUFFICIENT_FUNDS",
 			ErrorMessage: "not enough balance",
 		}
-		json.NewEncoder(w).Encode(resp)
+		_ = json.NewEncoder(w).Encode(resp)
 	}))
 	defer server.Close()
 
@@ -196,7 +196,7 @@ func TestGasStation_SponsorTransaction_MalformedResponse(t *testing.T) {
 	t.Parallel()
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("not json"))
+		_, _ = w.Write([]byte("not json"))
 	}))
 	defer server.Close()
 

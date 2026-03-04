@@ -432,7 +432,7 @@ func TestTake_WithErrorInFirstN(t *testing.T) {
 func TestSkip_WithErrorDuringSkip(t *testing.T) {
 	testErr := errors.New("error")
 	it := errAfter(1, testErr) // yields 0, then error
-	skipped := Skip(it, 5)    // trying to skip 5, but error after 1
+	skipped := Skip(it, 5)     // trying to skip 5, but error after 1
 
 	_, err := Collect(skipped)
 	require.ErrorIs(t, err, testErr)
