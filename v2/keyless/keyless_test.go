@@ -1,9 +1,12 @@
 package keyless
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"math/big"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
@@ -450,4 +453,195 @@ func TestPadBase64(t *testing.T) {
 		result := padBase64(tt.input)
 		assert.Equal(t, tt.expected, result)
 	}
+}
+
+// Prover client tests
+
+func TestNewProverClient(t *testing.T) {
+	t.Run("with default URL", func(t *testing.T) {
+		client := NewProverClient("")
+		assert.NotNil(t, client)
+	})
+
+	t.Run("with custom URL", func(t *testing.T) {
+		client := NewProverClient("http://custom-prover.com")
+		assert.NotNil(t, client)
+	})
+
+	t.Run("with custom HTTP client", func(t *testing.T) {
+		client := NewProverClient("").WithHTTPClient(&http.Client{})
+		assert.NotNil(t, client)
+	})
+}
+
+func TestProverClient_GetProof_ValidationErrors(t *testing.T) {
+	client := NewProverClient("http://localhost")
+
+	t.Run("empty JWT", func(t *testing.T) {
+		req := &ProveRequest{
+			EphemeralPublicKey: []byte{1, 2, 3},
+		}
+		_, err := client.GetProof(context.Background(), req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "JWT is required")
+	})
+
+	t.Run("empty ephemeral public key", func(t *testing.T) {
+		req := &ProveRequest{
+			JWT: "some.jwt.token",
+		}
+		_, err := client.GetProof(context.Background(), req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "ephemeral public key is required")
+	})
+}
+
+func TestProverClient_GetProof_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v0/prove", r.URL.Path)
+		resp := ProveResponse{
+			Proof: &ZKProof{
+				A:       []byte{1},
+				B:       []byte{2},
+				C:       []byte{3},
+				Variant: "groth16",
+			},
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewProverClient(server.URL)
+	resp, err := client.GetProof(context.Background(), &ProveRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+		ExpiryDateSecs:     9999999999,
+		Pepper:             make([]byte, 31),
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, resp.Proof)
+}
+
+func TestProverClient_GetProof_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "internal error"})
+	}))
+	defer server.Close()
+
+	client := NewProverClient(server.URL)
+	_, err := client.GetProof(context.Background(), &ProveRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+	})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrProverFailed)
+}
+
+func TestProverClient_GetProof_ProofError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := ProveResponse{
+			Error: "proof generation failed",
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewProverClient(server.URL)
+	_, err := client.GetProof(context.Background(), &ProveRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+	})
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrProverFailed)
+}
+
+// Pepper client tests
+
+func TestNewPepperClient(t *testing.T) {
+	t.Run("with default URL", func(t *testing.T) {
+		client := NewPepperClient("")
+		assert.NotNil(t, client)
+	})
+
+	t.Run("with custom URL", func(t *testing.T) {
+		client := NewPepperClient("http://custom-pepper.com")
+		assert.NotNil(t, client)
+	})
+}
+
+func TestPepperClient_GetPepper_ValidationErrors(t *testing.T) {
+	client := NewPepperClient("http://localhost")
+
+	t.Run("empty JWT", func(t *testing.T) {
+		req := &PepperRequest{
+			EphemeralPublicKey: []byte{1, 2, 3},
+		}
+		_, err := client.GetPepper(context.Background(), req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "JWT is required")
+	})
+
+	t.Run("empty ephemeral public key", func(t *testing.T) {
+		req := &PepperRequest{
+			JWT: "some.jwt.token",
+		}
+		_, err := client.GetPepper(context.Background(), req)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "ephemeral public key is required")
+	})
+}
+
+func TestPepperClient_GetPepper_Success(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "/v0/fetch", r.URL.Path)
+		resp := PepperResponse{
+			Pepper: make([]byte, 31),
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewPepperClient(server.URL)
+	resp, err := client.GetPepper(context.Background(), &PepperRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+		ExpiryDateSecs:     9999999999,
+	})
+	require.NoError(t, err)
+	assert.Len(t, resp.Pepper, 31)
+}
+
+func TestPepperClient_GetPepper_ServerError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{"error": "service error"})
+	}))
+	defer server.Close()
+
+	client := NewPepperClient(server.URL)
+	_, err := client.GetPepper(context.Background(), &PepperRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "pepper service error")
+}
+
+func TestPepperClient_GetPepper_PepperError(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		resp := PepperResponse{
+			Error: "pepper error",
+		}
+		json.NewEncoder(w).Encode(resp)
+	}))
+	defer server.Close()
+
+	client := NewPepperClient(server.URL)
+	_, err := client.GetPepper(context.Background(), &PepperRequest{
+		JWT:                "test.jwt.token",
+		EphemeralPublicKey: []byte{1, 2, 3},
+	})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "pepper service error")
 }

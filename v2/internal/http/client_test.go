@@ -294,3 +294,85 @@ func TestDefaultRetryConfig(t *testing.T) {
 	assert.Contains(t, config.RetryableStatusCodes, http.StatusTooManyRequests)
 	assert.Contains(t, config.RetryableStatusCodes, http.StatusServiceUnavailable)
 }
+
+func TestNewRateLimitedClient(t *testing.T) {
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
+		},
+	}
+
+	client := NewRateLimitedClient(mock, 100, 10, nil)
+	require.NotNil(t, client)
+
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestRateLimitedClient_ContextCancellation(t *testing.T) {
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
+		},
+	}
+
+	// Very slow rate so the wait will exceed the context timeout
+	client := NewRateLimitedClient(mock, 0.01, 0, nil)
+
+	// Exhaust the burst
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", nil)
+	_, err := client.Do(req)
+	assert.Error(t, err) // Should fail due to context deadline
+}
+
+func TestLoggingClient_Error(t *testing.T) {
+	testErr := errors.New("network error")
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{nil},
+		errors:    []error{testErr},
+	}
+
+	var logBuf strings.Builder
+	logger := slog.New(slog.NewTextHandler(&logBuf, &slog.HandlerOptions{Level: slog.LevelDebug}))
+	client := NewLoggingClient(mock, logger)
+
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com/test", nil)
+	_, err := client.Do(req)
+
+	require.ErrorIs(t, err, testErr)
+	logOutput := logBuf.String()
+	assert.Contains(t, logOutput, "request failed")
+}
+
+func TestNewLoggingClient_NilLogger(t *testing.T) {
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
+		},
+	}
+
+	client := NewLoggingClient(mock, nil)
+	require.NotNil(t, client)
+
+	req, _ := http.NewRequest(http.MethodGet, "http://example.com", nil)
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+}
+
+func TestNewRateLimitedClient_NilLogger(t *testing.T) {
+	mock := &mockHTTPDoer{
+		responses: []*http.Response{
+			{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(""))},
+		},
+	}
+
+	client := NewRateLimitedClient(mock, 100, 10, nil)
+	require.NotNil(t, client)
+}

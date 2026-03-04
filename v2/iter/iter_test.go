@@ -385,3 +385,241 @@ func TestEarlyTermination(t *testing.T) {
 	assert.Equal(t, []int{1, 2, 3, 4, 5}, result)
 	assert.Equal(t, 5, callCount, "iterator should stop after 5 elements")
 }
+
+// Error propagation tests
+
+func errAfter(n int, errVal error) Seq2[int, error] {
+	return func(yield func(int, error) bool) {
+		for i := 0; i < n; i++ {
+			if !yield(i, nil) {
+				return
+			}
+		}
+		yield(0, errVal)
+	}
+}
+
+func TestMap_WithSourceError(t *testing.T) {
+	testErr := errors.New("source error")
+	it := errAfter(2, testErr)
+	mapped := Map(it, func(n int) int { return n * 2 })
+
+	result, err := Collect(mapped)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{0, 2}, result)
+}
+
+func TestMapErr_WithSourceError(t *testing.T) {
+	testErr := errors.New("source error")
+	it := errAfter(2, testErr)
+	mapped := MapErr(it, func(n int) (int, error) { return n * 2, nil })
+
+	result, err := Collect(mapped)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{0, 2}, result)
+}
+
+func TestTake_WithErrorInFirstN(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(1, testErr) // yields 0, then error
+	taken := Take(it, 5)
+
+	result, err := Collect(taken)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{0}, result)
+}
+
+func TestSkip_WithErrorDuringSkip(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(1, testErr) // yields 0, then error
+	skipped := Skip(it, 5)    // trying to skip 5, but error after 1
+
+	_, err := Collect(skipped)
+	require.ErrorIs(t, err, testErr)
+}
+
+func TestTakeWhile_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+	taken := TakeWhile(it, func(n int) bool { return true })
+
+	result, err := Collect(taken)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{0, 1}, result)
+}
+
+func TestSkipWhile_WithErrorDuringSkip(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+	skipped := SkipWhile(it, func(n int) bool { return true }) // skip everything
+
+	_, err := Collect(skipped)
+	require.ErrorIs(t, err, testErr)
+}
+
+func TestCount_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(3, testErr)
+
+	count, err := Count(it)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, 3, count)
+}
+
+func TestFirst_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := OnceErr[int](testErr)
+
+	_, found, err := First(it)
+	require.ErrorIs(t, err, testErr)
+	assert.False(t, found)
+}
+
+func TestLast_WithErrorMidIteration(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	v, found, err := Last(it)
+	require.ErrorIs(t, err, testErr)
+	assert.True(t, found)
+	assert.Equal(t, 1, v) // Last valid value before error
+}
+
+func TestFind_WithErrorBeforeMatch(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	_, found, err := Find(it, func(n int) bool { return n == 99 })
+	require.ErrorIs(t, err, testErr)
+	assert.False(t, found)
+}
+
+func TestAny_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	result, err := Any(it, func(n int) bool { return n == 99 })
+	require.ErrorIs(t, err, testErr)
+	assert.False(t, result)
+}
+
+func TestAll_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	result, err := All(it, func(n int) bool { return true })
+	require.ErrorIs(t, err, testErr)
+	assert.False(t, result)
+}
+
+func TestNone_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	result, err := None(it, func(n int) bool { return false })
+	require.ErrorIs(t, err, testErr)
+	assert.False(t, result)
+}
+
+func TestEnumerate_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(1, testErr)
+	enumerated := Enumerate(it)
+
+	var results []IndexedValue[int]
+	var collectedErr error
+	for v, err := range enumerated {
+		if err != nil {
+			collectedErr = err
+			break
+		}
+		results = append(results, v)
+	}
+	require.ErrorIs(t, collectedErr, testErr)
+	assert.Len(t, results, 1)
+}
+
+func TestReduce_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(3, testErr)
+
+	sum, err := Reduce(it, 0, func(acc, n int) int { return acc + n })
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, 3, sum) // 0+1+2
+}
+
+func TestChunk_WithError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(3, testErr)
+	chunked := Chunk(it, 2)
+
+	result, err := Collect(chunked)
+	require.ErrorIs(t, err, testErr)
+	// Should have yielded [0,1] as a full chunk, then [2] as partial before error
+	assert.Len(t, result, 2)
+}
+
+func TestFlatten_WithErrorInOuter(t *testing.T) {
+	testErr := errors.New("error")
+	// Create an iterator of slices that errors after first
+	outer := func(yield func([]int, error) bool) {
+		if !yield([]int{1, 2}, nil) {
+			return
+		}
+		yield(nil, testErr)
+	}
+	flattened := Flatten(outer)
+
+	result, err := Collect(flattened)
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{1, 2}, result)
+}
+
+func TestConcat_WithErrorInFirst(t *testing.T) {
+	testErr := errors.New("error")
+	first := errAfter(1, testErr)
+	second := FromSlice([]int{10, 20})
+
+	result, err := Collect(Concat(first, second))
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{0}, result)
+}
+
+func TestConcat_WithErrorInSecond(t *testing.T) {
+	testErr := errors.New("error")
+	first := FromSlice([]int{1, 2})
+	second := errAfter(0, testErr) // error immediately
+
+	result, err := Collect(Concat(first, second))
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, []int{1, 2}, result)
+}
+
+func TestForEach_WithSourceError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	var sum int
+	err := ForEach(it, func(n int) { sum += n })
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, 1, sum) // 0+1
+}
+
+func TestForEachErr_WithSourceError(t *testing.T) {
+	testErr := errors.New("error")
+	it := errAfter(2, testErr)
+
+	var sum int
+	err := ForEachErr(it, func(n int) error {
+		sum += n
+		return nil
+	})
+	require.ErrorIs(t, err, testErr)
+	assert.Equal(t, 1, sum)
+}
+
+func TestCollect_Empty(t *testing.T) {
+	result, err := Collect(Empty[int]())
+	require.NoError(t, err)
+	assert.Nil(t, result)
+}

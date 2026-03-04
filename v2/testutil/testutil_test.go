@@ -6,6 +6,7 @@ import (
 	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
+	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -343,4 +344,299 @@ func TestFakeClient_WithResources(t *testing.T) {
 	result, err := client.AccountResources(ctx, addr)
 	require.NoError(t, err)
 	assert.Len(t, result, 2)
+}
+
+func TestFakeClient_SimulateTransaction(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	txn := &aptos.RawTransaction{
+		Sender:   aptos.AccountOne,
+		ChainID:  4,
+		Payload:  &aptos.EntryFunctionPayload{Module: aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"}, Function: "transfer"},
+	}
+
+	signer := RandomSigner()
+	result, err := client.SimulateTransaction(ctx, txn, signer)
+	require.NoError(t, err)
+	assert.True(t, result.Success)
+	assert.NotEmpty(t, result.VMStatus)
+}
+
+func TestFakeClient_SimulateTransaction_Error(t *testing.T) {
+	client := NewFakeClient().WithError("SimulateTransaction", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.SimulateTransaction(ctx, &aptos.RawTransaction{}, RandomSigner())
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_HealthCheck(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	resp, err := client.HealthCheck(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, resp.Message, "ok")
+}
+
+func TestFakeClient_HealthCheck_Error(t *testing.T) {
+	client := NewFakeClient().WithError("HealthCheck", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.HealthCheck(ctx)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_AccountModule(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	mod, err := client.AccountModule(ctx, aptos.AccountOne, "coin")
+	require.NoError(t, err)
+	assert.Equal(t, "0x", mod.Bytecode)
+	assert.Equal(t, "coin", mod.ABI.Name)
+}
+
+func TestFakeClient_AccountModule_Error(t *testing.T) {
+	client := NewFakeClient().WithError("AccountModule", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.AccountModule(ctx, aptos.AccountOne, "coin")
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_AccountTransactions(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	txns, err := client.AccountTransactions(ctx, aptos.AccountOne, nil, nil)
+	require.NoError(t, err)
+	assert.Empty(t, txns)
+}
+
+func TestFakeClient_AccountTransactions_Error(t *testing.T) {
+	client := NewFakeClient().WithError("AccountTransactions", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.AccountTransactions(ctx, aptos.AccountOne, nil, nil)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_BatchSubmitTransaction(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	result, err := client.BatchSubmitTransaction(ctx, nil)
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+func TestFakeClient_BatchSubmitTransaction_Error(t *testing.T) {
+	client := NewFakeClient().WithError("BatchSubmitTransaction", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.BatchSubmitTransaction(ctx, nil)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_EventsByHandle(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	events, err := client.EventsByHandle(ctx, aptos.AccountOne, "0x1::coin::CoinStore", "deposit_events", nil, nil)
+	require.NoError(t, err)
+	assert.Empty(t, events)
+}
+
+func TestFakeClient_EventsByHandle_Error(t *testing.T) {
+	client := NewFakeClient().WithError("EventsByHandle", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.EventsByHandle(ctx, aptos.AccountOne, "handle", "field", nil, nil)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_EventsByCreationNumber(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	events, err := client.EventsByCreationNumber(ctx, aptos.AccountOne, 0, nil, nil)
+	require.NoError(t, err)
+	assert.Empty(t, events)
+}
+
+func TestFakeClient_EventsByCreationNumber_Error(t *testing.T) {
+	client := NewFakeClient().WithError("EventsByCreationNumber", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.EventsByCreationNumber(ctx, aptos.AccountOne, 0, nil, nil)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_AccountResource(t *testing.T) {
+	addr := RandomAddress()
+	resources := []aptos.Resource{
+		SampleCoinStoreResource("0x1::aptos_coin::AptosCoin", 1000),
+		SampleResource("0x1::test::TestResource", nil),
+	}
+	client := NewFakeClient().WithResources(addr, resources)
+	ctx := context.Background()
+
+	t.Run("found", func(t *testing.T) {
+		r, err := client.AccountResource(ctx, addr, "0x1::test::TestResource")
+		require.NoError(t, err)
+		assert.Equal(t, "0x1::test::TestResource", r.Type)
+	})
+
+	t.Run("not found type", func(t *testing.T) {
+		_, err := client.AccountResource(ctx, addr, "0x1::missing::Resource")
+		assert.ErrorIs(t, err, aptos.ErrNotFound)
+	})
+
+	t.Run("not found address", func(t *testing.T) {
+		_, err := client.AccountResource(ctx, RandomAddress(), "0x1::test::TestResource")
+		assert.ErrorIs(t, err, aptos.ErrNotFound)
+	})
+}
+
+func TestFakeClient_AccountResource_Error(t *testing.T) {
+	client := NewFakeClient().WithError("AccountResource", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.AccountResource(ctx, aptos.AccountOne, "type")
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_SubmitTransaction(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	result, err := client.SubmitTransaction(ctx, &aptos.SignedTransaction{})
+	require.NoError(t, err)
+	assert.NotEmpty(t, result.Hash)
+}
+
+func TestFakeClient_SubmitTransaction_Error(t *testing.T) {
+	client := NewFakeClient().WithError("SubmitTransaction", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.SubmitTransaction(ctx, &aptos.SignedTransaction{})
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_SignAndSubmitTransaction(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	acct, err := account.NewEd25519()
+	require.NoError(t, err)
+	payload := &aptos.EntryFunctionPayload{
+		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"},
+		Function: "transfer",
+	}
+
+	result, err := client.SignAndSubmitTransaction(ctx, acct, payload)
+	require.NoError(t, err)
+	assert.NotEmpty(t, result.Hash)
+}
+
+func TestFakeClient_SignAndSubmitTransaction_Error(t *testing.T) {
+	client := NewFakeClient().WithError("SignAndSubmitTransaction", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	acct, err := account.NewEd25519()
+	require.NoError(t, err)
+
+	_, err = client.SignAndSubmitTransaction(ctx, acct, &aptos.EntryFunctionPayload{})
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_WaitForTransaction(t *testing.T) {
+	txn := SampleTransaction()
+	client := NewFakeClient().WithTransaction(txn)
+	ctx := context.Background()
+
+	t.Run("known hash", func(t *testing.T) {
+		result, err := client.WaitForTransaction(ctx, txn.Hash)
+		require.NoError(t, err)
+		assert.Equal(t, txn.Hash, result.Hash)
+	})
+
+	t.Run("unknown hash returns default success", func(t *testing.T) {
+		result, err := client.WaitForTransaction(ctx, "0xunknown")
+		require.NoError(t, err)
+		assert.True(t, result.Success)
+	})
+}
+
+func TestFakeClient_WaitForTransaction_Error(t *testing.T) {
+	client := NewFakeClient().WithError("WaitForTransaction", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.WaitForTransaction(ctx, "0xhash")
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_TransactionsList(t *testing.T) {
+	txn1 := SampleTransaction()
+	txn2 := SampleTransaction()
+	txn2.Hash = "0xdifferenthash"
+	txn2.Version = 2000
+	client := NewFakeClient().WithTransaction(txn1).WithTransaction(txn2)
+	ctx := context.Background()
+
+	result, err := client.Transactions(ctx, nil, nil)
+	require.NoError(t, err)
+	assert.Len(t, result, 2)
+}
+
+func TestFakeClient_TransactionsList_Error(t *testing.T) {
+	client := NewFakeClient().WithError("Transactions", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.Transactions(ctx, nil, nil)
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
+}
+
+func TestFakeClient_TransactionsIter(t *testing.T) {
+	txn := SampleTransaction()
+	client := NewFakeClient().WithTransaction(txn)
+	ctx := context.Background()
+
+	count := 0
+	for _, err := range client.TransactionsIter(ctx, nil) {
+		require.NoError(t, err)
+		count++
+	}
+	assert.Equal(t, 1, count)
+}
+
+func TestFakeClient_TransactionsIter_Error(t *testing.T) {
+	client := NewFakeClient().WithError("TransactionsIter", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	for _, err := range client.TransactionsIter(ctx, nil) {
+		assert.ErrorIs(t, err, aptos.ErrNotFound)
+	}
+}
+
+func TestFakeClient_View(t *testing.T) {
+	client := NewFakeClient()
+	ctx := context.Background()
+
+	result, err := client.View(ctx, &aptos.ViewPayload{
+		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"},
+		Function: "balance",
+	})
+	require.NoError(t, err)
+	assert.NotNil(t, result)
+}
+
+func TestFakeClient_View_Error(t *testing.T) {
+	client := NewFakeClient().WithError("View", aptos.ErrNotFound)
+	ctx := context.Background()
+
+	_, err := client.View(ctx, &aptos.ViewPayload{})
+	assert.ErrorIs(t, err, aptos.ErrNotFound)
 }
