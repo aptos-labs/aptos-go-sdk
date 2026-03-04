@@ -111,6 +111,7 @@ func TestSubmitTransactions(t *testing.T) {
 	resp := <-responses
 	require.NoError(t, resp.Err)
 	assert.NotNil(t, resp.Response)
+	assert.Equal(t, uint64(1), resp.Id)
 }
 
 func TestBatchSubmitTransactions(t *testing.T) {
@@ -161,6 +162,7 @@ func TestBatchSubmitTransactions(t *testing.T) {
 
 	resp := <-responses
 	require.NoError(t, resp.Err)
+	assert.Equal(t, uint64(1), resp.Id)
 	// BatchSubmitTransactions returns nil response on success (no individual responses)
 	assert.Nil(t, resp.Response)
 }

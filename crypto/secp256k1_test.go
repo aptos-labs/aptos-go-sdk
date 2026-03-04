@@ -156,12 +156,24 @@ func TestSecp256k1PrivateKey_Clear(t *testing.T) {
 	// Verify key is valid before clear
 	assert.NotNil(t, privateKey.Inner)
 
+	// Save the key bytes before clearing
+	originalBytes := privateKey.Bytes()
+	assert.NotEmpty(t, originalBytes)
+
 	// Clear the key
 	privateKey.Clear()
 
-	// After Zero() the key should be in zeroed state
-	// Note: the secp256k1 library's Zero() method zeros the underlying scalar
-	assert.NotNil(t, privateKey.Inner)
+	// After Zero() the key bytes should be all zeros
+	clearedBytes := privateKey.Bytes()
+	allZero := true
+	for _, b := range clearedBytes {
+		if b != 0 {
+			allZero = false
+			break
+		}
+	}
+	assert.True(t, allZero, "key bytes should be zeroed after Clear()")
+	assert.NotEqual(t, originalBytes, clearedBytes, "cleared bytes should differ from original")
 }
 
 func TestSecp256k1Authenticator_Verify(t *testing.T) {

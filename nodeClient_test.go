@@ -1250,7 +1250,9 @@ func TestNodeClient_SimulateTransactionMultiAgent(t *testing.T) {
 	feePayer := AccountTwo
 	results, err := client.SimulateTransactionMultiAgent(rawTxnWithData, sender, FeePayer(&feePayer))
 	require.NoError(t, err)
-	assert.Len(t, results, 1)
+	require.Len(t, results, 1)
+	assert.True(t, results[0].Success)
+	assert.Equal(t, "0xsim", results[0].Hash)
 }
 
 func TestNodeClient_NodeAPIHealthCheck_WithDuration(t *testing.T) {
@@ -1281,7 +1283,12 @@ func TestNodeClient_AccountResource_WithLedgerVersion(t *testing.T) {
 
 	data, err := client.AccountResource(AccountOne, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", 42)
 	require.NoError(t, err)
-	assert.NotNil(t, data["data"])
+	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", data["type"])
+	dataMap, ok := data["data"].(map[string]any)
+	require.True(t, ok)
+	coinMap, ok := dataMap["coin"].(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "1000", coinMap["value"])
 }
 
 func TestNodeClient_Account_WithLedgerVersion(t *testing.T) {

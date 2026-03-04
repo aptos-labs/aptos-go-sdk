@@ -12,6 +12,12 @@ func TestAccountAddress_NamedObjectAddress(t *testing.T) {
 	result := AccountOne.NamedObjectAddress([]byte("test"))
 	assert.Len(t, result[:], 32)
 	assert.NotEqual(t, AccountOne, result)
+	// Verify determinism: same inputs produce same output
+	result2 := AccountOne.NamedObjectAddress([]byte("test"))
+	assert.Equal(t, result, result2)
+	// Different seed produces different address
+	result3 := AccountOne.NamedObjectAddress([]byte("other"))
+	assert.NotEqual(t, result, result3)
 }
 
 func TestAccountAddress_ResourceAccount(t *testing.T) {
@@ -19,6 +25,12 @@ func TestAccountAddress_ResourceAccount(t *testing.T) {
 	result := AccountOne.ResourceAccount([]byte("test"))
 	assert.Len(t, result[:], 32)
 	assert.NotEqual(t, AccountOne, result)
+	// Verify determinism: same inputs produce same output
+	result2 := AccountOne.ResourceAccount([]byte("test"))
+	assert.Equal(t, result, result2)
+	// Different seed produces different address
+	result3 := AccountOne.ResourceAccount([]byte("other"))
+	assert.NotEqual(t, result, result3)
 }
 
 func TestAccountAddress_ParseStringWithPrefixRelaxed(t *testing.T) {

@@ -76,5 +76,6 @@ func TestGUID_UnmarshalJSON(t *testing.T) {
 	err := json.Unmarshal(data, &g)
 	require.NoError(t, err)
 	assert.Equal(t, uint64(42), g.CreationNumber)
-	assert.NotNil(t, g.AccountAddress)
+	require.NotNil(t, g.AccountAddress)
+	assert.Equal(t, "0x0000000000000000000000000000000000000000000000000000000000000001", g.AccountAddress.StringLong())
 }
