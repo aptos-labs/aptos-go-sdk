@@ -99,8 +99,7 @@ func restoreNormalLogging(t *testing.T, logContext *testSlogContext) {
 	slog.SetDefault(logContext.oldDefault)
 }
 
-func TestEpoch(t *testing.T) {
-	t.Parallel()
+func TestEpoch(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -113,8 +112,7 @@ func TestEpoch(t *testing.T) {
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
 }
 
-func TestLedgerVersion(t *testing.T) {
-	t.Parallel()
+func TestLedgerVersion(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -127,8 +125,7 @@ func TestLedgerVersion(t *testing.T) {
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
 }
 
-func TestOldestLedgerVersion(t *testing.T) {
-	t.Parallel()
+func TestOldestLedgerVersion(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -142,8 +139,7 @@ func TestOldestLedgerVersion(t *testing.T) {
 	assert.Equal(t, 0, lc.countingHandler.counts.get(slog.LevelDebug))
 }
 
-func TestBlockHeight(t *testing.T) {
-	t.Parallel()
+func TestBlockHeight(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
@@ -156,8 +152,7 @@ func TestBlockHeight(t *testing.T) {
 	assert.Equal(t, 1, lc.countingHandler.counts.get(slog.LevelError))
 }
 
-func TestOldestBlockHeight(t *testing.T) {
-	t.Parallel()
+func TestOldestBlockHeight(t *testing.T) { //nolint:paralleltest // mutates global slog default logger via setupTestLogging
 	lc := setupTestLogging()
 	defer restoreNormalLogging(t, lc)
 
