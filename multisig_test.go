@@ -135,7 +135,7 @@ func generateOwnerAccounts() []*Account {
 
 func fundAccounts(client *Client, accounts []*AccountAddress) {
 	for _, account := range accounts {
-		err := client.Fund(*account, 100_000_000)
+		err := client.Fund(*account, 1_000_000_000)
 		if err != nil {
 			panic("Failed to fund account " + err.Error())
 		}
