@@ -51,7 +51,7 @@ func SampleTransaction() *aptos.Transaction {
 		Timestamp:               uint64(time.Now().Unix()),
 		Sender:                  RandomAddress().String(),
 		SequenceNumber:          0,
-		MaxGasAmount:            200000,
+		MaxGasAmount:            2_000_000,
 		GasUnitPrice:            100,
 		ExpirationTimestampSecs: uint64(time.Now().Add(30 * time.Second).Unix()),
 	}

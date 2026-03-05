@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	DefaultMaxGasAmount      = uint64(100_000) // Default to 0.001 APT max gas amount
-	DefaultGasUnitPrice      = uint64(100)     // Default to min gas price
-	DefaultExpirationSeconds = uint64(300)     // Default to 5 minutes
+	DefaultMaxGasAmount      = uint64(1_000_000) // Default to 0.01 APT max gas amount
+	DefaultGasUnitPrice      = uint64(100)       // Default to min gas price
+	DefaultExpirationSeconds = uint64(300)       // Default to 5 minutes
 )
 
 // For Content-Type header when POST-ing a Transaction
