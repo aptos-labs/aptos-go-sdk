@@ -32,15 +32,9 @@ func (o *Signature) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
 	}
-	switch inner := o.Inner.(type) {
-	case *UnknownSignature:
-		if inner.Payload != nil {
-			return json.Marshal(inner.Payload)
-		}
-		return json.Marshal(map[string]any{"type": inner.Type})
-	case *SingleSenderSignature:
-		// SingleSenderSignature is a map[string]any that already includes the type field
-		return json.Marshal(inner)
+	switch o.Inner.(type) {
+	case *UnknownSignature, *SingleSenderSignature:
+		return json.Marshal(o.Inner)
 	default:
 		return marshalWithType(string(o.Type), o.Inner)
 	}
@@ -86,6 +80,14 @@ type SignatureImpl interface{}
 type UnknownSignature struct {
 	Type    string         // Type is the type of the unknown signature
 	Payload map[string]any // Payload is the raw JSON payload
+}
+
+// MarshalJSON marshals the [UnknownSignature] to JSON
+func (u *UnknownSignature) MarshalJSON() ([]byte, error) {
+	if u.Payload != nil {
+		return json.Marshal(u.Payload)
+	}
+	return json.Marshal(map[string]any{"type": u.Type})
 }
 
 // Ed25519Signature represents an Ed25519 public key and signature pair, which actually is the [crypto.AccountAuthenticator].

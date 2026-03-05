@@ -50,9 +50,6 @@ func (o *CommittedTransaction) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
 	}
-	if unknown, ok := o.Inner.(*UnknownTransaction); ok {
-		return json.Marshal(unknown)
-	}
 	return json.Marshal(o.Inner)
 }
 
@@ -187,9 +184,6 @@ func (o *Transaction) Version() *uint64 {
 func (o *Transaction) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
-	}
-	if unknown, ok := o.Inner.(*UnknownTransaction); ok {
-		return json.Marshal(unknown)
 	}
 	return json.Marshal(o.Inner)
 }

@@ -26,11 +26,8 @@ func (o *WriteSet) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
 	}
-	if unknown, ok := o.Inner.(*UnknownWriteSet); ok {
-		if unknown.Payload != nil {
-			return json.Marshal(unknown.Payload)
-		}
-		return json.Marshal(map[string]any{"type": unknown.Type})
+	if _, ok := o.Inner.(*UnknownWriteSet); ok {
+		return json.Marshal(o.Inner)
 	}
 	return marshalWithType(string(o.Type), o.Inner)
 }
@@ -67,6 +64,14 @@ type WriteSetImpl interface{}
 type UnknownWriteSet struct {
 	Type    string         `json:"type"`    // Type is the type of the unknown write set
 	Payload map[string]any `json:"payload"` // Payload is the raw JSON data for the unknown write set
+}
+
+// MarshalJSON marshals the [UnknownWriteSet] to JSON
+func (u *UnknownWriteSet) MarshalJSON() ([]byte, error) {
+	if u.Payload != nil {
+		return json.Marshal(u.Payload)
+	}
+	return json.Marshal(map[string]any{"type": u.Type})
 }
 
 // DirectWriteSet is a raw set of changes and events.  This is also used for the [GenesisTransaction]
@@ -107,11 +112,8 @@ func (o *WriteSetChange) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
 	}
-	if unknown, ok := o.Inner.(*WriteSetChangeUnknown); ok {
-		if unknown.Payload != nil {
-			return json.Marshal(unknown.Payload)
-		}
-		return json.Marshal(map[string]any{"type": unknown.Type})
+	if _, ok := o.Inner.(*WriteSetChangeUnknown); ok {
+		return json.Marshal(o.Inner)
 	}
 	return marshalWithType(string(o.Type), o.Inner)
 }
@@ -156,6 +158,14 @@ type WriteSetChangeImpl interface{}
 type WriteSetChangeUnknown struct {
 	Type    string         `json:"type"`    // Type is the type of the unknown write set change
 	Payload map[string]any `json:"payload"` // Payload is the raw JSON data for the unknown write set change
+}
+
+// MarshalJSON marshals the [WriteSetChangeUnknown] to JSON
+func (u *WriteSetChangeUnknown) MarshalJSON() ([]byte, error) {
+	if u.Payload != nil {
+		return json.Marshal(u.Payload)
+	}
+	return json.Marshal(map[string]any{"type": u.Type})
 }
 
 // WriteSetChangeWriteResource is a change that writes a resource to an account

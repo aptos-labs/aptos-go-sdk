@@ -31,11 +31,8 @@ func (o *TransactionPayload) MarshalJSON() ([]byte, error) {
 	if o.Inner == nil {
 		return []byte("null"), nil
 	}
-	if unknown, ok := o.Inner.(*TransactionPayloadUnknown); ok {
-		if unknown.Payload != nil {
-			return json.Marshal(unknown.Payload)
-		}
-		return json.Marshal(map[string]any{"type": unknown.Type})
+	if _, ok := o.Inner.(*TransactionPayloadUnknown); ok {
+		return json.Marshal(o.Inner)
 	}
 	return marshalWithType(string(o.Type), o.Inner)
 }
@@ -90,6 +87,14 @@ type TransactionPayloadImpl interface{}
 type TransactionPayloadUnknown struct {
 	Type    string         `json:"type"`    // Type is the actual type field from the JSON.
 	Payload map[string]any `json:"payload"` // Payload is the raw JSON payload.
+}
+
+// MarshalJSON marshals the [TransactionPayloadUnknown] to JSON
+func (u *TransactionPayloadUnknown) MarshalJSON() ([]byte, error) {
+	if u.Payload != nil {
+		return json.Marshal(u.Payload)
+	}
+	return json.Marshal(map[string]any{"type": u.Type})
 }
 
 // TransactionPayloadEntryFunction describes an entry function call by a transaction.
