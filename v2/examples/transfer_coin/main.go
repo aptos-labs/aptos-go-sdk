@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	FundAmount     = 100_000_000 // 1 APT in octas
-	TransferAmount = 1_000       // 0.00001 APT
+	FundAmount     = 1_000_000_000 // 10 APT in octas
+	TransferAmount = 1_000         // 0.00001 APT
 )
 
 func main() {
