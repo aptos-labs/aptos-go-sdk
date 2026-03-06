@@ -284,7 +284,7 @@ func (c *FakeClient) BuildTransaction(ctx context.Context, sender aptos.AccountA
 		Sender:                     sender,
 		SequenceNumber:             seqNum,
 		Payload:                    payload,
-		MaxGasAmount:               200000,
+		MaxGasAmount:               2_000_000,
 		GasUnitPrice:               100,
 		ExpirationTimestampSeconds: uint64(time.Now().Add(30 * time.Second).Unix()),
 		ChainID:                    chainID,

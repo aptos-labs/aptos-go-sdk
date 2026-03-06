@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	FundAmount     = 100_000_000
+	FundAmount     = 1_000_000_000
 	TransferAmount = 1_000
 )
 

@@ -300,7 +300,7 @@ func TestClient(t *testing.T) {
 	sender, err := NewEd25519Account()
 	require.NoError(t, err)
 
-	err = aptosClient.Fund(sender.AccountAddress(), 100000000)
+	err = aptosClient.Fund(sender.AccountAddress(), 1_000_000_000)
 	require.NoError(t, err)
 
 	// Convert to FA APT

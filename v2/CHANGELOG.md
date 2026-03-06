@@ -3,6 +3,10 @@
 All notable changes to the Aptos Go SDK v2 will be captured in this file. This changelog is written by hand for now. It
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+# Unreleased
+
+- [`Fix`] Increase default max gas amount by 10x from 200,000 to 2,000,000
+
 # v2.0.0 (2/25/2026)
 
 ## New Features

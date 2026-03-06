@@ -19,7 +19,7 @@ func setup(networkConfig aptos.NetworkConfig) (*aptos.Client, aptos.TransactionS
 		panic("Failed to create sender:" + err.Error())
 	}
 
-	err = client.Fund(sender.Address, 100_000_000)
+	err = client.Fund(sender.Address, 1_000_000_000)
 	if err != nil {
 		panic("Failed to fund sender:" + err.Error())
 	}

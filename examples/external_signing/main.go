@@ -97,7 +97,7 @@ func example(networkConfig aptos.NetworkConfig) {
 	}
 
 	// Fund the sender with the faucet to create it on-chain
-	err = client.Fund(sender.Address, 100_000_000)
+	err = client.Fund(sender.Address, 1_000_000_000)
 	if err != nil {
 		panic("Failed to fund:" + err.Error())
 	}

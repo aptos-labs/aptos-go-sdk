@@ -13,7 +13,7 @@ import (
 
 const (
 	singleSignerScript = "a11ceb0b060000000701000402040a030e0c041a04051e20073e30086e2000000001010204010001000308000104030401000105050601000002010203060c0305010b0001080101080102060c03010b0001090002050b00010900000a6170746f735f636f696e04636f696e04436f696e094170746f73436f696e087769746864726177076465706f7369740000000000000000000000000000000000000000000000000000000000000001000001080b000b0138000c030b020b03380102"
-	fundAmount         = 100_000_000
+	fundAmount         = 1_000_000_000
 	vmStatusSuccess    = "Executed successfully"
 )
 
@@ -418,7 +418,7 @@ func Test_AccountTransactions(t *testing.T) {
 	// Create a bunch of transactions so we can test the pagination
 	account, err := NewEd25519Account()
 	require.NoError(t, err)
-	err = client.Fund(account.AccountAddress(), 100_000_000)
+	err = client.Fund(account.AccountAddress(), 1_000_000_000)
 	require.NoError(t, err)
 
 	// Build and submit 100 transactions
@@ -604,7 +604,7 @@ func Test_Concurrent_Submission(t *testing.T) {
 	account1, err := NewEd25519Account()
 	require.NoError(t, err)
 
-	err = client.Fund(account1.AccountAddress(), 100_000_000)
+	err = client.Fund(account1.AccountAddress(), 1_000_000_000)
 	require.NoError(t, err)
 
 	// start submission goroutine
@@ -799,7 +799,7 @@ func TestClient_EntryFunctionWithArgs(t *testing.T) {
 	// Setup account
 	account, err := types.NewEd25519Account()
 	require.NoError(t, err)
-	err = client.Fund(account.Address, 100000000)
+	err = client.Fund(account.Address, 1_000_000_000)
 	require.NoError(t, err)
 
 	// Attempt to transfer to an account, using the ABI directly

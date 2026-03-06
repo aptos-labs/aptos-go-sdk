@@ -168,7 +168,7 @@ func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress,
 // BuildTransaction builds an unsigned transaction.
 func (c *nodeClient) BuildTransaction(ctx context.Context, sender AccountAddress, payload Payload, opts ...TransactionOption) (*RawTransaction, error) {
 	config := &TransactionConfig{
-		MaxGasAmount:       200000,
+		MaxGasAmount:       2_000_000,
 		ExpirationDuration: 30 * time.Second,
 	}
 	for _, opt := range opts {
