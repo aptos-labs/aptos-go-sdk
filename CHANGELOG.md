@@ -4,6 +4,7 @@ All notable changes to the Aptos Go SDK will be captured in this file. This chan
 adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 # Unreleased
+- [`Feature`] Added Digital AssetClient `CreateCollection` & `MintToken`.
 
 - [`Fix`] Increase default max gas amount by 10x from 100,000 to 1,000,000 (0.01 APT)
 

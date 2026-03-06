@@ -445,6 +445,13 @@ func SerializeBytes(input []byte) ([]byte, error) {
 	})
 }
 
+// SerializeString serializes a single string using the BCS format
+func SerializeString(input string) ([]byte, error) {
+	return SerializeSingle(func(ser *Serializer) {
+		ser.WriteString(input)
+	})
+}
+
 // SerializeSingle is a convenience function, to not have to create a serializer to serialize one value
 //
 // Here's an example for handling a nested byte array
