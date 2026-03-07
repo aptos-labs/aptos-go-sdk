@@ -106,6 +106,28 @@ func TestNodeClient_EventsByCreationNumber(t *testing.T) {
 	assert.Len(t, result, 1)
 }
 
+func TestNodeClient_View_IncludesTypeArguments(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodPost, r.Method)
+		require.Equal(t, "/view", r.URL.Path)
+
+		var body map[string]any
+		require.NoError(t, json.NewDecoder(r.Body).Decode(&body))
+		assert.Equal(t, []any{AptosCoinTypeTag.String()}, body["type_arguments"])
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]any{"0"})
+	}))
+
+	_, err := client.View(context.Background(), &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+		TypeArgs: []TypeTag{AptosCoinTypeTag},
+	})
+	require.NoError(t, err)
+}
+
 func TestNodeClient_SimulateTransaction(t *testing.T) {
 	t.Parallel()
 	simResult := []*SimulationResult{{Success: true, VMStatus: "Executed successfully", GasUsed: 500}}
