@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -413,6 +414,52 @@ func (c *nodeClient) TransactionsIter(ctx context.Context, start *uint64) iter.S
 	}
 }
 
+func normalizeViewArgs(args []any) []any {
+	if args == nil {
+		return nil
+	}
+	normalized := make([]any, len(args))
+	for i, arg := range args {
+		normalized[i] = normalizeViewArg(arg)
+	}
+	return normalized
+}
+
+func normalizeViewArg(arg any) any {
+	if arg == nil {
+		return nil
+	}
+
+	value := reflect.ValueOf(arg)
+	switch value.Kind() {
+	case reflect.Uint64:
+		return strconv.FormatUint(value.Uint(), 10)
+	case reflect.Int64:
+		return strconv.FormatInt(value.Int(), 10)
+	case reflect.Slice, reflect.Array:
+		if value.Type().Elem().Kind() == reflect.Uint8 {
+			return arg
+		}
+		normalized := make([]any, value.Len())
+		for i := range normalized {
+			normalized[i] = normalizeViewArg(value.Index(i).Interface())
+		}
+		return normalized
+	case reflect.Map:
+		if value.Type().Key().Kind() != reflect.String {
+			return arg
+		}
+		normalized := make(map[string]any, value.Len())
+		iter := value.MapRange()
+		for iter.Next() {
+			normalized[iter.Key().String()] = normalizeViewArg(iter.Value().Interface())
+		}
+		return normalized
+	default:
+		return arg
+	}
+}
+
 // View executes a view function and returns the results.
 func (c *nodeClient) View(ctx context.Context, payload *ViewPayload, opts ...ViewOption) ([]any, error) {
 	config := &ViewConfig{}
@@ -429,7 +476,7 @@ func (c *nodeClient) View(ctx context.Context, payload *ViewPayload, opts ...Vie
 	body := map[string]any{
 		"function":       fmt.Sprintf("%s::%s", payload.Module.String(), payload.Function),
 		"type_arguments": []string{}, // TODO: Convert TypeTags to strings
-		"arguments":      payload.Args,
+		"arguments":      normalizeViewArgs(payload.Args),
 	}
 
 	var result []any
