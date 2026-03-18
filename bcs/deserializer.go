@@ -189,7 +189,7 @@ func (des *Deserializer) deserializeIBigint(typeName string, size uint8) big.Int
 // I8 deserializes a single signed 8-bit integer
 func (des *Deserializer) I8() int8 {
 	return deserializeInt(des, "i8", 1, func(slice []byte) int8 {
-		return int8(slice[0])
+		return int8(slice[0]) //nolint:gosec
 	})
 }
 
