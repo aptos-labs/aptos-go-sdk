@@ -1279,12 +1279,12 @@ func Get[T any](rc *NodeClient, getUrl string) (T, error) {
 		err = fmt.Errorf("GET %s, %w", getUrl, err)
 		return out, err
 	}
+	defer response.Body.Close()
 
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return out, err
 	}
-	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		return out, fmt.Errorf("error getting response data, %w", err)
@@ -1312,10 +1312,10 @@ func (rc *NodeClient) GetBCS(getUrl string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GET %s, %w", getUrl, err)
 	}
+	defer response.Body.Close()
 	if response.StatusCode >= 400 {
 		return nil, NewHttpError(response)
 	}
-	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		return nil, fmt.Errorf("error getting response data, %w", err)
@@ -1344,11 +1344,11 @@ func Post[T any](rc *NodeClient, postUrl string, contentType string, body io.Rea
 		err = fmt.Errorf("POST %s, %w", postUrl, err)
 		return data, err
 	}
+	defer response.Body.Close()
 	if response.StatusCode >= 400 {
 		err = NewHttpError(response)
 		return data, err
 	}
-	defer response.Body.Close()
 	blob, err := io.ReadAll(response.Body)
 	if err != nil {
 		err = fmt.Errorf("error getting response data, %w", err)
