@@ -848,7 +848,7 @@ func ConvertToOption(typeParam TypeTag, arg any, generics []TypeTag, options ...
 				if err != nil {
 					return nil, err
 				}
-				b := make([]byte, length+1)
+				b := make([]byte, len(buffer)+1)
 				b[0] = 1
 				copy(b[1:], buffer)
 				return b, nil
