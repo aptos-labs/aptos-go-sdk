@@ -425,10 +425,15 @@ func (c *nodeClient) View(ctx context.Context, payload *ViewPayload, opts ...Vie
 		path += fmt.Sprintf("?ledger_version=%d", *config.LedgerVersion)
 	}
 
+	typeArgs := make([]string, len(payload.TypeArgs))
+	for i, typeArg := range payload.TypeArgs {
+		typeArgs[i] = typeArg.String()
+	}
+
 	// Build request body
 	body := map[string]any{
 		"function":       fmt.Sprintf("%s::%s", payload.Module.String(), payload.Function),
-		"type_arguments": []string{}, // TODO: Convert TypeTags to strings
+		"type_arguments": typeArgs,
 		"arguments":      payload.Args,
 	}
 
