@@ -5,6 +5,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.12.1 (3/18/2026)
+
+- [`Fix`] properly closing client responses on errors
 - [`Fix`] Increase default max gas amount by 10x from 100,000 to 1,000,000 (0.01 APT)
 
 # v1.12.0 (2/25/2026)
