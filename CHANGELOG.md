@@ -9,6 +9,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 - [`Fix`] properly closing client responses on errors
 - [`Fix`] Increase default max gas amount by 10x from 100,000 to 1,000,000 (0.01 APT)
+- [`Fix`] Always use default transport, and reuse it
 
 # v1.12.0 (2/25/2026)
 

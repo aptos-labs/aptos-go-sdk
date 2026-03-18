@@ -3,7 +3,6 @@ package aptos
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -57,11 +56,6 @@ func NewNodeClient(rpcUrl string, chainId uint8) (*NodeClient, error) {
 	defaultClient := &http.Client{
 		Jar:     jar,
 		Timeout: 60 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{
-				MinVersion: tls.VersionTLS12,
-			},
-		},
 	}
 
 	return NewNodeClientWithHttpClient(rpcUrl, chainId, defaultClient)
