@@ -440,9 +440,13 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (*api.U
 //   - start is a version number. Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) Transactions(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
-	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
+	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) (uint64, bool) {
 		txn := (*txns)[len(*txns)-1]
-		return txn.Version()
+		v := txn.Version()
+		if v == 0 {
+			return 0, false
+		}
+		return v - 1, true
 	}, func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
 		return rc.transactionsInner(start, limit)
 	})
@@ -454,10 +458,16 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) ([]*api.Committ
 //   - start is a version number. Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
-	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) uint64 {
+	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) (uint64, bool) {
+		if len(*txns) == 0 {
+			return 0, false
+		}
 		// It will always be a UserTransaction, no other type will come from the API
 		userTxn, _ := ((*txns)[0]).UserTransaction()
-		return userTxn.SequenceNumber - 1
+		if userTxn.SequenceNumber == 0 {
+			return 0, false
+		}
+		return userTxn.SequenceNumber - 1, true
 	}, func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
 		return rc.accountTransactionsInner(account, start, limit)
 	})
@@ -654,7 +664,7 @@ func (rc *NodeClient) EventsByCreationNumber(
 func (rc *NodeClient) handleTransactions(
 	start *uint64,
 	limit *uint64,
-	getNext func(txns *[]*api.CommittedTransaction) uint64,
+	getNext func(txns *[]*api.CommittedTransaction) (nextStart uint64, ok bool),
 	getTxns func(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error),
 ) ([]*api.CommittedTransaction, error) {
 	// Can only pull everything in parallel if a start and a limit is handled
@@ -675,7 +685,10 @@ func (rc *NodeClient) handleTransactions(
 			return txns, nil
 		}
 
-		newStart := getNext(&txns)
+		newStart, hasPrev := getNext(&txns)
+		if !hasPrev {
+			return txns, nil
+		}
 		newLength := actualLimit - numTxns
 		extra, err := rc.transactionsConcurrent(newStart, newLength, getTxns)
 		if err != nil {

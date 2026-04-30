@@ -280,6 +280,47 @@ func TestNodeClient_AccountTransactions(t *testing.T) {
 	assert.Len(t, txns, 1)
 }
 
+func TestNodeClient_AccountTransactions_LimitOnly_NoUnderflowAtSeqZero(t *testing.T) {
+	t.Parallel()
+	var requestCount int
+	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		if start := r.URL.Query().Get("start"); start != "" {
+			assert.NotEqual(t, "18446744073709551615", start,
+				"previous-page cursor must not underflow sequence number 0")
+		}
+		assert.Contains(t, r.URL.Path, "/transactions")
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{
+				"type":                      "user_transaction",
+				"hash":                      "0xaaa",
+				"version":                   "100",
+				"success":                   true,
+				"sender":                    "0x1",
+				"sequence_number":           "0",
+				"max_gas_amount":            "100000",
+				"gas_unit_price":            "100",
+				"expiration_timestamp_secs": "9999999999",
+				"gas_used":                  "42",
+				"vm_status":                 "Executed successfully",
+				"timestamp":                 "1000000",
+				"accumulator_root_hash":     "0x0",
+				"state_change_hash":         "0x0",
+				"event_root_hash":           "0x0",
+				"changes":                   []any{},
+				"events":                    []any{},
+			},
+		})
+	})
+	defer server.Close()
+
+	limit := uint64(9)
+	txns, err := client.AccountTransactions(AccountOne, nil, &limit)
+	require.NoError(t, err)
+	assert.Len(t, txns, 1)
+	assert.Equal(t, 1, requestCount, "must not request an earlier page when already at sequence 0")
+}
+
 func TestNodeClient_SubmitTransaction(t *testing.T) {
 	t.Parallel()
 	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
