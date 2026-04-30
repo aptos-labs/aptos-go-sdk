@@ -96,6 +96,36 @@ func TestNodeClient_AccountTransactions_WithParams(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestNodeClient_AccountTransactions_LimitOnly_SingleRequestNoUnderflowPath(t *testing.T) {
+	t.Parallel()
+	var requestCount int
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		assert.Contains(t, r.URL.Path, "/accounts/")
+		assert.Contains(t, r.URL.Path, "/transactions")
+		q := r.URL.Query()
+		assert.Empty(t, q.Get("start"), "nil start must not send a start query param")
+		assert.Equal(t, "9", q.Get("limit"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]*Transaction{
+			{
+				Type:           "user_transaction",
+				Hash:           "0xaaa",
+				Version:        100,
+				Success:        true,
+				SequenceNumber: 0,
+			},
+		})
+	}))
+
+	limit := uint64(9)
+	result, err := client.AccountTransactions(context.Background(), AccountOne, nil, &limit)
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, uint64(0), result[0].SequenceNumber)
+	assert.Equal(t, 1, requestCount, "v2 performs one GET; no client-side back-pagination")
+}
+
 func TestNodeClient_EventsByCreationNumber(t *testing.T) {
 	t.Parallel()
 	events := []Event{{Type: "0x1::coin::DepositEvent", SequenceNumber: 0}}

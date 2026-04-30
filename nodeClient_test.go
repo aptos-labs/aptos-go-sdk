@@ -321,6 +321,55 @@ func TestNodeClient_AccountTransactions_LimitOnly_NoUnderflowAtSeqZero(t *testin
 	assert.Equal(t, 1, requestCount, "must not request an earlier page when already at sequence 0")
 }
 
+func TestNodeClient_Transactions_LimitOnly_NoUnderflowAtVersionZero(t *testing.T) {
+	t.Parallel()
+	var requestCount int
+	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requestCount++
+		if start := r.URL.Query().Get("start"); start != "" {
+			assert.NotEqual(t, "18446744073709551615", start,
+				"previous-page cursor must not underflow ledger version 0")
+		}
+		assert.Equal(t, "/transactions", r.URL.Path)
+		// Newest-first page: oldest txn is last; version 0 means no earlier ledger page.
+		_ = json.NewEncoder(w).Encode([]map[string]any{
+			{
+				"type":                  "state_checkpoint_transaction",
+				"hash":                  "0x2",
+				"version":               "1",
+				"success":               true,
+				"accumulator_root_hash": "0x0",
+				"state_change_hash":     "0x0",
+				"event_root_hash":       "0x0",
+				"changes":               []any{},
+				"events":                []any{},
+				"timestamp":             "1000000",
+				"state_checkpoint_hash": "0x0",
+			},
+			{
+				"type":                  "state_checkpoint_transaction",
+				"hash":                  "0x1",
+				"version":               "0",
+				"success":               true,
+				"accumulator_root_hash": "0x0",
+				"state_change_hash":     "0x0",
+				"event_root_hash":       "0x0",
+				"changes":               []any{},
+				"events":                []any{},
+				"timestamp":             "1000000",
+				"state_checkpoint_hash": "0x0",
+			},
+		})
+	})
+	defer server.Close()
+
+	limit := uint64(9)
+	txns, err := client.Transactions(nil, &limit)
+	require.NoError(t, err)
+	assert.Len(t, txns, 2)
+	assert.Equal(t, 1, requestCount, "must not request an earlier page when oldest version on page is 0")
+}
+
 func TestNodeClient_SubmitTransaction(t *testing.T) {
 	t.Parallel()
 	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
