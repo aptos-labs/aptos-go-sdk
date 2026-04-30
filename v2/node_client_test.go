@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -98,13 +99,14 @@ func TestNodeClient_AccountTransactions_WithParams(t *testing.T) {
 
 func TestNodeClient_AccountTransactions_LimitOnly_SingleRequestNoUnderflowPath(t *testing.T) {
 	t.Parallel()
-	var requestCount int
+	var requestCount atomic.Int32
 	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		assert.Contains(t, r.URL.Path, "/accounts/")
 		assert.Contains(t, r.URL.Path, "/transactions")
 		q := r.URL.Query()
-		assert.Empty(t, q.Get("start"), "nil start must not send a start query param")
+		_, hasStart := q["start"]
+		assert.False(t, hasStart, "nil start must omit the start query parameter")
 		assert.Equal(t, "9", q.Get("limit"))
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode([]*Transaction{
@@ -123,7 +125,7 @@ func TestNodeClient_AccountTransactions_LimitOnly_SingleRequestNoUnderflowPath(t
 	require.NoError(t, err)
 	require.Len(t, result, 1)
 	assert.Equal(t, uint64(0), result[0].SequenceNumber)
-	assert.Equal(t, 1, requestCount, "v2 performs one GET; no client-side back-pagination")
+	assert.Equal(t, int32(1), requestCount.Load(), "v2 performs one GET; no client-side back-pagination")
 }
 
 func TestNodeClient_EventsByCreationNumber(t *testing.T) {

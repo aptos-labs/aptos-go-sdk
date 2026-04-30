@@ -441,6 +441,9 @@ func (rc *NodeClient) WaitForTransaction(txnHash string, options ...any) (*api.U
 //   - limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) Transactions(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
 	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) (uint64, bool) {
+		if len(*txns) == 0 {
+			return 0, false
+		}
 		txn := (*txns)[len(*txns)-1]
 		v := txn.Version()
 		if v == 0 {
@@ -455,7 +458,7 @@ func (rc *NodeClient) Transactions(start *uint64, limit *uint64) ([]*api.Committ
 // AccountTransactions Get recent transactions for an account
 //
 // Arguments:
-//   - start is a version number. Nil for most recent transactions.
+//   - start is an account sequence number (REST query parameter `start`). Nil for most recent transactions.
 //   - limit is a number of transactions to return. 'about a hundred' by default.
 func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64, limit *uint64) ([]*api.CommittedTransaction, error) {
 	return rc.handleTransactions(start, limit, func(txns *[]*api.CommittedTransaction) (uint64, bool) {

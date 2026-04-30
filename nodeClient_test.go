@@ -6,6 +6,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -282,9 +283,9 @@ func TestNodeClient_AccountTransactions(t *testing.T) {
 
 func TestNodeClient_AccountTransactions_LimitOnly_NoUnderflowAtSeqZero(t *testing.T) {
 	t.Parallel()
-	var requestCount int
+	var requestCount atomic.Int32
 	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		if start := r.URL.Query().Get("start"); start != "" {
 			assert.NotEqual(t, "18446744073709551615", start,
 				"previous-page cursor must not underflow sequence number 0")
@@ -318,14 +319,14 @@ func TestNodeClient_AccountTransactions_LimitOnly_NoUnderflowAtSeqZero(t *testin
 	txns, err := client.AccountTransactions(AccountOne, nil, &limit)
 	require.NoError(t, err)
 	assert.Len(t, txns, 1)
-	assert.Equal(t, 1, requestCount, "must not request an earlier page when already at sequence 0")
+	assert.Equal(t, int32(1), requestCount.Load(), "must not request an earlier page when already at sequence 0")
 }
 
 func TestNodeClient_Transactions_LimitOnly_NoUnderflowAtVersionZero(t *testing.T) {
 	t.Parallel()
-	var requestCount int
+	var requestCount atomic.Int32
 	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
-		requestCount++
+		requestCount.Add(1)
 		if start := r.URL.Query().Get("start"); start != "" {
 			assert.NotEqual(t, "18446744073709551615", start,
 				"previous-page cursor must not underflow ledger version 0")
@@ -367,7 +368,24 @@ func TestNodeClient_Transactions_LimitOnly_NoUnderflowAtVersionZero(t *testing.T
 	txns, err := client.Transactions(nil, &limit)
 	require.NoError(t, err)
 	assert.Len(t, txns, 2)
-	assert.Equal(t, 1, requestCount, "must not request an earlier page when oldest version on page is 0")
+	assert.Equal(t, int32(1), requestCount.Load(), "must not request an earlier page when oldest version on page is 0")
+}
+
+func TestNodeClient_Transactions_LimitOnly_EmptyFirstPage(t *testing.T) {
+	t.Parallel()
+	var requestCount atomic.Int32
+	client, server := newMockClient(t, func(w http.ResponseWriter, r *http.Request) {
+		requestCount.Add(1)
+		assert.Equal(t, "/transactions", r.URL.Path)
+		_ = json.NewEncoder(w).Encode([]map[string]any{})
+	})
+	defer server.Close()
+
+	limit := uint64(9)
+	txns, err := client.Transactions(nil, &limit)
+	require.NoError(t, err)
+	assert.Empty(t, txns)
+	assert.Equal(t, int32(1), requestCount.Load())
 }
 
 func TestNodeClient_SubmitTransaction(t *testing.T) {
