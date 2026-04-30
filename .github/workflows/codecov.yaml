@@ -10,16 +10,20 @@ on:
 env:
   GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
+permissions:
+  contents: read
+
 jobs:
   coverage:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ env.GIT_SHA }}
+          persist-credentials: false
 
-      - uses: actions/setup-go@v6
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version: ">=1.24"
 
@@ -37,7 +41,7 @@ jobs:
 
       # Upload v2 coverage to Codecov
       - name: Upload v2 coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         with:
           files: ./v2/coverage.out
           flags: v2
@@ -49,7 +53,7 @@ jobs:
 
       # Upload v1 coverage to Codecov (if available)
       - name: Upload v1 coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@75cd11691c0faa626561e295848008c8a7dddffe # v5
         if: hashFiles('coverage-v1.out') != ''
         with:
           files: ./coverage-v1.out

@@ -5,15 +5,13 @@ description: |
 runs:
   using: composite
   steps:
-    # Setup checkout of Git
-    - uses: actions/checkout@v6
     # Setup Go
-    - uses: actions/setup-go@v6
+    - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
       with:
         go-version: '>=1.24'
     # Run a local testnet in the background. After this action runs the local testnet
     # should be up and queryable. This also installs node and pnpm for us.
-    - uses: aptos-labs/actions/run-local-testnet@main
+    - uses: aptos-labs/actions/run-local-testnet@528ef7ad9427a8c0720ea3eea790a9190d6e377d # main
       with:
         PNPM_VERSION: 8.9.0
     # Run unit tests
