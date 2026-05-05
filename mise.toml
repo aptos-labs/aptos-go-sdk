@@ -1,7 +1,7 @@
 [tools]
-go = "1.24"
+go = "1.24.2"
 golangci-lint = "2.12.1"
-gofumpt = "latest"
+gofumpt = "0.10.0"
 node = "20.14.0"
 
 [env]
@@ -13,7 +13,16 @@ run = "gofumpt -l -w ."
 
 [tasks.fmt-check]
 description = "Check formatting with gofumpt (CI parity)"
-run = "test \"$(gofumpt -l -e . | wc -l | tr -d ' ')\" = '0' || (echo 'Formatting is wrong, please run: mise run fmt' && gofumpt -l -e . && exit 1)"
+run = """
+set -e
+out=$(gofumpt -l -e .)
+if [ -n "$out" ]; then
+    echo "Formatting is wrong, please run: mise run fmt"
+    echo "$out"
+    exit 1
+fi
+echo "Formatting is good"
+"""
 
 [tasks.lint]
 description = "Run golangci-lint on the v1 module"
