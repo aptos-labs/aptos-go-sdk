@@ -1,21 +1,15 @@
-name: "Go Unit Tests"
+name: "gofumpt formatting check"
 description: |
-  Run Go unit tests
+  Check Go source formatting with gofumpt at the version pinned in mise.toml.
 
 runs:
   using: composite
   steps:
-    # Setup checkout of Git
-    - uses: actions/checkout@v6
-    # Setup Go
-    - uses: actions/setup-go@v6
+    - uses: jdx/mise-action@v4
       with:
-        go-version: '>=1.24'
-    # Run vet and formatter
+        install_args: "go gofumpt"
+        cache: true
     - shell: bash
       run: 'go vet ./...'
     - shell: bash
-      run: 'go install mvdan.cc/gofumpt@latest'
-    - shell: bash
-      run: "(test `gofumpt -l -e . | wc -l | sed 's/ //g'` = '0' && echo 'Formatting is good') || (echo 'Formatting is wrong please run gofumpt -l -w' && exit -1)"
-
+      run: 'mise run fmt-check'
