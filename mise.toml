@@ -1,0 +1,42 @@
+[tools]
+go = "1.24"
+golangci-lint = "2.12.1"
+gofumpt = "latest"
+node = "20.14.0"
+
+[env]
+GOTOOLCHAIN = "local"
+
+[tasks.fmt]
+description = "Format Go source files with gofumpt"
+run = "gofumpt -l -w ."
+
+[tasks.fmt-check]
+description = "Check formatting with gofumpt (CI parity)"
+run = "test \"$(gofumpt -l -e . | wc -l | tr -d ' ')\" = '0' || (echo 'Formatting is wrong, please run: mise run fmt' && gofumpt -l -e . && exit 1)"
+
+[tasks.lint]
+description = "Run golangci-lint on the v1 module"
+run = "golangci-lint run"
+
+[tasks."lint:v2"]
+description = "Run golangci-lint on the v2 module"
+dir = "v2"
+run = "golangci-lint run"
+
+[tasks.test]
+description = "Run unit tests for v1 (use 'go test ./...' for full)"
+run = "go test -short ./..."
+
+[tasks."test:v2"]
+description = "Run v2 unit tests"
+dir = "v2"
+run = "go test -short ./..."
+
+[tasks.vet]
+description = "Run go vet on the v1 module"
+run = "go vet ./..."
+
+[tasks.ci]
+description = "Run all CI checks locally (vet, fmt-check, lint)"
+depends = ["vet", "fmt-check", "lint"]
