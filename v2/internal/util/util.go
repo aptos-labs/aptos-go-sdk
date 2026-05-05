@@ -2,6 +2,7 @@
 package util
 
 import (
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
 	"hash"
@@ -10,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"golang.org/x/crypto/sha3"
 )
 
 // sha3Pool provides reusable SHA3-256 hashers to reduce allocations.

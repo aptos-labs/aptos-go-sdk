@@ -64,32 +64,33 @@ func example(networkConfig aptos.NetworkConfig) {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
 	replayNonce := uint64(100)
-	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
-		Payload: &aptos.TransactionInnerPayload{
-			Payload: &aptos.TransactionInnerPayloadV1{
-				Executable: aptos.TransactionExecutable{
-					Inner: &aptos.EntryFunction{
-						Module: aptos.ModuleId{
-							Address: aptos.AccountOne,
-							Name:    "aptos_account",
-						},
-						Function: "transfer",
-						ArgTypes: []aptos.TypeTag{},
-						Args: [][]byte{
-							accountBytes,
-							amountBytes,
+	rawTxn, err := client.BuildTransaction(
+		alice.AccountAddress(), aptos.TransactionPayload{
+			Payload: &aptos.TransactionInnerPayload{
+				Payload: &aptos.TransactionInnerPayloadV1{
+					Executable: aptos.TransactionExecutable{
+						Inner: &aptos.EntryFunction{
+							Module: aptos.ModuleId{
+								Address: aptos.AccountOne,
+								Name:    "aptos_account",
+							},
+							Function: "transfer",
+							ArgTypes: []aptos.TypeTag{},
+							Args: [][]byte{
+								accountBytes,
+								amountBytes,
+							},
 						},
 					},
-				},
-				ExtraConfig: aptos.TransactionExtraConfig{
-					Inner: &aptos.TransactionExtraConfigV1{
-						MultisigAddress:       nil,
-						ReplayProtectionNonce: &replayNonce,
+					ExtraConfig: aptos.TransactionExtraConfig{
+						Inner: &aptos.TransactionExtraConfigV1{
+							MultisigAddress:       nil,
+							ReplayProtectionNonce: &replayNonce,
+						},
 					},
 				},
 			},
 		},
-	},
 		aptos.ExpirationSeconds(60),
 	)
 	if err != nil {
@@ -146,32 +147,33 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Now do it again, but with a different method
 	replayNonce2 := uint64(256)
-	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
-		Payload: &aptos.TransactionInnerPayload{
-			Payload: &aptos.TransactionInnerPayloadV1{
-				Executable: aptos.TransactionExecutable{
-					Inner: &aptos.EntryFunction{
-						Module: aptos.ModuleId{
-							Address: aptos.AccountOne,
-							Name:    "aptos_account",
-						},
-						Function: "transfer",
-						ArgTypes: []aptos.TypeTag{},
-						Args: [][]byte{
-							accountBytes,
-							amountBytes,
+	resp, err := client.BuildSignAndSubmitTransaction(
+		alice, aptos.TransactionPayload{
+			Payload: &aptos.TransactionInnerPayload{
+				Payload: &aptos.TransactionInnerPayloadV1{
+					Executable: aptos.TransactionExecutable{
+						Inner: &aptos.EntryFunction{
+							Module: aptos.ModuleId{
+								Address: aptos.AccountOne,
+								Name:    "aptos_account",
+							},
+							Function: "transfer",
+							ArgTypes: []aptos.TypeTag{},
+							Args: [][]byte{
+								accountBytes,
+								amountBytes,
+							},
 						},
 					},
-				},
-				ExtraConfig: aptos.TransactionExtraConfig{
-					Inner: &aptos.TransactionExtraConfigV1{
-						MultisigAddress:       nil,
-						ReplayProtectionNonce: &replayNonce2,
+					ExtraConfig: aptos.TransactionExtraConfig{
+						Inner: &aptos.TransactionExtraConfigV1{
+							MultisigAddress:       nil,
+							ReplayProtectionNonce: &replayNonce2,
+						},
 					},
 				},
 			},
 		},
-	},
 		aptos.ExpirationSeconds(60),
 	)
 	if err != nil {

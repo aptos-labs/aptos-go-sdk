@@ -189,17 +189,18 @@ func runScript(client *aptos.Client, alice *aptos.Account, bob *aptos.AccountAdd
 	}
 
 	// 1. Build transaction
-	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
-		Payload: &aptos.Script{
-			Code:     scriptBytes,
-			ArgTypes: []aptos.TypeTag{},
-			Args: []aptos.ScriptArgument{
-				{Variant: aptos.ScriptArgumentAddress, Value: *faMetadataAddress},
-				{Variant: aptos.ScriptArgumentAddress, Value: *bob},
-				{Variant: aptos.ScriptArgumentU64, Value: TransferAmount},
+	rawTxn, err := client.BuildTransaction(
+		alice.AccountAddress(), aptos.TransactionPayload{
+			Payload: &aptos.Script{
+				Code:     scriptBytes,
+				ArgTypes: []aptos.TypeTag{},
+				Args: []aptos.ScriptArgument{
+					{Variant: aptos.ScriptArgumentAddress, Value: *faMetadataAddress},
+					{Variant: aptos.ScriptArgumentAddress, Value: *bob},
+					{Variant: aptos.ScriptArgumentU64, Value: TransferAmount},
+				},
 			},
 		},
-	},
 	)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())

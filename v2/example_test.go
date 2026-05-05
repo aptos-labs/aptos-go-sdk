@@ -31,7 +31,8 @@ func Example_basicUsage() {
 
 func Example_clientOptions() {
 	// Create a client with custom options
-	_, _ = aptos.NewClient(aptos.Mainnet,
+	_, _ = aptos.NewClient(
+		aptos.Mainnet,
 		aptos.WithTimeout(60*time.Second),
 		aptos.WithRetry(5, 200*time.Millisecond),
 		aptos.WithAPIKey("your-api-key"),
@@ -76,7 +77,8 @@ func Example_transactionBuilder() {
 	// Build a transfer transaction using the fluent builder
 	txn, err := transaction.New().
 		Sender(sender).
-		EntryFunction("0x1::aptos_account::transfer",
+		EntryFunction(
+			"0x1::aptos_account::transfer",
 			nil, // no type args
 			recipient.Bytes(),
 			amount,

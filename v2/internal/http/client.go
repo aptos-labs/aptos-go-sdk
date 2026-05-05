@@ -94,7 +94,8 @@ func (c *RetryClient) Do(req *http.Request) (*http.Response, error) {
 			// Calculate backoff
 			backoff := c.calculateBackoff(attempt)
 
-			c.logger.Debug("retrying request",
+			c.logger.Debug(
+				"retrying request",
 				"attempt", attempt,
 				"max_retries", c.config.MaxRetries,
 				"backoff", backoff,
@@ -123,7 +124,8 @@ func (c *RetryClient) Do(req *http.Request) (*http.Response, error) {
 			// Network errors are retriable
 			lastErr = err
 			lastResp = nil
-			c.logger.Debug("request failed with error",
+			c.logger.Debug(
+				"request failed with error",
 				"attempt", attempt,
 				"error", err,
 				"url", req.URL.String(),
@@ -148,7 +150,8 @@ func (c *RetryClient) Do(req *http.Request) (*http.Response, error) {
 
 			lastResp = resp
 			lastErr = fmt.Errorf("retriable status code: %d", resp.StatusCode)
-			c.logger.Debug("retriable status code",
+			c.logger.Debug(
+				"retriable status code",
 				"attempt", attempt,
 				"status", resp.StatusCode,
 				"url", req.URL.String(),
@@ -285,7 +288,8 @@ func NewLoggingClient(inner HTTPDoer, logger *slog.Logger) *LoggingClient {
 func (c *LoggingClient) Do(req *http.Request) (*http.Response, error) {
 	start := time.Now()
 
-	c.logger.Debug("sending request",
+	c.logger.Debug(
+		"sending request",
 		"method", req.Method,
 		"url", req.URL.String(),
 	)
@@ -294,7 +298,8 @@ func (c *LoggingClient) Do(req *http.Request) (*http.Response, error) {
 	duration := time.Since(start)
 
 	if err != nil {
-		c.logger.Debug("request failed",
+		c.logger.Debug(
+			"request failed",
 			"method", req.Method,
 			"url", req.URL.String(),
 			"error", err,
@@ -303,7 +308,8 @@ func (c *LoggingClient) Do(req *http.Request) (*http.Response, error) {
 		return nil, err
 	}
 
-	c.logger.Debug("request completed",
+	c.logger.Debug(
+		"request completed",
 		"method", req.Method,
 		"url", req.URL.String(),
 		"status", resp.StatusCode,

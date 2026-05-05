@@ -261,20 +261,21 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
-	rawTxn, err := client.BuildTransaction(multikeyAddress, aptos.TransactionPayload{
-		Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
-			Args: [][]byte{
-				accountBytes,
-				amountBytes,
+	rawTxn, err := client.BuildTransaction(
+		multikeyAddress, aptos.TransactionPayload{
+			Payload: &aptos.EntryFunction{
+				Module: aptos.ModuleId{
+					Address: aptos.AccountOne,
+					Name:    "aptos_account",
+				},
+				Function: "transfer",
+				ArgTypes: []aptos.TypeTag{},
+				Args: [][]byte{
+					accountBytes,
+					amountBytes,
+				},
 			},
 		},
-	},
 	)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())

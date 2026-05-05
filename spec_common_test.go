@@ -73,7 +73,7 @@ func parseU8(input string) uint8 {
 	if err != nil {
 		panic("invalid u8 input " + input)
 	}
-	return (uint8)(out)
+	return uint8(out)
 }
 
 func parseU16(input string) uint16 {
@@ -81,7 +81,7 @@ func parseU16(input string) uint16 {
 	if err != nil {
 		panic("invalid u16 input " + input)
 	}
-	return (uint16)(out)
+	return uint16(out)
 }
 
 func parseU32(input string) uint32 {
@@ -89,7 +89,7 @@ func parseU32(input string) uint32 {
 	if err != nil {
 		panic("invalid u32 input " + input)
 	}
-	return (uint32)(out)
+	return uint32(out)
 }
 
 func parseU64(input string) uint64 {

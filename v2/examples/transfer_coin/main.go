@@ -73,7 +73,8 @@ func main() {
 	}
 
 	// Build the transaction with gas estimation
-	rawTxn, err := client.BuildTransaction(ctx, alice, payload,
+	rawTxn, err := client.BuildTransaction(
+		ctx, alice, payload,
 		aptos.WithGasEstimation(),
 	)
 	if err != nil {

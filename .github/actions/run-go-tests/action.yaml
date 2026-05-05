@@ -1,22 +1,20 @@
 name: "Go Unit Tests"
 description: |
-  Run Go unit tests
+  Run Go unit tests. The Go version is pinned via mise.toml so the build
+  uses the same toolchain as the lint and format jobs.
 
 runs:
   using: composite
   steps:
-    # Setup checkout of Git
-    - uses: actions/checkout@v6
-    # Setup Go
-    - uses: actions/setup-go@v6
+    - uses: jdx/mise-action@v4
       with:
-        go-version: '>=1.24'
+        install_args: "go"
+        cache: true
     # Run a local testnet in the background. After this action runs the local testnet
     # should be up and queryable. This also installs node and pnpm for us.
     - uses: aptos-labs/actions/run-local-testnet@main
       with:
         PNPM_VERSION: 8.9.0
-    # Run unit tests
 
     - shell: bash
       run: |

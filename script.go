@@ -76,61 +76,61 @@ func (sa *ScriptArgument) MarshalBCS(ser *bcs.Serializer) {
 	ser.Uleb128(uint32(sa.Variant))
 	switch sa.Variant {
 	case ScriptArgumentU8:
-		value, ok := (sa.Value).(uint8)
+		value, ok := sa.Value.(uint8)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU8, must be uint8", sa.Value))
 		}
 		ser.U8(value)
 	case ScriptArgumentU16:
-		value, ok := (sa.Value).(uint16)
+		value, ok := sa.Value.(uint16)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU16, must be uint16", sa.Value))
 		}
 		ser.U16(value)
 	case ScriptArgumentU32:
-		value, ok := (sa.Value).(uint32)
+		value, ok := sa.Value.(uint32)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU32, must be uint32", sa.Value))
 		}
 		ser.U32(value)
 	case ScriptArgumentU64:
-		value, ok := (sa.Value).(uint64)
+		value, ok := sa.Value.(uint64)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU64, must be uint64", sa.Value))
 		}
 		ser.U64(value)
 	case ScriptArgumentU128:
-		value, ok := (sa.Value).(big.Int)
+		value, ok := sa.Value.(big.Int)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgument128, must be big.Int", sa.Value))
 		}
 		ser.U128(value)
 	case ScriptArgumentU256:
-		value, ok := (sa.Value).(big.Int)
+		value, ok := sa.Value.(big.Int)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgument256, must be big.Int", sa.Value))
 		}
 		ser.U256(value)
 	case ScriptArgumentAddress:
-		addr, ok := (sa.Value).(AccountAddress)
+		addr, ok := sa.Value.(AccountAddress)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentAddress, must be AccountAddress", sa.Value))
 		}
 		ser.Struct(&addr)
 	case ScriptArgumentU8Vector:
-		bytes, ok := (sa.Value).([]byte)
+		bytes, ok := sa.Value.([]byte)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentU8Vector, must be []byte", sa.Value))
 		}
 		ser.WriteBytes(bytes)
 	case ScriptArgumentBool:
-		value, ok := (sa.Value).(bool)
+		value, ok := sa.Value.(bool)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentBool, must be bool", sa.Value))
 		}
 		ser.Bool(value)
 	case ScriptArgumentSerialized:
-		value, ok := (sa.Value).(*bcs.Serialized)
+		value, ok := sa.Value.(*bcs.Serialized)
 		if !ok {
 			ser.SetError(fmt.Errorf("invalid input type (%T) for ScriptArgumentSerialized, must be *bcs.Serialized", sa.Value))
 		}

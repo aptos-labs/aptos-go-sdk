@@ -212,7 +212,8 @@ func (t *InstrumentedTransport) RoundTrip(req *http.Request) (*http.Response, er
 	// Start span
 	var span trace.Span
 	if !t.config.DisableTracing {
-		ctx, span = t.tracer.Start(ctx, "aptos."+operation,
+		ctx, span = t.tracer.Start(
+			ctx, "aptos."+operation,
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attrs...),
 		)

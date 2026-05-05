@@ -45,13 +45,15 @@ func NewHttpError(response *http.Response) *HttpError {
 //   - [Error]
 func (he *HttpError) Error() string {
 	if len(he.Body) < HttpErrSummaryLength {
-		return fmt.Sprintf("HttpError %s %#v -> %#v %#v",
+		return fmt.Sprintf(
+			"HttpError %s %#v -> %#v %#v",
 			he.Method, he.RequestUrl.String(), he.Status,
 			string(he.Body),
 		)
 	}
 	// Trim if the error is too long
-	return fmt.Sprintf("HttpError %s %#v -> %#v %s %#v...[+%d]",
+	return fmt.Sprintf(
+		"HttpError %s %#v -> %#v %s %#v...[+%d]",
 		he.Method, he.RequestUrl.String(), he.Status,
 		he.Header.Get("Content-Type"),
 		string(he.Body)[:HttpErrSummaryLength-10], len(he.Body)-(HttpErrSummaryLength-10),

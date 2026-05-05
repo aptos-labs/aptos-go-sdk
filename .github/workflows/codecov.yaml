@@ -19,9 +19,10 @@ jobs:
         with:
           ref: ${{ env.GIT_SHA }}
 
-      - uses: actions/setup-go@v6
+      - uses: jdx/mise-action@v4
         with:
-          go-version: ">=1.24"
+          install_args: "go"
+          cache: true
 
       # Run v2 SDK tests with coverage
       - name: Run v2 SDK tests with coverage
