@@ -154,10 +154,10 @@ func (txn *TransactionExtraConfigV1) MarshalBCS(ser *bcs.Serializer) {
 }
 
 func (txn *TransactionExtraConfigV1) UnmarshalBCS(des *bcs.Deserializer) {
-	bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *AccountAddress) {
+	txn.MultisigAddress = bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *AccountAddress) {
 		des.Struct(out)
 	})
-	bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *uint64) {
+	txn.ReplayProtectionNonce = bcs.DeserializeOption(des, func(des *bcs.Deserializer, out *uint64) {
 		*out = des.U64()
 	})
 }
