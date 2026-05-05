@@ -152,13 +152,10 @@ func TestTransactionExtraConfig_V1_BCS_RoundTrip(t *testing.T) {
 	require.True(t, ok)
 	assert.Equal(t, TransactionExtraConfigVariantV1, v1.ConfigType())
 
-	// NOTE: TransactionExtraConfigV1.UnmarshalBCS does not assign deserialized
-	// optional fields back to the struct (known issue in source). The deserializer
-	// consumes the bytes without error, but the struct fields remain nil.
-	// Verify that deserialization at least succeeds without error and the variant
-	// is correct. The serialization path (MarshalBCS) is fully tested above.
-	assert.Nil(t, v1.MultisigAddress, "known issue: UnmarshalBCS does not populate optional fields")
-	assert.Nil(t, v1.ReplayProtectionNonce, "known issue: UnmarshalBCS does not populate optional fields")
+	require.NotNil(t, v1.MultisigAddress)
+	require.NotNil(t, v1.ReplayProtectionNonce)
+	assert.Equal(t, addr, *v1.MultisigAddress)
+	assert.Equal(t, nonce, *v1.ReplayProtectionNonce)
 }
 
 func TestTransactionExtraConfig_V1_NilOptionals_BCS_RoundTrip(t *testing.T) {

@@ -305,8 +305,7 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 
 		parts := strings.Split(str, "::")
 		if len(parts) != 3 {
-			// TODO: More informative message
-			return nil, errors.New("invalid type tag")
+			return nil, fmt.Errorf("invalid type tag %q: expected address::module::name", str)
 		}
 
 		// Validate struct address
@@ -867,7 +866,6 @@ func (xt *ReferenceTag) GetType() TypeTagVariant {
 
 // region Reference bcs.Struct
 
-// TODO: Do we need a proper serialization here
 func (xt *ReferenceTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *ReferenceTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
@@ -896,7 +894,6 @@ func (xt *GenericTag) GetType() TypeTagVariant {
 
 // region Generic bcs.Struct
 
-// TODO: Do we need a proper serialization here
 func (xt *GenericTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *GenericTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 

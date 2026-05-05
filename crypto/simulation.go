@@ -48,9 +48,7 @@ func (ea *NoAuthenticator) Verify([]byte) bool {
 //
 // Implements:
 //   - [bcs.Marshaler]
-func (ea *NoAuthenticator) MarshalBCS(*bcs.Serializer) {
-	// TODO: Double check nothing is needed here
-}
+func (ea *NoAuthenticator) MarshalBCS(*bcs.Serializer) {}
 
 // UnmarshalBCS deserializes the [NoAuthenticator] from BCS bytes
 //
@@ -58,9 +56,7 @@ func (ea *NoAuthenticator) MarshalBCS(*bcs.Serializer) {
 //
 // Implements:
 //   - [bcs.Unmarshaler]
-func (ea *NoAuthenticator) UnmarshalBCS(*bcs.Deserializer) {
-	// TODO: Double check nothing is needed here
-}
+func (ea *NoAuthenticator) UnmarshalBCS(*bcs.Deserializer) {}
 
 func NoAccountAuthenticator() *AccountAuthenticator {
 	return &AccountAuthenticator{

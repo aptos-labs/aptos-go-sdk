@@ -168,3 +168,18 @@ func TestBlockWithTransactions(t *testing.T) {
 	assert.NotEmpty(t, data.Transactions)
 	assert.Equal(t, uint64(2), data.Transactions[1].Version())
 }
+
+func TestBlockWithUnparsableTransaction(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+		"block_height": "1",
+		"block_hash": "0x014e30aafd9f715ab6262322bf919abebd66d948f6822ffb8a2699a57722fb80",
+		"block_timestamp": "1665609760857472",
+		"first_version": "1",
+		"last_version": "1",
+		"transactions": [[1, 2, 3]]
+	}`
+	data := &Block{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.Error(t, err)
+}

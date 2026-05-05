@@ -126,3 +126,87 @@ func TestAccountAuthenticator_FeePayer(t *testing.T) {
 	assert.Empty(t, auth.SecondarySignerAddresses)
 	assert.Empty(t, auth.SecondarySigners)
 }
+
+func TestAccountAuthenticator_MultiAgent(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+  "sender": {
+    "public_key": "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",
+    "signature": "0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609",
+    "type": "ed25519_signature"
+  },
+  "secondary_signer_addresses": ["0xc1d18520beffe36d104232f455d5cc83b991bde0d1425a735aea1c0c2df60e0b"],
+  "secondary_signers": [{
+    "public_key": "0xcfbeb24598919df85ecb827b24bf70e082fd08fdefef8a4b470da16e633a8dee",
+    "signature": "0x82d46bfb63d774fc724ed85b9822d318a79b9ec9a8d5cc1c56f4bd6964e13273e3f53962e5a2b75184544343adff70a9920167d9b1b84f8e5ad74dc8882b7707",
+    "type": "ed25519_signature"
+  }],
+  "type": "multi_agent_signature"
+}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantMultiAgent, data.Type)
+	auth, ok := data.Inner.(*MultiAgentSignature)
+	require.True(t, ok)
+	require.NotNil(t, auth.Sender)
+	assert.Equal(t, SignatureVariantEd25519, auth.Sender.Type)
+	require.Len(t, auth.SecondarySignerAddresses, 1)
+	require.Len(t, auth.SecondarySigners, 1)
+	assert.Equal(t, SignatureVariantEd25519, auth.SecondarySigners[0].Type)
+}
+
+func TestAccountAuthenticator_SingleSender(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+  "type": "single_sender",
+  "sender": {
+    "public_key": "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f",
+    "signature": "0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609",
+    "type": "ed25519_signature"
+  }
+}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.NoError(t, err)
+	assert.Equal(t, SignatureVariantSingleSender, data.Type)
+	_, ok := data.Inner.(*SingleSenderSignature)
+	require.True(t, ok)
+}
+
+func TestAccountAuthenticator_Ed25519_InvalidJSON(t *testing.T) {
+	t.Parallel()
+	sig := &Ed25519Signature{}
+	err := json.Unmarshal([]byte(`{"public_key": 123}`), sig)
+	require.Error(t, err)
+}
+
+func TestAccountAuthenticator_Ed25519_InvalidPubKey(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+  "public_key": "0x00",
+  "signature": "0x0ba0310b8dad7053259b956f088779a59dc4a913e997678b4c8fb2da9a9d13d39736ad3a713ca300e7c8fcc98e483d829a8ddcf99df873038e3558ee982f6609",
+  "type": "ed25519_signature"
+}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.Error(t, err)
+}
+
+func TestAccountAuthenticator_MultiEd25519_InvalidSignature(t *testing.T) {
+	t.Parallel()
+	testJson := `{
+  "public_keys": [
+    "0xfc0947a61275f90ed089e1584143362eb236b11d72f901b8c2a5ca546f7fa34f"
+  ],
+  "signatures": [
+    "0x00"
+  ],
+  "threshold": 1,
+  "bitmap": "0x80000000",
+  "type": "multi_ed25519_signature"
+}`
+	data := &Signature{}
+	err := json.Unmarshal([]byte(testJson), &data)
+	require.Error(t, err)
+}

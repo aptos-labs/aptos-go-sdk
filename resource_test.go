@@ -34,3 +34,19 @@ func TestMoveResourceBCS(t *testing.T) {
 	assert.Equal(t, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", resources[0].Tag.String())
 	assert.Equal(t, "0x1::account::Account", resources[1].Tag.String())
 }
+
+func TestAccountResourceRecord_BCS_RoundTrip(t *testing.T) {
+	t.Parallel()
+	b64text := "AgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBGNvaW4JQ29pblN0b3JlAQcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQphcHRvc19jb2luCUFwdG9zQ29pbgBpKsLrCwAAAAAAAgAAAAAAAAACAAAAAAAAANGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAADAAAAAAAAANGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEHYWNjb3VudAdBY2NvdW50AJMBINGdA6RyqwjAFP2cXRokfP3YJqHHNb55lM2GQFYwd6a7AAAAAAAAAAAEAAAAAAAAAAEAAAAAAAAAAAAAAAAAAADRnQOkcqsIwBT9nF0aJHz92CahxzW+eZTNhkBWMHemuwAAAAAAAAAAAQAAAAAAAADRnQOkcqsIwBT9nF0aJHz92CahxzW+eZTNhkBWMHemuwAA"
+	original, err := decodeB64(b64text)
+	require.NoError(t, err)
+
+	deserializer := bcs.NewDeserializer(original)
+	resources := bcs.DeserializeSequence[AccountResourceRecord](deserializer)
+	require.NoError(t, deserializer.Error())
+	require.Len(t, resources, 2)
+
+	reserialized, err := bcs.SerializeSequenceOnly(resources)
+	require.NoError(t, err)
+	assert.Equal(t, original, reserialized)
+}

@@ -12,6 +12,15 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/internal/util"
 )
 
+var (
+	maxU128 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 128), big.NewInt(1))
+	maxU256 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 256), big.NewInt(1))
+	minI128 = new(big.Int).Neg(new(big.Int).Lsh(big.NewInt(1), 127))
+	maxI128 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 127), big.NewInt(1))
+	minI256 = new(big.Int).Neg(new(big.Int).Lsh(big.NewInt(1), 255))
+	maxI256 = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), 255), big.NewInt(1))
+)
+
 func EntryFunctionFromAbi(abi any, moduleAddress AccountAddress, moduleName string, functionName string, typeArgs []any, args []any, options ...any) (*EntryFunction, error) {
 	var function *api.MoveFunction
 	switch abi := abi.(type) {
@@ -225,7 +234,6 @@ func ConvertToU64(arg any) (uint64, error) {
 	}
 }
 
-// TODO: Check bounds of bigints
 func ConvertToU128(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
@@ -233,21 +241,32 @@ func ConvertToU128(arg any) (*big.Int, error) {
 	case uint:
 		return util.UintToUBigInt(arg)
 	case big.Int:
+		if arg.Sign() < 0 || arg.Cmp(maxU128) > 0 {
+			return nil, errors.New("value out of range for uint128")
+		}
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
 			return nil, errors.New("cannot convert to uint128, input is nil")
 		}
+		if arg.Sign() < 0 || arg.Cmp(maxU128) > 0 {
+			return nil, errors.New("value out of range for uint128")
+		}
 		return arg, nil
 	case string:
-		// Convert the number
-		return util.StrToBigInt(arg)
+		result, err := util.StrToBigInt(arg)
+		if err != nil {
+			return nil, err
+		}
+		if result.Sign() < 0 || result.Cmp(maxU128) > 0 {
+			return nil, fmt.Errorf("value out of range for uint128: %s", arg)
+		}
+		return result, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for uint128: %T", arg)
 	}
 }
 
-// TODO: Check bounds of bigints
 func ConvertToU256(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
@@ -255,15 +274,27 @@ func ConvertToU256(arg any) (*big.Int, error) {
 	case uint:
 		return util.UintToUBigInt(arg)
 	case big.Int:
+		if arg.Sign() < 0 || arg.Cmp(maxU256) > 0 {
+			return nil, errors.New("value out of range for uint256")
+		}
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
 			return nil, errors.New("cannot convert to uint256, input is nil")
 		}
+		if arg.Sign() < 0 || arg.Cmp(maxU256) > 0 {
+			return nil, errors.New("value out of range for uint256")
+		}
 		return arg, nil
 	case string:
-		// Convert the number
-		return util.StrToBigInt(arg)
+		result, err := util.StrToBigInt(arg)
+		if err != nil {
+			return nil, err
+		}
+		if result.Sign() < 0 || result.Cmp(maxU256) > 0 {
+			return nil, fmt.Errorf("value out of range for uint256: %s", arg)
+		}
+		return result, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for uint256: %T", arg)
 	}
@@ -394,7 +425,6 @@ func ConvertToI64(arg any) (int64, error) {
 	}
 }
 
-// TODO: Check bounds of bigints for i128
 func ConvertToI128(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
@@ -402,10 +432,16 @@ func ConvertToI128(arg any) (*big.Int, error) {
 	case int64:
 		return big.NewInt(arg), nil
 	case big.Int:
+		if arg.Cmp(minI128) < 0 || arg.Cmp(maxI128) > 0 {
+			return nil, errors.New("value out of range for int128")
+		}
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
 			return nil, errors.New("cannot convert to int128, input is nil")
+		}
+		if arg.Cmp(minI128) < 0 || arg.Cmp(maxI128) > 0 {
+			return nil, errors.New("value out of range for int128")
 		}
 		return arg, nil
 	case string:
@@ -414,13 +450,15 @@ func ConvertToI128(arg any) (*big.Int, error) {
 		if !ok {
 			return nil, fmt.Errorf("invalid string for int128: %s", arg)
 		}
+		if result.Cmp(minI128) < 0 || result.Cmp(maxI128) > 0 {
+			return nil, fmt.Errorf("value out of range for int128: %s", arg)
+		}
 		return result, nil
 	default:
 		return nil, fmt.Errorf("invalid input type for int128: %T", arg)
 	}
 }
 
-// TODO: Check bounds of bigints for i256
 func ConvertToI256(arg any) (*big.Int, error) {
 	switch arg := arg.(type) {
 	case int:
@@ -428,10 +466,16 @@ func ConvertToI256(arg any) (*big.Int, error) {
 	case int64:
 		return big.NewInt(arg), nil
 	case big.Int:
+		if arg.Cmp(minI256) < 0 || arg.Cmp(maxI256) > 0 {
+			return nil, errors.New("value out of range for int256")
+		}
 		return &arg, nil
 	case *big.Int:
 		if arg == nil {
 			return nil, errors.New("cannot convert to int256, input is nil")
+		}
+		if arg.Cmp(minI256) < 0 || arg.Cmp(maxI256) > 0 {
+			return nil, errors.New("value out of range for int256")
 		}
 		return arg, nil
 	case string:
@@ -439,6 +483,9 @@ func ConvertToI256(arg any) (*big.Int, error) {
 		_, ok := result.SetString(arg, 10)
 		if !ok {
 			return nil, fmt.Errorf("invalid string for int256: %s", arg)
+		}
+		if result.Cmp(minI256) < 0 || result.Cmp(maxI256) > 0 {
+			return nil, fmt.Errorf("value out of range for int256: %s", arg)
 		}
 		return result, nil
 	default:

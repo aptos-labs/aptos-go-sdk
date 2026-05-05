@@ -1353,6 +1353,236 @@ func TestConvertToI64(t *testing.T) {
 	}
 }
 
+func TestConvertToU128(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    *big.Int
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   42,
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "uint",
+			input:   uint(42),
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int valid",
+			input:   big.NewInt(42),
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int at max",
+			input:   new(big.Int).Set(maxU128),
+			want:    new(big.Int).Set(maxU128),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int negative",
+			input:   big.NewInt(-1),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int above max",
+			input:   new(big.Int).Add(maxU128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int value negative",
+			input:   *big.NewInt(-1),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int value above max",
+			input:   *new(big.Int).Add(maxU128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string valid",
+			input:   "42",
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "string at max",
+			input:   maxU128.String(),
+			want:    new(big.Int).Set(maxU128),
+			wantErr: false,
+		},
+		{
+			name:    "string negative",
+			input:   "-1",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string above max",
+			input:   new(big.Int).Add(maxU128, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid string",
+			input:   "invalid",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToU128(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToU128() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got.Cmp(tt.want) != 0 {
+				t.Errorf("ConvertToU128() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestConvertToU256(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name    string
+		input   any
+		want    *big.Int
+		wantErr bool
+	}{
+		{
+			name:    "int positive",
+			input:   42,
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "uint",
+			input:   uint(42),
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int valid",
+			input:   big.NewInt(42),
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int at max",
+			input:   new(big.Int).Set(maxU256),
+			want:    new(big.Int).Set(maxU256),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int negative",
+			input:   big.NewInt(-1),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int above max",
+			input:   new(big.Int).Add(maxU256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int value negative",
+			input:   *big.NewInt(-1),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int value above max",
+			input:   *new(big.Int).Add(maxU256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "nil big.Int",
+			input:   (*big.Int)(nil),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string valid",
+			input:   "42",
+			want:    big.NewInt(42),
+			wantErr: false,
+		},
+		{
+			name:    "string at max",
+			input:   maxU256.String(),
+			want:    new(big.Int).Set(maxU256),
+			wantErr: false,
+		},
+		{
+			name:    "string negative",
+			input:   "-1",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string above max",
+			input:   new(big.Int).Add(maxU256, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid string",
+			input:   "invalid",
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "invalid type",
+			input:   float64(42),
+			want:    nil,
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got, err := ConvertToU256(tt.input)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("ConvertToU256() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !tt.wantErr && got.Cmp(tt.want) != 0 {
+				t.Errorf("ConvertToU256() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestConvertToI128(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
@@ -1402,6 +1632,66 @@ func TestConvertToI128(t *testing.T) {
 			input:   "-42",
 			want:    big.NewInt(-42),
 			wantErr: false,
+		},
+		{
+			name:    "big.Int at min",
+			input:   *new(big.Int).Set(minI128),
+			want:    new(big.Int).Set(minI128),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int at max",
+			input:   *new(big.Int).Set(maxI128),
+			want:    new(big.Int).Set(maxI128),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int below min",
+			input:   *new(big.Int).Sub(minI128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int above max",
+			input:   *new(big.Int).Add(maxI128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "pointer big.Int below min",
+			input:   new(big.Int).Sub(minI128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "pointer big.Int above max",
+			input:   new(big.Int).Add(maxI128, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string at min",
+			input:   minI128.String(),
+			want:    new(big.Int).Set(minI128),
+			wantErr: false,
+		},
+		{
+			name:    "string at max",
+			input:   maxI128.String(),
+			want:    new(big.Int).Set(maxI128),
+			wantErr: false,
+		},
+		{
+			name:    "string below min",
+			input:   new(big.Int).Sub(minI128, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string above max",
+			input:   new(big.Int).Add(maxI128, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name:    "invalid string",
@@ -1475,6 +1765,66 @@ func TestConvertToI256(t *testing.T) {
 			input:   "-42",
 			want:    big.NewInt(-42),
 			wantErr: false,
+		},
+		{
+			name:    "big.Int at min",
+			input:   *new(big.Int).Set(minI256),
+			want:    new(big.Int).Set(minI256),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int at max",
+			input:   *new(big.Int).Set(maxI256),
+			want:    new(big.Int).Set(maxI256),
+			wantErr: false,
+		},
+		{
+			name:    "big.Int below min",
+			input:   *new(big.Int).Sub(minI256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "big.Int above max",
+			input:   *new(big.Int).Add(maxI256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "pointer big.Int below min",
+			input:   new(big.Int).Sub(minI256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "pointer big.Int above max",
+			input:   new(big.Int).Add(maxI256, big.NewInt(1)),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string at min",
+			input:   minI256.String(),
+			want:    new(big.Int).Set(minI256),
+			wantErr: false,
+		},
+		{
+			name:    "string at max",
+			input:   maxI256.String(),
+			want:    new(big.Int).Set(maxI256),
+			wantErr: false,
+		},
+		{
+			name:    "string below min",
+			input:   new(big.Int).Sub(minI256, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name:    "string above max",
+			input:   new(big.Int).Add(maxI256, big.NewInt(1)).String(),
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name:    "invalid string",

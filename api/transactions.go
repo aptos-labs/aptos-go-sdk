@@ -696,6 +696,7 @@ func (o *BlockEpilogueTransaction) UnmarshalJSON(b []byte) error {
 		Success             bool              `json:"success"`
 		VmStatus            string            `json:"vm_status"`
 		Changes             []*WriteSetChange `json:"changes"`
+		Events              []*Event          `json:"events"`
 		Timestamp           U64               `json:"timestamp"`
 		BlockEndInfo        *BlockEndInfo     `json:"block_end_info"`
 		StateCheckpointHash Hash              `json:"state_checkpoint_hash"` // Optional
@@ -715,6 +716,7 @@ func (o *BlockEpilogueTransaction) UnmarshalJSON(b []byte) error {
 	o.Success = data.Success
 	o.VmStatus = data.VmStatus
 	o.Changes = data.Changes
+	o.Events = data.Events
 	o.Timestamp = data.Timestamp.ToUint64()
 	o.BlockEndInfo = data.BlockEndInfo
 	o.StateCheckpointHash = data.StateCheckpointHash

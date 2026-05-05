@@ -86,13 +86,13 @@ func (o *Event) UnmarshalJSON(b []byte) error {
 	dataMap := make(map[string]any)
 	dataMap[AnyDataName] = dataAny.Data
 
-	o.Version = data.Version.ToUint64()
-	o.Type = data.Type
-	o.Guid = data.Guid
-	o.SequenceNumber = data.SequenceNumber.ToUint64()
+	o.Version = dataAny.Version.ToUint64()
+	o.Type = dataAny.Type
+	o.Guid = dataAny.Guid
+	o.SequenceNumber = dataAny.SequenceNumber.ToUint64()
 	o.Data = dataMap
 
-	return err
+	return nil
 }
 
 // endregion
