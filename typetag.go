@@ -894,7 +894,6 @@ func (xt *GenericTag) GetType() TypeTagVariant {
 
 // region Generic bcs.Struct
 
-// TODO: Do we need a proper serialization here
 func (xt *GenericTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *GenericTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 

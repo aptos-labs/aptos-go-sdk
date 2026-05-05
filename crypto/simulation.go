@@ -56,9 +56,7 @@ func (ea *NoAuthenticator) MarshalBCS(*bcs.Serializer) {}
 //
 // Implements:
 //   - [bcs.Unmarshaler]
-func (ea *NoAuthenticator) UnmarshalBCS(*bcs.Deserializer) {
-	// TODO: Double check nothing is needed here
-}
+func (ea *NoAuthenticator) UnmarshalBCS(*bcs.Deserializer) {}
 
 func NoAccountAuthenticator() *AccountAuthenticator {
 	return &AccountAuthenticator{
