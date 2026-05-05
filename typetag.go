@@ -867,7 +867,6 @@ func (xt *ReferenceTag) GetType() TypeTagVariant {
 
 // region Reference bcs.Struct
 
-// TODO: Do we need a proper serialization here
 func (xt *ReferenceTag) MarshalBCS(_ *bcs.Serializer)     {}
 func (xt *ReferenceTag) UnmarshalBCS(_ *bcs.Deserializer) {}
 
