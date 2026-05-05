@@ -305,8 +305,7 @@ func ParseTypeTagInner(input string, types []TypeTag) (*TypeTag, error) {
 
 		parts := strings.Split(str, "::")
 		if len(parts) != 3 {
-			// TODO: More informative message
-			return nil, errors.New("invalid type tag")
+			return nil, fmt.Errorf("invalid type tag %q: expected address::module::name", str)
 		}
 
 		// Validate struct address
