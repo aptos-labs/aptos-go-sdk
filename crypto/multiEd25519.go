@@ -386,6 +386,9 @@ func (e *MultiEd25519Signature) MarshalBCS(ser *bcs.Serializer) {
 //   - [bcs.Unmarshaler]
 func (e *MultiEd25519Signature) UnmarshalBCS(des *bcs.Deserializer) {
 	bytes := des.ReadBytes()
+	if des.Error() != nil {
+		return
+	}
 	err := e.FromBytes(bytes)
 	if err != nil {
 		des.SetError(err)
