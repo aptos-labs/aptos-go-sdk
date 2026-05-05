@@ -577,7 +577,10 @@ func (c *nodeClient) AccountModule(ctx context.Context, address AccountAddress, 
 	return &module, nil
 }
 
-// AccountTransactions returns transactions sent by an account.
+// AccountTransactions returns transactions sent by an account in a single REST response.
+// Unlike [github.com/aptos-labs/aptos-go-sdk.NodeClient.AccountTransactions], this does not
+// merge multiple pages when [limit] is larger than one response page; pass an explicit [start]
+// and/or issue additional calls if you need more than the node returns in one request.
 func (c *nodeClient) AccountTransactions(ctx context.Context, address AccountAddress, start *uint64, limit *uint64) ([]*Transaction, error) {
 	path := fmt.Sprintf("accounts/%s/transactions", address.String())
 	params := url.Values{}

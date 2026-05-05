@@ -263,7 +263,7 @@ type AptosRpcClient interface {
 	Transactions(start *uint64, limit *uint64) ([]*api.CommittedTransaction, error)
 
 	// AccountTransactions Get transactions associated with an account.
-	// Start is a version number. Nil for most recent transactions.
+	// Start is an account sequence number (REST query parameter `start`). Nil for most recent transactions.
 	// Limit is a number of transactions to return. 'about a hundred' by default.
 	//
 	//	client.AccountTransactions(AccountOne, 0, 2)   // Returns 2 transactions for 0x1
@@ -733,7 +733,7 @@ func (client *Client) Transactions(start *uint64, limit *uint64) ([]*api.Committ
 }
 
 // AccountTransactions Get transactions associated with an account.
-// Start is a version number. Nil for most recent transactions.
+// Start is an account sequence number (REST query parameter `start`). Nil for most recent transactions.
 // Limit is a number of transactions to return. 'about a hundred' by default.
 //
 //	client.AccountTransactions(AccountOne, 0, 2)   // Returns 2 transactions for 0x1
