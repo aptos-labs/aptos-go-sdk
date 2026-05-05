@@ -77,21 +77,21 @@ func givenU8(ctx context.Context, input int) (context.Context, error) {
 	if input < 0 || input > 255 {
 		return nil, errors.New("u8 must be between 0 and 255")
 	}
-	return context.WithValue(ctx, godogsCtxKey{}, (uint8)(input)), nil
+	return context.WithValue(ctx, godogsCtxKey{}, uint8(input)), nil
 }
 
 func givenU16(ctx context.Context, input int) (context.Context, error) {
 	if input < 0 || input > 65535 {
 		return nil, errors.New("u16 must be between 0 and 65535")
 	}
-	return context.WithValue(ctx, godogsCtxKey{}, (uint16)(input)), nil
+	return context.WithValue(ctx, godogsCtxKey{}, uint16(input)), nil
 }
 
 func givenU32(ctx context.Context, input int) (context.Context, error) {
 	if input < 0 || input > 4294967295 {
 		return nil, errors.New("u32 must be between 0 and 4294967295")
 	}
-	return context.WithValue(ctx, godogsCtxKey{}, (uint32)(input)), nil
+	return context.WithValue(ctx, godogsCtxKey{}, uint32(input)), nil
 }
 
 func givenU64(ctx context.Context, input string) (context.Context, error) {

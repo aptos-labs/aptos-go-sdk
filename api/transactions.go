@@ -431,7 +431,7 @@ func (o *UserTransaction) UnmarshalJSON(b []byte) error {
 	o.StateCheckpointHash = data.StateCheckpointHash
 
 	if data.ReplayProtectionNonce != nil {
-		replayNonce := (data.ReplayProtectionNonce).ToUint64()
+		replayNonce := data.ReplayProtectionNonce.ToUint64()
 		o.ReplayProtectionNonce = &replayNonce
 	}
 	return nil

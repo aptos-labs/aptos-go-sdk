@@ -63,20 +63,21 @@ func example(networkConfig aptos.NetworkConfig) {
 	if err != nil {
 		panic("Failed to serialize transfer amount:" + err.Error())
 	}
-	rawTxn, err := client.BuildTransaction(alice.AccountAddress(), aptos.TransactionPayload{
-		Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
-			Args: [][]byte{
-				accountBytes,
-				amountBytes,
+	rawTxn, err := client.BuildTransaction(
+		alice.AccountAddress(), aptos.TransactionPayload{
+			Payload: &aptos.EntryFunction{
+				Module: aptos.ModuleId{
+					Address: aptos.AccountOne,
+					Name:    "aptos_account",
+				},
+				Function: "transfer",
+				ArgTypes: []aptos.TypeTag{},
+				Args: [][]byte{
+					accountBytes,
+					amountBytes,
+				},
 			},
 		},
-	},
 	)
 	if err != nil {
 		panic("Failed to build transaction:" + err.Error())
@@ -129,20 +130,21 @@ func example(networkConfig aptos.NetworkConfig) {
 	fmt.Printf("Bob:%d\n", bobBalance)
 
 	// Now do it again, but with a different method
-	resp, err := client.BuildSignAndSubmitTransaction(alice, aptos.TransactionPayload{
-		Payload: &aptos.EntryFunction{
-			Module: aptos.ModuleId{
-				Address: aptos.AccountOne,
-				Name:    "aptos_account",
-			},
-			Function: "transfer",
-			ArgTypes: []aptos.TypeTag{},
-			Args: [][]byte{
-				accountBytes,
-				amountBytes,
+	resp, err := client.BuildSignAndSubmitTransaction(
+		alice, aptos.TransactionPayload{
+			Payload: &aptos.EntryFunction{
+				Module: aptos.ModuleId{
+					Address: aptos.AccountOne,
+					Name:    "aptos_account",
+				},
+				Function: "transfer",
+				ArgTypes: []aptos.TypeTag{},
+				Args: [][]byte{
+					accountBytes,
+					amountBytes,
+				},
 			},
 		},
-	},
 	)
 	if err != nil {
 		panic("Failed to sign transaction:" + err.Error())

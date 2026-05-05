@@ -112,7 +112,8 @@ func main() {
 	fmt.Println()
 
 	// Build the transaction with fee payer option
-	rawTxn, err := client.BuildTransaction(ctx, senderAddr, payload,
+	rawTxn, err := client.BuildTransaction(
+		ctx, senderAddr, payload,
 		aptos.WithFeePayer(feePayerAddr),
 		aptos.WithGasEstimation(),
 	)

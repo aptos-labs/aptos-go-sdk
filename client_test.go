@@ -767,7 +767,8 @@ func buildSingleSignerScript(client *Client, sender TransactionSigner, options .
 	amount := uint64(1)
 	dest := AccountOne
 
-	rawTxn, err := client.BuildTransaction(sender.AccountAddress(),
+	rawTxn, err := client.BuildTransaction(
+		sender.AccountAddress(),
 		TransactionPayload{Payload: &Script{
 			Code:     scriptBytes,
 			ArgTypes: []TypeTag{},

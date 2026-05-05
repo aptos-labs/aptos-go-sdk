@@ -466,7 +466,7 @@ func (rc *NodeClient) AccountTransactions(account AccountAddress, start *uint64,
 			return 0, false
 		}
 		// It will always be a UserTransaction, no other type will come from the API
-		userTxn, _ := ((*txns)[0]).UserTransaction()
+		userTxn, _ := (*txns)[0].UserTransaction()
 		if userTxn.SequenceNumber == 0 {
 			return 0, false
 		}

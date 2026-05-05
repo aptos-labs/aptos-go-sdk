@@ -117,7 +117,8 @@ func example(networkConfig aptos.NetworkConfig) {
 
 	// Sign transaction
 	fmt.Printf("Submit a coin transfer to address %s\n", receiver.String())
-	rawTxn, err := client.BuildTransaction(sender.Address,
+	rawTxn, err := client.BuildTransaction(
+		sender.Address,
 		aptos.TransactionPayload{Payload: payload},
 	)
 	if err != nil {

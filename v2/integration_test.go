@@ -566,7 +566,8 @@ func TestIntegration_BuildTransactionWithOptions(t *testing.T) {
 		Args:     []any{AccountTwo.String(), "100"},
 	}
 
-	txn, err := client.BuildTransaction(ctx, AccountOne, payload,
+	txn, err := client.BuildTransaction(
+		ctx, AccountOne, payload,
 		WithSequenceNumber(seqNum),
 		WithMaxGas(50000),
 		WithGasPrice(200),
@@ -608,7 +609,8 @@ func TestIntegration_Timeout(t *testing.T) {
 	_, err = client.Info(ctx)
 	// With a 1-nanosecond timeout, the request should fail with a deadline/timeout error
 	require.Error(t, err, "request with 1ns timeout should fail")
-	assert.True(t,
+	assert.True(
+		t,
 		errors.Is(err, context.DeadlineExceeded) || strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "deadline"),
 		"expected a timeout-related error, got: %v", err,
 	)
