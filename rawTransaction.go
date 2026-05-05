@@ -1,13 +1,13 @@
 package aptos
 
 import (
+	"crypto/sha3"
 	"encoding/json"
 	"fmt"
 	"sync"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
 	"github.com/aptos-labs/aptos-go-sdk/crypto"
-	"golang.org/x/crypto/sha3"
 )
 
 // region RawTransaction
@@ -233,7 +233,7 @@ func (txn *RawTransactionWithData) ToFeePayerSignedTransaction(
 
 // MarshalTypeScriptBCS converts to RawTransactionWithData to the TypeScript type MultiAgentTransaction
 func (txn *RawTransactionWithData) MarshalTypeScriptBCS(ser *bcs.Serializer) {
-	switch inner := (txn.Inner).(type) {
+	switch inner := txn.Inner.(type) {
 	case *MultiAgentRawTransactionWithData:
 		ser.Struct(inner.RawTxn)
 		bcs.SerializeSequence(inner.SecondarySigners, ser)

@@ -1,21 +1,20 @@
 package util
 
 import (
+	"crypto/sha3"
 	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
 	"strconv"
 	"strings"
-
-	"golang.org/x/crypto/sha3"
 )
 
 // Sha3256Hash hashes the input bytes using SHA3-256
 func Sha3256Hash(bytes [][]byte) []byte {
 	hasher := sha3.New256()
 	for _, b := range bytes {
-		hasher.Write(b)
+		_, _ = hasher.Write(b)
 	}
 	return hasher.Sum([]byte{})
 }
