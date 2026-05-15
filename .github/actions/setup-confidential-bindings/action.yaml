@@ -1,3 +1,4 @@
+# TODO(正式发布前删除): 与 codecov 中固定 ref 一并移除；正式发版后改用已发布的 bindings/go 模块。
 name: "Setup confidential-asset-bindings for v2"
 description: |
   Check out aptos-labs/confidential-asset-bindings and point v2/go.mod replace
@@ -24,7 +25,7 @@ runs:
         ROOT="${GITHUB_WORKSPACE}"
         BIND="${ROOT}/confidential-asset-bindings/bindings/go"
         if [ ! -f "${BIND}/go.mod" ]; then
-          echo "::error::Expected ${BIND}/go.mod — pick a bindings ref that includes bindings/go (set CONFIDENTIAL_ASSET_BINDINGS_REF / workflow env)."
+          echo "::error::Expected ${BIND}/go.mod — confidential-asset-bindings ref must include bindings/go (see codecov workflow TODO)."
           exit 1
         fi
         cd "${ROOT}/v2"
