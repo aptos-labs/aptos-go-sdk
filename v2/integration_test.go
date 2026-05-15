@@ -728,7 +728,8 @@ func TestIntegration_TransferAPT(t *testing.T) {
 	require.NoError(t, err, "get receiver balance after")
 
 	// Receiver should have gained exactly `transferAmount` (no gas paid).
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		receiverBalanceBefore+transferAmount,
 		receiverBalanceAfter,
 		"receiver balance should increase by exactly the transfer amount",
@@ -737,7 +738,7 @@ func TestIntegration_TransferAPT(t *testing.T) {
 	// Sender should have lost the transfer amount plus some non-zero gas
 	// (we don't assert the precise gas figure since gas pricing is tunable).
 	gasPaid := senderBalanceBefore - senderBalanceAfter - transferAmount
-	assert.Greater(t, gasPaid, uint64(0), "sender should have paid non-zero gas")
+	assert.Positive(t, gasPaid, "sender should have paid non-zero gas")
 	assert.Less(t, gasPaid, transferAmount, "gas should be smaller than the transfer amount")
 
 	t.Logf("Transfer succeeded: hash=%s, gas_paid=%d octas", result.Hash, gasPaid)
