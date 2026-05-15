@@ -9,6 +9,11 @@ on:
 
 env:
   GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+  # v2 replace points at ../../confidential-asset-bindings (sibling clone). In CI, checkout
+  # bindings under the workspace and apply go mod replace (see setup-confidential-bindings).
+  # Set repo variable CONFIDENTIAL_ASSET_BINDINGS_REF to a branch/SHA that includes bindings/go,
+  # or change the fallback below until that code is on the default branch / published.
+  CONFIDENTIAL_ASSET_BINDINGS_REF: ${{ vars.CONFIDENTIAL_ASSET_BINDINGS_REF || 'main' }}
 
 jobs:
   coverage:
@@ -39,6 +44,11 @@ jobs:
         with:
           go-version-file: v2/go.mod
           cache: true
+
+      - name: Checkout confidential-asset-bindings (for v2 replace)
+        uses: ./.github/actions/setup-confidential-bindings
+        with:
+          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
 
       - name: Run v2 SDK tests with coverage
         working-directory: v2
