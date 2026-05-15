@@ -1,0 +1,454 @@
+package aptos
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"sync/atomic"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+// These tests pin behaviour of the v2 client paths that were either added or
+// re-shaped in the SDK audit PR — specifically:
+//
+//   - View() must forward TypeArgs (previously the body was hardcoded to
+//     `"type_arguments": []string{}`).
+//   - AccountBalance() must call the 0x1::coin::balance view function rather
+//     than reading 0x1::coin::CoinStore directly (the old impl 404'd on
+//     fungible-asset accounts).
+//   - Fund() must wait for the faucet's funding transactions to commit
+//     (previously it returned as soon as POST /mint succeeded).
+//   - parseFaucetHashes() must handle the localnet's bare-array body and
+//     hosted faucets' {txn_hashes: [...]} body shape.
+//
+// They are pure HTTP-mock tests; no localnet required.
+
+// --- View ----------------------------------------------------------------
+
+// TestView_ForwardsTypeArguments asserts that ViewPayload.TypeArgs are
+// serialized into the request body as the canonical Move type strings.
+// Before the fix the body always contained an empty type_arguments array.
+func TestView_ForwardsTypeArguments(t *testing.T) {
+	t.Parallel()
+
+	var captured struct {
+		Function      string   `json:"function"`
+		TypeArguments []string `json:"type_arguments"`
+		Arguments     []any    `json:"arguments"`
+	}
+
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Equal(t, "/view", r.URL.Path)
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]any{"100000"})
+	}))
+
+	addr := MustParseAddress("0x123")
+	_, err := client.View(context.Background(), &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+		TypeArgs: []TypeTag{AptosCoinTypeTag},
+		Args:     []any{addr.String()},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, "0x1::coin::balance", captured.Function)
+	assert.Equal(t, []string{"0x1::aptos_coin::AptosCoin"}, captured.TypeArguments,
+		"View must forward TypeTag.String() values, not drop them")
+	require.Len(t, captured.Arguments, 1)
+}
+
+// TestView_NoTypeArgs sends an empty TypeArgs slice and asserts the body
+// contains an empty (but present) type_arguments array.
+func TestView_NoTypeArgs(t *testing.T) {
+	t.Parallel()
+
+	var captured struct {
+		TypeArguments []string `json:"type_arguments"`
+	}
+
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.NoError(t, json.NewDecoder(r.Body).Decode(&captured))
+		_ = json.NewEncoder(w).Encode([]any{true})
+	}))
+
+	_, err := client.View(context.Background(), &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "account"},
+		Function: "exists_at",
+		Args:     []any{"0x1"},
+	})
+	require.NoError(t, err)
+	assert.Equal(t, []string{}, captured.TypeArguments)
+}
+
+// TestView_LedgerVersion asserts AtLedgerVersion appends the query parameter.
+func TestView_LedgerVersion(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "ledger_version=12345", r.URL.RawQuery)
+		_ = json.NewEncoder(w).Encode([]any{"42"})
+	}))
+
+	_, err := client.View(context.Background(), &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "account"},
+		Function: "exists_at",
+		Args:     []any{"0x1"},
+	}, AtLedgerVersion(12345))
+	require.NoError(t, err)
+}
+
+// --- AccountBalance ------------------------------------------------------
+
+// TestAccountBalance_UsesViewFunction is the regression test for the
+// fungible-asset bug: AccountBalance must hit /view, not /resource/.
+// Returning a 404 to the resource path would surface the bug.
+func TestAccountBalance_UsesViewFunction(t *testing.T) {
+	t.Parallel()
+
+	var calls struct {
+		viewPath     atomic.Int32
+		resourcePath atomic.Int32
+	}
+
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch {
+		case strings.HasPrefix(r.URL.Path, "/view"):
+			calls.viewPath.Add(1)
+			_ = json.NewEncoder(w).Encode([]any{"123456"})
+		case strings.Contains(r.URL.Path, "/resource/"):
+			calls.resourcePath.Add(1)
+			// Simulate the FA-account behaviour: no CoinStore.
+			w.WriteHeader(http.StatusNotFound)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"error_code": "resource_not_found",
+				"message":    "Resource not found",
+			})
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+
+	bal, err := client.AccountBalance(context.Background(), MustParseAddress("0x123"))
+	require.NoError(t, err)
+	assert.Equal(t, uint64(123456), bal)
+	assert.Equal(t, int32(1), calls.viewPath.Load(), "should call /view")
+	assert.Equal(t, int32(0), calls.resourcePath.Load(), "must NOT fall back to /resource/")
+}
+
+// TestAccountBalance_LedgerVersionForwarded asserts that a ResourceOption's
+// ledger version is passed through to the underlying view call as the
+// ledger_version query parameter. There is no public `WithVersion` helper
+// (v2 API gap), so the option is constructed inline.
+func TestAccountBalance_LedgerVersionForwarded(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Contains(t, r.URL.RawQuery, "ledger_version=777")
+		_ = json.NewEncoder(w).Encode([]any{"1"})
+	}))
+
+	withVersion := func(v uint64) ResourceOption {
+		return func(c *ResourceConfig) { c.LedgerVersion = &v }
+	}
+	_, err := client.AccountBalance(context.Background(), MustParseAddress("0x1"), withVersion(777))
+	require.NoError(t, err)
+}
+
+// TestAccountBalance_NumericFromNode covers the defensive float64 branch in
+// case a non-conforming node returns the balance as a JSON number.
+func TestAccountBalance_NumericFromNode(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, jsonHandler([]any{float64(999)}))
+	bal, err := client.AccountBalance(context.Background(), AccountOne)
+	require.NoError(t, err)
+	assert.Equal(t, uint64(999), bal)
+}
+
+// TestAccountBalance_UnexpectedShape exercises the type-assertion fallback.
+func TestAccountBalance_UnexpectedShape(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, jsonHandler([]any{true}))
+	_, err := client.AccountBalance(context.Background(), AccountOne)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "unexpected balance value type")
+}
+
+// TestAccountBalance_EmptyView covers the "view function returned no values"
+// error path.
+func TestAccountBalance_EmptyView(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, jsonHandler([]any{}))
+	_, err := client.AccountBalance(context.Background(), AccountOne)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no values")
+}
+
+// --- Fund / parseFaucetHashes ------------------------------------------
+
+// TestParseFaucetHashes covers each response-shape branch of parseFaucetHashes.
+func TestParseFaucetHashes(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		body string
+		want []string
+	}{
+		{"empty body", "", nil},
+		{"whitespace", "   \n\t ", nil},
+		{"bare array (localnet)", `["0xabc","0xdef"]`, []string{"0xabc", "0xdef"}},
+		{"empty array", `[]`, []string{}},
+		{"hosted faucet object", `{"txn_hashes":["0xa","0xb"]}`, []string{"0xa", "0xb"}},
+		{"unknown shape — number", `42`, nil},
+		{"unknown shape — string", `"oops"`, nil},
+		{"unknown shape — object", `{"foo":"bar"}`, nil},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := parseFaucetHashes([]byte(tt.body))
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestFund_WaitsForTransactions is the regression for the bug where Fund
+// returned before the faucet's transactions had committed: it must call
+// /transactions/by_hash for every hash returned, polling until each is no
+// longer "pending_transaction".
+func TestFund_WaitsForTransactions(t *testing.T) {
+	t.Parallel()
+
+	var (
+		mintCalls atomic.Int32
+		txByHash  atomic.Int32
+	)
+	hashes := []string{"0xabc", "0xdef"}
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mint", func(w http.ResponseWriter, r *http.Request) {
+		mintCalls.Add(1)
+		assert.Equal(t, http.MethodPost, r.Method)
+		assert.Contains(t, r.URL.RawQuery, "address=0x")
+		assert.Contains(t, r.URL.RawQuery, "amount=1000000")
+		_ = json.NewEncoder(w).Encode(hashes)
+	})
+	mux.HandleFunc("/transactions/by_hash/", func(w http.ResponseWriter, _ *http.Request) {
+		txByHash.Add(1)
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"type":      "user_transaction",
+			"hash":      "0xabc",
+			"version":   "1",
+			"success":   true,
+			"vm_status": "Executed successfully",
+		})
+	})
+
+	client := newTestClient(t, mux)
+	err := client.Fund(context.Background(), MustParseAddress("0x123"), 1000000)
+	require.NoError(t, err)
+
+	assert.Equal(t, int32(1), mintCalls.Load(), "should POST /mint exactly once")
+	assert.Equal(t, int64(len(hashes)), int64(txByHash.Load()),
+		"should call /transactions/by_hash/<hash> for every hash the faucet emitted")
+}
+
+// TestFund_NoHashesNoWait verifies that when the faucet returns an empty
+// body (or unknown shape), Fund still succeeds without trying to wait.
+func TestFund_NoHashesNoWait(t *testing.T) {
+	t.Parallel()
+
+	var txCalls atomic.Int32
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mint", func(w http.ResponseWriter, _ *http.Request) {
+		// No body.
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/transactions/by_hash/", func(_ http.ResponseWriter, _ *http.Request) {
+		txCalls.Add(1)
+	})
+
+	client := newTestClient(t, mux)
+	err := client.Fund(context.Background(), MustParseAddress("0x1"), 100)
+	require.NoError(t, err)
+	assert.Equal(t, int32(0), txCalls.Load(), "no hashes ⇒ no wait")
+}
+
+// TestFund_FaucetError propagates non-2xx as APIError.
+func TestFund_FaucetError(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mint", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = io.WriteString(w, "boom")
+	})
+
+	client := newTestClient(t, mux)
+	err := client.Fund(context.Background(), MustParseAddress("0x1"), 100)
+	require.Error(t, err)
+	var apiErr *APIError
+	require.ErrorAs(t, err, &apiErr)
+	assert.Equal(t, http.StatusInternalServerError, apiErr.StatusCode)
+	assert.Contains(t, apiErr.Message, "boom")
+}
+
+// TestFund_NoFaucetURL covers the early-return error when the network
+// has no faucet (e.g. mainnet).
+func TestFund_NoFaucetURL(t *testing.T) {
+	t.Parallel()
+
+	c, err := newNodeClient(&ClientConfig{
+		network: NetworkConfig{
+			NodeURL: "http://127.0.0.1:1",
+			ChainID: 1,
+		},
+	})
+	require.NoError(t, err)
+
+	err = c.Fund(context.Background(), AccountOne, 1)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "faucet not available")
+}
+
+// TestFund_ContextCancelled verifies context cancellation is respected
+// during the wait phase.
+func TestFund_ContextCancelled(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mint", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]string{"0xpending"})
+	})
+	mux.HandleFunc("/transactions/by_hash/", func(w http.ResponseWriter, _ *http.Request) {
+		// Always pending.
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"type": "pending_transaction",
+			"hash": "0xpending",
+		})
+	})
+
+	client := newTestClient(t, mux)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	err := client.Fund(ctx, MustParseAddress("0x1"), 1)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, context.Canceled) || strings.Contains(err.Error(), "context"),
+		"expected context cancellation error, got: %v", err)
+}
+
+// --- ChainID caching ----------------------------------------------------
+
+// TestChainID_Cached asserts the chain ID returned by Info() is cached and
+// subsequent calls do not hit the network. This protects against the easy
+// regression of dropping the chainIDSet flag.
+func TestChainID_Cached(t *testing.T) {
+	t.Parallel()
+
+	var calls atomic.Int32
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		assert.True(t, strings.HasPrefix(r.URL.Path, "/v1"), "path: %s", r.URL.Path)
+		_ = json.NewEncoder(w).Encode(NodeInfo{ChainID: 99, LedgerVersion: 1, BlockHeight: 1})
+	}))
+	t.Cleanup(server.Close)
+
+	// ChainID == 0 ⇒ dynamic ⇒ first ChainID() call fetches Info.
+	c, err := newNodeClient(&ClientConfig{
+		network: NetworkConfig{NodeURL: server.URL + "/v1", ChainID: 0},
+	})
+	require.NoError(t, err)
+
+	id, err := c.ChainID(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(99), id)
+
+	id, err = c.ChainID(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(99), id)
+
+	assert.Equal(t, int32(1), calls.Load(), "ChainID should be cached after the first fetch")
+}
+
+// TestChainID_PreconfiguredNoFetch asserts that a non-zero NetworkConfig
+// ChainID is used directly without ever hitting the node.
+func TestChainID_PreconfiguredNoFetch(t *testing.T) {
+	t.Parallel()
+
+	server := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {
+		t.Fatalf("ChainID() should not call the node when chain id is pre-configured")
+	}))
+	t.Cleanup(server.Close)
+
+	c, err := newNodeClient(&ClientConfig{
+		network: NetworkConfig{NodeURL: server.URL, ChainID: 4},
+	})
+	require.NoError(t, err)
+
+	id, err := c.ChainID(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(4), id)
+}
+
+// --- normalizeViewArg ---------------------------------------------------
+
+// TestNormalizeViewArg covers the reflect-based normalization that converts
+// Go-native types into the JSON shape Aptos's /view endpoint expects.
+//
+// In particular u64/int64 must be stringified (since JSON numbers can't hold
+// the full u64 range), and []byte must pass through unchanged.
+func TestNormalizeViewArg(t *testing.T) {
+	t.Parallel()
+
+	cases := []struct {
+		name string
+		in   any
+		want any
+	}{
+		{"nil", nil, nil},
+		{"uint64 stringified", uint64(123), "123"},
+		{"int64 stringified", int64(-456), "-456"},
+		{"uint64 max", uint64(1<<63 + 1), "9223372036854775809"},
+		{"bool passes through", true, true},
+		{"string passes through", "hello", "hello"},
+		{"byte slice passes through", []byte{1, 2, 3}, []byte{1, 2, 3}},
+		{"slice of u64 stringified element-wise", []uint64{1, 2}, []any{"1", "2"}},
+		{"map with string keys recurses", map[string]any{"k": uint64(5)}, map[string]any{"k": "5"}},
+	}
+
+	for _, tt := range cases {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := normalizeViewArg(tt.in)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestNormalizeViewArgs_NilAndEmpty pins behaviour on the slice helper.
+func TestNormalizeViewArgs_NilAndEmpty(t *testing.T) {
+	t.Parallel()
+	assert.Nil(t, normalizeViewArgs(nil))
+	assert.Equal(t, []any{}, normalizeViewArgs([]any{}))
+}
