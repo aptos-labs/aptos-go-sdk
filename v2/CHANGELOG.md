@@ -20,6 +20,9 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Fix critical signing bug in transaction authentication
 - [`Fix`] Fix entry-function argument BCS encoding and ANS payloads
 - [`Fix`] Stringify `uint64` view function arguments correctly
+- [`Feature`] Add **`confidentialasset`** sub-package (`github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset`) for Aptos confidential fungible assets, aligned with `@aptos-labs/confidential-asset`. Includes views, deposit/rollover, and CGO-backed proof paths (`register_raw`, `normalize_raw`, `withdraw_to_raw`, `confidential_transfer_raw`). Examples are separate commands under `v2/examples/confidential_asset/{balance,register,transfer,deposit_chain,ffismoke}`; `RunBindingsBatchSmoke` exercises FFI from the SDK package.
+
+- [`Fix`] Use **SHA3-256** for signing domain prefixes (`APTOS::RawTransaction`, `APTOS::RawTransactionWithData`) and for user transaction hashing (`APTOS::Transaction` + variant + BCS). The code previously used **SHA-256**, which does not match Aptos core or the TypeScript SDK and caused **`INVALID_SIGNATURE`** on real transaction submission (simulation still succeeded).
 - [`Fix`] Increase default max gas amount by 10x from 200,000 to 2,000,000
 - [`Security`] Upgrade OpenTelemetry SDK from 1.39.0 to 1.43.0
 

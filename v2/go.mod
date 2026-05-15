@@ -6,8 +6,10 @@ toolchain go1.25.10
 
 require (
 	github.com/aptos-labs/aptos-go-sdk v1.13.0
+	github.com/aptos-labs/confidential-asset-bindings/bindings/go v1.1.2
 	github.com/cloudflare/circl v1.6.3
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
+	github.com/gtank/ristretto255 v0.1.2
 	github.com/hdevalence/ed25519consensus v0.2.0
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasthttp v1.69.0
@@ -36,3 +38,7 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+// Local development: point at sibling confidential-asset-bindings checkout.
+// Remove or override when bindings publishes bindings/go on the module proxy.
+replace github.com/aptos-labs/confidential-asset-bindings/bindings/go => ../../confidential-asset-bindings/bindings/go

@@ -179,6 +179,21 @@ claims, err := keyless.ParseJWT(jwtToken)
 address, err := keyless.DeriveAddress(claims, "sub", pepper)
 ```
 
+### Confidential assets
+
+Confidential fungible balances and transfers (aligned with `@aptos-labs/confidential-asset`):
+
+```go
+import confidentialasset "github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
+
+ca := confidentialasset.NewClient(client,
+    confidentialasset.WithRESTBaseURL("https://fullnode.testnet.aptoslabs.com/v1"),
+)
+tx, err := ca.Deposit(ctx, signer, token, amountOctas, faMetadataHex)
+```
+
+Proof generation and balance decryption require **CGO** and `confidential-asset-bindings` FFI. See [`confidentialasset/README.md`](confidentialasset/README.md) and [`examples/confidential_asset/README.md`](examples/confidential_asset/README.md) for per-command `go run ./examples/confidential_asset/<name>` (CGO-only; omitted from `go test ./...` when `CGO_ENABLED=0`).
+
 ### ANS (Aptos Names Service)
 
 Resolve human-readable names:
@@ -207,6 +222,7 @@ payload, err := ansClient.RegisterPayload("myname.apt", ans.RegisterOptions{Year
 | `aptos/iter` | Go 1.23 iterator utilities |
 | `aptos/keyless` | Keyless (ZK) authentication |
 | `aptos/ans` | Aptos Names Service integration |
+| `aptos/confidentialasset` | Confidential fungible assets (optional CGO + FFI) |
 | `aptos/testutil` | Test helpers and mock client |
 | `aptos/internal/bcs` | BCS serialization |
 | `aptos/internal/crypto` | Cryptographic primitives |
