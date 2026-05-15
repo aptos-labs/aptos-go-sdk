@@ -24,20 +24,31 @@ jobs:
           install_args: "go"
           cache: true
 
-      # Run v2 SDK tests with coverage.
+      # The v2 module declares `go 1.25.0` while mise pins the v1
+      # toolchain at 1.24.2. Install a *full* Go 1.25.0 toolchain via
+      # actions/setup-go so coverage works end to end. Using
+      # GOTOOLCHAIN=auto with mise's downloaded modular toolchain
+      # almost works, but Go's modular toolchain archives ship without
+      # `covdata`, which `go test -coverprofile` invokes when a
+      # package-main has no tests (e.g. v2/examples/transfer_coin), and
+      # the build fails with `go: no such tool "covdata"`. A full Go
+      # install from setup-go ships the complete cmd/ tree.
       #
-      # The v2 module declares `go 1.25.0` in v2/go.mod, while mise
-      # pins the system Go install at the v1 toolchain (currently
-      # 1.24.2). With GOTOOLCHAIN=auto (set in mise.toml) Go will
-      # auto-download 1.25.0 to satisfy v2's directive; we also pin
-      # the value explicitly here so the coverage job is robust against
-      # a future mise.toml change re-asserting GOTOOLCHAIN=local. The
-      # inline prefix (rather than a step-level `env:`) is deliberate:
-      # mise's go-shim re-exports vars from mise.toml [env] on every
-      # invocation, which would override a step-level env. An inline
-      # `VAR=value cmd` prefix is part of the same exec call and wins.
-      # Bump this value (and v2/go.mod) in lockstep when the v2 module
-      # advances its minimum Go version.
+      # Pin the Go version explicitly to the value declared in
+      # v2/go.mod (via go-version-file) — single source of truth.
+      - name: Set up Go 1.25 toolchain for v2
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: v2/go.mod
+          cache: false
+
+      # Run v2 SDK tests with coverage. The leading
+      # `GOTOOLCHAIN=go1.25.0` overrides any GOTOOLCHAIN=local that
+      # mise.toml [env] might re-inject through its shim wrapper —
+      # mise re-exports its env vars on every shim invocation, so a
+      # step-level `env:` block doesn't win; an inline prefix does
+      # because it's part of the same exec call. Pinning here matches
+      # the pin in v2/go.mod; bump them in lockstep.
       - name: Run v2 SDK tests with coverage
         working-directory: v2
         run: |
