@@ -28,22 +28,24 @@ jobs:
       #
       # The v2 module requires Go 1.25.0 (see v2/go.mod "go 1.25.0"),
       # but mise pins the system toolchain at the v1 version (currently
-      # 1.24.2) and exports GOTOOLCHAIN=local, which tells Go *not* to
-      # auto-download a newer toolchain. Running v2 tests under those
-      # defaults fails with:
+      # 1.24.2) and re-exports GOTOOLCHAIN=local from mise.toml's [env]
+      # block on every shim invocation. That tells Go *not* to
+      # auto-download a newer toolchain, and v2 tests fail with:
       #
       #     go: go.mod requires go >= 1.25.0 (running go 1.24.2; GOTOOLCHAIN=local)
       #
-      # Pin GOTOOLCHAIN explicitly to the version v2 needs so Go fetches
-      # and uses it for just this step, leaving every other CI job on
-      # the mise-pinned toolchain. Bump this value (and v2/go.mod) in
+      # Setting GOTOOLCHAIN on the step `env:` block alone doesn't win
+      # because mise re-injects its [env] vars when the `go` shim
+      # executes. So we pin it inline on the command — the leading
+      # `GOTOOLCHAIN=go1.25.0` is part of the same process invocation
+      # and survives mise's shim wrapper. Go will fetch and use exactly
+      # 1.25.0 for this step, leaving every other CI job on the
+      # mise-pinned toolchain. Bump this value (and v2/go.mod) in
       # lockstep when the v2 module advances its minimum Go version.
       - name: Run v2 SDK tests with coverage
         working-directory: v2
-        env:
-          GOTOOLCHAIN: go1.25.0
         run: |
-          go test -race -coverprofile=coverage.out -covermode=atomic ./...
+          GOTOOLCHAIN=go1.25.0 go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
       # Run v1 SDK tests with coverage (optional, for overall repo coverage).
       # v1's go.mod pins toolchain go1.24.2 so the mise default is fine.
