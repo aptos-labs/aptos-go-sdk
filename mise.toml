@@ -5,7 +5,18 @@ gofumpt = "0.10.0"
 node = "20.14.0"
 
 [env]
-GOTOOLCHAIN = "local"
+# GOTOOLCHAIN=auto so each go.mod controls its own toolchain version:
+#   * v1 (./go.mod) declares `toolchain go1.24.2` — Go uses the mise-pinned 1.24.2.
+#   * v2 (./v2/go.mod) declares `go 1.25.0` — Go fetches and uses 1.25.0.
+# This is required because v2 has advanced beyond v1's Go version. Using
+# GOTOOLCHAIN=local would block the v2 coverage job (the only CI job that
+# enters v2/) from compiling at all:
+#   go: go.mod requires go >= 1.25.0 (running go 1.24.2; GOTOOLCHAIN=local)
+# The version actually used in each tree remains deterministic — it's
+# pinned in the respective go.mod — but Go is now allowed to satisfy
+# those pins by downloading the toolchain Aptos-Labs publishes via the
+# official Go module proxy.
+GOTOOLCHAIN = "auto"
 
 [tasks.fmt]
 description = "Format Go source files with gofumpt"

@@ -26,22 +26,18 @@ jobs:
 
       # Run v2 SDK tests with coverage.
       #
-      # The v2 module requires Go 1.25.0 (see v2/go.mod "go 1.25.0"),
-      # but mise pins the system toolchain at the v1 version (currently
-      # 1.24.2) and re-exports GOTOOLCHAIN=local from mise.toml's [env]
-      # block on every shim invocation. That tells Go *not* to
-      # auto-download a newer toolchain, and v2 tests fail with:
-      #
-      #     go: go.mod requires go >= 1.25.0 (running go 1.24.2; GOTOOLCHAIN=local)
-      #
-      # Setting GOTOOLCHAIN on the step `env:` block alone doesn't win
-      # because mise re-injects its [env] vars when the `go` shim
-      # executes. So we pin it inline on the command — the leading
-      # `GOTOOLCHAIN=go1.25.0` is part of the same process invocation
-      # and survives mise's shim wrapper. Go will fetch and use exactly
-      # 1.25.0 for this step, leaving every other CI job on the
-      # mise-pinned toolchain. Bump this value (and v2/go.mod) in
-      # lockstep when the v2 module advances its minimum Go version.
+      # The v2 module declares `go 1.25.0` in v2/go.mod, while mise
+      # pins the system Go install at the v1 toolchain (currently
+      # 1.24.2). With GOTOOLCHAIN=auto (set in mise.toml) Go will
+      # auto-download 1.25.0 to satisfy v2's directive; we also pin
+      # the value explicitly here so the coverage job is robust against
+      # a future mise.toml change re-asserting GOTOOLCHAIN=local. The
+      # inline prefix (rather than a step-level `env:`) is deliberate:
+      # mise's go-shim re-exports vars from mise.toml [env] on every
+      # invocation, which would override a step-level env. An inline
+      # `VAR=value cmd` prefix is part of the same exec call and wins.
+      # Bump this value (and v2/go.mod) in lockstep when the v2 module
+      # advances its minimum Go version.
       - name: Run v2 SDK tests with coverage
         working-directory: v2
         run: |
