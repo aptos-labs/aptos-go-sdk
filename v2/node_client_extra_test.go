@@ -177,6 +177,41 @@ func TestAccountBalance_NumericFromNode(t *testing.T) {
 	assert.Equal(t, uint64(999), bal)
 }
 
+// TestAccountBalance_NumericOverflow rejects balances that exceed float64's
+// exact-integer range (2^53). Without the guard, casting `uint64(v)` would
+// silently truncate to a different, lower value — exactly the kind of bug
+// that's invisible until someone hits a ~90M-APT account.
+func TestAccountBalance_NumericOverflow(t *testing.T) {
+	t.Parallel()
+
+	// 2^53 + 2 — not exactly representable in float64; rounds to 2^53.
+	bad := float64(1<<53) + 2
+	client := newTestClient(t, jsonHandler([]any{bad}))
+	_, err := client.AccountBalance(context.Background(), AccountOne)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "float64 exact-integer range")
+}
+
+// TestAccountBalance_NumericNonInteger rejects non-integer JSON numbers.
+func TestAccountBalance_NumericNonInteger(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, jsonHandler([]any{1.5}))
+	_, err := client.AccountBalance(context.Background(), AccountOne)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-negative integer")
+}
+
+// TestAccountBalance_NumericNegative rejects negative JSON numbers.
+func TestAccountBalance_NumericNegative(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, jsonHandler([]any{float64(-1)}))
+	_, err := client.AccountBalance(context.Background(), AccountOne)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "non-negative integer")
+}
+
 // TestAccountBalance_UnexpectedShape exercises the type-assertion fallback.
 func TestAccountBalance_UnexpectedShape(t *testing.T) {
 	t.Parallel()
@@ -288,6 +323,39 @@ func TestFund_NoHashesNoWait(t *testing.T) {
 	err := client.Fund(context.Background(), MustParseAddress("0x1"), 100)
 	require.NoError(t, err)
 	assert.Equal(t, int32(0), txCalls.Load(), "no hashes ⇒ no wait")
+}
+
+// TestFund_BodyReadError ensures that a faucet response whose body fails
+// mid-stream surfaces an error rather than silently falling through to
+// "no hashes ⇒ no wait" — which would re-introduce the race the wait was
+// added to fix. We use an http.Hijacker to send a Content-Length larger
+// than the body and then close the connection so io.ReadAll observes EOF
+// before reading the promised bytes.
+func TestFund_BodyReadError(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/mint", func(w http.ResponseWriter, _ *http.Request) {
+		hijacker, ok := w.(http.Hijacker)
+		if !ok {
+			t.Error("server doesn't support hijack")
+			return
+		}
+		conn, bufrw, err := hijacker.Hijack()
+		if !assert.NoError(t, err) {
+			return
+		}
+		defer conn.Close()
+		// Promise 1000 bytes, send 0, then drop the connection.
+		// io.ReadAll on the client will see an unexpected EOF.
+		_, _ = bufrw.WriteString("HTTP/1.1 200 OK\r\nContent-Length: 1000\r\n\r\n")
+		_ = bufrw.Flush()
+	})
+
+	client := newTestClient(t, mux)
+	err := client.Fund(context.Background(), MustParseAddress("0x1"), 100)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "read faucet response")
 }
 
 // TestFund_FaucetError propagates non-2xx as APIError.

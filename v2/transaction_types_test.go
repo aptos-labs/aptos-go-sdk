@@ -68,11 +68,12 @@ func TestRawTransaction_SigningMessage(t *testing.T) {
 	// The signing message should start with the prehash (32 bytes)
 	assert.GreaterOrEqual(t, len(msg), 32)
 
-	// Verify the message starts with the expected prehash prefix
-	// The prehash is SHA-256("APTOS::RawTransaction")
+	// Verify the message starts with the expected prehash prefix.
+	// The prehash is SHA3-256("APTOS::RawTransaction") — Aptos signs the
+	// SHA3-256 of the salt concatenated with the BCS-encoded raw txn.
 	expectedPrehash := sha3.Sum256([]byte(RawTransactionSalt))
 	assert.True(t, bytes.HasPrefix(msg, expectedPrehash[:]),
-		"signing message should start with SHA-256 of RawTransactionSalt")
+		"signing message should start with SHA3-256 of RawTransactionSalt")
 
 	// The message should be longer than just the prehash (prehash + serialized txn)
 	assert.Greater(t, len(msg), 32, "signing message should contain prehash + serialized transaction")
@@ -695,10 +696,10 @@ func TestRawTransactionWithDataPrehash(t *testing.T) {
 	prehash := RawTransactionWithDataPrehash()
 	assert.Len(t, prehash, 32)
 
-	// Verify the prehash matches the expected SHA-256 of the salt
+	// Verify the prehash matches the expected SHA3-256 of the salt.
 	expectedHash := sha3.Sum256([]byte(RawTransactionWithDataSalt))
 	assert.Equal(t, expectedHash[:], prehash,
-		"prehash should equal SHA-256 of RawTransactionWithDataSalt")
+		"prehash should equal SHA3-256 of RawTransactionWithDataSalt")
 
 	// Calling again should return the same value (deterministic)
 	prehash2 := RawTransactionWithDataPrehash()

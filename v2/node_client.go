@@ -184,8 +184,24 @@ func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress,
 	case string:
 		return strconv.ParseUint(v, 10, 64)
 	case float64:
-		// JSON numbers decode to float64; tolerate that for completeness even
-		// though node responses use stringified u64.
+		// JSON numbers decode to float64. The node *should* return APT
+		// balances as stringified u64 (and does today), but we accept a
+		// numeric response defensively. float64 can exactly represent
+		// integers only up to 2^53 — about 9.0×10^16 octas, i.e. ~90M
+		// APT — so a value beyond that, or one that isn't a
+		// non-negative integer, indicates an unexpected response shape
+		// and we refuse to silently truncate it.
+		if v < 0 || v != float64(uint64(v)) {
+			return 0, fmt.Errorf("balance %v is not a non-negative integer", v)
+		}
+		const maxExactFloat64Int = float64(1 << 53)
+		if v > maxExactFloat64Int {
+			return 0, fmt.Errorf(
+				"balance %v exceeds the float64 exact-integer range (2^53); "+
+					"node should return stringified u64",
+				v,
+			)
+		}
 		return uint64(v), nil
 	default:
 		return 0, fmt.Errorf("unexpected balance value type %T", values[0])
@@ -713,7 +729,16 @@ func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount ui
 	}
 	defer resp.Body.Close()
 
-	body, _ := io.ReadAll(resp.Body)
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		// We need the body for two things: surfacing the error message
+		// on a non-2xx response, and parsing the JSON hashes we have to
+		// wait on. Returning here is safer than silently treating Fund
+		// as "fire and forget" (which would re-introduce the race the
+		// hash-wait was added to fix). Wrap with status context so the
+		// caller can tell read-after-success from read-after-error.
+		return fmt.Errorf("read faucet response (status %d): %w", resp.StatusCode, readErr)
+	}
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
 		return &APIError{
