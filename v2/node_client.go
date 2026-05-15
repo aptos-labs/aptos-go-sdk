@@ -148,22 +148,48 @@ func (c *nodeClient) AccountResource(ctx context.Context, address AccountAddress
 
 // AccountBalance returns the APT balance for an account.
 func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress, opts ...ResourceOption) (uint64, error) {
-	resource, err := c.AccountResource(ctx, address, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", opts...)
+	// Use the 0x1::coin::balance<AptosCoin>(address) view function.
+	//
+	// Why a view function rather than reading 0x1::coin::CoinStore<AptosCoin>:
+	//   * Newer Aptos networks have migrated APT to the fungible-asset model.
+	//     For accounts created post-migration there is no CoinStore resource at
+	//     all, only a primary fungible store, and a direct resource read returns
+	//     a 404. The view function transparently handles both representations.
+	//   * The view function returns the balance as a stringified u64 in the
+	//     first slot, which is stable across both representations.
+	resourceConfig := &ResourceConfig{}
+	for _, opt := range opts {
+		opt(resourceConfig)
+	}
+
+	viewOpts := []ViewOption(nil)
+	if resourceConfig.LedgerVersion != nil {
+		viewOpts = append(viewOpts, AtLedgerVersion(*resourceConfig.LedgerVersion))
+	}
+
+	values, err := c.View(ctx, &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+		TypeArgs: []TypeTag{AptosCoinTypeTag},
+		Args:     []any{address.String()},
+	}, viewOpts...)
 	if err != nil {
 		return 0, err
 	}
-
-	coin, ok := resource.Data["coin"].(map[string]any)
-	if !ok {
-		return 0, errors.New("unexpected coin data format")
+	if len(values) == 0 {
+		return 0, errors.New("view function returned no values")
 	}
 
-	valueStr, ok := coin["value"].(string)
-	if !ok {
-		return 0, errors.New("unexpected value format")
+	switch v := values[0].(type) {
+	case string:
+		return strconv.ParseUint(v, 10, 64)
+	case float64:
+		// JSON numbers decode to float64; tolerate that for completeness even
+		// though node responses use stringified u64.
+		return uint64(v), nil
+	default:
+		return 0, fmt.Errorf("unexpected balance value type %T", values[0])
 	}
-
-	return strconv.ParseUint(valueStr, 10, 64)
 }
 
 // BuildTransaction builds an unsigned transaction.
@@ -472,10 +498,14 @@ func (c *nodeClient) View(ctx context.Context, payload *ViewPayload, opts ...Vie
 		path += fmt.Sprintf("?ledger_version=%d", *config.LedgerVersion)
 	}
 
-	// Build request body
+	typeArgs := make([]string, 0, len(payload.TypeArgs))
+	for i := range payload.TypeArgs {
+		typeArgs = append(typeArgs, payload.TypeArgs[i].String())
+	}
+
 	body := map[string]any{
 		"function":       fmt.Sprintf("%s::%s", payload.Module.String(), payload.Function),
-		"type_arguments": []string{}, // TODO: Convert TypeTags to strings
+		"type_arguments": typeArgs,
 		"arguments":      normalizeViewArgs(payload.Args),
 	}
 
