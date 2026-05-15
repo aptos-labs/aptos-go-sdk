@@ -672,7 +672,20 @@ func (c *nodeClient) EventsByCreationNumber(ctx context.Context, address Account
 	return events, nil
 }
 
-// Fund requests tokens from the faucet.
+// Fund requests tokens from the faucet and waits for the resulting funding
+// transactions to commit before returning.
+//
+// The localnet (and aptos-faucet-service in general) responds with a JSON
+// array of transaction hashes. Returning before those transactions commit
+// makes the call effectively asynchronous: a follow-up balance/account read
+// will race the indexer/state and frequently observe a zero balance, which
+// silently breaks integration tests and any caller that reasonably expects
+// "Fund returned successfully" to mean "the funds are visible". So we wait.
+//
+// If the faucet response shape is different (for example, some hosted
+// faucets return an empty body or an object with no hashes), we fall back to
+// best-effort behavior: return nil rather than fail, since the caller can
+// always re-poll for the balance.
 func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount uint64) error {
 	if c.config.network.FaucetURL == "" {
 		return errors.New("faucet not available for this network")
@@ -700,14 +713,49 @@ func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount ui
 	}
 	defer resp.Body.Close()
 
+	body, _ := io.ReadAll(resp.Body)
+
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		body, _ := io.ReadAll(resp.Body)
 		return &APIError{
 			StatusCode:    resp.StatusCode,
 			Message:       string(body),
 			RequestMethod: req.Method,
 			RequestURL:    req.URL.String(),
 		}
+	}
+
+	// Parse out any transaction hashes the faucet emitted and wait for them
+	// to commit. We accept either ["hash", ...] (the localnet/standalone
+	// faucet) or {"txn_hashes": ["hash", ...]} (some hosted faucets); on
+	// anything else we silently skip the wait.
+	hashes := parseFaucetHashes(body)
+	for _, h := range hashes {
+		if _, err := c.WaitForTransaction(ctx, h); err != nil {
+			return fmt.Errorf("waiting for faucet transaction %s: %w", h, err)
+		}
+	}
+	return nil
+}
+
+// parseFaucetHashes extracts transaction hashes from a faucet response body.
+// Returns nil for any unexpected shape rather than erroring, so unknown
+// faucet variants degrade to "fire and forget" rather than to a hard failure.
+func parseFaucetHashes(body []byte) []string {
+	body = bytes.TrimSpace(body)
+	if len(body) == 0 {
+		return nil
+	}
+
+	var asArray []string
+	if err := json.Unmarshal(body, &asArray); err == nil {
+		return asArray
+	}
+
+	var asObject struct {
+		TxnHashes []string `json:"txn_hashes"`
+	}
+	if err := json.Unmarshal(body, &asObject); err == nil {
+		return asObject.TxnHashes
 	}
 
 	return nil

@@ -2,7 +2,7 @@ package aptos
 
 import (
 	"bytes"
-	"crypto/sha256"
+	"crypto/sha3"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -70,7 +70,7 @@ func TestRawTransaction_SigningMessage(t *testing.T) {
 
 	// Verify the message starts with the expected prehash prefix
 	// The prehash is SHA-256("APTOS::RawTransaction")
-	expectedPrehash := sha256.Sum256([]byte(RawTransactionSalt))
+	expectedPrehash := sha3.Sum256([]byte(RawTransactionSalt))
 	assert.True(t, bytes.HasPrefix(msg, expectedPrehash[:]),
 		"signing message should start with SHA-256 of RawTransactionSalt")
 
@@ -696,7 +696,7 @@ func TestRawTransactionWithDataPrehash(t *testing.T) {
 	assert.Len(t, prehash, 32)
 
 	// Verify the prehash matches the expected SHA-256 of the salt
-	expectedHash := sha256.Sum256([]byte(RawTransactionWithDataSalt))
+	expectedHash := sha3.Sum256([]byte(RawTransactionWithDataSalt))
 	assert.Equal(t, expectedHash[:], prehash,
 		"prehash should equal SHA-256 of RawTransactionWithDataSalt")
 

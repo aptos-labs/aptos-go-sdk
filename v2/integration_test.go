@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -638,6 +639,108 @@ func TestIntegration_ConcurrentRequests(t *testing.T) {
 		err := <-results
 		assert.NoError(t, err, "concurrent request %d should succeed", i)
 	}
+}
+
+// TestIntegration_TransferAPT exercises the full transaction lifecycle against
+// a network with a faucet (intended for localnet via APTOS_NETWORK=localnet):
+// generate two fresh accounts, fund the sender, build/sign/submit a transfer
+// entry function, wait for it to commit, and verify both balances and the
+// on-chain transaction record.
+//
+// This is the canonical end-to-end smoke test for the v2 SDK: it touches
+// account creation, the faucet, view-function-backed balance queries,
+// transaction building (incl. sequence/chain-id discovery), BCS signing,
+// transaction submission, polling for confirmation, and read-back via
+// Transaction(hash).
+func TestIntegration_TransferAPT(t *testing.T) {
+	skipIfShort(t)
+	t.Parallel()
+
+	cfg := testNetwork()
+	// Only auto-run against localnet: public test/devnet faucets require a
+	// JWT or API key that we don't provision in CI. Users who want to run
+	// against a remote faucet can do so by configuring credentials and
+	// invoking this test directly.
+	if cfg.Name != Localnet.Name {
+		t.Skip("end-to-end transfer test only runs against localnet (set APTOS_NETWORK=localnet)")
+	}
+	if cfg.FaucetURL == "" {
+		t.Skip("test requires a network with a faucet")
+	}
+
+	client := createTestClient(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	sender, err := account.NewEd25519()
+	require.NoError(t, err, "failed to generate sender")
+	receiver, err := account.NewEd25519()
+	require.NoError(t, err, "failed to generate receiver")
+
+	// Fund both: the sender to pay gas + transfer, the receiver so its
+	// account exists (transfers to non-existent accounts are allowed via
+	// 0x1::aptos_account::transfer, but we want to assert the receiver's
+	// post-transfer balance against a known starting point).
+	const senderInitial = uint64(200_000_000) // 2 APT
+	const receiverInitial = uint64(100_000_000)
+	const transferAmount = uint64(50_000_000)
+
+	require.NoError(t, client.Fund(ctx, sender.Address(), senderInitial), "fund sender")
+	require.NoError(t, client.Fund(ctx, receiver.Address(), receiverInitial), "fund receiver")
+
+	senderBalanceBefore, err := client.AccountBalance(ctx, sender.Address())
+	require.NoError(t, err, "get sender balance before")
+	require.GreaterOrEqual(t, senderBalanceBefore, senderInitial, "sender should be funded")
+
+	receiverBalanceBefore, err := client.AccountBalance(ctx, receiver.Address())
+	require.NoError(t, err, "get receiver balance before")
+	require.GreaterOrEqual(t, receiverBalanceBefore, receiverInitial, "receiver should be funded")
+
+	// 0x1::aptos_account::transfer(to: address, amount: u64).
+	//
+	// Entry function arguments must be supplied in their Move-native types so
+	// the SDK can BCS-encode them: the recipient address as AccountAddress (or
+	// its 32 raw bytes) and the amount as a uint64.
+	receiverAddr := receiver.Address()
+	payload := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "aptos_account"},
+		Function: "transfer",
+		Args:     []any{receiverAddr, transferAmount},
+	}
+
+	result, err := client.SignAndSubmitTransaction(ctx, sender, payload)
+	require.NoError(t, err, "submit transfer")
+	require.NotEmpty(t, result.Hash, "submit should return a hash")
+
+	committed, err := client.WaitForTransaction(ctx, result.Hash)
+	require.NoError(t, err, "wait for transfer")
+	require.True(t, committed.Success, "transfer should succeed: vm_status=%s", committed.VMStatus)
+	require.Equal(t, "user_transaction", committed.Type)
+
+	// Read back by hash to confirm round-trip parsing.
+	fetched, err := client.Transaction(ctx, result.Hash)
+	require.NoError(t, err, "read transaction back")
+	require.Equal(t, committed.Hash, fetched.Hash)
+
+	senderBalanceAfter, err := client.AccountBalance(ctx, sender.Address())
+	require.NoError(t, err, "get sender balance after")
+	receiverBalanceAfter, err := client.AccountBalance(ctx, receiver.Address())
+	require.NoError(t, err, "get receiver balance after")
+
+	// Receiver should have gained exactly `transferAmount` (no gas paid).
+	assert.Equal(t,
+		receiverBalanceBefore+transferAmount,
+		receiverBalanceAfter,
+		"receiver balance should increase by exactly the transfer amount",
+	)
+
+	// Sender should have lost the transfer amount plus some non-zero gas
+	// (we don't assert the precise gas figure since gas pricing is tunable).
+	gasPaid := senderBalanceBefore - senderBalanceAfter - transferAmount
+	assert.Greater(t, gasPaid, uint64(0), "sender should have paid non-zero gas")
+	assert.Less(t, gasPaid, transferAmount, "gas should be smaller than the transfer amount")
+
+	t.Logf("Transfer succeeded: hash=%s, gas_paid=%d octas", result.Hash, gasPaid)
 }
 
 // TestIntegration_Mainnet tests connectivity to mainnet specifically.
