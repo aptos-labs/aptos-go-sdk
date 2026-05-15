@@ -15,11 +15,11 @@ type CipherChunk struct {
 
 // EncryptedAmount holds chunked balance + ciphertexts under one public key.
 type EncryptedAmount struct {
-	PublicKey32   [32]byte
-	AmountChunks  []uint64
-	Amount        uint64
-	Cipher        []CipherChunk
-	Randomness    []*big.Int // per chunk, may be nil when unknown
+	PublicKey32  [32]byte
+	AmountChunks []uint64
+	Amount       uint64
+	Cipher       []CipherChunk
+	Randomness   []*big.Int // per chunk, may be nil when unknown
 }
 
 // NewEncryptedAmountFromAmount encrypts full available balance (8 chunks) with optional randomness.

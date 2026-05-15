@@ -102,7 +102,8 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 	if maxGas < gasUsed {
 		return nil, fmt.Errorf("%s: affordable max_gas %d < gas_used %d", label, maxGas, gasUsed)
 	}
-	final, err := c.Aptos.BuildTransaction(ctx, signer.Address(), payload,
+	final, err := c.Aptos.BuildTransaction(
+		ctx, signer.Address(), payload,
 		aptos.WithMaxGas(maxGas),
 		aptos.WithGasPrice(gasPrice),
 	)

@@ -29,10 +29,10 @@ func BCSTransferSession(sender32, recipient32, token32 [32]byte, numAvail, numTr
 }
 
 const (
-	trIdxG = 0
-	trIdxH = 1
-	trIdxEkSid = 2
-	trIdxEkRid = 3
+	trIdxG      = 0
+	trIdxH      = 1
+	trIdxEkSid  = 2
+	trIdxEkRid  = 3
 	trStartOldP = 4
 )
 
@@ -53,23 +53,23 @@ func trStartVolun(ell, n int, hasEff bool, numVolun int) int {
 
 // TransferProofArgs matches TS TransferProofArgs.
 type TransferProofArgs struct {
-	DK32                     [32]byte
-	Sender32, Recipient32    [32]byte
-	Token32                  [32]byte
-	ChainID                  byte
-	SenderEK32, RecipientEK32 []byte
-	OldC, OldD               [][]byte
-	NewC, NewD               [][]byte
-	NewAmountChunks          []uint64
-	NewRandomness            []*big.Int
-	TransferC                [][]byte
+	DK32                       [32]byte
+	Sender32, Recipient32      [32]byte
+	Token32                    [32]byte
+	ChainID                    byte
+	SenderEK32, RecipientEK32  []byte
+	OldC, OldD                 [][]byte
+	NewC, NewD                 [][]byte
+	NewAmountChunks            []uint64
+	NewRandomness              []*big.Int
+	TransferC                  [][]byte
 	TransferDSid, TransferDRid [][]byte
-	TransferAmountChunks     []uint64
-	TransferRandomness       []*big.Int
-	HasEffectiveAuditor      bool
-	AuditorEK32s             [][]byte // voluntary first, then effective if HasEffectiveAuditor
-	NewBalanceDAud           [][][]byte // per auditor index, ell rows of D
-	TransferAmountDAud     [][][]byte // per auditor, n rows
+	TransferAmountChunks       []uint64
+	TransferRandomness         []*big.Int
+	HasEffectiveAuditor        bool
+	AuditorEK32s               [][]byte   // voluntary first, then effective if HasEffectiveAuditor
+	NewBalanceDAud             [][][]byte // per auditor index, ell rows of D
+	TransferAmountDAud         [][][]byte // per auditor, n rows
 }
 
 // ProveTransfer is TS proveTransfer.
@@ -223,7 +223,7 @@ func ProveTransfer(a TransferProofArgs) (*Proof, error) {
 		ContractAddress: AptosFrameworkAddress,
 		ChainID:         a.ChainID,
 		ProtocolID:      []byte(transferProtocolID),
-		SessionID: BCSTransferSession(a.Sender32, a.Recipient32, a.Token32, uint64(ell), uint64(n), a.HasEffectiveAuditor, uint64(numVolun)),
+		SessionID:       BCSTransferSession(a.Sender32, a.Recipient32, a.Token32, uint64(ell), uint64(n), a.HasEffectiveAuditor, uint64(numVolun)),
 	}
 	psi := makeTransferPsi(ell, n, a.HasEffectiveAuditor, numVolun)
 	return Prove(dst, transferTypeName, psi, stmt, witness)

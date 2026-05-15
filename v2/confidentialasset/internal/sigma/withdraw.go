@@ -36,16 +36,16 @@ func computeBPowers(count int) []*big.Int {
 }
 
 const (
-	idxWG = 0
-	idxWH = 1
-	idxWEk = 2
+	idxWG     = 0
+	idxWH     = 1
+	idxWEk    = 2
 	startOldP = 3
 )
 
-func startOldR(ell int) int   { return startOldP + ell }
-func startNewP(ell int) int   { return startOldP + 2*ell }
-func startNewR(ell int) int   { return startOldP + 3*ell }
-func idxEkAud(ell int) int    { return startOldP + 4*ell }
+func startOldR(ell int) int    { return startOldP + ell }
+func startNewP(ell int) int    { return startOldP + 2*ell }
+func startNewR(ell int) int    { return startOldP + 3*ell }
+func idxEkAud(ell int) int     { return startOldP + 4*ell }
 func startNewRAud(ell int) int { return startOldP + 4*ell + 1 }
 
 // WithdrawProofArgs matches TS WithdrawProofArgs (points from EncryptedAmount).
@@ -59,7 +59,7 @@ type WithdrawProofArgs struct {
 	NewC, NewD      [][]byte
 	NewAmountChunks []uint64
 	NewRandomness   []*big.Int
-	AuditorPub32    []byte // optional, nil if absent
+	AuditorPub32    []byte   // optional, nil if absent
 	NewDAud         [][]byte // optional D under auditor, same ell as balance
 }
 
@@ -162,7 +162,7 @@ func ProveWithdrawal(a WithdrawProofArgs) (*Proof, error) {
 		ContractAddress: AptosFrameworkAddress,
 		ChainID:         a.ChainID,
 		ProtocolID:      []byte(withdrawProtocolID),
-		SessionID: BCSWithdrawSession(a.Sender32, a.Token32, uint64(ell), hasAuditor),
+		SessionID:       BCSWithdrawSession(a.Sender32, a.Token32, uint64(ell), hasAuditor),
 	}
 	psi := makeWithdrawPsi(ell, hasAuditor)
 	return Prove(dst, withdrawTypeName, psi, stmt, witness)

@@ -25,9 +25,9 @@ func BCSKeyRotationSession(sender32, token32 [32]byte, numChunks uint64) []byte 
 }
 
 const (
-	krIdxH = 0
-	krIdxEk = 1
-	krIdxEkNew = 2
+	krIdxH      = 0
+	krIdxEk     = 1
+	krIdxEkNew  = 2
 	krStartOldD = 3
 )
 
