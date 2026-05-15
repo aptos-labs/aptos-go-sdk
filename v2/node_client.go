@@ -148,22 +148,64 @@ func (c *nodeClient) AccountResource(ctx context.Context, address AccountAddress
 
 // AccountBalance returns the APT balance for an account.
 func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress, opts ...ResourceOption) (uint64, error) {
-	resource, err := c.AccountResource(ctx, address, "0x1::coin::CoinStore<0x1::aptos_coin::AptosCoin>", opts...)
+	// Use the 0x1::coin::balance<AptosCoin>(address) view function.
+	//
+	// Why a view function rather than reading 0x1::coin::CoinStore<AptosCoin>:
+	//   * Newer Aptos networks have migrated APT to the fungible-asset model.
+	//     For accounts created post-migration there is no CoinStore resource at
+	//     all, only a primary fungible store, and a direct resource read returns
+	//     a 404. The view function transparently handles both representations.
+	//   * The view function returns the balance as a stringified u64 in the
+	//     first slot, which is stable across both representations.
+	resourceConfig := &ResourceConfig{}
+	for _, opt := range opts {
+		opt(resourceConfig)
+	}
+
+	viewOpts := []ViewOption(nil)
+	if resourceConfig.LedgerVersion != nil {
+		viewOpts = append(viewOpts, AtLedgerVersion(*resourceConfig.LedgerVersion))
+	}
+
+	values, err := c.View(ctx, &ViewPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "coin"},
+		Function: "balance",
+		TypeArgs: []TypeTag{AptosCoinTypeTag},
+		Args:     []any{address.String()},
+	}, viewOpts...)
 	if err != nil {
 		return 0, err
 	}
-
-	coin, ok := resource.Data["coin"].(map[string]any)
-	if !ok {
-		return 0, errors.New("unexpected coin data format")
+	if len(values) == 0 {
+		return 0, errors.New("view function returned no values")
 	}
 
-	valueStr, ok := coin["value"].(string)
-	if !ok {
-		return 0, errors.New("unexpected value format")
+	switch v := values[0].(type) {
+	case string:
+		return strconv.ParseUint(v, 10, 64)
+	case float64:
+		// JSON numbers decode to float64. The node *should* return APT
+		// balances as stringified u64 (and does today), but we accept a
+		// numeric response defensively. float64 can exactly represent
+		// integers only up to 2^53 — about 9.0×10^16 octas, i.e. ~90M
+		// APT — so a value beyond that, or one that isn't a
+		// non-negative integer, indicates an unexpected response shape
+		// and we refuse to silently truncate it.
+		if v < 0 || v != float64(uint64(v)) {
+			return 0, fmt.Errorf("balance %v is not a non-negative integer", v)
+		}
+		const maxExactFloat64Int = float64(1 << 53)
+		if v > maxExactFloat64Int {
+			return 0, fmt.Errorf(
+				"balance %v exceeds the float64 exact-integer range (2^53); "+
+					"node should return stringified u64",
+				v,
+			)
+		}
+		return uint64(v), nil
+	default:
+		return 0, fmt.Errorf("unexpected balance value type %T", values[0])
 	}
-
-	return strconv.ParseUint(valueStr, 10, 64)
 }
 
 // BuildTransaction builds an unsigned transaction.
@@ -472,10 +514,14 @@ func (c *nodeClient) View(ctx context.Context, payload *ViewPayload, opts ...Vie
 		path += fmt.Sprintf("?ledger_version=%d", *config.LedgerVersion)
 	}
 
-	// Build request body
+	typeArgs := make([]string, 0, len(payload.TypeArgs))
+	for i := range payload.TypeArgs {
+		typeArgs = append(typeArgs, payload.TypeArgs[i].String())
+	}
+
 	body := map[string]any{
 		"function":       fmt.Sprintf("%s::%s", payload.Module.String(), payload.Function),
-		"type_arguments": []string{}, // TODO: Convert TypeTags to strings
+		"type_arguments": typeArgs,
 		"arguments":      normalizeViewArgs(payload.Args),
 	}
 
@@ -642,7 +688,20 @@ func (c *nodeClient) EventsByCreationNumber(ctx context.Context, address Account
 	return events, nil
 }
 
-// Fund requests tokens from the faucet.
+// Fund requests tokens from the faucet and waits for the resulting funding
+// transactions to commit before returning.
+//
+// The localnet (and aptos-faucet-service in general) responds with a JSON
+// array of transaction hashes. Returning before those transactions commit
+// makes the call effectively asynchronous: a follow-up balance/account read
+// will race the indexer/state and frequently observe a zero balance, which
+// silently breaks integration tests and any caller that reasonably expects
+// "Fund returned successfully" to mean "the funds are visible". So we wait.
+//
+// If the faucet response shape is different (for example, some hosted
+// faucets return an empty body or an object with no hashes), we fall back to
+// best-effort behavior: return nil rather than fail, since the caller can
+// always re-poll for the balance.
 func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount uint64) error {
 	if c.config.network.FaucetURL == "" {
 		return errors.New("faucet not available for this network")
@@ -670,14 +729,58 @@ func (c *nodeClient) Fund(ctx context.Context, address AccountAddress, amount ui
 	}
 	defer resp.Body.Close()
 
+	body, readErr := io.ReadAll(resp.Body)
+	if readErr != nil {
+		// We need the body for two things: surfacing the error message
+		// on a non-2xx response, and parsing the JSON hashes we have to
+		// wait on. Returning here is safer than silently treating Fund
+		// as "fire and forget" (which would re-introduce the race the
+		// hash-wait was added to fix). Wrap with status context so the
+		// caller can tell read-after-success from read-after-error.
+		return fmt.Errorf("read faucet response (status %d): %w", resp.StatusCode, readErr)
+	}
+
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusAccepted {
-		body, _ := io.ReadAll(resp.Body)
 		return &APIError{
 			StatusCode:    resp.StatusCode,
 			Message:       string(body),
 			RequestMethod: req.Method,
 			RequestURL:    req.URL.String(),
 		}
+	}
+
+	// Parse out any transaction hashes the faucet emitted and wait for them
+	// to commit. We accept either ["hash", ...] (the localnet/standalone
+	// faucet) or {"txn_hashes": ["hash", ...]} (some hosted faucets); on
+	// anything else we silently skip the wait.
+	hashes := parseFaucetHashes(body)
+	for _, h := range hashes {
+		if _, err := c.WaitForTransaction(ctx, h); err != nil {
+			return fmt.Errorf("waiting for faucet transaction %s: %w", h, err)
+		}
+	}
+	return nil
+}
+
+// parseFaucetHashes extracts transaction hashes from a faucet response body.
+// Returns nil for any unexpected shape rather than erroring, so unknown
+// faucet variants degrade to "fire and forget" rather than to a hard failure.
+func parseFaucetHashes(body []byte) []string {
+	body = bytes.TrimSpace(body)
+	if len(body) == 0 {
+		return nil
+	}
+
+	var asArray []string
+	if err := json.Unmarshal(body, &asArray); err == nil {
+		return asArray
+	}
+
+	var asObject struct {
+		TxnHashes []string `json:"txn_hashes"`
+	}
+	if err := json.Unmarshal(body, &asObject); err == nil {
+		return asObject.TxnHashes
 	}
 
 	return nil

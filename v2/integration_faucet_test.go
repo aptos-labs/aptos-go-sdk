@@ -27,9 +27,19 @@ func skipIfNoFaucetTests(t *testing.T) {
 	}
 }
 
-// testNetworkWithFaucet returns a network that has a faucet (testnet).
+// testNetworkWithFaucet returns a network that has a faucet.
+//
+// Defaults to Testnet but respects APTOS_NETWORK so faucet tests can run
+// against a localnet (preferred for hermetic testing). Mainnet is filtered
+// out because it has no faucet; for that case the test falls back to
+// Testnet so the rejection path is exercised at the SDK layer rather than
+// the network layer.
 func testNetworkWithFaucet() NetworkConfig {
-	return Testnet
+	cfg := testNetwork()
+	if cfg.FaucetURL == "" {
+		return Testnet
+	}
+	return cfg
 }
 
 // generateRandomAddress generates a random-looking address for testing.

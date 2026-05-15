@@ -19,18 +19,35 @@ jobs:
         with:
           ref: ${{ env.GIT_SHA }}
 
-      - uses: jdx/mise-action@v4
+      # Coverage is the only CI job that compiles inside v2/, which
+      # declares `go 1.25.0` in v2/go.mod. The rest of CI (lint, vet,
+      # unit tests) operates on v1 only and goes through mise — that's
+      # fine. Here we deliberately skip mise to avoid two competing Go
+      # installs on PATH/GOROOT (mise's 1.24.2 vs the one we need for
+      # v2), which produces:
+      #
+      #     compile: version "go1.24.2" does not match go tool version "go1.25.0"
+      #
+      # actions/setup-go gives us one full Go install (with the
+      # complete cmd/ tree, including `covdata` — needed for
+      # `go test -coverprofile` on the v2/examples/* package-mains
+      # that have no test files). go-version-file pins the version
+      # to the single source of truth (v2/go.mod), so bumping v2's
+      # minimum Go version automatically updates CI.
+      - name: Set up Go (pinned to v2/go.mod)
+        uses: actions/setup-go@v5
         with:
-          install_args: "go"
+          go-version-file: v2/go.mod
           cache: true
 
-      # Run v2 SDK tests with coverage
       - name: Run v2 SDK tests with coverage
         working-directory: v2
         run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
-      # Run v1 SDK tests with coverage (optional, for overall repo coverage)
+      # Run v1 SDK tests with coverage (optional, for overall repo coverage).
+      # v1's go.mod declares `go 1.24.0; toolchain go1.24.2`, but a newer
+      # Go (1.25.0 from the step above) is backward-compatible with v1.
       - name: Run v1 SDK tests with coverage
         run: |
           go test -race -coverprofile=coverage-v1.out -covermode=atomic ./...

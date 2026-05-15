@@ -471,56 +471,56 @@ func Test_AccountTransactions(t *testing.T) {
 
 	t.Run("Default transaction size, no start", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(nil, nil)
+		txns, err := client.Transactions(nil, nil)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 25)
+		assert.Len(t, txns, 25)
 	})
 	t.Run("Default transaction size, start from zero", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(&zero, nil)
+		txns, err := client.Transactions(&zero, nil)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 25)
+		assert.Len(t, txns, 25)
 	})
 	t.Run("Default transaction size, start from one", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(&one, nil)
+		txns, err := client.Transactions(&one, nil)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 25)
+		assert.Len(t, txns, 25)
 	})
 
 	t.Run("101 transactions, no start", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(nil, &hundredOne)
+		txns, err := client.Transactions(nil, &hundredOne)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 101)
+		assert.Len(t, txns, 101)
 	})
 
 	t.Run("101 transactions, start zero", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(&zero, &hundredOne)
+		txns, err := client.Transactions(&zero, &hundredOne)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 101)
+		assert.Len(t, txns, 101)
 	})
 
 	t.Run("101 transactions, start one", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(&one, &hundredOne)
+		txns, err := client.Transactions(&one, &hundredOne)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 101)
+		assert.Len(t, txns, 101)
 	})
 
 	t.Run("10 transactions, no start", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(nil, &ten)
+		txns, err := client.Transactions(nil, &ten)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 10)
+		assert.Len(t, txns, 10)
 	})
 
 	t.Run("10 transactions, start one", func(t *testing.T) {
 		t.Parallel()
-		transactions, err = client.Transactions(&one, &ten)
+		txns, err := client.Transactions(&one, &ten)
 		require.NoError(t, err)
-		assert.Len(t, transactions, 10)
+		assert.Len(t, txns, 10)
 	})
 }
 

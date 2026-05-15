@@ -1,7 +1,7 @@
 package aptos
 
 import (
-	"crypto/sha256"
+	"crypto/sha3"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -17,7 +17,7 @@ const (
 
 // rawTransactionPrehash returns the SHA3-256 hash of the raw transaction salt.
 func rawTransactionPrehash() []byte {
-	hash := sha256.Sum256([]byte(RawTransactionSalt))
+	hash := sha3.Sum256([]byte(RawTransactionSalt))
 	return hash[:]
 }
 
@@ -67,13 +67,13 @@ func (txn *SignedTransaction) Hash() (string, error) {
 	}
 
 	// Hash with the transaction prefix
-	prefix := sha256.Sum256([]byte("APTOS::Transaction"))
+	prefix := sha3.Sum256([]byte("APTOS::Transaction"))
 
 	// Combine prefix, variant byte (0 for user transaction), and serialized transaction
 	hashInput := append(prefix[:], 0) // 0 = UserTransaction variant
 	hashInput = append(hashInput, txnBytes...)
 
-	hash := sha256.Sum256(hashInput)
+	hash := sha3.Sum256(hashInput)
 	return "0x" + hex.EncodeToString(hash[:]), nil
 }
 
@@ -607,7 +607,7 @@ func (txn *MultiAgentTransaction) MarshalBCS(ser *bcs.Serializer) {
 
 // SigningMessage returns the message to be signed for a multi-agent transaction.
 func (txn *MultiAgentTransaction) SigningMessage() ([]byte, error) {
-	prehash := sha256.Sum256([]byte(RawTransactionWithDataSalt))
+	prehash := sha3.Sum256([]byte(RawTransactionWithDataSalt))
 
 	ser := bcs.NewSerializer()
 	txn.MarshalBCS(ser)
@@ -638,7 +638,7 @@ func (txn *FeePayerTransaction) MarshalBCS(ser *bcs.Serializer) {
 
 // SigningMessage returns the message to be signed for a fee payer transaction.
 func (txn *FeePayerTransaction) SigningMessage() ([]byte, error) {
-	prehash := sha256.Sum256([]byte(RawTransactionWithDataSalt))
+	prehash := sha3.Sum256([]byte(RawTransactionWithDataSalt))
 
 	ser := bcs.NewSerializer()
 	txn.MarshalBCS(ser)
@@ -680,7 +680,7 @@ func SimulationAuthenticator(signer Signer) *AccountAuthenticator {
 
 // RawTransactionWithDataPrehash returns the prehash for RawTransactionWithData.
 func RawTransactionWithDataPrehash() []byte {
-	hash := sha256.Sum256([]byte(RawTransactionWithDataSalt))
+	hash := sha3.Sum256([]byte(RawTransactionWithDataSalt))
 	return hash[:]
 }
 
