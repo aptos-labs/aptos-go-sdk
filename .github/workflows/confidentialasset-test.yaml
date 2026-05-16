@@ -1,0 +1,80 @@
+# v2 confidentialasset: split CGO off (fast stub path) vs FFI-linked smoke (Rust static lib + CGO).
+# Root "Go Unit Tests" job still only runs v1 `go test ./...`; this workflow is the source of truth for confidentialasset.
+name: Confidential asset (v2)
+
+on:
+  pull_request:
+    paths:
+      - "v2/confidentialasset/**"
+      - "v2/go.mod"
+      - "v2/go.sum"
+      - "mise.toml"
+      - ".github/workflows/confidentialasset-test.yaml"
+      - ".github/workflows/codecov.yaml"
+      - ".github/actions/setup-confidential-bindings/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "v2/confidentialasset/**"
+      - "v2/go.mod"
+      - "v2/go.sum"
+      - "mise.toml"
+      - ".github/workflows/confidentialasset-test.yaml"
+      - ".github/workflows/codecov.yaml"
+      - ".github/actions/setup-confidential-bindings/**"
+
+env:
+  # TODO(正式发布前删除): 与 codecov.yaml 对齐；bindings 合并发版后改 main 或移除本 workflow 的临时 ref。
+  CONFIDENTIAL_ASSET_BINDINGS_REF: logan/go-only-ffi-go
+
+jobs:
+  confidentialasset-nocgo:
+    name: v2 confidentialasset (CGO off)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: "go"
+          cache: true
+
+      - name: Checkout confidential-asset-bindings (go mod replace)
+        uses: ./.github/actions/setup-confidential-bindings
+        with:
+          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
+
+      - name: go test -short (CGO_ENABLED=0)
+        working-directory: v2
+        env:
+          CGO_ENABLED: "0"
+        run: go test -short -count=1 ./confidentialasset/...
+
+  confidentialasset-cgo-ffi:
+    name: v2 confidentialasset (CGO + FFI static lib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: "go"
+          cache: true
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Checkout confidential-asset-bindings (go mod replace)
+        uses: ./.github/actions/setup-confidential-bindings
+        with:
+          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
+
+      - name: Build aptos_confidential_asset_ffi (libaptos_confidential_asset_ffi.a for Go CGO)
+        working-directory: confidential-asset-bindings/rust
+        run: cargo build -p aptos_confidential_asset_ffi --release
+
+      - name: go test -short (CGO_ENABLED=1)
+        working-directory: v2
+        env:
+          CGO_ENABLED: "1"
+        run: go test -short -count=1 ./confidentialasset/...

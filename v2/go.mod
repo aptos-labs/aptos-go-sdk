@@ -1,6 +1,6 @@
 module github.com/aptos-labs/aptos-go-sdk/v2
 
-go 1.24.2
+go 1.25.0
 
 toolchain go1.25.10
 

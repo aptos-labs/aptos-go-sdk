@@ -14,8 +14,20 @@ Import path: `github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset`
 ## Requirements
 
 - `github.com/aptos-labs/aptos-go-sdk/v2` (same module as core SDK)
-- **CGO + FFI** for decrypt and proof generation: build [`confidential-asset-bindings`](https://github.com/aptos-labs/confidential-asset-bindings) `libaptos_confidential_asset_ffi` (see bindings `bindings/go/README.md`)
+- **CGO + FFI** for decrypt and proof generation: build [`confidential-asset-bindings`](https://github.com/aptos-labs/confidential-asset-bindings) Rust workspace member **`aptos_confidential_asset_ffi`** → static library `libaptos_confidential_asset_ffi.a` (see bindings `bindings/go/aptosconfidential` CGO flags). Go package `aptosconfidential` links that archive on Linux amd64.
 - Set `WithRESTBaseURL` to your fullnode base including `/v1` when using simulated-gas submit helpers
+
+## CI and local testing (what actually runs)
+
+| 场景 | 命令 / 位置 | 覆盖内容 |
+|------|----------------|----------|
+| 仓库根 **Go Unit Tests** workflow | `go test ./...`（仅 v1 模块） | **不包含** `v2/confidentialasset` |
+| **Confidential asset (v2)** workflow | `confidentialasset-nocgo`：`CGO_ENABLED=0 go test -short ./confidentialasset/...` | `cipherparse`、`movearg`、`sigbcs`、`views` 单测；**`!cgo` stub** 返回 `ErrCGODisabled` 契约 |
+| 同上 | `confidentialasset-cgo-ffi`：`cargo build -p aptos_confidential_asset_ffi --release` 后 `CGO_ENABLED=1 go test -short ./confidentialasset/...` | **FFI smoke**、`rangeproof` CGO 往返等 |
+| **Code Coverage** workflow | `v2/` 下 `go test -race ./...`，`CGO_ENABLED=1`，且先构建同一 FFI | 全 v2 模块覆盖率（含机密子包 CGO 路径） |
+| 可选链上只读 | `APTOS_CONFIDENTIAL_INTEGRATION=1`，无 `-short`，跑 `TestIntegration_Confidential*` | 对公共网络的 `HasUserRegistered` 等（**默认 CI 不启用**） |
+
+临时 CI：checkout bindings 分支由 workflow 内 `CONFIDENTIAL_ASSET_BINDINGS_REF` 固定（与 codecov 一致）；**正式发布前**应删除该临时逻辑并改为已发布的 `bindings/go` 版本（见 workflow 内 TODO 注释）。
 
 ## Usage
 
