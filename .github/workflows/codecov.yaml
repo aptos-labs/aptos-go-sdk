@@ -9,10 +9,8 @@ on:
 
 env:
   GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-  # TODO(正式发布前删除): 临时固定从 aptos-labs/confidential-asset-bindings 拉分支
-  # logan/go-only-ffi-go（WGB5445:logan/go-only-ffi-go）。等 bindings/go 合并进默认分支且 v2 可依赖
-  # 已发布的 module 版本后，应删除本 env 及对 setup-confidential-bindings 的调用，并去掉 v2/go.mod
-  # 里指向 sibling 的 replace（改为 proxy 上的正式版本）。
+  # TODO(正式发布前删除): bindings 分支暂在 fork WGB5445；合并进 aptos-labs 后改 repository/ref。
+  CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY: WGB5445/confidential-asset-bindings
   CONFIDENTIAL_ASSET_BINDINGS_REF: logan/go-only-ffi-go
 
 jobs:
@@ -48,6 +46,7 @@ jobs:
       - name: Checkout confidential-asset-bindings (for v2 replace)
         uses: ./.github/actions/setup-confidential-bindings
         with:
+          repository: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY }}
           ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
 
       - uses: dtolnay/rust-toolchain@stable
