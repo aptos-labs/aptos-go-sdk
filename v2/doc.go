@@ -49,7 +49,7 @@
 //	ca := confidentialasset.NewClient(client, confidentialasset.WithRESTBaseURL(restBase))
 //	tx, err := ca.Deposit(ctx, signer, token, amountOctas, faMetadataHex)
 //
-// See package confidentialasset and v2/examples/confidential_asset/ (per-command mains: balance, register, transfer, deposit_chain, ffismoke).
+// See package confidentialasset and v2/examples/confidential_asset/ (per-command mains: balance, register, transfer, withdraw, deposit_chain).
 //
 // # Aptos Names Service
 //

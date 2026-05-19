@@ -42,7 +42,7 @@ func TwistedDecryptionKey32(acct *account.Account, twistedHex string) ([32]byte,
 // FetchBalanceCipherChunks loads compressed C,D chunks from a balance view (no CGO).
 func (c *Client) FetchBalanceCipherChunks(ctx context.Context, account, token aptos.AccountAddress, viewFunction string) (cChunks, dChunks [][]byte, err error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: viewFunction,
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},

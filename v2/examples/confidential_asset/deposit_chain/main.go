@@ -15,6 +15,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	confidentialasset "github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/native"
 )
 
 const (
@@ -76,20 +77,6 @@ func envTruthy(name string) bool {
 	return v == "1" || v == "true" || v == "yes"
 }
 
-func printNormalizeCGORequired() {
-	msg := `
-----------------------------------------------------------------------
-is_normalized == false：需要提交 normalize_raw（sigma + Bulletproof）才能 rollover。
-本命令会调用 SDK NormalizeBalance（与 TS normalizeBalance 等价），需要 CGO +
-confidential-asset-bindings 的 libaptos_confidential_asset_ffi（见 examples/confidential_asset/README.md）。
-
-请使用：CGO_ENABLED=1 go run ./examples/confidential_asset/deposit_chain
-若无法启用 CGO，可先用 @aptos-labs/confidential-asset（TS）对账户执行 normalizeBalance，再重跑本命令。
-----------------------------------------------------------------------
-`
-	fmt.Fprintln(os.Stderr, strings.TrimSpace(msg))
-}
-
 func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Minute)
 	defer cancel()
@@ -98,6 +85,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("client: %v", err)
 	}
+	nc := native.Wrap(cc)
 	fmt.Printf("deposit_chain — Network: %s\n\n", net.Name)
 
 	acct, err := loadAccount()
@@ -142,11 +130,7 @@ func main() {
 		} else {
 			fmt.Println("\nBalance not normalized after deposit — submitting normalize_raw…")
 			twistedHex := strings.TrimSpace(os.Getenv("TWISTED_PRIVATE_KEY_HEX"))
-			if _, err := cc.NormalizeBalance(ctx, acct, token, twistedHex, tokenMetadataLong); err != nil {
-				if errors.Is(err, confidentialasset.ErrCGODisabled) {
-					printNormalizeCGORequired()
-					os.Exit(1)
-				}
+			if _, err := nc.NormalizeBalance(ctx, acct, token, twistedHex, tokenMetadataLong); err != nil {
 				log.Fatalf("normalize_raw: %v", err)
 			}
 			fmt.Println("normalize_raw: ok")
@@ -171,7 +155,7 @@ func main() {
 	} else {
 		fmt.Println("\n=== Confidential balance (SDK GetBalance) ===")
 		twistedHex := strings.TrimSpace(os.Getenv("TWISTED_PRIVATE_KEY_HEX"))
-		bal, err := cc.GetBalance(ctx, acct, token, twistedHex)
+		bal, err := nc.GetBalance(ctx, acct, token, twistedHex)
 		if err != nil {
 			log.Fatalf("get balance: %v", err)
 		}

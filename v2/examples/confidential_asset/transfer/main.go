@@ -16,6 +16,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	confidentialasset "github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/native"
 )
 
 const tokenMetadataLong = "0x000000000000000000000000000000000000000000000000000000000000000a"
@@ -124,12 +125,9 @@ func main() {
 		log.Fatalf("recipient has no confidential store for this token — they must register before receiving a confidential transfer")
 	}
 
-	tx, err := cc.Transfer(ctx, acct, token, amount, recipient, twistedHex, tokenMetadataLong)
+	nc := native.Wrap(cc)
+	tx, err := nc.Transfer(ctx, acct, token, amount, recipient, twistedHex, tokenMetadataLong)
 	if err != nil {
-		if errors.Is(err, confidentialasset.ErrCGODisabled) {
-			fmt.Fprintln(os.Stderr, "confidential transfer requires CGO_ENABLED=1 and libaptos_confidential_asset_ffi (see confidential-asset-bindings/bindings/go/README.md).")
-			os.Exit(1)
-		}
 		log.Fatalf("confidential_transfer_raw: %v", err)
 	}
 	fmt.Printf("confidential_transfer_raw: ok version=%d hash=%s\n", tx.Version, tx.Hash)

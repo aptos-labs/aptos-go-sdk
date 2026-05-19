@@ -15,6 +15,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	confidentialasset "github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/native"
 )
 
 const tokenMetadataLong = "0x000000000000000000000000000000000000000000000000000000000000000a"
@@ -106,7 +107,8 @@ func main() {
 
 	fmt.Println("\n=== Confidential balance (SDK GetBalance) ===")
 	twistedHex := strings.TrimSpace(os.Getenv("TWISTED_PRIVATE_KEY_HEX"))
-	bal, err := cc.GetBalance(ctx, acct, token, twistedHex)
+	nc := native.Wrap(cc)
+	bal, err := nc.GetBalance(ctx, acct, token, twistedHex)
 	if err != nil {
 		log.Fatalf("get balance: %v", err)
 	}

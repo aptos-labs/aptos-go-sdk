@@ -133,7 +133,7 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 func (c *Client) Deposit(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, faMetadataHex string) (*aptos.Transaction, error) {
 	// Args must match native chain_flow + Move: address (metadata object id) + u64 octas (not BCS string).
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "deposit",
 		TypeArgs: nil,
 		Args:     []any{token, amountOctas},
@@ -148,7 +148,7 @@ func (c *Client) RolloverPendingBalance(ctx context.Context, signer aptos.Transa
 		fn = "rollover_pending_balance_and_pause"
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: fn,
 		TypeArgs: nil,
 		Args:     []any{token},

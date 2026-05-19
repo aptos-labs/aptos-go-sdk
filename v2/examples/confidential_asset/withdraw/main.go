@@ -16,6 +16,7 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	confidentialasset "github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/native"
 )
 
 const tokenMetadataLong = "0x000000000000000000000000000000000000000000000000000000000000000a"
@@ -121,12 +122,9 @@ func main() {
 		log.Fatalf("no confidential store for this token — run: CGO_ENABLED=1 go run ./examples/confidential_asset/register")
 	}
 
-	tx, err := cc.Withdraw(ctx, acct, token, amount, recipient, twistedHex, tokenMetadataLong)
+	nc := native.Wrap(cc)
+	tx, err := nc.Withdraw(ctx, acct, token, amount, recipient, twistedHex, tokenMetadataLong)
 	if err != nil {
-		if errors.Is(err, confidentialasset.ErrCGODisabled) {
-			fmt.Fprintln(os.Stderr, "withdraw requires CGO_ENABLED=1 and libaptos_confidential_asset_ffi (see confidential-asset-bindings/bindings/go/README.md).")
-			os.Exit(1)
-		}
 		log.Fatalf("withdraw_to_raw: %v", err)
 	}
 	fmt.Printf("withdraw_to_raw: ok version=%d hash=%s\n", tx.Version, tx.Hash)

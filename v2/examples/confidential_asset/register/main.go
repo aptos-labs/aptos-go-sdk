@@ -1,5 +1,3 @@
-//go:build cgo
-
 // Registers confidential store when needed, then optionally deposits into confidential balance.
 package main
 

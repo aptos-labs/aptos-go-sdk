@@ -1,5 +1,7 @@
 # Confidential Asset Go SDK — TS ↔ Move ↔ Go specification
 
+For **TypeScript ↔ Go file and API mapping** (architecture, CGO split, parity gaps), see **[TS_GO_MAP.md](TS_GO_MAP.md)**. This document focuses on **Move** view/entry layouts.
+
 Reference: `@aptos-labs/confidential-asset` (`confidential-asset/src/internal/confidentialAssetTxnBuilder.ts`, `viewFunctions.ts`, `api/confidentialAsset.ts`).  
 Module address default: `0x1`, Move module name: `confidential_asset`.
 

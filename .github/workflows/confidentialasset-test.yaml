@@ -6,6 +6,7 @@ on:
   pull_request:
     paths:
       - "v2/confidentialasset/**"
+      - "v2/confidentialasset/native/**"
       - "v2/go.mod"
       - "v2/go.sum"
       - "mise.toml"
@@ -17,6 +18,7 @@ on:
       - main
     paths:
       - "v2/confidentialasset/**"
+      - "v2/confidentialasset/native/**"
       - "v2/go.mod"
       - "v2/go.sum"
       - "mise.toml"
@@ -47,11 +49,13 @@ jobs:
           repository: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY }}
           ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
 
-      - name: go test -short (CGO_ENABLED=0)
+      - name: go test -short (CGO_ENABLED=0, exclude native)
         working-directory: v2
         env:
           CGO_ENABLED: "0"
-        run: go test -short -count=1 ./confidentialasset/...
+        run: |
+          pkgs=$(go list ./confidentialasset/... | grep -v '/confidentialasset/native$' | grep -v '/internal/rangeproof$')
+          go test -short -count=1 $pkgs
 
   confidentialasset-cgo-ffi:
     name: v2 confidentialasset (CGO + FFI static lib)

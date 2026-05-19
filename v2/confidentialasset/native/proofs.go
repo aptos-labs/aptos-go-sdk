@@ -1,6 +1,6 @@
 //go:build cgo
 
-package confidentialasset
+package native
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/ca"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/caed25519"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/movearg"
@@ -22,7 +23,7 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 	if !ok {
 		return nil, fmt.Errorf("normalize: signer must be *account.Account")
 	}
-	pub, chunks, oldC, oldD, err := c.DecryptAvailableAmountChunks(ctx, acct, token, twistedHex)
+	pub, chunks, oldC, oldD, err := c.decryptAvailableAmountChunks(ctx, acct, token, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +57,7 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 	if err != nil {
 		return nil, err
 	}
-	dk32, err := TwistedDecryptionKey32(acct, twistedHex)
+	dk32, err := confidentialasset.TwistedDecryptionKey32(acct, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +91,7 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 		newBalanceAArg = movearg.VectorVectorU8(audNewD)
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "normalize_raw",
 		TypeArgs: nil,
 		Args: []any{
@@ -115,7 +116,7 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 	if !ok {
 		return nil, fmt.Errorf("withdraw: signer must be *account.Account")
 	}
-	pub, chunks, oldC, oldD, err := c.DecryptAvailableAmountChunks(ctx, acct, token, twistedHex)
+	pub, chunks, oldC, oldD, err := c.decryptAvailableAmountChunks(ctx, acct, token, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -153,7 +154,7 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 	if err != nil {
 		return nil, err
 	}
-	dk32, err := TwistedDecryptionKey32(acct, twistedHex)
+	dk32, err := confidentialasset.TwistedDecryptionKey32(acct, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +188,7 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 		newBalanceAArg = movearg.VectorVectorU8(audNewD)
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "withdraw_to_raw",
 		TypeArgs: nil,
 		Args: []any{
@@ -215,7 +216,7 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 	if !ok {
 		return nil, fmt.Errorf("transfer: signer must be *account.Account")
 	}
-	pub, chunks, oldC, oldD, err := c.DecryptAvailableAmountChunks(ctx, acct, token, twistedHex)
+	pub, chunks, oldC, oldD, err := c.decryptAvailableAmountChunks(ctx, acct, token, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -290,7 +291,7 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 	if err != nil {
 		return nil, err
 	}
-	dk32, err := TwistedDecryptionKey32(acct, twistedHex)
+	dk32, err := confidentialasset.TwistedDecryptionKey32(acct, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +355,7 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 		effD = xferDAud[len(xferDAud)-1]
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "confidential_transfer_raw",
 		TypeArgs: nil,
 		Args: []any{

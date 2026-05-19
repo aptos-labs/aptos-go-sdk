@@ -1,6 +1,6 @@
 //go:build cgo
 
-package confidentialasset
+package native
 
 import (
 	"context"
@@ -8,14 +8,15 @@ import (
 
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
+	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/ca"
 	"github.com/aptos-labs/confidential-asset-bindings/bindings/go/aptosconfidential"
 	"github.com/gtank/ristretto255"
 )
 
 // GetBalance matches TS getBalance: views + local decrypt (requires CGO + FFI static lib).
-func (c *Client) GetBalance(ctx context.Context, acct *account.Account, token aptos.AccountAddress, twistedHex string) (*ConfidentialBalance, error) {
-	tw, err := TwistedDecryptionKey32(acct, twistedHex)
+func (c *Client) GetBalance(ctx context.Context, acct *account.Account, token aptos.AccountAddress, twistedHex string) (*confidentialasset.ConfidentialBalance, error) {
+	tw, err := confidentialasset.TwistedDecryptionKey32(acct, twistedHex)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +48,7 @@ func (c *Client) GetBalance(ctx context.Context, acct *account.Account, token ap
 	if err != nil {
 		return nil, fmt.Errorf("decrypt pending: %w", err)
 	}
-	return &ConfidentialBalance{AvailableOctas: avail, PendingOctas: pend}, nil
+	return &confidentialasset.ConfidentialBalance{AvailableOctas: avail, PendingOctas: pend}, nil
 }
 
 func scalarModNFromTwistedKeyLE32(twisted [32]byte) (*ristretto255.Scalar, error) {
@@ -130,10 +131,10 @@ func decryptChunkedOctas(solver *aptosconfidential.Solver, modS *ristretto255.Sc
 	return total, nil
 }
 
-// DecryptAvailableAmountChunks decrypts get_available_balance ciphertext into per-chunk values (CGO).
+// decryptAvailableAmountChunks decrypts get_available_balance ciphertext into per-chunk values (CGO).
 // Returns sender encryption public key (twisted ek), chunk values, and raw C/D rows for sigma statements.
-func (c *Client) DecryptAvailableAmountChunks(ctx context.Context, acct *account.Account, token aptos.AccountAddress, twistedHex string) (pub [32]byte, chunks []uint64, c32, d32 [][]byte, err error) {
-	tw, err := TwistedDecryptionKey32(acct, twistedHex)
+func (c *Client) decryptAvailableAmountChunks(ctx context.Context, acct *account.Account, token aptos.AccountAddress, twistedHex string) (pub [32]byte, chunks []uint64, c32, d32 [][]byte, err error) {
+	tw, err := confidentialasset.TwistedDecryptionKey32(acct, twistedHex)
 	if err != nil {
 		return pub, nil, nil, nil, err
 	}

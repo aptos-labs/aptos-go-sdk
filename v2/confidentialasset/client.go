@@ -49,6 +49,7 @@ func WithRESTBaseURL(base string) ClientOption {
 	}
 }
 
-func (c *Client) viewModule() aptos.ModuleID {
+// ViewModule returns the Move module ID for confidential_asset views and entry functions.
+func (c *Client) ViewModule() aptos.ModuleID {
 	return aptos.ModuleID{Address: c.ModuleAddress, Name: ModuleName}
 }

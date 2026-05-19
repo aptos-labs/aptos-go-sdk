@@ -35,7 +35,7 @@ func viewToJSONArray(out []any) ([]any, error) {
 // HasUserRegistered wraps has_confidential_store (TS hasUserRegistered).
 func (c *Client) HasUserRegistered(ctx context.Context, account, token aptos.AccountAddress) (bool, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "has_confidential_store",
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},
@@ -53,7 +53,7 @@ func (c *Client) HasUserRegistered(ctx context.Context, account, token aptos.Acc
 // IsBalanceNormalized wraps is_normalized.
 func (c *Client) IsBalanceNormalized(ctx context.Context, account, token aptos.AccountAddress) (bool, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "is_normalized",
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},
@@ -71,7 +71,7 @@ func (c *Client) IsBalanceNormalized(ctx context.Context, account, token aptos.A
 // IncomingTransfersPaused wraps incoming_transfers_paused.
 func (c *Client) IncomingTransfersPaused(ctx context.Context, account, token aptos.AccountAddress) (bool, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "incoming_transfers_paused",
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},
@@ -89,7 +89,7 @@ func (c *Client) IncomingTransfersPaused(ctx context.Context, account, token apt
 // IsEmergencyPaused wraps is_emergency_paused.
 func (c *Client) IsEmergencyPaused(ctx context.Context) (bool, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "is_emergency_paused",
 		TypeArgs: nil,
 		Args:     []any{},
@@ -107,7 +107,7 @@ func (c *Client) IsEmergencyPaused(ctx context.Context) (bool, error) {
 // GetEncryptionKeyHex returns get_encryption_key compressed point hex (0x + 64 hex); parse to bytes for crypto.
 func (c *Client) GetEncryptionKeyHex(ctx context.Context, account, token aptos.AccountAddress) (string, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "get_encryption_key",
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},
@@ -133,7 +133,7 @@ func (c *Client) GetEncryptionKeyHex(ctx context.Context, account, token aptos.A
 // GetEffectiveAuditorHint wraps get_effective_auditor_hint.
 func (c *Client) GetEffectiveAuditorHint(ctx context.Context, account, token aptos.AccountAddress) (*EffectiveAuditorHint, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "get_effective_auditor_hint",
 		TypeArgs: nil,
 		Args:     []any{account.String(), token.String()},
@@ -169,7 +169,7 @@ func (c *Client) GetEffectiveAuditorHint(ctx context.Context, account, token apt
 // GetEffectiveAuditorEncryptionKeyHex returns compressed EK hex or "" if none (TS getAssetAuditorEncryptionKey).
 func (c *Client) GetEffectiveAuditorEncryptionKeyHex(ctx context.Context, token aptos.AccountAddress) (string, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "get_effective_auditor_config",
 		TypeArgs: nil,
 		Args:     []any{token.String()},
@@ -205,7 +205,7 @@ func (c *Client) GetEffectiveAuditorEncryptionKeyHex(ctx context.Context, token 
 // GetMaxMemoBytes wraps get_max_memo_bytes.
 func (c *Client) GetMaxMemoBytes(ctx context.Context) (uint64, error) {
 	out, err := c.Aptos.View(ctx, &aptos.ViewPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "get_max_memo_bytes",
 		TypeArgs: nil,
 		Args:     []any{},

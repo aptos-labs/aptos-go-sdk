@@ -3,27 +3,13 @@ package confidentialasset
 import (
 	"context"
 	"fmt"
-	"math/big"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/ca"
-	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/caed25519"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/movearg"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/sigma"
 )
-
-func ristrettoValRandBases() (valBase, randBase []byte) {
-	return ca.BaseG.Encode(make([]byte, 0, 32)), ca.HRistretto.Encode(make([]byte, 0, 32))
-}
-
-func flattenBlindingsLE32(rs []*big.Int) []byte {
-	out := make([]byte, 0, len(rs)*32)
-	for _, r := range rs {
-		out = append(out, caed25519.NumberToBytesLE32(r)...)
-	}
-	return out
-}
 
 // RegisterBalance submits register_raw (sigma registration proof).
 func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
@@ -50,7 +36,7 @@ func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSi
 		return nil, err
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "register_raw",
 		TypeArgs: nil,
 		Args: []any{
@@ -95,7 +81,7 @@ func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.Transacti
 		return nil, err
 	}
 	payload := &aptos.EntryFunctionPayload{
-		Module:   c.viewModule(),
+		Module:   c.ViewModule(),
 		Function: "rotate_encryption_key_raw",
 		TypeArgs: nil,
 		Args: []any{
