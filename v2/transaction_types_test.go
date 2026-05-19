@@ -232,23 +232,41 @@ func TestSerializeArg_AllTypes(t *testing.T) {
 }
 
 func TestSerializeArg_BigInts(t *testing.T) {
-	// big.Int-backed Move types use explicit wrappers so we can pick
-	// signed vs unsigned, 128 vs 256 bits unambiguously.
+	// Byte-exact tests differentiating signed/unsigned and width.
+	// `assert.Len` is not enough: U128(1) and I128(1) both produce
+	// 16 bytes, so a length-only test would silently pass if the
+	// signed/unsigned dispatch were swapped.
+
+	// u128(1) and u256(1): little-endian, all zero except the lowest byte.
+	u128One := make([]byte, 16)
+	u128One[0] = 0x01
+	u256One := make([]byte, 32)
+	u256One[0] = 0x01
+
+	// i128(-1) and i256(-1): two's complement, all 0xff.
+	i128NegOne := bytes.Repeat([]byte{0xff}, 16)
+	i256NegOne := bytes.Repeat([]byte{0xff}, 32)
+
 	cases := []struct {
-		name    string
-		arg     any
-		wantLen int
+		name string
+		arg  any
+		want []byte
 	}{
-		{"u128", U128Arg{Value: big.NewInt(1)}, 16},
-		{"u256", U256Arg{Value: big.NewInt(1)}, 32},
-		{"i128", I128Arg{Value: big.NewInt(-1)}, 16},
-		{"i256", I256Arg{Value: big.NewInt(-1)}, 32},
+		{"u128 = 1", U128Arg{Value: big.NewInt(1)}, u128One},
+		{"u256 = 1", U256Arg{Value: big.NewInt(1)}, u256One},
+		{"i128 = -1", I128Arg{Value: big.NewInt(-1)}, i128NegOne},
+		{"i256 = -1", I256Arg{Value: big.NewInt(-1)}, i256NegOne},
+		// i128(1) must NOT equal u128(1) byte-for-byte if dispatch
+		// is correct — both happen to be the same for value 1, so
+		// also test a negative on the signed path which is illegal
+		// for the unsigned path.
+		{"i128 = 1", I128Arg{Value: big.NewInt(1)}, u128One}, // shares value but goes through signed path
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			data, err := serializeArg(tc.arg)
 			require.NoError(t, err)
-			assert.Len(t, data, tc.wantLen)
+			assert.Equal(t, tc.want, data)
 		})
 	}
 }

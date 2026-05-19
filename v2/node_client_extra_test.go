@@ -603,31 +603,6 @@ func TestSimulateTransaction_PrioritizedGasFlag(t *testing.T) {
 	assert.Equal(t, "true", gotQuery.Get("estimate_prioritized_gas_unit_price"))
 }
 
-func TestSimulateMultiAgentTransaction(t *testing.T) {
-	t.Parallel()
-
-	var gotBody []byte
-	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
-
-	primary, err := GenerateEd25519PrivateKey()
-	require.NoError(t, err)
-	secondary, err := GenerateEd25519PrivateKey()
-	require.NoError(t, err)
-
-	res, err := client.SimulateMultiAgentTransaction(
-		context.Background(),
-		makeRawTxn(AccountOne),
-		primary,
-		[]Signer{secondary},
-		[]AccountAddress{AccountTwo},
-	)
-	require.NoError(t, err)
-	assert.True(t, res.Success)
-	// The body should contain a multi-agent authenticator (variant 2,
-	// uleb128-encoded) followed by the secondary signer count.
-	assert.NotEmpty(t, gotBody)
-}
-
 func TestSimulateMultiAgentTransaction_LengthMismatch(t *testing.T) {
 	t.Parallel()
 
@@ -644,32 +619,6 @@ func TestSimulateMultiAgentTransaction_LengthMismatch(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "length mismatch")
-}
-
-func TestSimulateFeePayerTransaction(t *testing.T) {
-	t.Parallel()
-
-	var gotBody []byte
-	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
-
-	primary, err := GenerateEd25519PrivateKey()
-	require.NoError(t, err)
-	feePayer, err := GenerateEd25519PrivateKey()
-	require.NoError(t, err)
-	feePayerAddr := AccountThree
-
-	res, err := client.SimulateFeePayerTransaction(
-		context.Background(),
-		makeRawTxn(AccountOne),
-		primary,
-		nil,
-		nil,
-		feePayerAddr,
-		feePayer,
-	)
-	require.NoError(t, err)
-	assert.True(t, res.Success)
-	assert.NotEmpty(t, gotBody)
 }
 
 func TestSimulateFeePayerTransaction_LengthMismatch(t *testing.T) {
@@ -740,6 +689,22 @@ func TestSimulateMultiAgentTransaction_AuthVariantAndSecondaries(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, res.Success)
 	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantMultiAgent))
+
+	// Round-trip-deserialize the body to confirm the secondary
+	// addresses arrived in the right slots. assertAuthenticatorVariant
+	// only checks one byte; a regression that silently dropped the
+	// secondaries would otherwise slip past.
+	got := &SignedTransaction{}
+	got.UnmarshalBCS(bcs.NewDeserializer(gotBody))
+	ma, ok := got.Authenticator.(*MultiAgentAuthenticator)
+	require.True(t, ok, "expected *MultiAgentAuthenticator, got %T", got.Authenticator)
+	assert.Equal(
+		t,
+		[]AccountAddress{AccountTwo, AccountThree},
+		ma.SecondarySignerAddresses,
+		"secondary signer addresses must appear in the deserialized body",
+	)
+	assert.Len(t, ma.SecondarySigners, 2, "two secondary authenticators expected")
 }
 
 func TestSimulateFeePayerTransaction_AuthVariant(t *testing.T) {
@@ -790,6 +755,16 @@ func TestSimulateFeePayerTransaction_WithSecondaries(t *testing.T) {
 	)
 	require.NoError(t, err)
 	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantFeePayer))
+
+	// Round-trip the body and assert the fee-payer address survived
+	// the wire encoding — a regression that silently dropped it would
+	// produce valid-looking bytes that the node would later reject.
+	got := &SignedTransaction{}
+	got.UnmarshalBCS(bcs.NewDeserializer(gotBody))
+	fp, ok := got.Authenticator.(*FeePayerAuthenticator)
+	require.True(t, ok, "expected *FeePayerAuthenticator, got %T", got.Authenticator)
+	assert.Equal(t, []AccountAddress{AccountTwo}, fp.SecondarySignerAddresses)
+	assert.Equal(t, AccountThree, fp.FeePayerAddress)
 }
 
 func TestSimulateSigned_EmptyResponseIsError(t *testing.T) {
