@@ -34,6 +34,21 @@ type (
 	I256Arg struct{ Value *big.Int }
 )
 
+// RawArg wraps an already-BCS-encoded entry-function argument. writeArg
+// writes the bytes verbatim (no length prefix, no re-encoding).
+//
+// This exists to make round-trips safe. After BCS-deserializing a
+// transaction, EntryFunctionPayload.Args is populated with RawArg
+// values containing the on-the-wire BCS for each argument — so that
+// re-serializing the same payload produces identical bytes. A plain
+// []byte goes through the vector<u8> case and gets a fresh inner
+// length prefix, which would double-encode a deserialized arg.
+//
+// Callers building a fresh payload usually want the typed forms
+// ([]byte for vector<u8>, AccountAddress for address, Some/None for
+// Option, etc.) rather than RawArg.
+type RawArg []byte
+
 // Transaction prefix used for signing
 const (
 	RawTransactionSalt         = "APTOS::RawTransaction"
@@ -206,11 +221,12 @@ func deserializeEntryFunction(des *bcs.Deserializer) *EntryFunctionPayload {
 		ef.TypeArgs[i].UnmarshalBCS(des)
 	}
 
-	// Arguments (as raw bytes)
+	// Arguments are stored as RawArg so a subsequent re-serialize emits
+	// the same bytes — see RawArg's doc for why []byte would be wrong.
 	numArgs := des.Uleb128()
 	ef.Args = make([]any, numArgs)
 	for i := uint32(0); i < numArgs; i++ {
-		ef.Args[i] = des.ReadBytes()
+		ef.Args[i] = RawArg(des.ReadBytes())
 	}
 
 	return ef
@@ -275,6 +291,10 @@ func writeArg(ser *bcs.Serializer, arg any) error {
 	switch v := arg.(type) {
 	case nil:
 		return errors.New("nil argument; use aptos.None() for Move Option")
+	case RawArg:
+		// Verbatim — already BCS-encoded. Used for deserialized args
+		// so that serialize→deserialize→serialize round-trips.
+		ser.FixedBytes(v)
 	case []byte:
 		// Move vector<u8>: ULEB128(len) || bytes
 		ser.WriteBytes(v)

@@ -393,6 +393,21 @@ func TestANSPayloads_AllSerializable(t *testing.T) {
 // TestSubdomainOption asserts the helper returns the right Option for
 // each input. This is the entry point for several ANS payloads where
 // the chain expects Option<String> not bare strings.
+func TestYearsOverflow(t *testing.T) {
+	// math.MaxUint64 / secondsPerYear is roughly 5.85e11 years — no
+	// real user will ever ask to register a domain for that long, but
+	// `years * secondsPerYear` would silently wrap and the on-chain
+	// duration would be garbage. We surface this as an error instead.
+	client := NewClient(nil)
+	huge := uint64(1 << 63) // far above the overflow threshold
+
+	_, err := client.RegisterPayload("alice.apt", RegisterOptions{Years: huge})
+	require.ErrorIs(t, err, ErrYearsOverflow)
+
+	_, err = client.RenewPayload("alice.apt", huge)
+	require.ErrorIs(t, err, ErrYearsOverflow)
+}
+
 func TestSubdomainOption(t *testing.T) {
 	assert.Equal(t, aptos.None(), subdomainOption(""))
 	assert.Equal(t, aptos.Some("wallet"), subdomainOption("wallet"))

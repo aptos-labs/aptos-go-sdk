@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"regexp"
 	"strings"
 	"time"
@@ -326,6 +327,21 @@ func (c *Client) IsAvailable(ctx context.Context, name string) (bool, error) {
 // duration to the seconds value the router contract expects.
 const secondsPerYear uint64 = 365 * 24 * 60 * 60
 
+// ErrYearsOverflow is returned when years * secondsPerYear would exceed
+// uint64. The user-facing input has no business hitting this — domain
+// registrations max out at a few decades — but silently wrapping would
+// send a garbage duration on-chain, so we error explicitly instead.
+var ErrYearsOverflow = errors.New("ans: years value is too large to convert to seconds")
+
+// yearsToSeconds converts a year count to seconds, returning
+// ErrYearsOverflow if the multiplication would wrap uint64.
+func yearsToSeconds(years uint64) (uint64, error) {
+	if years > math.MaxUint64/secondsPerYear {
+		return 0, ErrYearsOverflow
+	}
+	return years * secondsPerYear, nil
+}
+
 // RegisterOptions contains options for name registration.
 type RegisterOptions struct {
 	// Years is the number of years to register the name for.
@@ -373,6 +389,10 @@ func (c *Client) RegisterPayload(name string, opts RegisterOptions) (*aptos.Entr
 	if years == 0 {
 		years = 1
 	}
+	durationSecs, err := yearsToSeconds(years)
+	if err != nil {
+		return nil, err
+	}
 
 	return &aptos.EntryFunctionPayload{
 		Module:   aptos.ModuleID{Address: c.routerAddress, Name: "router"},
@@ -380,7 +400,7 @@ func (c *Client) RegisterPayload(name string, opts RegisterOptions) (*aptos.Entr
 		TypeArgs: nil,
 		Args: []any{
 			parsed.Domain,
-			years * secondsPerYear,
+			durationSecs,
 			addressOption(opts.Target),
 			addressOption(opts.Target),
 		},
@@ -432,18 +452,24 @@ func (c *Client) RenewPayload(name string, years uint64) (*aptos.EntryFunctionPa
 	if years == 0 {
 		years = 1
 	}
+	durationSecs, err := yearsToSeconds(years)
+	if err != nil {
+		return nil, err
+	}
 
 	return &aptos.EntryFunctionPayload{
 		Module:   aptos.ModuleID{Address: c.routerAddress, Name: "router"},
 		Function: "renew_domain",
 		TypeArgs: nil,
-		Args:     []any{parsed.Domain, years * secondsPerYear},
+		Args:     []any{parsed.Domain, durationSecs},
 	}, nil
 }
 
 // AddSubdomainPayload returns the payload for adding a subdomain.
-// expirationSecs is the absolute Unix timestamp at which the subdomain
-// expires; pass 0 to default to the parent domain's expiration.
+// The subdomain's expiration defaults to the parent domain's
+// (expiration_time_sec is encoded as 0, which the router interprets
+// as "inherit from parent"); callers that need a different expiration
+// must build the payload manually until this helper grows an option.
 func (c *Client) AddSubdomainPayload(domain, subdomain string, target aptos.AccountAddress) (*aptos.EntryFunctionPayload, error) {
 	parsed, err := ParseName(domain)
 	if err != nil {
