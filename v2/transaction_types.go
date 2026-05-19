@@ -5,8 +5,33 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"math/big"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
+)
+
+// Option wraps a Move Option<T> argument. A nil Value encodes as `None`;
+// a non-nil Value encodes as `Some(value)`. The inner Value goes through
+// the same serializeArg machinery as a top-level argument, so any type
+// serializeArg supports — including a nested Option — works inside.
+type Option struct {
+	Value any
+}
+
+// Some constructs an Option containing the given value.
+func Some(v any) *Option { return &Option{Value: v} }
+
+// None constructs an empty Option.
+func None() *Option { return &Option{Value: nil} }
+
+// U128Arg / U256Arg / I128Arg / I256Arg are explicit big-integer argument
+// markers. We can't dispatch on *big.Int alone because Move has four
+// different 128/256-bit types and the BCS encoding differs by signedness.
+type (
+	U128Arg struct{ Value *big.Int }
+	U256Arg struct{ Value *big.Int }
+	I128Arg struct{ Value *big.Int }
+	I256Arg struct{ Value *big.Int }
 )
 
 // Transaction prefix used for signing
@@ -66,11 +91,15 @@ func (txn *SignedTransaction) Hash() (string, error) {
 		return "", fmt.Errorf("failed to serialize signed transaction: %w", err)
 	}
 
-	// Hash with the transaction prefix
+	// Hash with the transaction prefix.
+	// Build the buffer explicitly (rather than `append(prefix[:], ...)`)
+	// because `prefix` is a [32]byte and `prefix[:]` would have cap 32;
+	// the first append happens to allocate today, but a future change
+	// to the prefix size could silently mutate the underlying array.
 	prefix := sha3.Sum256([]byte("APTOS::Transaction"))
-
-	// Combine prefix, variant byte (0 for user transaction), and serialized transaction
-	hashInput := append(prefix[:], 0) // 0 = UserTransaction variant
+	hashInput := make([]byte, 0, len(prefix)+1+len(txnBytes))
+	hashInput = append(hashInput, prefix[:]...)
+	hashInput = append(hashInput, 0) // 0 = UserTransaction variant
 	hashInput = append(hashInput, txnBytes...)
 
 	hash := sha3.Sum256(hashInput)
@@ -229,46 +258,96 @@ func deserializeScript(des *bcs.Deserializer) *ScriptPayload {
 
 // serializeArg serializes a single argument to BCS bytes.
 func serializeArg(arg any) ([]byte, error) {
+	ser := bcs.NewSerializer()
+	if err := writeArg(ser, arg); err != nil {
+		return nil, err
+	}
+	if err := ser.Error(); err != nil {
+		return nil, err
+	}
+	return ser.ToBytes(), nil
+}
+
+// writeArg encodes a Move entry-function argument into ser using BCS.
+// Splitting this from serializeArg lets Option<T> recurse without
+// re-allocating a Serializer per level.
+func writeArg(ser *bcs.Serializer, arg any) error {
 	switch v := arg.(type) {
+	case nil:
+		return errors.New("nil argument; use aptos.None() for Move Option")
 	case []byte:
-		return v, nil
+		// Move vector<u8>: ULEB128(len) || bytes
+		ser.WriteBytes(v)
 	case string:
-		// Assume it's a string argument - serialize as BCS string
-		ser := bcs.NewSerializer()
 		ser.WriteString(v)
-		return ser.ToBytes(), ser.Error()
-	case uint8:
-		ser := bcs.NewSerializer()
-		ser.U8(v)
-		return ser.ToBytes(), nil
-	case uint16:
-		ser := bcs.NewSerializer()
-		ser.U16(v)
-		return ser.ToBytes(), nil
-	case uint32:
-		ser := bcs.NewSerializer()
-		ser.U32(v)
-		return ser.ToBytes(), nil
-	case uint64:
-		ser := bcs.NewSerializer()
-		ser.U64(v)
-		return ser.ToBytes(), nil
 	case bool:
-		ser := bcs.NewSerializer()
 		ser.Bool(v)
-		return ser.ToBytes(), nil
+	case uint8:
+		ser.U8(v)
+	case uint16:
+		ser.U16(v)
+	case uint32:
+		ser.U32(v)
+	case uint64:
+		ser.U64(v)
+	case uint:
+		// Go's platform uint is at least 32 bits, in practice 64. Encode
+		// as u64 because that's the only width that always fits.
+		ser.U64(uint64(v))
+	case int8:
+		ser.I8(v)
+	case int16:
+		ser.I16(v)
+	case int32:
+		ser.I32(v)
+	case int64:
+		ser.I64(v)
+	case int:
+		ser.I64(int64(v))
+	case U128Arg:
+		if v.Value == nil {
+			return errors.New("nil U128Arg")
+		}
+		ser.U128(v.Value)
+	case U256Arg:
+		if v.Value == nil {
+			return errors.New("nil U256Arg")
+		}
+		ser.U256(v.Value)
+	case I128Arg:
+		if v.Value == nil {
+			return errors.New("nil I128Arg")
+		}
+		ser.I128(v.Value)
+	case I256Arg:
+		if v.Value == nil {
+			return errors.New("nil I256Arg")
+		}
+		ser.I256(v.Value)
 	case AccountAddress:
-		return v[:], nil
+		ser.FixedBytes(v[:])
 	case *AccountAddress:
 		if v == nil {
-			return nil, errors.New("nil address")
+			return errors.New("nil address")
 		}
-		return (*v)[:], nil
+		ser.FixedBytes((*v)[:])
+	case *Option:
+		if v == nil || v.Value == nil {
+			// None: vector of length 0
+			ser.Uleb128(0)
+			return nil
+		}
+		// Some(value): vector of length 1 followed by the inner value
+		ser.Uleb128(1)
+		return writeArg(ser, v.Value)
+	case Option:
+		return writeArg(ser, &v)
 	case bcs.Marshaler:
-		return bcs.Serialize(v)
+		v.MarshalBCS(ser)
 	default:
-		return nil, fmt.Errorf("unsupported argument type: %T", arg)
+		return fmt.Errorf("unsupported argument type: %T", arg)
 	}
+	return nil
 }
 
 // Script argument type variants

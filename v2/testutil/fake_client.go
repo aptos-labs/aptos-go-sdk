@@ -304,6 +304,32 @@ func (c *FakeClient) SimulateTransaction(ctx context.Context, txn *aptos.RawTran
 	}, nil
 }
 
+// SimulateMultiAgentTransaction simulates a multi-agent transaction.
+func (c *FakeClient) SimulateMultiAgentTransaction(ctx context.Context, txn *aptos.RawTransaction, sender aptos.Signer, secondarySigners []aptos.Signer, secondaryAddrs []aptos.AccountAddress, opts ...aptos.TransactionOption) (*aptos.SimulationResult, error) {
+	c.record("SimulateMultiAgentTransaction", txn)
+	if err := c.getError("SimulateMultiAgentTransaction"); err != nil {
+		return nil, err
+	}
+	return &aptos.SimulationResult{
+		Success:  true,
+		VMStatus: "Executed successfully",
+		GasUsed:  1000,
+	}, nil
+}
+
+// SimulateFeePayerTransaction simulates a fee-payer transaction.
+func (c *FakeClient) SimulateFeePayerTransaction(ctx context.Context, txn *aptos.RawTransaction, sender aptos.Signer, secondarySigners []aptos.Signer, secondaryAddrs []aptos.AccountAddress, feePayerAddr aptos.AccountAddress, feePayer aptos.Signer, opts ...aptos.TransactionOption) (*aptos.SimulationResult, error) {
+	c.record("SimulateFeePayerTransaction", txn)
+	if err := c.getError("SimulateFeePayerTransaction"); err != nil {
+		return nil, err
+	}
+	return &aptos.SimulationResult{
+		Success:  true,
+		VMStatus: "Executed successfully",
+		GasUsed:  1000,
+	}, nil
+}
+
 // SubmitTransaction submits a signed transaction.
 func (c *FakeClient) SubmitTransaction(ctx context.Context, signed *aptos.SignedTransaction) (*aptos.SubmitResult, error) {
 	c.record("SubmitTransaction", signed)

@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -498,6 +500,10 @@ func TestNormalizeViewArg(t *testing.T) {
 		{"uint64 stringified", uint64(123), "123"},
 		{"int64 stringified", int64(-456), "-456"},
 		{"uint64 max", uint64(1<<63 + 1), "9223372036854775809"},
+		{"uint stringified", uint(789), "789"},
+		{"int stringified", int(-789), "-789"},
+		{"big.Int u128 stringified", new(big.Int).SetUint64(1<<63 + 1), "9223372036854775809"},
+		{"big.Int nil", (*big.Int)(nil), nil},
 		{"bool passes through", true, true},
 		{"string passes through", "hello", "hello"},
 		{"byte slice passes through", []byte{1, 2, 3}, []byte{1, 2, 3}},
@@ -519,4 +525,170 @@ func TestNormalizeViewArgs_NilAndEmpty(t *testing.T) {
 	t.Parallel()
 	assert.Nil(t, normalizeViewArgs(nil))
 	assert.Equal(t, []any{}, normalizeViewArgs([]any{}))
+}
+
+// --- Simulate variants --------------------------------------------------
+
+// makeRawTxn builds a minimal valid RawTransaction for simulation tests.
+func makeRawTxn(sender AccountAddress) *RawTransaction {
+	return &RawTransaction{
+		Sender:                     sender,
+		SequenceNumber:             0,
+		MaxGasAmount:               1000,
+		GasUnitPrice:               100,
+		ExpirationTimestampSeconds: 1_700_000_000,
+		ChainID:                    4,
+		Payload: &EntryFunctionPayload{
+			Module:   ModuleID{Address: AccountOne, Name: "test"},
+			Function: "f",
+		},
+	}
+}
+
+// simulateFakeHandler captures the simulate request and returns a fixed
+// successful response. The captured query and body bytes are surfaced
+// through pointers so tests can assert on them.
+func simulateFakeHandler(t *testing.T, gotQuery *url.Values, gotBody *[]byte) http.Handler {
+	t.Helper()
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasSuffix(r.URL.Path, "/transactions/simulate") {
+			body, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+			if gotBody != nil {
+				*gotBody = body
+			}
+			if gotQuery != nil {
+				q := r.URL.Query()
+				*gotQuery = q
+			}
+			w.Header().Set("Content-Type", "application/json")
+			// Simulate endpoint returns an array.
+			_, _ = w.Write([]byte(`[{"success":true,"vm_status":"Executed","gas_used":"123","gas_unit_price":"100","changes":[],"events":[]}]`))
+			return
+		}
+		http.NotFound(w, r)
+	})
+}
+
+func TestSimulateTransaction_DefaultsEstimateGas(t *testing.T) {
+	t.Parallel()
+
+	var gotQuery url.Values
+	client := newTestClient(t, simulateFakeHandler(t, &gotQuery, nil))
+
+	signer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	res, err := client.SimulateTransaction(context.Background(), makeRawTxn(AccountOne), signer)
+	require.NoError(t, err)
+	assert.True(t, res.Success)
+	// No opts → default estimation on, prioritized off.
+	assert.Equal(t, "true", gotQuery.Get("estimate_gas_unit_price"))
+	assert.Equal(t, "true", gotQuery.Get("estimate_max_gas_amount"))
+	assert.Equal(t, "false", gotQuery.Get("estimate_prioritized_gas_unit_price"))
+}
+
+func TestSimulateTransaction_PrioritizedGasFlag(t *testing.T) {
+	t.Parallel()
+
+	var gotQuery url.Values
+	client := newTestClient(t, simulateFakeHandler(t, &gotQuery, nil))
+
+	signer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateTransaction(context.Background(), makeRawTxn(AccountOne), signer, WithPrioritizedGas())
+	require.NoError(t, err)
+	assert.Equal(t, "true", gotQuery.Get("estimate_prioritized_gas_unit_price"))
+}
+
+func TestSimulateMultiAgentTransaction(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	secondary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	res, err := client.SimulateMultiAgentTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		[]Signer{secondary},
+		[]AccountAddress{AccountTwo},
+	)
+	require.NoError(t, err)
+	assert.True(t, res.Success)
+	// The body should contain a multi-agent authenticator (variant 2,
+	// uleb128-encoded) followed by the secondary signer count.
+	assert.NotEmpty(t, gotBody)
+}
+
+func TestSimulateMultiAgentTransaction_LengthMismatch(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, simulateFakeHandler(t, nil, nil))
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateMultiAgentTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		[]Signer{},                   // 0 signers
+		[]AccountAddress{AccountTwo}, // 1 address
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "length mismatch")
+}
+
+func TestSimulateFeePayerTransaction(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayerAddr := AccountThree
+
+	res, err := client.SimulateFeePayerTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		nil,
+		nil,
+		feePayerAddr,
+		feePayer,
+	)
+	require.NoError(t, err)
+	assert.True(t, res.Success)
+	assert.NotEmpty(t, gotBody)
+}
+
+func TestSimulateFeePayerTransaction_LengthMismatch(t *testing.T) {
+	t.Parallel()
+
+	client := newTestClient(t, simulateFakeHandler(t, nil, nil))
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateFeePayerTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		[]Signer{primary, primary},
+		[]AccountAddress{AccountTwo}, // length mismatch
+		AccountThree,
+		feePayer,
+	)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "length mismatch")
 }

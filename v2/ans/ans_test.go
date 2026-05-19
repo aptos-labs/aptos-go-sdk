@@ -5,9 +5,29 @@ import (
 	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
+	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// payloadIsSerializable asserts that a payload can flow through the
+// BCS pipeline by wrapping it in a RawTransaction and serializing the
+// transaction. This catches "unsupported argument type" failures from
+// writeArg without depending on internal serializePayload.
+func payloadIsSerializable(t *testing.T, payload *aptos.EntryFunctionPayload) {
+	t.Helper()
+	txn := &aptos.RawTransaction{
+		Sender:                     aptos.AccountOne,
+		SequenceNumber:             0,
+		MaxGasAmount:               1000,
+		GasUnitPrice:               100,
+		ExpirationTimestampSeconds: 1_700_000_000,
+		ChainID:                    4,
+		Payload:                    payload,
+	}
+	_, err := bcs.Marshal(txn)
+	require.NoError(t, err)
+}
 
 func TestParseName(t *testing.T) {
 	tests := []struct {
@@ -159,13 +179,13 @@ func TestClient_RegisterPayload(t *testing.T) {
 		assert.Equal(t, "router", payload.Module.Name)
 		assert.Equal(t, "register_domain", payload.Function)
 		assert.Contains(t, payload.Args, "alice")
-		assert.Contains(t, payload.Args, 2)
+		assert.Contains(t, payload.Args, 2*secondsPerYear)
 	})
 
 	t.Run("defaults to 1 year", func(t *testing.T) {
 		payload, err := client.RegisterPayload("alice.apt", RegisterOptions{})
 		require.NoError(t, err)
-		assert.Contains(t, payload.Args, 1)
+		assert.Contains(t, payload.Args, secondsPerYear)
 	})
 
 	t.Run("rejects subdomain registration", func(t *testing.T) {
@@ -188,7 +208,8 @@ func TestClient_SetPrimaryNamePayload(t *testing.T) {
 
 		assert.Equal(t, "set_primary_name", payload.Function)
 		assert.Contains(t, payload.Args, "alice")
-		assert.Contains(t, payload.Args, "") // Empty subdomain
+		// No subdomain -> Option::None
+		assert.Contains(t, payload.Args, aptos.None())
 	})
 
 	t.Run("subdomain as primary", func(t *testing.T) {
@@ -196,7 +217,7 @@ func TestClient_SetPrimaryNamePayload(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.Contains(t, payload.Args, "alice")
-		assert.Contains(t, payload.Args, "wallet")
+		assert.Contains(t, payload.Args, aptos.Some("wallet"))
 	})
 }
 
@@ -209,7 +230,9 @@ func TestClient_SetTargetAddressPayload(t *testing.T) {
 
 	assert.Equal(t, "set_target_addr", payload.Function)
 	assert.Contains(t, payload.Args, "alice")
-	assert.Contains(t, payload.Args, target.String())
+	// Address must be passed as AccountAddress, not its hex string,
+	// or BCS will encode it as a Move String.
+	assert.Contains(t, payload.Args, target)
 }
 
 func TestClient_RenewPayload(t *testing.T) {
@@ -221,13 +244,13 @@ func TestClient_RenewPayload(t *testing.T) {
 
 		assert.Equal(t, "renew_domain", payload.Function)
 		assert.Contains(t, payload.Args, "alice")
-		assert.Contains(t, payload.Args, 3)
+		assert.Contains(t, payload.Args, 3*secondsPerYear)
 	})
 
 	t.Run("defaults to 1 year", func(t *testing.T) {
 		payload, err := client.RenewPayload("alice.apt", 0)
 		require.NoError(t, err)
-		assert.Contains(t, payload.Args, 1)
+		assert.Contains(t, payload.Args, secondsPerYear)
 	})
 
 	t.Run("rejects subdomain renewal", func(t *testing.T) {
@@ -311,6 +334,74 @@ func TestName_HasSubdomain(t *testing.T) {
 		name := &Name{Domain: "alice"}
 		assert.Empty(t, name.Subdomain)
 	})
+}
+
+// TestANSPayloads_AllSerializable confirms every ANS payload survives
+// BCS encoding. Before the audit fix, RegisterPayload used an `int`
+// Years value that serializeArg rejected at submission time, and
+// SetTargetAddress / SetPrimaryName passed plain strings where the
+// router expected Option<String> / address. Each of those would have
+// hit "unsupported argument type" or produced bytes the chain would
+// reject. This test would have failed against the broken code.
+func TestANSPayloads_AllSerializable(t *testing.T) {
+	client := NewClient(nil)
+	target := aptos.MustParseAddress("0x123")
+
+	t.Run("RegisterPayload", func(t *testing.T) {
+		p, err := client.RegisterPayload("alice.apt", RegisterOptions{Years: 1})
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("RegisterPayload with target", func(t *testing.T) {
+		p, err := client.RegisterPayload("alice.apt", RegisterOptions{Years: 1, Target: &target})
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("SetPrimaryNamePayload no subdomain", func(t *testing.T) {
+		p, err := client.SetPrimaryNamePayload("alice.apt")
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("SetPrimaryNamePayload with subdomain", func(t *testing.T) {
+		p, err := client.SetPrimaryNamePayload("wallet.alice.apt")
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("SetTargetAddressPayload", func(t *testing.T) {
+		p, err := client.SetTargetAddressPayload("alice.apt", target)
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("RenewPayload", func(t *testing.T) {
+		p, err := client.RenewPayload("alice.apt", 2)
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+
+	t.Run("AddSubdomainPayload", func(t *testing.T) {
+		p, err := client.AddSubdomainPayload("alice.apt", "wallet", target)
+		require.NoError(t, err)
+		payloadIsSerializable(t, p)
+	})
+}
+
+// TestSubdomainOption asserts the helper returns the right Option for
+// each input. This is the entry point for several ANS payloads where
+// the chain expects Option<String> not bare strings.
+func TestSubdomainOption(t *testing.T) {
+	assert.Equal(t, aptos.None(), subdomainOption(""))
+	assert.Equal(t, aptos.Some("wallet"), subdomainOption("wallet"))
+}
+
+func TestAddressOption(t *testing.T) {
+	assert.Equal(t, aptos.None(), addressOption(nil))
+	addr := aptos.MustParseAddress("0x123")
+	assert.Equal(t, aptos.Some(addr), addressOption(&addr))
 }
 
 func TestParseName_EdgeCases(t *testing.T) {

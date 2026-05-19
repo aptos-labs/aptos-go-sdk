@@ -12,7 +12,6 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"strconv"
 	"time"
 
 	aptos "github.com/aptos-labs/aptos-go-sdk/v2"
@@ -69,7 +68,10 @@ func main() {
 		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "aptos_account"},
 		Function: "transfer",
 		TypeArgs: nil,
-		Args:     []any{bob.String(), strconv.FormatUint(TransferAmount, 10)},
+		// Entry-function args go to BCS, so types must match the Move
+		// signature exactly: `address` => AccountAddress (not its hex
+		// string), `u64` => uint64 (not a decimal string).
+		Args: []any{bob, uint64(TransferAmount)},
 	}
 
 	// Build the transaction with gas estimation
