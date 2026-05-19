@@ -283,9 +283,15 @@ func (c *nodeClient) SimulateTransaction(ctx context.Context, txn *RawTransactio
 		return nil, errors.New("signer has no public key")
 	}
 
+	// Wrap in SingleSenderAuthenticator so the on-the-wire TransactionAuthenticator
+	// variant is `SingleSender` (4). Assigning the raw *AccountAuthenticator here
+	// would serialize as just the AccountAuthenticator variant byte; for Ed25519
+	// (variant 0) that accidentally matches the legacy `TxnAuth::Ed25519` layout,
+	// but for Secp256k1/Secp256r1/Keyless it would mis-decode at the node.
+	// SignTransaction wraps identically — keeping these paths consistent matters.
 	signed := &SignedTransaction{
 		Transaction:   txn,
-		Authenticator: auth,
+		Authenticator: &SingleSenderAuthenticator{Sender: auth},
 	}
 	return c.simulateSigned(ctx, signed, opts...)
 }

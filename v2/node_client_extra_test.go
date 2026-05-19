@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -691,4 +692,135 @@ func TestSimulateFeePayerTransaction_LengthMismatch(t *testing.T) {
 	)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "length mismatch")
+}
+
+// TestSimulateTransaction_AuthVariantSingleSender pins the on-the-wire
+// authenticator variant for a single-sender simulation. The Aptos node
+// rejects a transaction whose authenticator variant doesn't match the
+// outer transaction kind, so getting this wrong was the kind of bug we
+// want a test to catch immediately.
+//
+// The body of the BCS request after the RawTransaction is the
+// TransactionAuthenticator enum, ULEB128-encoded. For a SingleSender
+// authenticator that's a single byte: 4.
+func TestSimulateTransaction_AuthVariantSingleSender(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	signer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateTransaction(context.Background(), makeRawTxn(AccountOne), signer)
+	require.NoError(t, err)
+	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantSingleSender))
+}
+
+func TestSimulateMultiAgentTransaction_AuthVariantAndSecondaries(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	sec1, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	sec2, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	res, err := client.SimulateMultiAgentTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		[]Signer{sec1, sec2},
+		[]AccountAddress{AccountTwo, AccountThree},
+	)
+	require.NoError(t, err)
+	assert.True(t, res.Success)
+	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantMultiAgent))
+}
+
+func TestSimulateFeePayerTransaction_AuthVariant(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateFeePayerTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		nil,
+		nil,
+		AccountThree,
+		feePayer,
+	)
+	require.NoError(t, err)
+	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantFeePayer))
+}
+
+func TestSimulateFeePayerTransaction_WithSecondaries(t *testing.T) {
+	t.Parallel()
+
+	var gotBody []byte
+	client := newTestClient(t, simulateFakeHandler(t, nil, &gotBody))
+
+	primary, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	sec, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	feePayer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateFeePayerTransaction(
+		context.Background(),
+		makeRawTxn(AccountOne),
+		primary,
+		[]Signer{sec},
+		[]AccountAddress{AccountTwo},
+		AccountThree,
+		feePayer,
+	)
+	require.NoError(t, err)
+	assertAuthenticatorVariant(t, gotBody, makeRawTxn(AccountOne), uint8(TransactionAuthenticatorVariantFeePayer))
+}
+
+func TestSimulateSigned_EmptyResponseIsError(t *testing.T) {
+	t.Parallel()
+
+	// Simulate endpoint returns an empty array — the node never does
+	// this in practice, but the code defensively errors rather than
+	// dereferencing results[0]. Pin that behaviour.
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`[]`))
+	}))
+
+	signer, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	_, err = client.SimulateTransaction(context.Background(), makeRawTxn(AccountOne), signer)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "no results")
+}
+
+// assertAuthenticatorVariant skips over the BCS-encoded RawTransaction at
+// the head of the simulate request body and asserts the next byte (which
+// the BCS encoding places at the start of the SignedTransaction's
+// authenticator) is the expected variant.
+func assertAuthenticatorVariant(t *testing.T, body []byte, txn *RawTransaction, wantVariant uint8) {
+	t.Helper()
+	txnBytes, err := bcs.Serialize(txn)
+	require.NoError(t, err)
+	require.Greater(t, len(body), len(txnBytes), "body shorter than serialized txn")
+	require.Equal(t, txnBytes, body[:len(txnBytes)], "request body must start with the BCS-encoded raw txn")
+	got := body[len(txnBytes)]
+	assert.Equal(t, wantVariant, got, "expected authenticator variant %d, got %d", wantVariant, got)
 }

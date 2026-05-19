@@ -279,6 +279,33 @@ func TestSerializeArg_NilAddress(t *testing.T) {
 	assert.Contains(t, err.Error(), "nil address")
 }
 
+func TestSerializeArg_OptionValueAndPointer(t *testing.T) {
+	// Option may be passed as either *Option (the common case from
+	// Some/None) or Option-by-value. Both must produce identical bytes.
+	byValue, err := serializeArg(Option{Value: uint64(7)})
+	require.NoError(t, err)
+	byPtr, err := serializeArg(&Option{Value: uint64(7)})
+	require.NoError(t, err)
+	assert.Equal(t, byPtr, byValue)
+	assert.Equal(t, []byte{0x01, 7, 0, 0, 0, 0, 0, 0, 0}, byValue)
+}
+
+// fakeMarshaler implements bcs.Marshaler. Used to confirm that
+// serializeArg honors the bcs.Marshaler case path.
+type fakeMarshaler struct{ payload []byte }
+
+func (f *fakeMarshaler) MarshalBCS(ser *bcs.Serializer) {
+	ser.FixedBytes(f.payload)
+}
+
+func (f *fakeMarshaler) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+func TestSerializeArg_BCSMarshaler(t *testing.T) {
+	got, err := serializeArg(&fakeMarshaler{payload: []byte{0xde, 0xad}})
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xde, 0xad}, got)
+}
+
 func TestSerializeArg_NestedOption(t *testing.T) {
 	// Option<Option<u64>> = Some(Some(1)) should produce:
 	//   ULEB128(1) || ULEB128(1) || 8 bytes
