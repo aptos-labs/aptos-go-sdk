@@ -16,8 +16,6 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2/testutil"
 )
 
-const testTwistedHex = "0x0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20"
-
 func TestGetBalance_decryptFixture(t *testing.T) {
 	skipIfBindingsDisabled(t)
 	var dk [32]byte

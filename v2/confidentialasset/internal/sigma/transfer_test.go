@@ -85,6 +85,85 @@ func TestProveTransfer_minimal(t *testing.T) {
 	}
 }
 
+func TestProveTransfer_withEffectiveAuditor(t *testing.T) {
+	t.Parallel()
+	var dk, sender, recipient, token [32]byte
+	dk[0] = 13
+	sender[0] = 1
+	recipient[0] = 2
+	token[0] = 3
+	senderEK, err := ca.TwistedPublicKeyFromPrivateLE32(dk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recipientEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var senderPub, recvPub [32]byte
+	copy(senderPub[:], senderEK)
+	copy(recvPub[:], recipientEK)
+	audEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{99})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	xferRand, err := caed25519.GenListOfRandom(ca.TransferAmountChunkCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newBalRand, err := caed25519.GenListOfRandom(ca.AvailableBalanceChunkCount)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldEnc, _ := ca.NewEncryptedAmountFromAmount(1000, senderPub, nil)
+	oldC, oldD := oldEnc.RowsCD()
+	newEnc, _ := ca.NewEncryptedAmountFromAmount(900, senderPub, newBalRand)
+	newC, newD := newEnc.RowsCD()
+	amountSender, _ := ca.NewEncryptedTransferAmount(100, senderPub, xferRand)
+	amountRecv, _ := ca.NewEncryptedTransferAmount(100, recvPub, xferRand)
+	tsC, tsDsid := amountSender.RowsCD()
+	_, tsDrid := amountRecv.RowsCD()
+
+	var audPub [32]byte
+	copy(audPub[:], audEK)
+	neAud, _ := ca.NewEncryptedAmountFromAmount(900, audPub, newBalRand)
+	_, ndAud := neAud.RowsCD()
+	teAud, _ := ca.NewEncryptedTransferAmount(100, audPub, xferRand)
+	_, tdAud := teAud.RowsCD()
+
+	proof, err := ProveTransfer(TransferProofArgs{
+		DK32:                 dk,
+		Sender32:             sender,
+		Recipient32:          recipient,
+		Token32:              token,
+		ChainID:              4,
+		SenderEK32:           senderEK,
+		RecipientEK32:        recipientEK,
+		OldC:                 oldC,
+		OldD:                 oldD,
+		NewC:                 newC,
+		NewD:                 newD,
+		NewAmountChunks:      newEnc.AmountChunks,
+		NewRandomness:        newEnc.Randomness,
+		TransferC:            tsC,
+		TransferDSid:         tsDsid,
+		TransferDRid:         tsDrid,
+		TransferAmountChunks: amountSender.AmountChunks,
+		TransferRandomness:   xferRand,
+		HasEffectiveAuditor:  true,
+		AuditorEK32s:         [][]byte{audEK},
+		NewBalanceDAud:       [][][]byte{ndAud},
+		TransferAmountDAud:   [][][]byte{tdAud},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(proof.Commitment) == 0 {
+		t.Fatal("empty proof")
+	}
+}
+
 func TestProveKeyRotation(t *testing.T) {
 	t.Parallel()
 	var oldDK, newDK, sender, token [32]byte

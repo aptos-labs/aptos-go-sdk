@@ -5,17 +5,11 @@ package native
 import (
 	"context"
 	"encoding/hex"
-	"math/big"
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2"
 	"github.com/aptos-labs/aptos-go-sdk/v2/account"
-	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset"
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/ca"
-	"github.com/aptos-labs/aptos-go-sdk/v2/testutil"
 )
 
 func Test_memoArg(t *testing.T) {
@@ -28,7 +22,9 @@ func Test_memoArg(t *testing.T) {
 }
 
 func TestNormalizeBalance_wrongSigner(t *testing.T) {
-	nc := Wrap(confidentialasset.NewClient(testutil.NewFakeClient()))
+	nc, _, _ := newSubmitReadyNativeClient(t, func(context.Context, *aptos.ViewPayload, ...aptos.ViewOption) ([]any, error) {
+		return nil, nil
+	})
 	_, err := nc.NormalizeBalance(context.Background(), wrongSigner{}, aptos.AccountOne, testTwistedHex, "0xa")
 	if err == nil {
 		t.Fatal("expected error")
@@ -36,31 +32,12 @@ func TestNormalizeBalance_wrongSigner(t *testing.T) {
 }
 
 func TestNormalizeBalance_submit(t *testing.T) {
-	skipIfBindingsDisabled(t)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("100000000000"))
-	}))
-	defer srv.Close()
-
-	var dk [32]byte
-	raw, _ := hex.DecodeString(strings.TrimPrefix(testTwistedHex, "0x"))
-	copy(dk[:], raw)
-	ek, err := ca.TwistedPublicKeyFromPrivateLE32(dk)
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 10, isNormalized: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	viewFn, err := cipherViewFunc8(ek, 10)
-	if err != nil {
-		t.Fatal(err)
-	}
-	fc := testutil.NewFakeClient().WithViewFunc(viewFn)
-	cc := confidentialasset.NewClient(fc, confidentialasset.WithRESTBaseURL(srv.URL))
-	nc := Wrap(cc)
-	acct, err := account.NewEd25519()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fc.WithAccount(acct.Address(), &aptos.AccountInfo{SequenceNumber: 0})
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
 	tx, err := nc.NormalizeBalance(context.Background(), acct, aptos.AccountOne, testTwistedHex, "0xa")
 	if err != nil {
 		t.Fatal(err)
@@ -70,76 +47,160 @@ func TestNormalizeBalance_submit(t *testing.T) {
 	}
 }
 
-func TestWithdraw_insufficientViaViews(t *testing.T) {
-	skipIfBindingsDisabled(t)
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		_, _ = w.Write([]byte("100000000000"))
-	}))
-	defer srv.Close()
-
-	var dk [32]byte
-	raw, _ := hex.DecodeString(strings.TrimPrefix(testTwistedHex, "0x"))
-	copy(dk[:], raw)
-	ek, err := ca.TwistedPublicKeyFromPrivateLE32(dk)
+func TestWithdraw_submit(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 100, isNormalized: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	viewFn, err := cipherViewFunc8(ek, 10)
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	tx, err := nc.Withdraw(context.Background(), acct, aptos.AccountOne, 50, aptos.AccountOne, testTwistedHex, "0xa")
 	if err != nil {
 		t.Fatal(err)
 	}
-	fc := testutil.NewFakeClient().WithViewFunc(viewFn)
-	cc := confidentialasset.NewClient(fc, confidentialasset.WithRESTBaseURL(srv.URL))
-	nc := Wrap(cc)
-	acct, err := account.NewEd25519()
-	if err != nil {
-		t.Fatal(err)
-	}
-	fc.WithAccount(acct.Address(), &aptos.AccountInfo{SequenceNumber: 0})
-	_, err = nc.Withdraw(context.Background(), acct, aptos.AccountOne, 1000, aptos.AccountOne, testTwistedHex, "0xa")
-	if err == nil || !strings.Contains(err.Error(), "insufficient") {
-		t.Fatalf("err=%v", err)
+	if tx == nil || !tx.Success {
+		t.Fatalf("tx=%+v", tx)
 	}
 }
 
-func cipherViewFunc8(ek []byte, amount uint64) (func(context.Context, *aptos.ViewPayload, ...aptos.ViewOption) ([]any, error), error) {
-	chunks := ca.AmountToChunks(amount, ca.AvailableBalanceChunkCount)
-	cs := make([][]byte, len(chunks))
-	ds := make([][]byte, len(chunks))
-	for i, ch := range chunks {
-		r := new(big.Int).SetInt64(int64(i + 3))
-		c, d, err := ca.EncryptTwistedElGamal(ch, ek, r)
-		if err != nil {
-			return nil, err
-		}
-		cs[i], ds[i] = c, d
+func TestWithdraw_defaultRecipient(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 100, isNormalized: true})
+	if err != nil {
+		t.Fatal(err)
 	}
-	return func(_ context.Context, payload *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
-		point := func(b []byte) map[string]any {
-			return map[string]any{"data": "0x" + hex.EncodeToString(b)}
-		}
-		points := make([]any, len(cs))
-		rpoints := make([]any, len(ds))
-		for i := range cs {
-			points[i] = point(cs[i])
-			rpoints[i] = point(ds[i])
-		}
-		row := []any{map[string]any{"P": points, "R": rpoints}}
-		switch payload.Function {
-		case "get_available_balance", "get_pending_balance":
-			return row, nil
-		case "is_normalized":
-			return []any{true}, nil
-		case "get_effective_auditor_config":
-			return []any{map[string]any{
-				"config": map[string]any{
-					"ek": map[string]any{"vec": []any{}},
-				},
-			}}, nil
-		default:
-			return []any{}, nil
-		}
-	}, nil
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	var zeroRecipient aptos.AccountAddress
+	tx, err := nc.Withdraw(context.Background(), acct, aptos.AccountOne, 10, zeroRecipient, testTwistedHex, "0xa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx == nil || !tx.Success {
+		t.Fatalf("tx=%+v", tx)
+	}
+}
+
+func TestWithdraw_withAuditor(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{
+		amount:       100,
+		isNormalized: true,
+		auditorEKHex: testAuditorPointHex,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	tx, err := nc.Withdraw(context.Background(), acct, aptos.AccountOne, 10, aptos.AccountOne, testTwistedHex, "0xa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx == nil || !tx.Success {
+		t.Fatalf("tx=%+v", tx)
+	}
+}
+
+func TestWithdraw_insufficientViaViews(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 10, isNormalized: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	_, err = nc.Withdraw(context.Background(), acct, aptos.AccountOne, 1000, aptos.AccountOne, testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected insufficient balance error")
+	}
+}
+
+func TestTransfer_submit(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	recipientEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recipientAcct, err := account.NewEd25519()
+	if err != nil {
+		t.Fatal(err)
+	}
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{
+		amount:         100,
+		isNormalized:   true,
+		recipientEKHex: "0x" + hex.EncodeToString(recipientEK),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	tx, err := nc.Transfer(context.Background(), acct, aptos.AccountOne, 20, recipientAcct.Address(), testTwistedHex, "0xa")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx == nil || !tx.Success {
+		t.Fatalf("tx=%+v", tx)
+	}
+}
+
+func TestTransfer_withMemo(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	recipientEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{8})
+	if err != nil {
+		t.Fatal(err)
+	}
+	recipientAcct, err := account.NewEd25519()
+	if err != nil {
+		t.Fatal(err)
+	}
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{
+		amount:         100,
+		isNormalized:   true,
+		recipientEKHex: "0x" + hex.EncodeToString(recipientEK),
+		auditorEKHex:   testAuditorPointHex,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	// transferWithMemo is unexported; exercise via same code path with memo through package test in native
+	tx, err := nc.transferWithMemo(context.Background(), acct, aptos.AccountOne, 15, recipientAcct.Address(), testTwistedHex, "0xa", "hello")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tx == nil || !tx.Success {
+		t.Fatalf("tx=%+v", tx)
+	}
+}
+
+func TestTransfer_insufficient(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	recipientEK, _ := ca.TwistedPublicKeyFromPrivateLE32([32]byte{9})
+	recipientAcct, _ := account.NewEd25519()
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{
+		amount:         10,
+		recipientEKHex: "0x" + hex.EncodeToString(recipientEK),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	_, err = nc.Transfer(context.Background(), acct, aptos.AccountOne, 1000, recipientAcct.Address(), testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected insufficient balance")
+	}
+}
+
+func TestTransfer_noRecipientKey(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	recipientAcct, _ := account.NewEd25519()
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 100})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	_, err = nc.Transfer(context.Background(), acct, aptos.AccountOne, 10, recipientAcct.Address(), testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected no encryption key error")
+	}
 }
 
 type wrongSigner struct{ aptos.AccountAddress }

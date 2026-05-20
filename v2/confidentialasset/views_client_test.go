@@ -83,6 +83,42 @@ func TestClient_views(t *testing.T) {
 	}
 }
 
+func TestGetEffectiveAuditorEncryptionKeyHex_withEK(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error) {
+		if payload.Function == "get_effective_auditor_config" {
+			return []any{map[string]any{
+				"config": map[string]any{
+					"ek": map[string]any{
+						"vec": []any{map[string]any{"data": "0x" + testPointP}},
+					},
+				},
+			}}, nil
+		}
+		return testViewFunc(ctx, payload, opts...)
+	})
+	h, err := cc.GetEffectiveAuditorEncryptionKeyHex(context.Background(), aptos.AccountOne)
+	if err != nil || h == "" {
+		t.Fatalf("h=%q err=%v", h, err)
+	}
+}
+
+func TestGetEffectiveAuditorEncryptionKeyHex_missingConfig(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error) {
+		if payload.Function == "get_effective_auditor_config" {
+			return []any{map[string]any{}}, nil
+		}
+		return testViewFunc(ctx, payload, opts...)
+	})
+	_, err := cc.GetEffectiveAuditorEncryptionKeyHex(context.Background(), aptos.AccountOne)
+	if err == nil {
+		t.Fatal("expected missing config error")
+	}
+}
+
 func TestGetMaxMemoBytes_float64(t *testing.T) {
 	t.Parallel()
 	cc, fc := newTestConfidentialClient()

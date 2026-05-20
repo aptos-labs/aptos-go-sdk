@@ -5,9 +5,7 @@ package native
 import (
 	"crypto/rand"
 	"encoding/hex"
-	"os"
 	"runtime"
-	"strings"
 	"testing"
 
 	"github.com/aptos-labs/confidential-asset-bindings/bindings/go/aptosconfidential"
@@ -18,14 +16,6 @@ var (
 	valBaseGoldenBatchSmoke, _  = hex.DecodeString("e2f2ae0a6abc4e71a884a961c500515f58e30b6aa582dd8db6a65945e08d2d76")
 	randBaseGoldenBatchSmoke, _ = hex.DecodeString("8c9240b456a9e6dc65c377a1048d745f94a08cdb7f44cbcd7b46f34048871134")
 )
-
-func skipIfBindingsDisabled(t *testing.T) {
-	t.Helper()
-	v := strings.ToLower(strings.TrimSpace(os.Getenv("SKIP_CONFIDENTIAL_BINDINGS")))
-	if v == "1" || v == "true" || v == "yes" {
-		t.Skip("SKIP_CONFIDENTIAL_BINDINGS set")
-	}
-}
 
 // Same as confidential-asset-bindings/examples/go/smoke_test.go — FFI linked and Solver constructs.
 func TestFFILinkedAndSolverConstructs(t *testing.T) {

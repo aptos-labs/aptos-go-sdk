@@ -35,6 +35,17 @@ func TestFetchPublicFABalanceOctas(t *testing.T) {
 			t.Fatalf("n=%d err=%v", n, err)
 		}
 	})
+	t.Run("json_string", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, _ = w.Write([]byte(`"5000"`))
+		}))
+		defer srv.Close()
+		cc := NewClient(testutil.NewFakeClient(), WithRESTBaseURL(srv.URL))
+		n, err := cc.FetchPublicFABalanceOctas(context.Background(), aptos.AccountOne, "0xa")
+		if err != nil || n != 5000 {
+			t.Fatalf("n=%d err=%v", n, err)
+		}
+	})
 	t.Run("missing_rest", func(t *testing.T) {
 		cc := NewClient(testutil.NewFakeClient())
 		_, err := cc.FetchPublicFABalanceOctas(context.Background(), aptos.AccountOne, "0xa")
