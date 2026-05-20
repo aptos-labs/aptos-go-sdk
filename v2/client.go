@@ -59,8 +59,19 @@ type Client interface {
 	// BuildTransaction builds an unsigned transaction.
 	BuildTransaction(ctx context.Context, sender AccountAddress, payload Payload, opts ...TransactionOption) (*RawTransaction, error)
 
-	// SimulateTransaction simulates a transaction without submitting it.
+	// SimulateTransaction simulates a single-sender transaction without
+	// submitting it.
 	SimulateTransaction(ctx context.Context, txn *RawTransaction, signer Signer, opts ...TransactionOption) (*SimulationResult, error)
+
+	// SimulateMultiAgentTransaction simulates a multi-agent transaction.
+	// secondarySigners and secondaryAddrs must be the same length and in
+	// the same order as the on-chain multi-agent authenticator expects.
+	SimulateMultiAgentTransaction(ctx context.Context, txn *RawTransaction, sender Signer, secondarySigners []Signer, secondaryAddrs []AccountAddress, opts ...TransactionOption) (*SimulationResult, error)
+
+	// SimulateFeePayerTransaction simulates a sponsored (fee-payer)
+	// transaction. Pass nil/empty secondarySigners and secondaryAddrs for
+	// the common single-sender + sponsor case.
+	SimulateFeePayerTransaction(ctx context.Context, txn *RawTransaction, sender Signer, secondarySigners []Signer, secondaryAddrs []AccountAddress, feePayerAddr AccountAddress, feePayer Signer, opts ...TransactionOption) (*SimulationResult, error)
 
 	// SubmitTransaction submits a signed transaction to the network.
 	SubmitTransaction(ctx context.Context, signed *SignedTransaction) (*SubmitResult, error)

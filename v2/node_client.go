@@ -9,6 +9,7 @@ import (
 	"io"
 	"iter"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -266,28 +267,132 @@ func (c *nodeClient) BuildTransaction(ctx context.Context, sender AccountAddress
 	}, nil
 }
 
-// SimulateTransaction simulates a transaction without submitting it.
+// SimulateTransaction simulates a single-sender transaction without
+// submitting it. To simulate a multi-agent or fee-payer transaction use
+// SimulateMultiAgentTransaction or SimulateFeePayerTransaction; this
+// entry point intentionally only wires up a SingleSender authenticator.
+//
+// Gas-estimation query parameters are derived from opts: WithGasEstimation
+// turns on both unit-price and max-amount estimation; WithPrioritizedGas
+// additionally requests the prioritized estimate. Pass no opts to get the
+// default (estimate gas price and max amount, no prioritized estimate),
+// which matches v1 behavior.
 func (c *nodeClient) SimulateTransaction(ctx context.Context, txn *RawTransaction, signer Signer, opts ...TransactionOption) (*SimulationResult, error) {
-	// Create simulation authenticator (zero signature)
 	auth := SimulationAuthenticator(signer)
-
-	// Create signed transaction for simulation
-	signed := &SignedTransaction{
-		Transaction:   txn,
-		Authenticator: auth,
+	if auth == nil {
+		return nil, errors.New("signer has no public key")
 	}
 
-	// Serialize to BCS
+	// Wrap in SingleSenderAuthenticator so the on-the-wire TransactionAuthenticator
+	// variant is `SingleSender` (4). Assigning the raw *AccountAuthenticator here
+	// would serialize as just the AccountAuthenticator variant byte; for Ed25519
+	// (variant 0) that accidentally matches the legacy `TxnAuth::Ed25519` layout,
+	// but for Secp256k1/Secp256r1/Keyless it would mis-decode at the node.
+	// SignTransaction wraps identically — keeping these paths consistent matters.
+	signed := &SignedTransaction{
+		Transaction:   txn,
+		Authenticator: &SingleSenderAuthenticator{Sender: auth},
+	}
+	return c.simulateSigned(ctx, signed, opts...)
+}
+
+// SimulateMultiAgentTransaction simulates a multi-agent transaction.
+// The primary signer signs as the sender; secondarySigners provide the
+// remaining authenticators in the order the on-chain multi-agent
+// signature expects.
+func (c *nodeClient) SimulateMultiAgentTransaction(ctx context.Context, txn *RawTransaction, sender Signer, secondarySigners []Signer, secondaryAddrs []AccountAddress, opts ...TransactionOption) (*SimulationResult, error) {
+	if len(secondarySigners) != len(secondaryAddrs) {
+		return nil, fmt.Errorf("secondarySigners (%d) and secondaryAddrs (%d) length mismatch", len(secondarySigners), len(secondaryAddrs))
+	}
+
+	senderAuth := SimulationAuthenticator(sender)
+	if senderAuth == nil {
+		return nil, errors.New("sender has no public key")
+	}
+
+	secondaryAuths := make([]*AccountAuthenticator, len(secondarySigners))
+	for i, s := range secondarySigners {
+		a := SimulationAuthenticator(s)
+		if a == nil {
+			return nil, fmt.Errorf("secondary signer %d has no public key", i)
+		}
+		secondaryAuths[i] = a
+	}
+
+	signed := &SignedTransaction{
+		Transaction: txn,
+		Authenticator: &MultiAgentAuthenticator{
+			Sender:                   senderAuth,
+			SecondarySignerAddresses: secondaryAddrs,
+			SecondarySigners:         secondaryAuths,
+		},
+	}
+	return c.simulateSigned(ctx, signed, opts...)
+}
+
+// SimulateFeePayerTransaction simulates a sponsored (fee-payer)
+// transaction. feePayerAddr / feePayer specify who pays gas; pass nil for
+// secondarySigners / secondaryAddrs for the common single-sender + sponsor
+// case.
+func (c *nodeClient) SimulateFeePayerTransaction(ctx context.Context, txn *RawTransaction, sender Signer, secondarySigners []Signer, secondaryAddrs []AccountAddress, feePayerAddr AccountAddress, feePayer Signer, opts ...TransactionOption) (*SimulationResult, error) {
+	if len(secondarySigners) != len(secondaryAddrs) {
+		return nil, fmt.Errorf("secondarySigners (%d) and secondaryAddrs (%d) length mismatch", len(secondarySigners), len(secondaryAddrs))
+	}
+
+	senderAuth := SimulationAuthenticator(sender)
+	if senderAuth == nil {
+		return nil, errors.New("sender has no public key")
+	}
+
+	secondaryAuths := make([]*AccountAuthenticator, len(secondarySigners))
+	for i, s := range secondarySigners {
+		a := SimulationAuthenticator(s)
+		if a == nil {
+			return nil, fmt.Errorf("secondary signer %d has no public key", i)
+		}
+		secondaryAuths[i] = a
+	}
+
+	feePayerAuth := SimulationAuthenticator(feePayer)
+	if feePayerAuth == nil {
+		return nil, errors.New("fee payer has no public key")
+	}
+
+	signed := &SignedTransaction{
+		Transaction: txn,
+		Authenticator: &FeePayerAuthenticator{
+			Sender:                   senderAuth,
+			SecondarySignerAddresses: secondaryAddrs,
+			SecondarySigners:         secondaryAuths,
+			FeePayerAddress:          feePayerAddr,
+			FeePayerAuth:             feePayerAuth,
+		},
+	}
+	return c.simulateSigned(ctx, signed, opts...)
+}
+
+// simulateSigned submits a pre-built simulation SignedTransaction.
+func (c *nodeClient) simulateSigned(ctx context.Context, signed *SignedTransaction, opts ...TransactionOption) (*SimulationResult, error) {
+	// Default: estimate gas price and max amount, no prioritized estimate.
+	// Mirrors v1's behavior so callers migrating don't see a gas-estimation
+	// regression. Caller can override via WithGasEstimation / WithPrioritizedGas.
+	cfg := &TransactionConfig{
+		EstimateGas:            true,
+		EstimatePrioritizedGas: false,
+	}
+	for _, opt := range opts {
+		opt(cfg)
+	}
+
 	txnBytes, err := bcs.Serialize(signed)
 	if err != nil {
 		return nil, fmt.Errorf("failed to serialize transaction: %w", err)
 	}
 
-	// Build query parameters
 	params := url.Values{}
-	params.Set("estimate_gas_unit_price", "true")
-	params.Set("estimate_max_gas_amount", "true")
-	params.Set("estimate_prioritized_gas_unit_price", "false")
+	params.Set("estimate_gas_unit_price", strconv.FormatBool(cfg.EstimateGas))
+	params.Set("estimate_max_gas_amount", strconv.FormatBool(cfg.EstimateGas))
+	params.Set("estimate_prioritized_gas_unit_price", strconv.FormatBool(cfg.EstimatePrioritizedGas))
 
 	path := "transactions/simulate?" + params.Encode()
 
@@ -472,11 +577,26 @@ func normalizeViewArg(arg any) any {
 		return nil
 	}
 
+	// *big.Int covers Move's u128/u256/i128/i256 view arguments. The
+	// node expects these as decimal strings — passing the *big.Int
+	// through would either be JSON-encoded as an unquoted number (too
+	// large to fit JSON's safe integer range) or rejected outright.
+	if bi, ok := arg.(*big.Int); ok {
+		if bi == nil {
+			return nil
+		}
+		return bi.String()
+	}
+
 	value := reflect.ValueOf(arg)
 	switch value.Kind() {
-	case reflect.Uint64:
+	case reflect.Uint, reflect.Uint64:
+		// Go's platform-sized uint is at least 32 bits; on 64-bit
+		// builds it can exceed JSON's safe integer range. Stringify
+		// for safety — the node accepts decimal strings for all
+		// unsigned widths.
 		return strconv.FormatUint(value.Uint(), 10)
-	case reflect.Int64:
+	case reflect.Int, reflect.Int64:
 		return strconv.FormatInt(value.Int(), 10)
 	case reflect.Slice, reflect.Array:
 		if value.Type().Elem().Kind() == reflect.Uint8 {

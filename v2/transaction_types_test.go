@@ -3,6 +3,8 @@ package aptos
 import (
 	"bytes"
 	"crypto/sha3"
+	"encoding/hex"
+	"math/big"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/bcs"
@@ -111,6 +113,19 @@ func TestSignedTransaction_Hash(t *testing.T) {
 	require.NoError(t, err)
 	assert.True(t, len(hash) > 2)
 	assert.Equal(t, "0x", hash[:2])
+
+	// Hash must be exactly SHA3-256(prefix || 0x00 || bcs(SignedTransaction)).
+	// Building the expected hash by hand pins the prefix construction —
+	// catches regressions in slice-aliasing or wrong variant byte.
+	signedBytes, err := bcs.Marshal(signed)
+	require.NoError(t, err)
+	prefix := sha3.Sum256([]byte("APTOS::Transaction"))
+	expected := make([]byte, 0, len(prefix)+1+len(signedBytes))
+	expected = append(expected, prefix[:]...)
+	expected = append(expected, 0)
+	expected = append(expected, signedBytes...)
+	want := sha3.Sum256(expected)
+	assert.Equal(t, "0x"+hex.EncodeToString(want[:]), hash)
 }
 
 func TestEntryFunctionPayload_BCSRoundTrip(t *testing.T) {
@@ -164,28 +179,104 @@ func TestScriptPayload_BCSRoundTrip(t *testing.T) {
 }
 
 func TestSerializeArg_AllTypes(t *testing.T) {
+	// Each case asserts the exact BCS bytes serializeArg should emit for
+	// a given Move-typed argument. This is the contract that
+	// EntryFunctionPayload.Args relies on; assertNotEmpty wasn't enough
+	// to catch a vector<u8> length-prefix regression.
+	addr := AccountOne
 	tests := []struct {
 		name string
 		arg  any
+		want []byte
 	}{
-		{"bytes", []byte{1, 2, 3}},
-		{"string", "hello"},
-		{"uint8", uint8(255)},
-		{"uint16", uint16(65535)},
-		{"uint32", uint32(4294967295)},
-		{"uint64", uint64(18446744073709551615)},
-		{"bool", true},
-		{"address", AccountOne},
-		{"address_ptr", &AccountOne},
+		{"bytes", []byte{1, 2, 3}, []byte{0x03, 0x01, 0x02, 0x03}},
+		{"empty bytes", []byte{}, []byte{0x00}},
+		{"string", "hi", []byte{0x02, 'h', 'i'}},
+		{"empty string", "", []byte{0x00}},
+		{"uint8", uint8(0x7f), []byte{0x7f}},
+		{"uint16", uint16(0x1234), []byte{0x34, 0x12}},
+		{"uint32", uint32(0xdeadbeef), []byte{0xef, 0xbe, 0xad, 0xde}},
+		{"uint64", uint64(1), []byte{1, 0, 0, 0, 0, 0, 0, 0}},
+		{"bool true", true, []byte{0x01}},
+		{"bool false", false, []byte{0x00}},
+		{"int8", int8(-1), []byte{0xff}},
+		{"int16", int16(-1), []byte{0xff, 0xff}},
+		{"int32", int32(-1), []byte{0xff, 0xff, 0xff, 0xff}},
+		{"int64", int64(-1), []byte{0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff}},
+		{"address", addr, addr[:]},
+		{"address_ptr", &addr, addr[:]},
+		{"option none", None(), []byte{0x00}},
+		{"option some uint64", Some(uint64(7)), []byte{0x01, 7, 0, 0, 0, 0, 0, 0, 0}},
+		{"option some string", Some("ab"), []byte{0x01, 0x02, 'a', 'b'}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			data, err := serializeArg(tt.arg)
 			require.NoError(t, err)
-			assert.NotEmpty(t, data)
+			assert.Equal(t, tt.want, data)
 		})
 	}
+}
+
+func TestSerializeArg_BigInts(t *testing.T) {
+	// Byte-exact tests differentiating signed/unsigned and width.
+	// `assert.Len` is not enough: U128(1) and I128(1) both produce
+	// 16 bytes, so a length-only test would silently pass if the
+	// signed/unsigned dispatch were swapped.
+
+	// u128(1) and u256(1): little-endian, all zero except the lowest byte.
+	u128One := make([]byte, 16)
+	u128One[0] = 0x01
+	u256One := make([]byte, 32)
+	u256One[0] = 0x01
+
+	// i128(-1) and i256(-1): two's complement, all 0xff.
+	i128NegOne := bytes.Repeat([]byte{0xff}, 16)
+	i256NegOne := bytes.Repeat([]byte{0xff}, 32)
+
+	cases := []struct {
+		name string
+		arg  any
+		want []byte
+	}{
+		{"u128 = 1", U128Arg{Value: big.NewInt(1)}, u128One},
+		{"u256 = 1", U256Arg{Value: big.NewInt(1)}, u256One},
+		// Positive values encode identically through signed and
+		// unsigned paths, so I128(1)/U128(1) are byte-equal. The
+		// signed-vs-unsigned dispatch is therefore validated by the
+		// negative cases below — i128(-1) is two's-complement 0xff…
+		// which differs unambiguously from the unsigned encoding.
+		{"i128 = 1", I128Arg{Value: big.NewInt(1)}, u128One},
+		{"i128 = -1", I128Arg{Value: big.NewInt(-1)}, i128NegOne},
+		{"i256 = -1", I256Arg{Value: big.NewInt(-1)}, i256NegOne},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			data, err := serializeArg(tc.arg)
+			require.NoError(t, err)
+			assert.Equal(t, tc.want, data)
+		})
+	}
+}
+
+func TestSerializeArg_NilBigInts(t *testing.T) {
+	cases := []any{
+		U128Arg{Value: nil},
+		U256Arg{Value: nil},
+		I128Arg{Value: nil},
+		I256Arg{Value: nil},
+	}
+	for _, c := range cases {
+		_, err := serializeArg(c)
+		require.Error(t, err)
+	}
+}
+
+func TestSerializeArg_NilArg(t *testing.T) {
+	_, err := serializeArg(nil)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "nil argument")
 }
 
 func TestSerializeArg_NilAddress(t *testing.T) {
@@ -195,10 +286,188 @@ func TestSerializeArg_NilAddress(t *testing.T) {
 	assert.Contains(t, err.Error(), "nil address")
 }
 
+func TestSerializeArg_OptionValueAndPointer(t *testing.T) {
+	// Option may be passed as either *Option (the common case from
+	// Some/None) or Option-by-value. Both must produce identical bytes.
+	byValue, err := serializeArg(Option{Value: uint64(7)})
+	require.NoError(t, err)
+	byPtr, err := serializeArg(&Option{Value: uint64(7)})
+	require.NoError(t, err)
+	assert.Equal(t, byPtr, byValue)
+	assert.Equal(t, []byte{0x01, 7, 0, 0, 0, 0, 0, 0, 0}, byValue)
+}
+
+// fakeMarshaler implements bcs.Marshaler. Used to confirm that
+// serializeArg honors the bcs.Marshaler case path.
+type fakeMarshaler struct{ payload []byte }
+
+func (f *fakeMarshaler) MarshalBCS(ser *bcs.Serializer) {
+	ser.FixedBytes(f.payload)
+}
+
+func (f *fakeMarshaler) UnmarshalBCS(_ *bcs.Deserializer) {}
+
+func TestSerializeArg_BCSMarshaler(t *testing.T) {
+	got, err := serializeArg(&fakeMarshaler{payload: []byte{0xde, 0xad}})
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0xde, 0xad}, got)
+}
+
+func TestSerializeArg_NestedOption(t *testing.T) {
+	// Option<Option<u64>> = Some(Some(1)) should produce:
+	//   ULEB128(1) || ULEB128(1) || 8 bytes
+	data, err := serializeArg(Some(Some(uint64(1))))
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x01, 1, 0, 0, 0, 0, 0, 0, 0}, data)
+
+	// Option<Option<u64>> = Some(None) -> 0x01 || 0x00
+	data, err = serializeArg(Some(None()))
+	require.NoError(t, err)
+	assert.Equal(t, []byte{0x01, 0x00}, data)
+}
+
+func TestEntryFunction_VectorU8ArgEncoding(t *testing.T) {
+	// Regression test for the vector<u8> length-prefix bug.
+	//
+	// For a vector<u8> arg containing N bytes, the on-chain BCS must be:
+	//   outer ULEB128(N+sizeof(uleb128(N))) || ULEB128(N) || N bytes
+	// i.e. the inner Move value is itself length-prefixed before the
+	// EntryFunction args[]vec wraps each element in WriteBytes.
+	payload := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "test"},
+		Function: "f",
+		TypeArgs: nil,
+		Args:     []any{[]byte{0xaa, 0xbb, 0xcc}},
+	}
+
+	ser := bcs.NewSerializer()
+	serializePayload(ser, payload)
+	require.NoError(t, ser.Error())
+	data := ser.ToBytes()
+
+	// Round-trip preserves the raw arg bytes — confirm the arg vector
+	// element contains the inner length prefix.
+	des := bcs.NewDeserializer(data)
+	got := deserializePayload(des)
+	require.NoError(t, des.Error())
+	ef, ok := got.(*EntryFunctionPayload)
+	require.True(t, ok)
+
+	// EntryFunction args after deserialization come back as RawArg
+	// (verbatim BCS bytes) so a re-serialize round-trips byte-for-byte.
+	require.Len(t, ef.Args, 1)
+	rawArg, ok := ef.Args[0].(RawArg)
+	require.True(t, ok, "deserialized arg should be RawArg, got %T", ef.Args[0])
+	// Inner encoding: ULEB128(3) || 0xaa 0xbb 0xcc.
+	assert.Equal(t, RawArg{0x03, 0xaa, 0xbb, 0xcc}, rawArg)
+
+	// And a full re-serialize must produce identical bytes — this is
+	// the round-trip invariant RawArg exists to preserve.
+	ser2 := bcs.NewSerializer()
+	serializePayload(ser2, ef)
+	require.NoError(t, ser2.Error())
+	assert.Equal(t, data, ser2.ToBytes(), "serialize→deserialize→serialize must round-trip")
+}
+
+func TestEntryFunction_AddressArgEncoding(t *testing.T) {
+	// An `address` arg must be encoded as the 32 raw fixed bytes
+	// (no inner length prefix), wrapped in a single outer
+	// ULEB128(32) prefix by the EntryFunction args vector.
+	payload := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "test"},
+		Function: "f",
+		TypeArgs: nil,
+		Args:     []any{AccountOne},
+	}
+
+	ser := bcs.NewSerializer()
+	serializePayload(ser, payload)
+	require.NoError(t, ser.Error())
+
+	des := bcs.NewDeserializer(ser.ToBytes())
+	got := deserializePayload(des)
+	require.NoError(t, des.Error())
+	ef, _ := got.(*EntryFunctionPayload)
+	require.Len(t, ef.Args, 1)
+	rawArg, ok := ef.Args[0].(RawArg)
+	require.True(t, ok, "deserialized arg should be RawArg, got %T", ef.Args[0])
+	// Expect the 32 raw bytes of AccountOne — no inner ULEB128 length.
+	assert.Equal(t, RawArg(AccountOne[:]), rawArg)
+}
+
+func TestEntryFunction_OptionArgEncoding(t *testing.T) {
+	// Option<u64> args used to be impossible to express. Confirm that
+	// Some(x) and None() round-trip through the EntryFunction encoding.
+	none := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "test"},
+		Function: "f",
+		Args:     []any{None()},
+	}
+	ser := bcs.NewSerializer()
+	serializePayload(ser, none)
+	require.NoError(t, ser.Error())
+	des := bcs.NewDeserializer(ser.ToBytes())
+	ef, _ := deserializePayload(des).(*EntryFunctionPayload)
+	require.NoError(t, des.Error())
+	require.Len(t, ef.Args, 1)
+	rawArg, _ := ef.Args[0].(RawArg)
+	assert.Equal(t, RawArg{0x00}, rawArg) // Move Option::None
+
+	some := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "test"},
+		Function: "f",
+		Args:     []any{Some(uint64(42))},
+	}
+	ser = bcs.NewSerializer()
+	serializePayload(ser, some)
+	require.NoError(t, ser.Error())
+	des = bcs.NewDeserializer(ser.ToBytes())
+	ef, _ = deserializePayload(des).(*EntryFunctionPayload)
+	require.NoError(t, des.Error())
+	rawArg, _ = ef.Args[0].(RawArg)
+	assert.Equal(t, RawArg{0x01, 42, 0, 0, 0, 0, 0, 0, 0}, rawArg)
+}
+
 func TestSerializeArg_UnsupportedType(t *testing.T) {
 	_, err := serializeArg(struct{}{})
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported argument type")
+}
+
+// TestEntryFunction_RoundTripIsByteStable proves the round-trip
+// invariant RawArg exists to guarantee. A deserialized payload re-
+// serialized through the same code path must produce identical bytes.
+// Before the RawArg fix this broke for vector<u8> args: the deserialized
+// `[]byte` would get re-wrapped with a fresh length prefix, double-
+// encoding on the second pass.
+func TestEntryFunction_RoundTripIsByteStable(t *testing.T) {
+	original := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "demo"},
+		Function: "do_thing",
+		TypeArgs: []TypeTag{AptosCoinTypeTag},
+		Args: []any{
+			[]byte{0xaa, 0xbb}, // vector<u8>
+			AccountTwo,         // address
+			uint64(42),
+			Some("ok"),
+		},
+	}
+
+	ser := bcs.NewSerializer()
+	serializePayload(ser, original)
+	require.NoError(t, ser.Error())
+	first := ser.ToBytes()
+
+	des := bcs.NewDeserializer(first)
+	got := deserializePayload(des)
+	require.NoError(t, des.Error())
+
+	ser2 := bcs.NewSerializer()
+	serializePayload(ser2, got)
+	require.NoError(t, ser2.Error())
+	second := ser2.ToBytes()
+
+	assert.Equal(t, first, second, "byte-stable round trip required")
 }
 
 func TestScriptArg_BCSRoundTrip(t *testing.T) {
