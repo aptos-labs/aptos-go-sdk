@@ -7,6 +7,7 @@ package benchmark
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -88,6 +89,36 @@ func newTestServer() *httptest.Server {
 	return httptest.NewServer(mux)
 }
 
+// newTestServerH2 creates a TLS test server that speaks HTTP/2 (with HTTP/1.1 fallback via ALPN).
+// This is what's needed to validate the PR #96 claim that net/http's HTTP/2 is slower than
+// fasthttp's HTTP/1.1. httptest.NewTLSServer + EnableHTTP2 = true requires Go 1.24+.
+func newTestServerH2() *httptest.Server {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sampleNodeInfo)
+	})
+	mux.HandleFunc("/v1/accounts/", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(sampleAccountInfo)
+	})
+	mux.HandleFunc("/v1/resources", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(largeResourceResponse)
+	})
+
+	srv := httptest.NewUnstartedServer(mux)
+	srv.EnableHTTP2 = true
+	srv.StartTLS()
+	return srv
+}
+
+// insecureTLS returns a TLS config that skips verification — used only for httptest
+// servers whose certs are self-signed.
+func insecureTLS() *tls.Config {
+	return &tls.Config{InsecureSkipVerify: true}
+}
+
 // DefaultHTTPClient uses default http.Client settings
 type DefaultHTTPClient struct {
 	client *http.Client
@@ -129,6 +160,39 @@ func NewTunedHTTPClient() *TunedHTTPClient {
 	}
 }
 
+// NewTunedHTTPClientTLS returns a tuned http.Client that accepts the httptest TLS
+// server's self-signed cert. With ALPN it negotiates HTTP/2.
+func NewTunedHTTPClientTLS() *TunedHTTPClient {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
+		MaxConnsPerHost:     100,
+		IdleConnTimeout:     90 * time.Second,
+		ForceAttemptHTTP2:   true,
+		TLSClientConfig:     insecureTLS(),
+	}
+	return &TunedHTTPClient{
+		client: &http.Client{Transport: transport, Timeout: 30 * time.Second},
+	}
+}
+
+// NewTunedHTTPClientH1Only forces HTTP/1.1 even over TLS by leaving TLSNextProto non-nil but
+// empty (this disables HTTP/2 upgrade), so HTTP/1.1 net/http and HTTP/2 net/http can be
+// compared on the same TLS server.
+func NewTunedHTTPClientH1Only() *TunedHTTPClient {
+	transport := &http.Transport{
+		MaxIdleConns:        100,
+		MaxIdleConnsPerHost: 100,
+		MaxConnsPerHost:     100,
+		IdleConnTimeout:     90 * time.Second,
+		TLSClientConfig:     insecureTLS(),
+		TLSNextProto:        map[string]func(string, *tls.Conn) http.RoundTripper{},
+	}
+	return &TunedHTTPClient{
+		client: &http.Client{Transport: transport, Timeout: 30 * time.Second},
+	}
+}
+
 func (c *TunedHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
 	return c.client.Do(req.WithContext(ctx))
 }
@@ -148,6 +212,7 @@ func NewFastHTTPClient() *FastHTTPClient {
 		},
 	}
 }
+
 
 // DoFastHTTP performs a request using fasthttp native API (no conversion overhead)
 func (c *FastHTTPClient) DoFastHTTP(url string) ([]byte, error) {
@@ -438,3 +503,170 @@ func BenchmarkHTTP_FastHTTP_Burst100(b *testing.B) {
 		wg.Wait()
 	}
 }
+
+// ============================================================================
+// TLS / HTTP-2 benchmarks — same TLS httptest server, only the *client* protocol
+// changes. Useful for measuring the gap between Go's net/http HTTP/2 stack and
+// HTTP/1.1 over TLS, which is the regime Aptos fullnodes actually serve.
+// ============================================================================
+
+func BenchmarkHTTP2_NetHTTP_SmallResponse(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientTLS() // negotiates h2 via ALPN
+	ctx := context.Background()
+	url := server.URL + "/v1/"
+
+	// Warm: ensure first ALPN/h2 handshake doesn't pollute timing.
+	if req, _ := http.NewRequest("GET", url, nil); req != nil {
+		if resp, err := client.Do(ctx, req); err == nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if resp.ProtoMajor != 2 {
+			b.Fatalf("expected HTTP/2, got %s", resp.Proto)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+}
+
+func BenchmarkHTTP1TLS_NetHTTP_SmallResponse(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientH1Only() // TLS, but ALPN forced to h1
+	ctx := context.Background()
+	url := server.URL + "/v1/"
+
+	if req, _ := http.NewRequest("GET", url, nil); req != nil {
+		if resp, err := client.Do(ctx, req); err == nil {
+			io.Copy(io.Discard, resp.Body)
+			resp.Body.Close()
+		}
+	}
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
+		if resp.ProtoMajor != 1 {
+			b.Fatalf("expected HTTP/1.x, got %s", resp.Proto)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+}
+
+func BenchmarkHTTP2_NetHTTP_LargeResponse(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientTLS()
+	ctx := context.Background()
+	url := server.URL + "/v1/resources"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+}
+
+func BenchmarkHTTP1TLS_NetHTTP_LargeResponse(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientH1Only()
+	ctx := context.Background()
+	url := server.URL + "/v1/resources"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(ctx, req)
+		if err != nil {
+			b.Fatal(err)
+		}
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+}
+
+// Burst tests over TLS — measures HTTP/2 multiplexing (one connection, many
+// concurrent streams) against HTTP/1.1 keepalive (connection pool).
+
+func BenchmarkHTTP2_NetHTTP_Burst100(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientTLS()
+	ctx := context.Background()
+	url := server.URL + "/v1/"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var wg sync.WaitGroup
+		wg.Add(100)
+		for j := 0; j < 100; j++ {
+			go func() {
+				defer wg.Done()
+				req, _ := http.NewRequest("GET", url, nil)
+				resp, err := client.Do(ctx, req)
+				if err != nil {
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}()
+		}
+		wg.Wait()
+	}
+}
+
+func BenchmarkHTTP1TLS_NetHTTP_Burst100(b *testing.B) {
+	server := newTestServerH2()
+	defer server.Close()
+
+	client := NewTunedHTTPClientH1Only()
+	ctx := context.Background()
+	url := server.URL + "/v1/"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		var wg sync.WaitGroup
+		wg.Add(100)
+		for j := 0; j < 100; j++ {
+			go func() {
+				defer wg.Done()
+				req, _ := http.NewRequest("GET", url, nil)
+				resp, err := client.Do(ctx, req)
+				if err != nil {
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}()
+		}
+		wg.Wait()
+	}
+}
+
