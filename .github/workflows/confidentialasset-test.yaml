@@ -26,11 +26,6 @@ on:
       - ".github/workflows/codecov.yaml"
       - ".github/actions/setup-confidential-bindings/**"
 
-env:
-  # TODO(正式发布前删除): logan/go-only-ffi-go 暂在 fork；合并进 aptos-labs 后改 repository/ref 并删本段。
-  CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY: WGB5445/confidential-asset-bindings
-  CONFIDENTIAL_ASSET_BINDINGS_REF: logan/go-only-ffi-go
-
 jobs:
   confidentialasset-nocgo:
     name: v2 confidentialasset (CGO off)
@@ -46,8 +41,8 @@ jobs:
       - name: Checkout confidential-asset-bindings (go mod replace)
         uses: ./.github/actions/setup-confidential-bindings
         with:
-          repository: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY }}
-          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
+          repository: aptos-labs/confidential-asset-bindings
+          ref: main
 
       - name: go test -short (CGO_ENABLED=0, exclude native)
         working-directory: v2
@@ -73,8 +68,8 @@ jobs:
       - name: Checkout confidential-asset-bindings (go mod replace)
         uses: ./.github/actions/setup-confidential-bindings
         with:
-          repository: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY }}
-          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
+          repository: aptos-labs/confidential-asset-bindings
+          ref: main
 
       - name: Build aptos_confidential_asset_ffi (libaptos_confidential_asset_ffi.a for Go CGO)
         working-directory: confidential-asset-bindings/rust

@@ -1,4 +1,3 @@
-# TODO(正式发布前删除): 与 codecov 中固定 ref/repository 一并移除；正式发版后改用已发布的 bindings/go 模块。
 name: "Setup confidential-asset-bindings for v2"
 description: |
   Check out confidential-asset-bindings and point v2/go.mod replace at bindings/go
@@ -12,7 +11,8 @@ inputs:
     default: aptos-labs/confidential-asset-bindings
   ref:
     description: "Git ref (branch, tag, or SHA) to checkout"
-    required: true
+    required: false
+    default: main
 
 runs:
   using: composite

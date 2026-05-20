@@ -9,9 +9,6 @@ on:
 
 env:
   GIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
-  # TODO(正式发布前删除): bindings 分支暂在 fork WGB5445；合并进 aptos-labs 后改 repository/ref。
-  CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY: WGB5445/confidential-asset-bindings
-  CONFIDENTIAL_ASSET_BINDINGS_REF: logan/go-only-ffi-go
 
 jobs:
   coverage:
@@ -46,8 +43,8 @@ jobs:
       - name: Checkout confidential-asset-bindings (for v2 replace)
         uses: ./.github/actions/setup-confidential-bindings
         with:
-          repository: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REPOSITORY }}
-          ref: ${{ env.CONFIDENTIAL_ASSET_BINDINGS_REF }}
+          repository: aptos-labs/confidential-asset-bindings
+          ref: main
 
       - uses: dtolnay/rust-toolchain@stable
 
