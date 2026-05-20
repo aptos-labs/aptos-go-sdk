@@ -11,7 +11,8 @@ func TestNewClient_options(t *testing.T) {
 	t.Parallel()
 	fc := testutil.NewFakeClient()
 	mod := aptos.MustParseAddress("0x2")
-	cc := NewClient(fc,
+	cc := NewClient(
+		fc,
 		WithModuleAddress(mod),
 		WithFeePayer(true),
 		WithRESTBaseURL("https://example.com/v1/"),

@@ -144,11 +144,11 @@ func cipherViewFunc8(ek []byte, amount uint64) (func(context.Context, *aptos.Vie
 
 type wrongSigner struct{ aptos.AccountAddress }
 
-func (w wrongSigner) Address() aptos.AccountAddress { return w.AccountAddress }
+func (w wrongSigner) Address() aptos.AccountAddress                    { return w.AccountAddress }
 func (w wrongSigner) Sign([]byte) (*aptos.AccountAuthenticator, error) { return nil, nil }
-func (w wrongSigner) SignMessage([]byte) (aptos.Signature, error)       { return nil, nil }
+func (w wrongSigner) SignMessage([]byte) (aptos.Signature, error)      { return nil, nil }
 func (w wrongSigner) SimulationAuthenticator() *aptos.AccountAuthenticator {
 	return nil
 }
 func (w wrongSigner) AuthKey() *aptos.AuthenticationKey { return nil }
-func (w wrongSigner) PubKey() aptos.PublicKey             { return nil }
+func (w wrongSigner) PubKey() aptos.PublicKey           { return nil }

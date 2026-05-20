@@ -70,11 +70,11 @@ func TestRotateEncryptionKey_submit(t *testing.T) {
 
 type wrongSigner struct{ aptos.AccountAddress }
 
-func (w wrongSigner) Address() aptos.AccountAddress { return w.AccountAddress }
+func (w wrongSigner) Address() aptos.AccountAddress                    { return w.AccountAddress }
 func (w wrongSigner) Sign([]byte) (*aptos.AccountAuthenticator, error) { return nil, nil }
-func (w wrongSigner) SignMessage([]byte) (aptos.Signature, error)       { return nil, nil }
+func (w wrongSigner) SignMessage([]byte) (aptos.Signature, error)      { return nil, nil }
 func (w wrongSigner) SimulationAuthenticator() *aptos.AccountAuthenticator {
 	return nil
 }
 func (w wrongSigner) AuthKey() *aptos.AuthenticationKey { return nil }
-func (w wrongSigner) PubKey() aptos.PublicKey             { return nil }
+func (w wrongSigner) PubKey() aptos.PublicKey           { return nil }
