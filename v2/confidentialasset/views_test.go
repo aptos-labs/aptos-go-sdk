@@ -53,3 +53,23 @@ func Test_viewBool(t *testing.T) {
 		t.Fatal("expected error for int")
 	}
 }
+
+func Test_viewToJSONArray_singleObject(t *testing.T) {
+	t.Parallel()
+	arr, err := viewToJSONArray([]any{map[string]any{"k": true}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(arr) != 1 {
+		t.Fatalf("len=%d", len(arr))
+	}
+}
+
+func Test_viewToJSONArray_invalid(t *testing.T) {
+	t.Parallel()
+	ch := make(chan int)
+	_, err := viewToJSONArray([]any{ch})
+	if err == nil {
+		t.Fatal("expected marshal error")
+	}
+}
