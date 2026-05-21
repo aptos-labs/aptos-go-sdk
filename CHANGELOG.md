@@ -5,6 +5,14 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.13.0 (5/5/2026)
+
+- [`Fix`] Fix deserialization of extra transaction config
+- [`Fix`] Add bounds checks to `ConvertToU128`/`U256`/`I128`/`I256` — oversized or negative values now return an error instead of silently passing through
+- [`Fix`] Fix `AccountTransactions` pagination underflow at sequence 0 — no longer panics or returns incorrect results at the first page boundary
+- [`Fix`] Improve type tag parse error messages to include the bad input string
+- [`Docs`] Add AGENTS.md with Cursor Cloud development instructions
+
 # v1.12.1 (3/18/2026)
 
 - [`Fix`] properly closing client responses on errors
