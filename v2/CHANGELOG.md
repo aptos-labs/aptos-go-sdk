@@ -5,7 +5,13 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v2.1.0 (5/21/2026)
+
+- [`Fix`] Fix critical signing bug in transaction authentication
+- [`Fix`] Fix entry-function argument BCS encoding and ANS payloads
+- [`Fix`] Stringify `uint64` view function arguments correctly
 - [`Fix`] Increase default max gas amount by 10x from 200,000 to 2,000,000
+- [`Security`] Upgrade OpenTelemetry SDK from 1.39.0 to 1.43.0
 
 # v2.0.0 (2/25/2026)
 
