@@ -3,6 +3,7 @@ package fasthttp
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -12,6 +13,7 @@ import (
 )
 
 func TestDoer_GET(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			t.Errorf("method = %s, want GET", r.Method)
@@ -53,6 +55,7 @@ func TestDoer_GET(t *testing.T) {
 }
 
 func TestDoer_POSTWithBody(t *testing.T) {
+	t.Parallel()
 	want := []byte(`{"hello":"world"}`)
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		got, _ := io.ReadAll(r.Body)
@@ -79,6 +82,7 @@ func TestDoer_POSTWithBody(t *testing.T) {
 }
 
 func TestDoer_ContextCancellation(t *testing.T) {
+	t.Parallel()
 	// Slow server: holds the request for longer than the context allows.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(500 * time.Millisecond)
@@ -96,13 +100,16 @@ func TestDoer_ContextCancellation(t *testing.T) {
 	defer cancel()
 
 	start := time.Now()
-	_, err = d.Do(ctx, req)
+	resp, err := d.Do(ctx, req)
 	elapsed := time.Since(start)
 
+	if resp != nil {
+		resp.Body.Close()
+	}
 	if err == nil {
 		t.Fatal("expected context cancellation error, got nil")
 	}
-	if !strings.Contains(err.Error(), "context") && err != context.DeadlineExceeded {
+	if !strings.Contains(err.Error(), "context") && !errors.Is(err, context.DeadlineExceeded) {
 		t.Errorf("expected context-related error, got: %v", err)
 	}
 	if elapsed > 250*time.Millisecond {
@@ -111,6 +118,7 @@ func TestDoer_ContextCancellation(t *testing.T) {
 }
 
 func TestDoer_NonOKStatus(t *testing.T) {
+	t.Parallel()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "nope", http.StatusBadRequest)
 	}))

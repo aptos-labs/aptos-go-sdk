@@ -1,16 +1,12 @@
-// Package fasthttp provides a fasthttp-backed [aptos.HTTPDoer] for the v2 SDK.
+// Package fasthttp provides an optional fasthttp-backed [HTTPDoer] for the
+// Aptos Go SDK v2. It is a separate module so the fasthttp dependency is never
+// pulled in by users who don't opt in.
 //
-// fasthttp uses a connection-pooled HTTP/1.1 implementation that avoids most of
-// the per-request allocation overhead in net/http. Benchmarks against an Aptos-
-// shaped JSON endpoint show roughly half the allocations and ~30% lower wall
-// time per request versus the stdlib client. See v2/benchmark for numbers.
+// To use it, add the module to your project:
 //
-// fasthttp does not implement HTTP/2; HTTP/2 endpoints are reached over
-// HTTP/1.1 via ALPN negotiation. For typical SDK workloads (sequential REST
-// calls against a fullnode) this is preferable, because Go's HTTP/2 stack
-// carries notable per-request overhead.
+//	go get github.com/aptos-labs/aptos-go-sdk/v2/fasthttp
 //
-// Usage:
+// Then wire it into the SDK client:
 //
 //	import (
 //	    aptos "github.com/aptos-labs/aptos-go-sdk/v2"
@@ -21,6 +17,18 @@
 //	    aptos.WithNetwork(aptos.DevnetConfig),
 //	    aptos.WithHTTPClient(fasthttpdoer.New()),
 //	)
+//
+// # Why fasthttp over net/http
+//
+// fasthttp uses a connection-pooled HTTP/1.1 implementation that avoids most
+// per-request allocation overhead in net/http. Benchmarks against an
+// Aptos-shaped JSON endpoint show roughly half the allocations and ~30% lower
+// wall time per request versus the stdlib default client.
+//
+// fasthttp does not implement HTTP/2. For typical SDK workloads (sequential
+// REST calls against a fullnode) this is fine: Go's HTTP/2 stack carries
+// measurable per-request overhead for the small sequential requests the SDK
+// issues, and Aptos fullnodes serve HTTP/1.1 over TLS in practice.
 package fasthttp
 
 import (
@@ -147,10 +155,10 @@ func (d *Doer) Do(ctx context.Context, req *http.Request) (*http.Response, error
 	if err != nil {
 		// On error including ctx cancellation, fresp is released here unless
 		// it's owned by a drainer goroutine (see cancellation path).
-		if err != errCancelled {
+		if !errors.Is(err, errCancelled) {
 			fasthttp.ReleaseResponse(fresp)
 		}
-		if err == errCancelled {
+		if errors.Is(err, errCancelled) {
 			return nil, ctx.Err()
 		}
 		return nil, err
@@ -171,9 +179,9 @@ func (d *Doer) Do(ctx context.Context, req *http.Request) (*http.Response, error
 		ContentLength: int64(len(body)),
 		Request:       req,
 	}
-	fresp.Header.VisitAll(func(k, v []byte) {
+	for k, v := range fresp.Header.All() {
 		resp.Header.Add(string(k), string(v))
-	})
+	}
 
 	return resp, nil
 }
