@@ -1,10 +1,10 @@
 //go:build benchmark
 
-// Package benchmark contains HTTP client benchmarks for the v2 SDK.
+// Package benchmark contains HTTP client benchmarks for the v1 SDK.
 //
-// This mirrors benchmark/http_bench_test.go (v1) so the two SDKs can be
-// compared apples-to-apples. The structure of the cases (Default / Tuned,
-// over HTTP/1.1 plain, HTTP/1.1+TLS, and HTTP/2+TLS) matches the v1 file.
+// This mirrors v2/benchmark/http_bench_test.go so the two SDKs can be compared
+// apples-to-apples. The structure of the cases (Default / Tuned, over HTTP/1.1
+// plain, HTTP/1.1+TLS, and HTTP/2+TLS) matches the equivalent cases in v2.
 //
 // Run with: go test -tags=benchmark -bench=. ./benchmark/...
 //
@@ -13,8 +13,8 @@
 // TIME_WAIT for ~60s). If that happens, run the TLS cases in a separate
 // invocation, e.g.
 //
-//	go test -tags=benchmark -bench='^BenchmarkHTTP_'      -run=^$ ./benchmark/...
-//	go test -tags=benchmark -bench='^BenchmarkHTTP[12]'   -run=^$ ./benchmark/...
+//	go test -tags=benchmark -bench='^BenchmarkV1HTTP_'      -run=^$ ./benchmark/...
+//	go test -tags=benchmark -bench='^BenchmarkV1HTTP[12]'   -run=^$ ./benchmark/...
 package benchmark
 
 import (
@@ -166,7 +166,7 @@ func (n *netHTTPClient) get(ctx context.Context, url string) error {
 // HTTP/1.1 plain
 // ============================================================================
 
-func BenchmarkHTTP_Default_SmallResponse(b *testing.B) {
+func BenchmarkV1HTTP_Default_SmallResponse(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newDefault()
@@ -180,7 +180,7 @@ func BenchmarkHTTP_Default_SmallResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP_Tuned_SmallResponse(b *testing.B) {
+func BenchmarkV1HTTP_Tuned_SmallResponse(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newTuned()
@@ -194,7 +194,7 @@ func BenchmarkHTTP_Tuned_SmallResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP_Default_LargeResponse(b *testing.B) {
+func BenchmarkV1HTTP_Default_LargeResponse(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newDefault()
@@ -208,7 +208,7 @@ func BenchmarkHTTP_Default_LargeResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP_Tuned_LargeResponse(b *testing.B) {
+func BenchmarkV1HTTP_Tuned_LargeResponse(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newTuned()
@@ -222,7 +222,7 @@ func BenchmarkHTTP_Tuned_LargeResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP_Default_Burst100(b *testing.B) {
+func BenchmarkV1HTTP_Default_Burst100(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newDefault()
@@ -242,7 +242,7 @@ func BenchmarkHTTP_Default_Burst100(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP_Tuned_Burst100(b *testing.B) {
+func BenchmarkV1HTTP_Tuned_Burst100(b *testing.B) {
 	srv := newTestServer()
 	defer srv.Close()
 	c := newTuned()
@@ -266,7 +266,7 @@ func BenchmarkHTTP_Tuned_Burst100(b *testing.B) {
 // TLS / HTTP-2
 // ============================================================================
 
-func BenchmarkHTTP2_NetHTTP_SmallResponse(b *testing.B) {
+func BenchmarkV1HTTP2_NetHTTP_SmallResponse(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedTLS()
@@ -281,7 +281,7 @@ func BenchmarkHTTP2_NetHTTP_SmallResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP1TLS_NetHTTP_SmallResponse(b *testing.B) {
+func BenchmarkV1HTTP1TLS_NetHTTP_SmallResponse(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedH1Only()
@@ -296,7 +296,7 @@ func BenchmarkHTTP1TLS_NetHTTP_SmallResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP2_NetHTTP_LargeResponse(b *testing.B) {
+func BenchmarkV1HTTP2_NetHTTP_LargeResponse(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedTLS()
@@ -310,7 +310,7 @@ func BenchmarkHTTP2_NetHTTP_LargeResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP1TLS_NetHTTP_LargeResponse(b *testing.B) {
+func BenchmarkV1HTTP1TLS_NetHTTP_LargeResponse(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedH1Only()
@@ -324,7 +324,7 @@ func BenchmarkHTTP1TLS_NetHTTP_LargeResponse(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP2_NetHTTP_Burst100(b *testing.B) {
+func BenchmarkV1HTTP2_NetHTTP_Burst100(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedTLS()
@@ -341,7 +341,7 @@ func BenchmarkHTTP2_NetHTTP_Burst100(b *testing.B) {
 	}
 }
 
-func BenchmarkHTTP1TLS_NetHTTP_Burst100(b *testing.B) {
+func BenchmarkV1HTTP1TLS_NetHTTP_Burst100(b *testing.B) {
 	srv := newTestServerH2()
 	defer srv.Close()
 	c := newTunedH1Only()
