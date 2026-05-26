@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.14.0 (5/26/2026)
+
 - [`Security`] Upgrade Go toolchain from go1.24.2 to go1.25.10, resolving 37 stdlib CVEs (Go 1.24 is EOL)
 - [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.52.0
 - [`Security`] Upgrade `github.com/decred/dcrd/dcrec/secp256k1/v4` v4.4.0 → v4.4.1

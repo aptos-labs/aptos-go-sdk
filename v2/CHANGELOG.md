@@ -5,11 +5,13 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v2.2.0 (5/26/2026)
+
 - [`Security`] Upgrade Go toolchain from go1.25.0 to go1.25.10, resolving 18 stdlib CVEs
 - [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.52.0
 - [`Security`] Upgrade `github.com/decred/dcrd/dcrec/secp256k1/v4` v4.4.0 → v4.4.1
 - [`Dependency`] Upgrade `filippo.io/edwards25519` v1.1.1 → v1.2.0
-- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.11.0 → v1.13.0
+- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.11.0 → v1.14.0
 - [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.14.4 → v0.15.1
 - [`Dependency`] Upgrade `golang.org/x/sys` v0.42.0 → v0.45.0
 
