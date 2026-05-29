@@ -24,6 +24,13 @@ type FakeClient struct {
 	transactions map[string]*aptos.Transaction
 	blocks       map[uint64]*aptos.Block
 
+	// View function stubbing. viewResults is keyed by either the bare
+	// function name ("balance") or the fully-qualified name
+	// ("0x1::coin::balance"). viewFunc, when set, takes precedence and is
+	// consulted for every View call.
+	viewResults map[string][]any
+	viewFunc    func(*aptos.ViewPayload) ([]any, error)
+
 	// Error simulation
 	errors map[string]error
 
@@ -47,6 +54,7 @@ func NewFakeClient() *FakeClient {
 		balances:     make(map[aptos.AccountAddress]uint64),
 		transactions: make(map[string]*aptos.Transaction),
 		blocks:       make(map[uint64]*aptos.Block),
+		viewResults:  make(map[string][]any),
 		errors:       make(map[string]error),
 		nodeInfo: &aptos.NodeInfo{
 			ChainID:       4,
@@ -118,6 +126,26 @@ func (c *FakeClient) WithBlock(block *aptos.Block) *FakeClient {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.blocks[block.BlockHeight] = block
+	return c
+}
+
+// WithViewResult stubs the result returned by View for a given function.
+// The function may be specified either by bare name ("get_target_addr") or
+// fully-qualified ("0x1::coin::balance"); View checks the fully-qualified
+// name first, then the bare name.
+func (c *FakeClient) WithViewResult(function string, result []any) *FakeClient {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.viewResults[function] = result
+	return c
+}
+
+// WithViewFunc sets a callback that is consulted for every View call. When
+// set it takes precedence over any results configured via WithViewResult.
+func (c *FakeClient) WithViewFunc(fn func(*aptos.ViewPayload) ([]any, error)) *FakeClient {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.viewFunc = fn
 	return c
 }
 
@@ -442,6 +470,27 @@ func (c *FakeClient) View(ctx context.Context, payload *aptos.ViewPayload, opts 
 	c.record("View", payload)
 	if err := c.getError("View"); err != nil {
 		return nil, err
+	}
+
+	c.mu.RLock()
+	fn := c.viewFunc
+	var (
+		result []any
+		ok     bool
+	)
+	if payload != nil {
+		fullName := payload.Module.String() + "::" + payload.Function
+		if result, ok = c.viewResults[fullName]; !ok {
+			result, ok = c.viewResults[payload.Function]
+		}
+	}
+	c.mu.RUnlock()
+
+	if fn != nil {
+		return fn(payload)
+	}
+	if ok {
+		return result, nil
 	}
 	// Return empty result by default
 	return []any{}, nil

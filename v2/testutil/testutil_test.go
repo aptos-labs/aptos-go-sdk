@@ -640,3 +640,47 @@ func TestFakeClient_View_Error(t *testing.T) {
 	_, err := client.View(ctx, &aptos.ViewPayload{})
 	assert.ErrorIs(t, err, aptos.ErrNotFound)
 }
+
+func TestFakeClient_View_StubbedByBareName(t *testing.T) {
+	t.Parallel()
+	client := NewFakeClient().WithViewResult("balance", []any{"12345"})
+	ctx := context.Background()
+
+	result, err := client.View(ctx, &aptos.ViewPayload{
+		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"},
+		Function: "balance",
+	})
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "12345", result[0])
+}
+
+func TestFakeClient_View_StubbedByFullName(t *testing.T) {
+	t.Parallel()
+	client := NewFakeClient().WithViewResult("0x1::coin::balance", []any{"42"})
+	ctx := context.Background()
+
+	result, err := client.View(ctx, &aptos.ViewPayload{
+		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"},
+		Function: "balance",
+	})
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "42", result[0])
+}
+
+func TestFakeClient_View_Func(t *testing.T) {
+	t.Parallel()
+	client := NewFakeClient().WithViewFunc(func(p *aptos.ViewPayload) ([]any, error) {
+		return []any{p.Function}, nil
+	})
+	ctx := context.Background()
+
+	result, err := client.View(ctx, &aptos.ViewPayload{
+		Module:   aptos.ModuleID{Address: aptos.AccountOne, Name: "coin"},
+		Function: "supply",
+	})
+	require.NoError(t, err)
+	require.Len(t, result, 1)
+	assert.Equal(t, "supply", result[0])
+}
