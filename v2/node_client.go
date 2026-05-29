@@ -50,6 +50,11 @@ func newNodeClient(config *ClientConfig) (*nodeClient, error) {
 		logger = slog.Default()
 	}
 
+	// Apply retry / rate-limit handling middleware when configured. This is a
+	// no-op wrapper (returns httpClient unchanged) when neither WithRetry,
+	// WithRetryConfig, nor WithRateLimitHandling were supplied.
+	httpClient = newRetryHTTPClient(httpClient, config.retryConfig, config.rateLimitConfig, logger)
+
 	return &nodeClient{
 		config:     config,
 		httpClient: httpClient,
