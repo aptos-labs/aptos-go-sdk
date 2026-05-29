@@ -520,6 +520,35 @@ func (a *Ed25519TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
 	a.Sender.Auth = auth
 }
 
+// MultiEd25519TransactionAuthenticator wraps a MultiEd25519 AccountAuthenticator
+// using the legacy on-chain multisig scheme (TransactionAuthenticator variant 1).
+// It serializes the inner MultiEd25519 public key and signature directly, without
+// an AccountAuthenticator variant prefix, matching the legacy layout (mirroring
+// Ed25519TransactionAuthenticator).
+type MultiEd25519TransactionAuthenticator struct {
+	Sender *AccountAuthenticator
+}
+
+func (a *MultiEd25519TransactionAuthenticator) Verify(msg []byte) bool {
+	return a.Sender.Verify(msg)
+}
+
+func (a *MultiEd25519TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	ser.Uleb128(uint32(TransactionAuthenticatorVariantMultiEd25519))
+	// For MultiEd25519, serialize the inner authenticator (public key +
+	// signature) without the AccountAuthenticator variant prefix.
+	a.Sender.Auth.MarshalBCS(ser)
+}
+
+func (a *MultiEd25519TransactionAuthenticator) UnmarshalBCS(des *bcs.Deserializer) {
+	a.Sender = &AccountAuthenticator{
+		Variant: AccountAuthenticatorMultiEd25519,
+	}
+	auth := &MultiEd25519Authenticator{}
+	auth.UnmarshalBCS(des)
+	a.Sender.Auth = auth
+}
+
 // serializeAuthenticator serializes an AccountAuthenticator to BCS.
 func serializeAuthenticator(ser *bcs.Serializer, auth *AccountAuthenticator) {
 	if auth == nil {
@@ -537,6 +566,13 @@ func deserializeTransactionAuthenticator(des *bcs.Deserializer) TransactionAuthe
 		auth := &Ed25519TransactionAuthenticator{}
 		auth.Sender = &AccountAuthenticator{Variant: AccountAuthenticatorEd25519}
 		inner := &Ed25519Authenticator{}
+		inner.UnmarshalBCS(des)
+		auth.Sender.Auth = inner
+		return auth
+	case TransactionAuthenticatorVariantMultiEd25519:
+		auth := &MultiEd25519TransactionAuthenticator{}
+		auth.Sender = &AccountAuthenticator{Variant: AccountAuthenticatorMultiEd25519}
+		inner := &MultiEd25519Authenticator{}
 		inner.UnmarshalBCS(des)
 		auth.Sender.Auth = inner
 		return auth
