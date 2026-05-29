@@ -2,6 +2,7 @@ package account
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/crypto"
@@ -417,17 +418,21 @@ func TestAccountToAIP80(t *testing.T) {
 	}
 }
 
-func TestSecp256k1ToAIP80_NotSupported(t *testing.T) {
+func TestSecp256k1ToAIP80_Supported(t *testing.T) {
 	t.Parallel()
 	acc, err := NewSecp256k1()
 	if err != nil {
 		t.Fatalf("NewSecp256k1() error = %v", err)
 	}
 
-	// Secp256k1 wrapped in SingleSigner doesn't support ToAIP80
-	_, err = acc.ToAIP80()
-	if err == nil {
-		t.Error("Expected error for SingleSigner ToAIP80")
+	// Secp256k1 wrapped in SingleSigner now exports correctly by unwrapping
+	// the inner private key.
+	aip80Key, err := acc.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() error = %v", err)
+	}
+	if !strings.HasPrefix(aip80Key, "secp256k1-priv-") {
+		t.Errorf("expected secp256k1-priv- prefix, got %q", aip80Key)
 	}
 }
 
@@ -557,6 +562,66 @@ func TestFromAIP80_Secp256k1(t *testing.T) {
 	}
 	if !auth.Verify(msg) {
 		t.Error("Signature from AIP-80 Secp256k1 account should verify")
+	}
+}
+
+func TestToAIP80_Secp256k1RoundTrip(t *testing.T) {
+	t.Parallel()
+
+	// Secp256k1 accounts wrap the key in a SingleSigner. ToAIP80 must unwrap
+	// it rather than failing (which was the previous behavior).
+	original, err := NewSecp256k1()
+	if err != nil {
+		t.Fatalf("NewSecp256k1() error = %v", err)
+	}
+
+	aip80Key, err := original.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() error = %v", err)
+	}
+	if !strings.HasPrefix(aip80Key, "secp256k1-priv-") {
+		t.Errorf("expected secp256k1-priv- prefix, got %q", aip80Key)
+	}
+
+	acc, err := FromAIP80(aip80Key)
+	if err != nil {
+		t.Fatalf("FromAIP80() error = %v", err)
+	}
+	if !bytes.Equal(original.AuthKey()[:], acc.AuthKey()[:]) {
+		t.Error("AuthKey mismatch after ToAIP80/FromAIP80 round trip")
+	}
+}
+
+func TestToAIP80_Ed25519SingleKeyRoundTrip(t *testing.T) {
+	t.Parallel()
+
+	// Ed25519 created via the SingleKey scheme is also wrapped in a
+	// SingleSigner and must export correctly.
+	original, err := NewEd25519SingleKey()
+	if err != nil {
+		t.Fatalf("NewEd25519SingleKey() error = %v", err)
+	}
+
+	aip80Key, err := original.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() error = %v", err)
+	}
+	if !strings.HasPrefix(aip80Key, "ed25519-priv-") {
+		t.Errorf("expected ed25519-priv- prefix, got %q", aip80Key)
+	}
+
+	acc, err := FromAIP80(aip80Key)
+	if err != nil {
+		t.Fatalf("FromAIP80() error = %v", err)
+	}
+	// FromAIP80 reconstructs an Ed25519 account using the legacy scheme, so
+	// the auth keys differ; the underlying private key bytes are what matter.
+	reExported, err := acc.ToAIP80()
+	if err != nil {
+		t.Fatalf("ToAIP80() (reconstructed) error = %v", err)
+	}
+	if reExported != aip80Key {
+		t.Errorf("private key changed across round trip: %q != %q", reExported, aip80Key)
 	}
 }
 

@@ -240,21 +240,29 @@ func FromAIP80(aip80Key string) (*Account, error) {
 	}
 }
 
+// aip80Exporter is implemented by private key types that can serialize
+// themselves to an AIP-80 formatted string (e.g. Ed25519PrivateKey,
+// Secp256k1PrivateKey).
+type aip80Exporter interface {
+	ToAIP80() (string, error)
+}
+
 // ToAIP80 returns the account's private key as an AIP-80 formatted string.
-// Returns an error if the underlying key type doesn't support AIP-80 format.
+// Returns an error if the underlying key type doesn't support AIP-80 format
+// (for example, keyless or multi-key signers that have no single private key).
 func (a *Account) ToAIP80() (string, error) {
-	// Handle Ed25519 directly
-	if ed25519Key, ok := a.signer.(*crypto.Ed25519PrivateKey); ok {
-		return ed25519Key.ToAIP80()
+	// Private keys used directly as the signer (e.g. legacy Ed25519).
+	if exporter, ok := a.signer.(aip80Exporter); ok {
+		return exporter.ToAIP80()
 	}
 
-	// Handle Secp256k1 directly (wrapped in SingleSigner)
-	// SingleSigner's inner field is private, so we need to check if the
-	// signer produces a Secp256k1 public key
-
-	// For now, we need to type assert or use a different approach
-	// The cleanest solution is to add a method to extract the private key
-	// but that requires changes to internal/crypto
+	// Keys wrapped in a SingleSigner (e.g. Secp256k1, or Ed25519 created via
+	// NewEd25519SingleKey). Unwrap to reach the underlying private key.
+	if single, ok := a.signer.(*crypto.SingleSigner); ok {
+		if exporter, ok := single.Inner().(aip80Exporter); ok {
+			return exporter.ToAIP80()
+		}
+	}
 
 	return "", errors.New("signer does not support AIP-80 format export")
 }
