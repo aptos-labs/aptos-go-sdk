@@ -12,7 +12,7 @@ Each has its own `go.mod` and must be managed independently (`go mod tidy`, `go 
 ### Running tests
 
 - **Unit tests only** (no network needed): `go test -short ./...` (run from root for v1, from `v2/` for v2)
-- **Full v1 tests** require a local Aptos testnet via `aptos node run-localnet --with-indexer-api` (Aptos CLI not pre-installed in cloud VMs)
+- **Full v1 tests** require a local Aptos testnet via `aptos node run-localnet --with-indexer-api` (Aptos CLI and Docker are not pre-installed in cloud VMs)
 - **v2 integration tests** hit public Aptos networks (no local infra needed): from `v2/`, run `go test -v -run "TestIntegration_" -timeout 120s ./...`
 - **v2 faucet tests** require env var: from `v2/`, run `APTOS_TEST_FAUCET=1 go test -v -run "TestIntegrationFaucet_" ./...`
 
