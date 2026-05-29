@@ -2,9 +2,11 @@ package aptos
 
 import (
 	"context"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -189,4 +191,181 @@ func TestNewRetryHTTPClient_NoConfigReturnsInner(t *testing.T) {
 
 	got = newRetryHTTPClient(inner, nil, &RateLimitConfig{Enabled: false}, nil)
 	assert.Same(t, inner, got, "disabled rate limiting should return the inner client unchanged")
+}
+
+// errDoer is an HTTPDoer that returns a fixed error for the first failN calls,
+// then delegates to a success response.
+type errDoer struct {
+	failN   int
+	calls   int32
+	mkResp  func() *http.Response
+	lastErr error
+}
+
+func (d *errDoer) Do(_ context.Context, _ *http.Request) (*http.Response, error) {
+	n := atomic.AddInt32(&d.calls, 1)
+	if int(n) <= d.failN {
+		d.lastErr = errors.New("simulated network error")
+		return nil, d.lastErr
+	}
+	return d.mkResp(), nil
+}
+
+func okResponse() *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body:       io.NopCloser(strings.NewReader(`{"chain_id":4}`)),
+		Header:     make(http.Header),
+	}
+}
+
+func TestRetry_NetworkErrorIsRetried(t *testing.T) {
+	t.Parallel()
+	doer := &errDoer{failN: 2, mkResp: okResponse}
+	client, err := newNodeClient(&ClientConfig{
+		network:     NetworkConfig{NodeURL: "http://example.invalid/v1", ChainID: 4},
+		httpClient:  doer,
+		retryConfig: &RetryConfig{MaxRetries: 3, InitialBackoff: time.Millisecond, BackoffMultiplier: 2, MaxBackoff: time.Second},
+	})
+	require.NoError(t, err)
+
+	info, err := client.Info(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(4), info.ChainID)
+	assert.Equal(t, int32(3), atomic.LoadInt32(&doer.calls))
+}
+
+func TestRetry_RateLimitOnly_DoesNotRetryNetworkError(t *testing.T) {
+	t.Parallel()
+	// Rate-limit handling without a retry config must not retry plain network
+	// errors (only 429 responses).
+	doer := &errDoer{failN: 5, mkResp: okResponse}
+	client, err := newNodeClient(&ClientConfig{
+		network:         NetworkConfig{NodeURL: "http://example.invalid/v1", ChainID: 4},
+		httpClient:      doer,
+		rateLimitConfig: &RateLimitConfig{Enabled: true, WaitOnLimit: true, MaxWaitTime: time.Second},
+	})
+	require.NoError(t, err)
+
+	_, err = client.Info(context.Background())
+	require.Error(t, err)
+	assert.Equal(t, int32(1), atomic.LoadInt32(&doer.calls))
+}
+
+func TestRetryHTTPClient_MaxAttempts(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name     string
+		client   *retryHTTPClient
+		expected int
+	}{
+		{"retry with max", &retryHTTPClient{retry: &RetryConfig{MaxRetries: 3}}, 4},
+		{"rate-limit only", &retryHTTPClient{rateLimit: &RateLimitConfig{Enabled: true}}, 6},
+		{"neither", &retryHTTPClient{}, 1},
+		{"retry zero", &retryHTTPClient{retry: &RetryConfig{MaxRetries: 0}}, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			assert.Equal(t, tt.expected, tt.client.maxAttempts())
+		})
+	}
+}
+
+func TestRetryHTTPClient_RetryAfter(t *testing.T) {
+	t.Parallel()
+	c := &retryHTTPClient{rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true, MaxWaitTime: 5 * time.Second}}
+
+	cases := []struct {
+		name   string
+		header string
+		want   time.Duration
+	}{
+		{"absent header", "", 0},
+		{"unparseable header", "not-a-number", 0},
+		{"negative header", "-3", 0},
+		{"valid header", "2", 2 * time.Second},
+		{"capped at MaxWaitTime", "100", 5 * time.Second},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			h := make(http.Header)
+			if tc.header != "" {
+				h.Set("Retry-After", tc.header)
+			}
+			resp := &http.Response{Header: h, Body: http.NoBody}
+			defer func() { _ = resp.Body.Close() }()
+			assert.Equal(t, tc.want, c.retryAfter(resp))
+		})
+	}
+}
+
+func TestRetryHTTPClient_ShouldRetry(t *testing.T) {
+	t.Parallel()
+
+	// Network error: retried only when retry is configured.
+	withRetry := &retryHTTPClient{retry: DefaultRetryConfig()}
+	retry, _ := withRetry.shouldRetry(nil, errors.New("boom"))
+	assert.True(t, retry)
+
+	rateOnly := &retryHTTPClient{rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true}}
+	retry, _ = rateOnly.shouldRetry(nil, errors.New("boom"))
+	assert.False(t, retry, "rate-limit-only must not retry network errors")
+
+	// nil response, no error.
+	retry, _ = withRetry.shouldRetry(nil, nil)
+	assert.False(t, retry)
+
+	// 429 with rate-limit handling.
+	resp429 := &http.Response{StatusCode: http.StatusTooManyRequests, Header: make(http.Header)}
+	retry, _ = rateOnly.shouldRetry(resp429, nil)
+	assert.True(t, retry)
+
+	// Non-retriable success.
+	resp200 := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header)}
+	retry, _ = withRetry.shouldRetry(resp200, nil)
+	assert.False(t, retry)
+}
+
+func TestRetryHTTPClient_Backoff(t *testing.T) {
+	t.Parallel()
+
+	// Rate-limit-only mode (no retry config) uses a small fixed base.
+	rateOnly := &retryHTTPClient{rateLimit: &RateLimitConfig{Enabled: true}}
+	assert.Equal(t, 100*time.Millisecond, rateOnly.backoff(1))
+
+	// Zero/negative config values fall back to defaults without panicking.
+	defaulted := &retryHTTPClient{retry: &RetryConfig{InitialBackoff: 0, BackoffMultiplier: 0}}
+	got := defaulted.backoff(1)
+	assert.Positive(t, got)
+
+	// Growth is capped at MaxBackoff.
+	capped := &retryHTTPClient{retry: &RetryConfig{
+		InitialBackoff:    time.Second,
+		BackoffMultiplier: 10,
+		MaxBackoff:        2 * time.Second,
+	}}
+	assert.LessOrEqual(t, capped.backoff(5), 2*time.Second)
+}
+
+func TestRetry_WithRetryConfigOption(t *testing.T) {
+	t.Parallel()
+	handler, count := countingHandler([]int{
+		http.StatusBadGateway,
+		http.StatusOK,
+	}, `{"chain_id":4}`)
+	cfg := &RetryConfig{
+		MaxRetries:           2,
+		InitialBackoff:       time.Millisecond,
+		MaxBackoff:           time.Second,
+		BackoffMultiplier:    2,
+		RetryableStatusCodes: []int{http.StatusBadGateway},
+	}
+	client := newRetryTestClient(t, handler, WithRetryConfig(cfg))
+
+	info, err := client.Info(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(4), info.ChainID)
+	assert.Equal(t, int32(2), atomic.LoadInt32(count))
 }
