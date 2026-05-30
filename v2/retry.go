@@ -27,10 +27,14 @@ type retryHTTPClient struct {
 }
 
 // newRetryHTTPClient builds a retrying HTTPDoer. It returns inner unchanged
-// when neither retry nor rate-limit handling is configured so the common
-// path adds no overhead.
+// unless at least one retry path can actually trigger — i.e. error/status
+// retries are enabled (retry.MaxRetries > 0) or 429 rate-limit handling is
+// enabled (rateLimit.Enabled && rateLimit.WaitOnLimit). This keeps the common
+// path (and any effectively-disabled configuration) free of wrapper overhead.
 func newRetryHTTPClient(inner HTTPDoer, retry *RetryConfig, rateLimit *RateLimitConfig, logger *slog.Logger) HTTPDoer {
-	if retry == nil && (rateLimit == nil || !rateLimit.Enabled) {
+	retryActive := retry != nil && retry.MaxRetries > 0
+	rateLimitActive := rateLimit != nil && rateLimit.Enabled && rateLimit.WaitOnLimit
+	if !retryActive && !rateLimitActive {
 		return inner
 	}
 	if logger == nil {
@@ -81,6 +85,11 @@ func (c *retryHTTPClient) retriesEnabled() bool {
 // Do executes the request, retrying transient failures per the configuration.
 func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
 	attempts := c.maxAttempts()
+
+	// Keep req.Context() consistent with the ctx we pass to the inner doer so
+	// cancellation/timeouts propagate even for a custom HTTPDoer that reads
+	// req.Context() instead of the explicit ctx argument.
+	req = req.WithContext(ctx)
 
 	var resp *http.Response
 	var err error

@@ -183,14 +183,50 @@ func TestRetry_RespectsContextCancellation(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestNewRetryHTTPClient_NoConfigReturnsInner(t *testing.T) {
+func TestNewRetryHTTPClient_ReturnsInnerWhenInactive(t *testing.T) {
 	t.Parallel()
 	inner := &defaultHTTPClient{}
-	got := newRetryHTTPClient(inner, nil, nil, nil)
-	assert.Same(t, inner, got, "no config should return the inner client unchanged")
 
-	got = newRetryHTTPClient(inner, nil, &RateLimitConfig{Enabled: false}, nil)
-	assert.Same(t, inner, got, "disabled rate limiting should return the inner client unchanged")
+	cases := []struct {
+		name      string
+		retry     *RetryConfig
+		rateLimit *RateLimitConfig
+	}{
+		{"no config", nil, nil},
+		{"rate limit disabled", nil, &RateLimitConfig{Enabled: false}},
+		{"rate limit enabled but not waiting", nil, &RateLimitConfig{Enabled: true, WaitOnLimit: false}},
+		{"retry with zero max retries", &RetryConfig{MaxRetries: 0}, nil},
+		{"retry zero and rate limit not waiting", &RetryConfig{MaxRetries: 0}, &RateLimitConfig{Enabled: true, WaitOnLimit: false}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := newRetryHTTPClient(inner, tc.retry, tc.rateLimit, nil)
+			assert.Same(t, inner, got, "inactive config should return the inner client unchanged")
+		})
+	}
+}
+
+func TestNewRetryHTTPClient_WrapsWhenActive(t *testing.T) {
+	t.Parallel()
+	inner := &defaultHTTPClient{}
+
+	cases := []struct {
+		name      string
+		retry     *RetryConfig
+		rateLimit *RateLimitConfig
+	}{
+		{"retries enabled", &RetryConfig{MaxRetries: 1}, nil},
+		{"rate-limit waiting enabled", nil, &RateLimitConfig{Enabled: true, WaitOnLimit: true}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := newRetryHTTPClient(inner, tc.retry, tc.rateLimit, nil)
+			assert.NotSame(t, inner, got, "active config should wrap the inner client")
+			assert.IsType(t, &retryHTTPClient{}, got)
+		})
+	}
 }
 
 // errDoer is an HTTPDoer that returns a fixed error for the first failN calls,
