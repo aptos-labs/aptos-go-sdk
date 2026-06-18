@@ -530,10 +530,19 @@ type MultiEd25519TransactionAuthenticator struct {
 }
 
 func (a *MultiEd25519TransactionAuthenticator) Verify(msg []byte) bool {
+	// Guard against a partially-constructed value (this type is exported, so
+	// callers can build it incorrectly).
+	if a.Sender == nil || a.Sender.Auth == nil {
+		return false
+	}
 	return a.Sender.Verify(msg)
 }
 
 func (a *MultiEd25519TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
+	if a.Sender == nil || a.Sender.Auth == nil {
+		ser.SetError(errors.New("MultiEd25519TransactionAuthenticator: nil sender authenticator"))
+		return
+	}
 	ser.Uleb128(uint32(TransactionAuthenticatorVariantMultiEd25519))
 	// For MultiEd25519, serialize the inner authenticator (public key +
 	// signature) without the AccountAuthenticator variant prefix.

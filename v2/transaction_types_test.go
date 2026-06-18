@@ -624,6 +624,19 @@ func TestMultiEd25519TransactionAuthenticator_BCSRoundTrip(t *testing.T) {
 	assert.False(t, result.Verify([]byte("wrong message")))
 }
 
+func TestMultiEd25519TransactionAuthenticator_NilSafety(t *testing.T) {
+	// Verify must not panic on a partially-constructed value.
+	assert.False(t, (&MultiEd25519TransactionAuthenticator{}).Verify([]byte("x")))
+	assert.False(t, (&MultiEd25519TransactionAuthenticator{Sender: &AccountAuthenticator{}}).Verify([]byte("x")))
+
+	// MarshalBCS must report a serializer error rather than panic.
+	_, err := bcs.Serialize(&MultiEd25519TransactionAuthenticator{})
+	require.Error(t, err)
+
+	_, err = bcs.Serialize(&MultiEd25519TransactionAuthenticator{Sender: &AccountAuthenticator{}})
+	require.Error(t, err)
+}
+
 func TestMultiEd25519TransactionAuthenticator_SignedTransactionRoundTrip(t *testing.T) {
 	msg := []byte("signing message")
 	auth := makeMultiEd25519Authenticator(t, msg)
