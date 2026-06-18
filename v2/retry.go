@@ -147,6 +147,9 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 
 	var resp *http.Response
 	var err error
+	// range over an int (Go 1.22+) iterates attempt = 0..attempts-1. This is
+	// required here: go.mod pins go 1.25 and the repo's golangci-lint config
+	// enables the intrange linter, which rejects the equivalent counted loop.
 	for attempt := range attempts {
 		// Re-buffer the request body for every attempt after the first.
 		// http.NewRequestWithContext populates GetBody for the in-memory
