@@ -136,8 +136,10 @@ func (c *FakeClient) WithBlock(block *aptos.Block) *FakeClient {
 func (c *FakeClient) WithViewResult(function string, result []any) *FakeClient {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	// Store a copy so later caller mutations of the slice can't change the
-	// stubbed result (and to avoid shared-mutable-state data races).
+	// Store a shallow copy so later caller mutations of the slice itself can't
+	// change the stubbed result. Reference-typed elements (maps/slices/
+	// pointers) are still shared, so tests should avoid mutating elements
+	// after stubbing.
 	c.viewResults[function] = append([]any(nil), result...)
 	return c
 }
@@ -492,8 +494,9 @@ func (c *FakeClient) View(ctx context.Context, payload *aptos.ViewPayload, opts 
 		return fn(payload)
 	}
 	if ok {
-		// Return a defensive copy so callers can't mutate the stored stub
-		// (which would affect later View calls or race across goroutines).
+		// Return a defensive (shallow) copy so callers can't mutate the
+		// stored stub slice (which would affect later View calls or race
+		// across goroutines). Reference-typed elements remain shared.
 		return append([]any(nil), result...), nil
 	}
 	// Return empty result by default
