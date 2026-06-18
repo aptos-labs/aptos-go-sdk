@@ -565,6 +565,123 @@ func TestEd25519TransactionAuthenticator_BCSRoundTrip(t *testing.T) {
 	assert.True(t, ok)
 }
 
+func makeMultiEd25519Authenticator(t *testing.T, msg []byte) *AccountAuthenticator {
+	t.Helper()
+	key1, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	key2, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+
+	pub1, ok := key1.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+	pub2, ok := key2.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+
+	multiKey := &MultiEd25519PublicKey{
+		PubKeys:            []*Ed25519PublicKey{pub1, pub2},
+		SignaturesRequired: 1,
+	}
+
+	sig1, err := key1.SignMessage(msg)
+	require.NoError(t, err)
+	edSig, ok := sig1.(*Ed25519Signature)
+	require.True(t, ok)
+
+	multiSig := &MultiEd25519Signature{
+		Signatures: []*Ed25519Signature{edSig},
+		// First key signed: most-significant bit of the first byte.
+		Bitmap: [4]byte{0x80, 0, 0, 0},
+	}
+
+	return &AccountAuthenticator{
+		Variant: AccountAuthenticatorMultiEd25519,
+		Auth:    &MultiEd25519Authenticator{PubKey: multiKey, Sig: multiSig},
+	}
+}
+
+func TestMultiEd25519TransactionAuthenticator_BCSRoundTrip(t *testing.T) {
+	msg := []byte("test message")
+	auth := makeMultiEd25519Authenticator(t, msg)
+
+	multiAuth := &MultiEd25519TransactionAuthenticator{Sender: auth}
+
+	data, err := bcs.Serialize(multiAuth)
+	require.NoError(t, err)
+
+	// The first ULEB128 byte must be the MultiEd25519 transaction variant (1).
+	require.NotEmpty(t, data)
+	assert.Equal(t, byte(TransactionAuthenticatorVariantMultiEd25519), data[0])
+
+	des := bcs.NewDeserializer(data)
+	txnAuth := deserializeTransactionAuthenticator(des)
+	require.NoError(t, des.Error())
+
+	result, ok := txnAuth.(*MultiEd25519TransactionAuthenticator)
+	require.True(t, ok, "expected *MultiEd25519TransactionAuthenticator, got %T", txnAuth)
+	require.NotNil(t, result.Sender)
+	assert.Equal(t, AccountAuthenticatorMultiEd25519, result.Sender.Variant)
+	assert.True(t, result.Verify(msg))
+	assert.False(t, result.Verify([]byte("wrong message")))
+}
+
+func TestMultiEd25519TransactionAuthenticator_NilSafety(t *testing.T) {
+	// Verify must not panic on a partially-constructed value.
+	assert.False(t, (&MultiEd25519TransactionAuthenticator{}).Verify([]byte("x")))
+	assert.False(t, (&MultiEd25519TransactionAuthenticator{Sender: &AccountAuthenticator{}}).Verify([]byte("x")))
+
+	// MarshalBCS must report a serializer error rather than panic.
+	_, err := bcs.Serialize(&MultiEd25519TransactionAuthenticator{})
+	require.Error(t, err)
+
+	_, err = bcs.Serialize(&MultiEd25519TransactionAuthenticator{Sender: &AccountAuthenticator{}})
+	require.Error(t, err)
+}
+
+func TestMultiEd25519TransactionAuthenticator_MarshalRejectsWrongInnerType(t *testing.T) {
+	// A sender whose inner Auth is not a MultiEd25519 authenticator must not be
+	// serialized under the multi-ed25519 variant byte (it would produce
+	// undecodable bytes). Use a plain Ed25519 authenticator as the mismatch.
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	ed25519Auth, err := key.Sign([]byte("msg"))
+	require.NoError(t, err)
+
+	mismatched := &MultiEd25519TransactionAuthenticator{Sender: ed25519Auth}
+	_, err = bcs.Serialize(mismatched)
+	require.Error(t, err)
+}
+
+func TestMultiEd25519TransactionAuthenticator_SignedTransactionRoundTrip(t *testing.T) {
+	msg := []byte("signing message")
+	auth := makeMultiEd25519Authenticator(t, msg)
+
+	signed := &SignedTransaction{
+		Transaction: &RawTransaction{
+			Sender:                     AccountOne,
+			SequenceNumber:             7,
+			Payload:                    &ScriptPayload{Code: []byte{0x01, 0x02}},
+			MaxGasAmount:               1000,
+			GasUnitPrice:               100,
+			ExpirationTimestampSeconds: 1234567890,
+			ChainID:                    4,
+		},
+		Authenticator: &MultiEd25519TransactionAuthenticator{Sender: auth},
+	}
+
+	data, err := bcs.Serialize(signed)
+	require.NoError(t, err)
+
+	var decoded SignedTransaction
+	require.NoError(t, bcs.Deserialize(&decoded, data))
+
+	_, ok := decoded.Authenticator.(*MultiEd25519TransactionAuthenticator)
+	require.True(t, ok, "expected *MultiEd25519TransactionAuthenticator, got %T", decoded.Authenticator)
+
+	reEncoded, err := bcs.Serialize(&decoded)
+	require.NoError(t, err)
+	assert.Equal(t, data, reEncoded, "round-trip must be byte-identical")
+}
+
 func TestEd25519TransactionAuthenticator_Verify(t *testing.T) {
 	key, err := GenerateEd25519PrivateKey()
 	require.NoError(t, err)

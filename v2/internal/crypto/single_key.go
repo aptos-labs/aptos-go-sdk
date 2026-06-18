@@ -38,6 +38,13 @@ func NewSingleSigner(signer MessageSigner) *SingleSigner {
 	return &SingleSigner{inner: signer}
 }
 
+// Inner returns the underlying MessageSigner wrapped by this SingleSigner.
+// This is useful for accessing key-type-specific behavior such as AIP-80
+// export that is not exposed through the Signer interface.
+func (s *SingleSigner) Inner() MessageSigner {
+	return s.inner
+}
+
 // Sign signs a message and returns an AccountAuthenticator.
 //
 // Implements [Signer].
