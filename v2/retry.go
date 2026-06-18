@@ -137,10 +137,15 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 			"url", req.URL.String(),
 		)
 
+		// Use an explicit timer (stopped on cancellation) rather than
+		// time.After so a cancelled wait doesn't leave a timer running until
+		// it fires.
+		timer := time.NewTimer(backoff)
 		select {
 		case <-ctx.Done():
+			timer.Stop()
 			return nil, ctx.Err()
-		case <-time.After(backoff):
+		case <-timer.C:
 		}
 	}
 
