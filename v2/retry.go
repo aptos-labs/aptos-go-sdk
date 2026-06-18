@@ -48,38 +48,88 @@ func newRetryHTTPClient(inner HTTPDoer, retry *RetryConfig, rateLimit *RateLimit
 	}
 }
 
-// maxAttempts returns the total number of attempts (including the first) the
-// client will make.
-//
-// An explicit retry config with MaxRetries == 0 means "no error/status
-// retries" and is honored as such (it does not silently inherit the
-// rate-limit default). When rate-limit handling is enabled we still allow a
-// bounded number of attempts so 429 responses can be retried even if
-// error/status retries are disabled.
-func (c *retryHTTPClient) maxAttempts() int {
-	attempts := 1
+// rateLimitMaxRetries bounds how many times a 429 response is retried when
+// rate-limit handling is enabled, so a misbehaving server can't make us loop
+// forever. Overall waiting is additionally bounded by MaxWaitTime per attempt
+// and by the request context.
+const rateLimitMaxRetries = 5
+
+// errorStatusCap is the strict maximum number of retries for network errors
+// and retryable status codes. It is exactly MaxRetries (0 when retries are
+// disabled or no retry config is set) and is never inflated by enabling
+// rate-limit handling.
+func (c *retryHTTPClient) errorStatusCap() int {
 	if c.retry != nil && c.retry.MaxRetries > 0 {
-		attempts = c.retry.MaxRetries + 1
+		return c.retry.MaxRetries
 	}
-	// Rate-limit handling needs to retry 429s even when error/status retries
-	// are disabled (retry config absent or MaxRetries == 0). Use a sensible
-	// bounded default so a misbehaving server can't make us loop forever;
-	// overall waiting is additionally bounded by MaxWaitTime per attempt and
-	// by the request context.
-	if c.rateLimit != nil && c.rateLimit.Enabled && c.rateLimit.WaitOnLimit {
-		const rateLimitAttempts = 6
-		if rateLimitAttempts > attempts {
-			attempts = rateLimitAttempts
-		}
+	return 0
+}
+
+// rateLimitCap is the maximum number of 429 rate-limit retries.
+func (c *retryHTTPClient) rateLimitCap() int {
+	if c.rateLimitActive() {
+		return rateLimitMaxRetries
 	}
-	return attempts
+	return 0
+}
+
+// rateLimitActive reports whether 429 Retry-After handling is enabled.
+func (c *retryHTTPClient) rateLimitActive() bool {
+	return c.rateLimit != nil && c.rateLimit.Enabled && c.rateLimit.WaitOnLimit
 }
 
 // retriesEnabled reports whether network-error and retryable-status-code
 // retries are active. A retry config with MaxRetries == 0 explicitly disables
 // them (only 429 rate-limit handling, if enabled, remains active).
 func (c *retryHTTPClient) retriesEnabled() bool {
-	return c.retry != nil && c.retry.MaxRetries > 0
+	return c.errorStatusCap() > 0
+}
+
+// maxAttempts returns the total number of attempts (including the first) the
+// client will make. Error/status retries and 429 retries are capped
+// independently, so the worst case is one initial attempt plus both caps.
+// This keeps MaxRetries a strict cap on error/status retries even when
+// rate-limit handling reserves additional attempts for 429s.
+func (c *retryHTTPClient) maxAttempts() int {
+	return 1 + c.errorStatusCap() + c.rateLimitCap()
+}
+
+// retryReason classifies why (or whether) a response/error warrants a retry.
+type retryReason int
+
+const (
+	retryNone retryReason = iota
+	retryErrorStatus
+	retryRateLimit
+)
+
+// classifyRetry determines the retry category for a response/error and, for
+// rate-limited responses, the Retry-After wait. The two categories are tracked
+// against separate caps by Do.
+func (c *retryHTTPClient) classifyRetry(resp *http.Response, err error) (retryReason, time.Duration) {
+	// Network/transport errors are retried only when error/status retries are
+	// enabled (an explicit MaxRetries == 0 disables them).
+	if err != nil {
+		if c.retriesEnabled() {
+			return retryErrorStatus, 0
+		}
+		return retryNone, 0
+	}
+	if resp == nil {
+		return retryNone, 0
+	}
+
+	// Rate-limit handling: honor Retry-After (capped) on 429. This stays
+	// active even when error/status retries are disabled.
+	if resp.StatusCode == http.StatusTooManyRequests && c.rateLimitActive() {
+		return retryRateLimit, c.retryAfter(resp)
+	}
+
+	if c.retriesEnabled() && c.isRetriableStatus(resp.StatusCode) {
+		return retryErrorStatus, 0
+	}
+
+	return retryNone, 0
 }
 
 // Do executes the request, retrying transient failures per the configuration.
@@ -90,6 +140,10 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 	// cancellation/timeouts propagate even for a custom HTTPDoer that reads
 	// req.Context() instead of the explicit ctx argument.
 	req = req.WithContext(ctx)
+
+	errorStatusCap := c.errorStatusCap()
+	rateLimitCap := c.rateLimitCap()
+	var errorStatusRetries, rateLimitRetries int
 
 	var resp *http.Response
 	var err error
@@ -107,13 +161,26 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 
 		resp, err = c.inner.Do(ctx, req)
 
-		// Last attempt: return whatever we got.
-		if attempt == attempts-1 {
-			return resp, err
-		}
+		reason, wait := c.classifyRetry(resp, err)
 
-		retry, wait := c.shouldRetry(resp, err)
-		if !retry {
+		// Each retry category is capped independently. MaxRetries is a strict
+		// cap on error/status retries and is not raised by enabling rate-limit
+		// handling; 429s have their own bounded budget.
+		proceed := false
+		switch reason {
+		case retryErrorStatus:
+			if errorStatusRetries < errorStatusCap {
+				errorStatusRetries++
+				proceed = true
+			}
+		case retryRateLimit:
+			if rateLimitRetries < rateLimitCap {
+				rateLimitRetries++
+				proceed = true
+			}
+		case retryNone:
+		}
+		if !proceed {
 			return resp, err
 		}
 
@@ -124,14 +191,15 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 			_ = resp.Body.Close()
 		}
 
-		backoff := c.backoff(attempt + 1)
+		retryNum := errorStatusRetries + rateLimitRetries
+		backoff := c.backoff(retryNum)
 		if wait > backoff {
 			backoff = wait
 		}
 
 		c.logger.Debug(
 			"retrying request",
-			"attempt", attempt+1,
+			"attempt", retryNum,
 			"max_attempts", attempts,
 			"backoff", backoff,
 			"url", req.URL.String(),
@@ -150,31 +218,6 @@ func (c *retryHTTPClient) Do(ctx context.Context, req *http.Request) (*http.Resp
 	}
 
 	return resp, err
-}
-
-// shouldRetry reports whether another attempt should be made and, for
-// rate-limited responses, how long to wait based on the Retry-After header.
-func (c *retryHTTPClient) shouldRetry(resp *http.Response, err error) (bool, time.Duration) {
-	// Network/transport errors are retried only when error/status retries are
-	// enabled (an explicit MaxRetries == 0 disables them).
-	if err != nil {
-		return c.retriesEnabled(), 0
-	}
-	if resp == nil {
-		return false, 0
-	}
-
-	// Rate-limit handling: honor Retry-After (capped) on 429. This stays
-	// active even when error/status retries are disabled.
-	if resp.StatusCode == http.StatusTooManyRequests && c.rateLimit != nil && c.rateLimit.Enabled && c.rateLimit.WaitOnLimit {
-		return true, c.retryAfter(resp)
-	}
-
-	if c.retriesEnabled() && c.isRetriableStatus(resp.StatusCode) {
-		return true, 0
-	}
-
-	return false, 0
 }
 
 // retryAfter parses the Retry-After header (seconds form) and caps it at

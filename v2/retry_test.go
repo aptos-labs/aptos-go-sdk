@@ -301,14 +301,23 @@ func TestRetryHTTPClient_MaxAttempts(t *testing.T) {
 		{"neither", &retryHTTPClient{}, 1},
 		{"retry zero", &retryHTTPClient{retry: &RetryConfig{MaxRetries: 0}}, 1},
 		{
+			// 1 initial + 0 error/status + 5 rate-limit.
 			"retry zero with rate-limit",
 			&retryHTTPClient{retry: &RetryConfig{MaxRetries: 0}, rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true}},
 			6,
 		},
 		{
-			"retry max larger than rate-limit default",
+			// Error/status and rate-limit budgets are independent: the total
+			// must reserve room for both (1 + 10 + 5), not max(11, 6).
+			"retry plus rate-limit budgets are additive",
 			&retryHTTPClient{retry: &RetryConfig{MaxRetries: 10}, rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true}},
-			11,
+			16,
+		},
+		{
+			// 1 initial + 2 error/status + 5 rate-limit.
+			"small retry with rate-limit",
+			&retryHTTPClient{retry: &RetryConfig{MaxRetries: 2}, rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true}},
+			8,
 		},
 	}
 	for _, tt := range tests {
@@ -348,31 +357,36 @@ func TestRetryHTTPClient_RetryAfter(t *testing.T) {
 	}
 }
 
-func TestRetryHTTPClient_ShouldRetry(t *testing.T) {
+func TestRetryHTTPClient_ClassifyRetry(t *testing.T) {
 	t.Parallel()
 
-	// Network error: retried only when retry is configured.
+	// Network error: classified as error/status only when retries are enabled.
 	withRetry := &retryHTTPClient{retry: DefaultRetryConfig()}
-	retry, _ := withRetry.shouldRetry(nil, errors.New("boom"))
-	assert.True(t, retry)
+	reason, _ := withRetry.classifyRetry(nil, errors.New("boom"))
+	assert.Equal(t, retryErrorStatus, reason)
 
 	rateOnly := &retryHTTPClient{rateLimit: &RateLimitConfig{Enabled: true, WaitOnLimit: true}}
-	retry, _ = rateOnly.shouldRetry(nil, errors.New("boom"))
-	assert.False(t, retry, "rate-limit-only must not retry network errors")
+	reason, _ = rateOnly.classifyRetry(nil, errors.New("boom"))
+	assert.Equal(t, retryNone, reason, "rate-limit-only must not retry network errors")
 
 	// nil response, no error.
-	retry, _ = withRetry.shouldRetry(nil, nil)
-	assert.False(t, retry)
+	reason, _ = withRetry.classifyRetry(nil, nil)
+	assert.Equal(t, retryNone, reason)
 
 	// 429 with rate-limit handling.
 	resp429 := &http.Response{StatusCode: http.StatusTooManyRequests, Header: make(http.Header)}
-	retry, _ = rateOnly.shouldRetry(resp429, nil)
-	assert.True(t, retry)
+	reason, _ = rateOnly.classifyRetry(resp429, nil)
+	assert.Equal(t, retryRateLimit, reason)
+
+	// Retryable 5xx with retries enabled.
+	resp503 := &http.Response{StatusCode: http.StatusServiceUnavailable, Header: make(http.Header)}
+	reason, _ = withRetry.classifyRetry(resp503, nil)
+	assert.Equal(t, retryErrorStatus, reason)
 
 	// Non-retriable success.
 	resp200 := &http.Response{StatusCode: http.StatusOK, Header: make(http.Header)}
-	retry, _ = withRetry.shouldRetry(resp200, nil)
-	assert.False(t, retry)
+	reason, _ = withRetry.classifyRetry(resp200, nil)
+	assert.Equal(t, retryNone, reason)
 }
 
 func TestRetryHTTPClient_Backoff(t *testing.T) {
@@ -394,6 +408,46 @@ func TestRetryHTTPClient_Backoff(t *testing.T) {
 		MaxBackoff:        2 * time.Second,
 	}}
 	assert.LessOrEqual(t, capped.backoff(5), 2*time.Second)
+}
+
+func TestRetry_RateLimitDoesNotRaiseServerErrorCap(t *testing.T) {
+	t.Parallel()
+	// Server returns 503 forever. With MaxRetries=2, enabling rate-limit
+	// handling must NOT allow more than 2 retries for the 503s (regression:
+	// previously the budget was bumped to the rate-limit default of ~6).
+	handler, count := countingHandler([]int{http.StatusServiceUnavailable}, "down")
+	client := newRetryTestClient(
+		t, handler,
+		WithRetry(2, time.Millisecond),
+		WithRateLimitHandling(true, time.Second),
+	)
+
+	_, err := client.Info(context.Background())
+	require.Error(t, err)
+	// 1 initial + 2 retries == 3, strictly capped by MaxRetries.
+	assert.Equal(t, int32(3), atomic.LoadInt32(count))
+}
+
+func TestRetry_ServerErrorAndRateLimitCapsAreIndependent(t *testing.T) {
+	t.Parallel()
+	// 503 (retryable status) then 429 (rate limit) then 200. With MaxRetries=1
+	// the 503 consumes the single error/status retry, and the 429 is handled
+	// by the independent rate-limit budget, so the request still succeeds.
+	handler, count := countingHandler([]int{
+		http.StatusServiceUnavailable,
+		http.StatusTooManyRequests,
+		http.StatusOK,
+	}, `{"chain_id":4}`)
+	client := newRetryTestClient(
+		t, handler,
+		WithRetry(1, time.Millisecond),
+		WithRateLimitHandling(true, time.Second),
+	)
+
+	info, err := client.Info(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, uint8(4), info.ChainID)
+	assert.Equal(t, int32(3), atomic.LoadInt32(count))
 }
 
 func TestRetry_MaxRetriesZeroWithRateLimit_OnlyRetries429(t *testing.T) {
@@ -441,25 +495,25 @@ func TestRetry_MaxRetriesZeroWithRateLimit_OnlyRetries429(t *testing.T) {
 	})
 }
 
-func TestRetryHTTPClient_ShouldRetry_MaxRetriesZero(t *testing.T) {
+func TestRetryHTTPClient_ClassifyRetry_MaxRetriesZero(t *testing.T) {
 	t.Parallel()
 
 	// retry present but MaxRetries == 0: network errors and retryable statuses
 	// must NOT be retried.
 	c := &retryHTTPClient{retry: &RetryConfig{MaxRetries: 0, RetryableStatusCodes: []int{http.StatusServiceUnavailable}}}
 
-	retry, _ := c.shouldRetry(nil, errors.New("boom"))
-	assert.False(t, retry, "network error must not be retried when MaxRetries==0")
+	reason, _ := c.classifyRetry(nil, errors.New("boom"))
+	assert.Equal(t, retryNone, reason, "network error must not be retried when MaxRetries==0")
 
 	resp503 := &http.Response{StatusCode: http.StatusServiceUnavailable, Header: make(http.Header)}
-	retry, _ = c.shouldRetry(resp503, nil)
-	assert.False(t, retry, "503 must not be retried when MaxRetries==0")
+	reason, _ = c.classifyRetry(resp503, nil)
+	assert.Equal(t, retryNone, reason, "503 must not be retried when MaxRetries==0")
 
 	// With rate-limit handling, a 429 is still retried.
 	c.rateLimit = &RateLimitConfig{Enabled: true, WaitOnLimit: true}
 	resp429 := &http.Response{StatusCode: http.StatusTooManyRequests, Header: make(http.Header)}
-	retry, _ = c.shouldRetry(resp429, nil)
-	assert.True(t, retry, "429 must be retried under rate-limit handling even with MaxRetries==0")
+	reason, _ = c.classifyRetry(resp429, nil)
+	assert.Equal(t, retryRateLimit, reason, "429 must be retried under rate-limit handling even with MaxRetries==0")
 }
 
 func TestRetry_WithRetryConfigOption(t *testing.T) {
