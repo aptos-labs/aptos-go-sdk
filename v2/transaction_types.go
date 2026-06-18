@@ -543,6 +543,13 @@ func (a *MultiEd25519TransactionAuthenticator) MarshalBCS(ser *bcs.Serializer) {
 		ser.SetError(errors.New("MultiEd25519TransactionAuthenticator: nil sender authenticator"))
 		return
 	}
+	// The on-the-wire variant byte (1) declares a MultiEd25519 inner
+	// authenticator, so the inner Auth must actually be one. Otherwise we'd
+	// emit bytes tagged "multi-ed25519" that decode into a different layout.
+	if _, ok := a.Sender.Auth.(*MultiEd25519Authenticator); !ok {
+		ser.SetError(fmt.Errorf("MultiEd25519TransactionAuthenticator: sender authenticator is %T, want *MultiEd25519Authenticator", a.Sender.Auth))
+		return
+	}
 	ser.Uleb128(uint32(TransactionAuthenticatorVariantMultiEd25519))
 	// For MultiEd25519, serialize the inner authenticator (public key +
 	// signature) without the AccountAuthenticator variant prefix.

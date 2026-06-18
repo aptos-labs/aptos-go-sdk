@@ -637,6 +637,20 @@ func TestMultiEd25519TransactionAuthenticator_NilSafety(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestMultiEd25519TransactionAuthenticator_MarshalRejectsWrongInnerType(t *testing.T) {
+	// A sender whose inner Auth is not a MultiEd25519 authenticator must not be
+	// serialized under the multi-ed25519 variant byte (it would produce
+	// undecodable bytes). Use a plain Ed25519 authenticator as the mismatch.
+	key, err := GenerateEd25519PrivateKey()
+	require.NoError(t, err)
+	ed25519Auth, err := key.Sign([]byte("msg"))
+	require.NoError(t, err)
+
+	mismatched := &MultiEd25519TransactionAuthenticator{Sender: ed25519Auth}
+	_, err = bcs.Serialize(mismatched)
+	require.Error(t, err)
+}
+
 func TestMultiEd25519TransactionAuthenticator_SignedTransactionRoundTrip(t *testing.T) {
 	msg := []byte("signing message")
 	auth := makeMultiEd25519Authenticator(t, msg)
