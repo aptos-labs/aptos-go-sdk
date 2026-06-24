@@ -226,7 +226,7 @@ func (des *Deserializer) Uleb128() uint32 {
 		}
 	}
 
-	if result > 0xFFFFFFFF {
+	if result > maxU32Length {
 		des.SetError(ErrOverflow)
 		return 0
 	}
