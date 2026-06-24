@@ -2,6 +2,7 @@ package bcs
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -10,7 +11,7 @@ import (
 
 func uleb128ToInt(length uint32) (int, error) {
 	if uint64(length) > uint64(math.MaxInt) {
-		return 0, fmt.Errorf("uleb128 length overflows int")
+		return 0, errors.New("uleb128 length overflows int")
 	}
 	return int(length), nil
 }
@@ -359,7 +360,7 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	}
 
 	out := make([]T, lengthInt)
-	for i := 0; i < lengthInt; i++ {
+	for i := range lengthInt {
 		deserialize(des, &out[i])
 
 		if des.Error() != nil {
