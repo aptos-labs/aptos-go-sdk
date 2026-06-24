@@ -51,3 +51,14 @@ func NewEd25519SingleSenderAccount() (*Account, error) {
 func NewSecp256k1Account() (*Account, error) {
 	return types.NewSecp256k1Account()
 }
+
+// NewEd25519AccountFromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic.
+// When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
+func NewEd25519AccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
+	return types.NewEd25519AccountFromMnemonic(mnemonic, path...)
+}
+
+// NewEd25519AccountFromDerivationPath creates a legacy Ed25519 account from a mnemonic and path.
+func NewEd25519AccountFromDerivationPath(mnemonic, path string) (*Account, error) {
+	return types.NewEd25519AccountFromDerivationPath(mnemonic, path)
+}
