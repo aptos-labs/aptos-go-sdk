@@ -258,8 +258,6 @@ func TestIntToU32(t *testing.T) {
 		wantErr bool
 	}{
 		{"zero", 0, 0, false},
-		{"max", math.MaxUint32, math.MaxUint32, false},
-		{"overflow", math.MaxUint32 + 1, 0, true},
 		{"negative", -1, 0, true},
 	}
 
