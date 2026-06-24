@@ -1,6 +1,7 @@
 package hd
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -183,5 +184,8 @@ func TestDeriveEd25519PrivateKeyHardenedSegmentOverflow(t *testing.T) {
 	_, err = DeriveEd25519PrivateKey("m/44'/637'/2147483648'/0'/0'", seed)
 	if err == nil {
 		t.Fatal("expected error for segment >= hardened offset")
+	}
+	if !strings.Contains(err.Error(), "index 2") || !strings.Contains(err.Error(), "2147483648") {
+		t.Fatalf("expected actionable segment error, got: %v", err)
 	}
 }

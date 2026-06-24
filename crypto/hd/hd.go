@@ -133,9 +133,9 @@ func DeriveEd25519PrivateKey(path string, seed []byte) ([]byte, error) {
 
 	master := deriveKey([]byte(Slip10Ed25519Seed), seed)
 	current := master
-	for _, segment := range segments {
+	for i, segment := range segments {
 		if segment >= HardenedOffset {
-			return nil, fmt.Errorf("path segment must be less than %d", HardenedOffset)
+			return nil, fmt.Errorf("path segment at index %d (%d) must be less than %d", i, segment, HardenedOffset)
 		}
 		current = ckdPriv(current, segment+HardenedOffset)
 	}

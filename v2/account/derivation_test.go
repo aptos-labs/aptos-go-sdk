@@ -102,3 +102,11 @@ func TestDefaultDerivationPathConstant(t *testing.T) {
 		t.Fatalf("DefaultDerivationPath = %q, want %q", DefaultDerivationPath, hd.DefaultDerivationPath)
 	}
 }
+
+func TestFromDerivationPathMultipleConfigs(t *testing.T) {
+	t.Parallel()
+	_, err := FromDerivationPath(testMnemonic, DefaultDerivationPath, &DerivationConfig{}, &DerivationConfig{})
+	if err == nil {
+		t.Fatal("expected error when multiple DerivationConfig values are provided")
+	}
+}
