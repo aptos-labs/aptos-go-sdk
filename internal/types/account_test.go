@@ -282,3 +282,10 @@ func TestNewEd25519AccountFromMnemonicCustomPath(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, "0xf867372dfec13fb6c0740d4b574363685e10e6f243e9554ffa8f6e698e940efa", account.Address.String())
 }
+
+func TestNewEd25519AccountFromMnemonicMultiplePaths(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	_, err := NewEd25519AccountFromMnemonic(mnemonic, crypto.DefaultDerivationPath, "m/44'/637'/1'/0'/0'")
+	require.Error(t, err)
+}

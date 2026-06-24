@@ -227,6 +227,10 @@ func FromMnemonic(mnemonic string, cfg ...*DerivationConfig) (*Account, error) {
 // FromDerivationPath creates an account from a BIP-39 mnemonic and Aptos BIP-44 path.
 // Paths must use hardened segments, e.g. m/44'/637'/0'/0'/0'.
 func FromDerivationPath(mnemonic, path string, cfg ...*DerivationConfig) (*Account, error) {
+	if len(cfg) > 1 {
+		return nil, errors.New("only one DerivationConfig may be provided")
+	}
+
 	var config DerivationConfig
 	if len(cfg) > 0 && cfg[0] != nil {
 		config = *cfg[0]

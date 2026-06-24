@@ -66,6 +66,9 @@ func NewSecp256k1Account() (*Account, error) {
 // NewEd25519AccountFromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic.
 // When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
 func NewEd25519AccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
+	if len(path) > 1 {
+		return nil, errors.New("only one derivation path may be provided")
+	}
 	derivationPath := crypto.DefaultDerivationPath
 	if len(path) > 0 {
 		derivationPath = path[0]
