@@ -1,4 +1,4 @@
-//go:build amd64 || arm64 || ppc64 || ppc64le || mips64 || mips64le || loong64 || riscv64
+//go:build !(386 || arm || mips || mipsle || wasm)
 
 package util
 
