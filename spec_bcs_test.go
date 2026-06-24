@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/big"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -87,11 +88,12 @@ func givenU16(ctx context.Context, input int) (context.Context, error) {
 	return context.WithValue(ctx, godogsCtxKey{}, uint16(input)), nil
 }
 
-func givenU32(ctx context.Context, input int) (context.Context, error) {
-	if input < 0 || input > 4294967295 {
+func givenU32(ctx context.Context, input string) (context.Context, error) {
+	val, err := strconv.ParseUint(input, 10, 32)
+	if err != nil {
 		return nil, errors.New("u32 must be between 0 and 4294967295")
 	}
-	return context.WithValue(ctx, godogsCtxKey{}, uint32(input)), nil
+	return context.WithValue(ctx, godogsCtxKey{}, uint32(val)), nil
 }
 
 func givenU64(ctx context.Context, input string) (context.Context, error) {
@@ -856,11 +858,12 @@ func u16Result(ctx context.Context, expected int) error {
 	return nil
 }
 
-func u32Result(ctx context.Context, expected int) error {
-	expectedU32, err := util.IntToU32(expected)
+func u32Result(ctx context.Context, expected string) error {
+	val, err := strconv.ParseUint(expected, 10, 32)
 	if err != nil {
 		return errors.New("invalid value for U32")
 	}
+	expectedU32 := uint32(val)
 
 	result, ok := ctx.Value(godogsCtxKey{}).(uint32)
 	if !ok {

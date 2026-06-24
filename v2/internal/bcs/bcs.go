@@ -62,6 +62,9 @@ var (
 	ErrInvalidOptionLen = errors.New("bcs: option must have 0 or 1 elements")
 )
 
+// maxU32Length is the maximum value representable as a BCS u32 length prefix.
+const maxU32Length = uint64(0xFFFFFFFF)
+
 // serializerPool provides reusable Serializers to reduce allocations.
 var serializerPool = sync.Pool{
 	New: func() interface{} {

@@ -84,7 +84,7 @@ func marshalValue(ser *Serializer, v reflect.Value) error {
 
 func marshalSlice(ser *Serializer, v reflect.Value) error {
 	length := v.Len()
-	if length > 0xFFFFFFFF {
+	if uint64(length) > maxU32Length {
 		return ErrOverflow
 	}
 	ser.Uleb128(uint32(length))
