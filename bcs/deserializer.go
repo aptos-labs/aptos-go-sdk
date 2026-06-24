@@ -3,9 +3,17 @@ package bcs
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"math/big"
 	"slices"
 )
+
+func uleb128ToInt(length uint32) (int, error) {
+	if uint64(length) > uint64(math.MaxInt) {
+		return 0, fmt.Errorf("uleb128 length overflows int")
+	}
+	return int(length), nil
+}
 
 // Deserializer is a type to deserialize a known set of bytes.
 // The reader must know the types, as the format is not self-describing.
@@ -268,8 +276,14 @@ func (des *Deserializer) ReadBytes() []byte {
 		return nil
 	}
 
-	dest := make([]byte, length)
-	des.readBytes("bytes", int(length), dest)
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.setError("%s", err.Error())
+		return nil
+	}
+
+	dest := make([]byte, lengthInt)
+	des.readBytes("bytes", lengthInt, dest)
 	return dest
 }
 
@@ -337,8 +351,15 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	if des.Error() != nil {
 		return nil
 	}
-	out := make([]T, length)
-	for i := range length {
+
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.setError("%s", err.Error())
+		return nil
+	}
+
+	out := make([]T, lengthInt)
+	for i := 0; i < lengthInt; i++ {
 		deserialize(des, &out[i])
 
 		if des.Error() != nil {

@@ -1295,13 +1295,13 @@ func TestConvertToI64(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name:    "int positive",
+			name:    "int64 positive",
 			input:   int64(100000000000),
 			want:    100000000000,
 			wantErr: false,
 		},
 		{
-			name:    "int negative",
+			name:    "int64 negative",
 			input:   int64(-100000000000),
 			want:    -100000000000,
 			wantErr: false,

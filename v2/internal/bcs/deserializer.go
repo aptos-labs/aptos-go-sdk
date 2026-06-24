@@ -3,9 +3,17 @@ package bcs
 import (
 	"encoding/binary"
 	"fmt"
+	"math"
 	"math/big"
 	"slices"
 )
+
+func uleb128ToInt(length uint32) (int, error) {
+	if uint64(length) > uint64(math.MaxInt) {
+		return 0, ErrOverflow
+	}
+	return int(length), nil
+}
 
 // Deserializer reads BCS-encoded data from a buffer.
 type Deserializer struct {
@@ -245,7 +253,13 @@ func (des *Deserializer) ReadBytes() []byte {
 		return nil
 	}
 
-	return des.ReadFixedBytes(int(length))
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
+		return nil
+	}
+
+	return des.ReadFixedBytes(lengthInt)
 }
 
 // ReadBoundedBytes deserializes a byte slice with bounds checking BEFORE allocation.
@@ -261,17 +275,23 @@ func (des *Deserializer) ReadBoundedBytes(minLen, maxLen int) []byte {
 		return nil
 	}
 
-	// Validate bounds BEFORE allocation to prevent DoS
-	if int(length) < minLen {
-		des.SetError(fmt.Errorf("byte slice too short: %d < %d", length, minLen))
-		return nil
-	}
-	if int(length) > maxLen {
-		des.SetError(fmt.Errorf("byte slice too large: %d > %d", length, maxLen))
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
 		return nil
 	}
 
-	return des.ReadFixedBytes(int(length))
+	// Validate bounds BEFORE allocation to prevent DoS
+	if lengthInt < minLen {
+		des.SetError(fmt.Errorf("byte slice too short: %d < %d", lengthInt, minLen))
+		return nil
+	}
+	if lengthInt > maxLen {
+		des.SetError(fmt.Errorf("byte slice too large: %d > %d", lengthInt, maxLen))
+		return nil
+	}
+
+	return des.ReadFixedBytes(lengthInt)
 }
 
 // ReadBoundedString deserializes a string with bounds checking BEFORE allocation.
@@ -286,13 +306,19 @@ func (des *Deserializer) ReadBoundedString(maxLen int) string {
 		return ""
 	}
 
-	// Validate bounds BEFORE allocation
-	if int(length) > maxLen {
-		des.SetError(fmt.Errorf("string too large: %d > %d", length, maxLen))
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
 		return ""
 	}
 
-	return string(des.ReadFixedBytes(int(length)))
+	// Validate bounds BEFORE allocation
+	if lengthInt > maxLen {
+		des.SetError(fmt.Errorf("string too large: %d > %d", lengthInt, maxLen))
+		return ""
+	}
+
+	return string(des.ReadFixedBytes(lengthInt))
 }
 
 // ReadString deserializes a UTF-8 string with a ULEB128 length prefix.
@@ -354,8 +380,14 @@ func DeserializeSequence[T Unmarshaler](des *Deserializer, newItem func() T) []T
 		return nil
 	}
 
-	result := make([]T, length)
-	for i := range length {
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
+		return nil
+	}
+
+	result := make([]T, lengthInt)
+	for i := 0; i < lengthInt; i++ {
 		result[i] = newItem()
 		result[i].UnmarshalBCS(des)
 		if des.err != nil {
@@ -376,8 +408,14 @@ func DeserializeSequenceFunc[T any](des *Deserializer, deserialize func(*Deseria
 		return nil
 	}
 
-	result := make([]T, length)
-	for i := range length {
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
+		return nil
+	}
+
+	result := make([]T, lengthInt)
+	for i := 0; i < lengthInt; i++ {
 		result[i] = deserialize(des)
 		if des.err != nil {
 			return nil
