@@ -43,6 +43,7 @@ func TestIsValidHardenedPath(t *testing.T) {
 		"m/44'/60'/0'/0'/0'",
 		"m/44'/637'/0'/0/0",
 		"m/44/637/0/0/0",
+		"m/44'/637'/0'/0'/0'/1'",
 	}
 	for _, path := range invalid {
 		if IsValidHardenedPath(path) {
@@ -130,4 +131,57 @@ func TestMnemonicToSeedPassphrase(t *testing.T) {
 		}
 	}
 	t.Fatal("passphrase should change the derived seed")
+}
+
+func TestMnemonicToSeedInvalid(t *testing.T) {
+	t.Parallel()
+	_, err := MnemonicToSeed("not a valid mnemonic phrase", "")
+	if err == nil {
+		t.Fatal("expected error for invalid mnemonic")
+	}
+}
+
+func TestSplitPathErrors(t *testing.T) {
+	t.Parallel()
+	_, err := SplitPath("bad/path")
+	if err == nil {
+		t.Fatal("expected error for path without m/ prefix")
+	}
+
+	_, err = SplitPath("m/")
+	if err == nil {
+		t.Fatal("expected error for empty segments")
+	}
+
+	_, err = SplitPath("m/44'/bad'/0'/0'/0'")
+	if err == nil {
+		t.Fatal("expected error for non-numeric segment")
+	}
+}
+
+func TestDeriveEd25519PrivateKeyInvalidPath(t *testing.T) {
+	t.Parallel()
+	seed, err := MnemonicToSeed(testMnemonic, "")
+	if err != nil {
+		t.Fatalf("MnemonicToSeed() error = %v", err)
+	}
+
+	_, err = DeriveEd25519PrivateKey("m/44'/637'/0'/0'/0'/1'", seed)
+	if err == nil {
+		t.Fatal("expected error for path with extra trailing segment")
+	}
+}
+
+func TestDeriveEd25519PrivateKeyHardenedSegmentOverflow(t *testing.T) {
+	t.Parallel()
+	seed, err := MnemonicToSeed(testMnemonic, "")
+	if err != nil {
+		t.Fatalf("MnemonicToSeed() error = %v", err)
+	}
+
+	// 0x80000000 is the hardened offset; segments must stay below it.
+	_, err = DeriveEd25519PrivateKey("m/44'/637'/2147483648'/0'/0'", seed)
+	if err == nil {
+		t.Fatal("expected error for segment >= hardened offset")
+	}
 }

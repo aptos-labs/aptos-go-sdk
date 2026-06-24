@@ -28,7 +28,7 @@ const (
 	DefaultDerivationPath = "m/44'/637'/0'/0'/0'"
 )
 
-var aptosHardenedPathRegex = regexp.MustCompile(`^m/44'/637'/[0-9]+'/[0-9]+'/[0-9]+'?`)
+var aptosHardenedPathRegex = regexp.MustCompile(`^m/44'/637'/[0-9]+'/[0-9]+'/[0-9]+'?$`)
 
 // NormalizeMnemonic trims whitespace, lowercases each word, and joins with single spaces.
 func NormalizeMnemonic(mnemonic string) string {
@@ -55,6 +55,7 @@ func MnemonicToSeed(mnemonic, passphrase string) ([]byte, error) {
 
 // IsValidHardenedPath reports whether path matches the Aptos SLIP-0010 BIP-44 format:
 // m/44'/637'/{account}'/{change}'/{address}'.
+// The final address segment may omit the trailing apostrophe (e.g. m/44'/637'/0'/0'/0).
 func IsValidHardenedPath(path string) bool {
 	return aptosHardenedPathRegex.MatchString(path)
 }
@@ -133,6 +134,9 @@ func DeriveEd25519PrivateKey(path string, seed []byte) ([]byte, error) {
 	master := deriveKey([]byte(Slip10Ed25519Seed), seed)
 	current := master
 	for _, segment := range segments {
+		if segment >= HardenedOffset {
+			return nil, fmt.Errorf("path segment must be less than %d", HardenedOffset)
+		}
 		current = ckdPriv(current, segment+HardenedOffset)
 	}
 	return current.key, nil
