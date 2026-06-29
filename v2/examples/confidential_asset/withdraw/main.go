@@ -1,5 +1,26 @@
 //go:build cgo
 
+// # Prerequisites
+//
+// 1. Download the pre-compiled FFI static library (no Rust toolchain needed):
+//
+//	go run github.com/aptos-labs/confidential-asset-bindings/bindings/go/aptosconfidential/tools/download@v1.1.2
+//
+// 2. Build / run with the library path (replace <triple> with your platform):
+//
+//	macOS M-series:  CGO_LDFLAGS="-L$(pwd)/native/aarch64-apple-darwin"
+//	Linux amd64:     CGO_LDFLAGS="-L$(pwd)/native/x86_64-unknown-linux-gnu"
+//	Linux arm64:     CGO_LDFLAGS="-L$(pwd)/native/aarch64-unknown-linux-gnu"
+//	Windows amd64:   set CGO_LDFLAGS=-L%cd%\native\x86_64-pc-windows-msvc
+//
+//	CGO_LDFLAGS="-L$(pwd)/native/<triple>" go run .
+//
+// # Environment variables
+//
+//	APTOS_PRIVATE_KEY       Ed25519 account private key (required)
+//	TWISTED_PRIVATE_KEY_HEX Decryption key hex; derived from Ed25519 key when omitted (optional)
+//	APTOS_NETWORK           testnet or mainnet (required)
+//
 // Submits withdraw_to_raw (TS confidentialAsset.withdraw): confidential → public FA for recipient.
 package main
 

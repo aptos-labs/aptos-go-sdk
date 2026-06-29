@@ -38,7 +38,3 @@ require (
 	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-// Local development: point at sibling confidential-asset-bindings checkout.
-// Remove or override when bindings publishes bindings/go on the module proxy.
-replace github.com/aptos-labs/confidential-asset-bindings/bindings/go => ../../confidential-asset-bindings/bindings/go
