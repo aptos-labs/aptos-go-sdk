@@ -40,22 +40,15 @@ jobs:
           go-version-file: v2/go.mod
           cache: true
 
-      - name: Checkout confidential-asset-bindings (for v2 replace)
-        uses: ./.github/actions/setup-confidential-bindings
-        with:
-          repository: aptos-labs/confidential-asset-bindings
-          ref: main
-
-      - uses: dtolnay/rust-toolchain@stable
-
-      - name: Build confidential asset FFI (static lib for v2 CGO)
-        working-directory: confidential-asset-bindings/rust
-        run: cargo build -p aptos_confidential_asset_ffi --release
+      - name: Download FFI static library (v1.1.2 pre-built, no Rust toolchain needed)
+        working-directory: v2
+        run: go run github.com/aptos-labs/confidential-asset-bindings/bindings/go/aptosconfidential/tools/download@v1.1.2
 
       - name: Run v2 SDK tests with coverage
         working-directory: v2
         env:
           CGO_ENABLED: "1"
+          CGO_LDFLAGS: "-L${{ github.workspace }}/v2/native/x86_64-unknown-linux-gnu"
         run: |
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
 

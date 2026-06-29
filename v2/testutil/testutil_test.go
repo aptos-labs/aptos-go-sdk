@@ -696,7 +696,7 @@ func TestFakeClient_View_ResultIsImmutable(t *testing.T) {
 
 func TestFakeClient_View_Func(t *testing.T) {
 	t.Parallel()
-	client := NewFakeClient().WithViewFunc(func(p *aptos.ViewPayload) ([]any, error) {
+	client := NewFakeClient().WithViewFunc(func(_ context.Context, p *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
 		return []any{p.Function}, nil
 	})
 	ctx := context.Background()
