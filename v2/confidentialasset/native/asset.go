@@ -39,9 +39,11 @@ func (a *ConfidentialAsset) RolloverPendingBalance(ctx context.Context, signer *
 		if opts.TwistedHex == "" {
 			return nil, fmt.Errorf("rollover: balance not normalized and no twisted decryption key provided")
 		}
-		if _, err := a.NormalizeBalance(ctx, signer, token, opts.TwistedHex, opts.FAMetadataHex); err != nil {
+		normTx, err := a.NormalizeBalance(ctx, signer, token, opts.TwistedHex, opts.FAMetadataHex)
+		if err != nil {
 			return nil, err
 		}
+		out = append(out, normTx)
 	}
 	tx, err := a.Client.RolloverPendingBalance(ctx, signer, token, opts.WithPauseIncoming, opts.FAMetadataHex)
 	if err != nil {

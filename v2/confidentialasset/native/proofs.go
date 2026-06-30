@@ -272,17 +272,17 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 			var ap [32]byte
 			copy(ap[:], raw)
 			audKeys = append(audKeys, raw)
-			ne, _ := ca.NewEncryptedAmountFromAmount(rem, ap, newBalRand)
-			var _, nd [][]byte
-			if ne != nil {
-				_, nd = ne.RowsCD()
+			ne, err := ca.NewEncryptedAmountFromAmount(rem, ap, newBalRand)
+			if err != nil {
+				return nil, fmt.Errorf("auditor new-balance encryption: %w", err)
 			}
+			_, nd := ne.RowsCD()
 			newBalDAud = append(newBalDAud, nd)
-			te, _ := ca.NewEncryptedTransferAmount(amountOctas, ap, xferRand)
-			var _, td [][]byte
-			if te != nil {
-				_, td = te.RowsCD()
+			te, err := ca.NewEncryptedTransferAmount(amountOctas, ap, xferRand)
+			if err != nil {
+				return nil, fmt.Errorf("auditor transfer encryption: %w", err)
 			}
+			_, td := te.RowsCD()
 			xferDAud = append(xferDAud, td)
 			hasEff = true
 		}

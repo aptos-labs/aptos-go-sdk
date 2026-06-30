@@ -59,12 +59,10 @@ func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.Transacti
 	if err != nil {
 		return nil, err
 	}
-	newRaw, err := decodeHex32(newTwistedHex)
+	newDK, err := TwistedDecryptionKey32(acct, newTwistedHex)
 	if err != nil {
 		return nil, fmt.Errorf("new twisted key: %w", err)
 	}
-	var newDK [32]byte
-	copy(newDK[:], newRaw)
 
 	_, dRows, err := c.FetchBalanceCipherChunks(ctx, signer.Address(), token, "get_available_balance")
 	if err != nil {

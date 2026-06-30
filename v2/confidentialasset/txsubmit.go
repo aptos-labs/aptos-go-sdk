@@ -100,7 +100,7 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 		new(big.Int).SetUint64(balanceFeeBudgetDen),
 		new(big.Int).SetUint64(gasPrice),
 	))
-	var maxByBalance uint64
+	maxByBalance := ^uint64(0) // if big.Int overflows uint64, balance is more than sufficient
 	if maxByBalanceBig.IsUint64() {
 		maxByBalance = maxByBalanceBig.Uint64()
 	}
