@@ -20,8 +20,8 @@
 //	APTOS_PRIVATE_KEY       Ed25519 account private key (required)
 //	TWISTED_PRIVATE_KEY_HEX Decryption key hex; derived from Ed25519 key when omitted (optional)
 //	APTOS_NETWORK           testnet or mainnet (required)
-//	RECIPIENT_ADDRESS       Recipient account address (required)
-//	TRANSFER_AMOUNT_OCTAS   Amount to transfer in octas (required)
+//	APTOS_SEND_TO           Recipient account address (required)
+//	APTOS_SEND_OCTAS        Amount to transfer in octas (optional, default 1)
 //
 // Submits confidential_transfer_raw (TS confidentialAsset.transfer).
 package main

@@ -194,7 +194,7 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 		Args: []any{
 			&token,
 			&recipient,
-			fmt.Sprintf("%d", amountOctas),
+			amountOctas,
 			movearg.VectorVectorU8(newC),
 			movearg.VectorVectorU8(newD),
 			newBalanceAArg,
