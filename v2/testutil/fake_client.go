@@ -30,8 +30,8 @@ type FakeClient struct {
 	// consulted for every View call.
 	viewResults map[string][]any
 
-	// ViewFunc, when set, handles View calls instead of returning an empty result.
-	ViewFunc func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error)
+	// viewFunc, when set, handles View calls instead of returning an empty result.
+	viewFunc func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error)
 
 	// Error simulation
 	errors map[string]error
@@ -119,7 +119,7 @@ func (c *FakeClient) WithGasEstimate(estimate *aptos.GasEstimate) *FakeClient {
 func (c *FakeClient) WithViewFunc(fn func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error)) *FakeClient {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.ViewFunc = fn
+	c.viewFunc = fn
 	return c
 }
 
@@ -479,7 +479,7 @@ func (c *FakeClient) View(ctx context.Context, payload *aptos.ViewPayload, opts 
 	}
 
 	c.mu.RLock()
-	fn := c.ViewFunc
+	fn := c.viewFunc
 	var (
 		result []any
 		ok     bool

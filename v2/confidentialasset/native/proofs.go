@@ -295,7 +295,10 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 	if err != nil {
 		return nil, err
 	}
-	senderEK, _ := ca.TwistedPublicKeyFromPrivateLE32(dk32)
+	senderEK, err := ca.TwistedPublicKeyFromPrivateLE32(dk32)
+	if err != nil {
+		return nil, fmt.Errorf("sender twisted public key: %w", err)
+	}
 	newC, newD := newEnc.RowsCD()
 	tsC, tsDsid := amountSender.RowsCD()
 	_, tsDrid := amountRecv.RowsCD()

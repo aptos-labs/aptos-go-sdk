@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -92,7 +92,18 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 	if maxGas < minGasUnits {
 		maxGas = minGasUnits
 	}
-	maxByBalance := (bal * balanceFeeBudgetNum) / (balanceFeeBudgetDen * gasPrice)
+	maxByBalanceBig := new(big.Int).Mul(
+		new(big.Int).SetUint64(bal),
+		new(big.Int).SetUint64(balanceFeeBudgetNum),
+	)
+	maxByBalanceBig.Div(maxByBalanceBig, new(big.Int).Mul(
+		new(big.Int).SetUint64(balanceFeeBudgetDen),
+		new(big.Int).SetUint64(gasPrice),
+	))
+	var maxByBalance uint64
+	if maxByBalanceBig.IsUint64() {
+		maxByBalance = maxByBalanceBig.Uint64()
+	}
 	if maxGas > maxByBalance {
 		maxGas = maxByBalance
 	}
@@ -118,7 +129,6 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 	if err != nil {
 		return nil, fmt.Errorf("%s: submit: %w", label, err)
 	}
-	fmt.Fprintf(os.Stderr, "confidentialasset: %s submitted (hash=%s), waiting for on-chain confirmation (poll up to 3m)…\n", label, sub.Hash)
 	tx, err := c.Aptos.WaitForTransaction(ctx, sub.Hash, aptos.WithPollTimeout(3*time.Minute))
 	if err != nil {
 		return nil, fmt.Errorf("%s: wait: %w", label, err)
