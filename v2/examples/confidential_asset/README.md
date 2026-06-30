@@ -1,21 +1,24 @@
 # Confidential asset examples (Go)
 
-在 **aptos-go-sdk v2** 模块内（`v2/examples/confidential_asset/`）。链上能力见 `github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset`；解密与 range proof 见 **`confidentialasset/native`**（需 CGO + FFI）。
+Runnable examples for confidential fungible assets, located in `v2/examples/confidential_asset/`.
+On-chain capabilities are in `github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset`;
+decryption and range proofs live in **`confidentialasset/native`** (requires CGO + FFI).
 
-## CGO 要求
+## CGO requirements
 
-| 示例 | CGO |
-|------|-----|
-| **`register`** | 否（仅 sigma 注册 + 可选 deposit） |
-| **`balance`**, **`transfer`**, **`withdraw`**, **`deposit_chain`** | 是（import `native`） |
+| Example | Requires CGO |
+|---------|--------------|
+| **`register`** | No (sigma registration + optional deposit only) |
+| **`balance`**, **`transfer`**, **`withdraw`**, **`deposit_chain`** | Yes (imports `native`) |
 
-`native` 在 `CGO_ENABLED=0` 时 **无法编译**；根包 `confidentialasset` 在无 CGO 时可编。
+`native` **cannot compile** with `CGO_ENABLED=0`; the root `confidentialasset` package compiles without CGO.
 
-**不自动领水**：请自备公开 APT（FA metadata `0xa`）。**`deposit_chain`** 会检查公开余额至少约 **0.01 APT**。
+**No automatic faucet**: fund the account with public APT (FA metadata `0xa`) beforehand.
+**`deposit_chain`** checks that the public balance is at least ~0.01 APT.
 
-环境变量：**`APTOS_NETWORK`**、**`APTOS_NODE_URL`**、**`APTOS_PRIVATE_KEY`** 或 **`FIXED_ED25519_PRIVATE_KEY`**。
+Environment variables: **`APTOS_NETWORK`**, **`APTOS_NODE_URL`**, **`APTOS_PRIVATE_KEY`** or **`FIXED_ED25519_PRIVATE_KEY`**.
 
-从 **`v2/`** 执行：
+Run from **`v2/`**:
 
 ```bash
 cd v2
@@ -26,17 +29,21 @@ CGO_ENABLED=1 go run ./examples/confidential_asset/withdraw
 CGO_ENABLED=1 go run ./examples/confidential_asset/deposit_chain
 ```
 
-| 命令 | 作用 |
-|------|------|
-| **`balance`** | 公开 FA APT + 解密机密 available/pending（`native.GetBalance`） |
-| **`register`** | `register_raw` + 可选 deposit |
+| Command | What it does |
+|---------|--------------|
+| **`balance`** | Public FA APT + decrypted confidential available/pending (`native.GetBalance`) |
+| **`register`** | `register_raw` + optional deposit |
 | **`transfer`** | `confidential_transfer_raw` |
 | **`withdraw`** | `withdraw_to_raw` |
-| **`deposit_chain`** | deposit → normalize → rollover → 打印余额 |
+| **`deposit_chain`** | deposit → normalize → rollover → print balance |
 
-## 先决条件（FFI 示例）
+## Prerequisites (FFI examples)
 
-构建 [`confidential-asset-bindings`](https://github.com/aptos-labs/confidential-asset-bindings) 的 **`aptos_confidential_asset_ffi`**，见 bindings `bindings/go/README.md`。`v2/go.mod` 可 `replace` 到 sibling checkout。FFI 链路 smoke 在 **`go test -short ./confidentialasset/native/...`**（`CGO_ENABLED=1`）中运行，无单独示例命令。
+Build **`aptos_confidential_asset_ffi`** from
+[`confidential-asset-bindings`](https://github.com/aptos-labs/confidential-asset-bindings);
+see `bindings/go/README.md`. `v2/go.mod` can `replace` to a sibling checkout.
+FFI smoke runs in **`go test -short ./confidentialasset/native/...`** (`CGO_ENABLED=1`);
+there is no separate example command.
 
 ```bash
 cd confidential-asset-bindings/rust
@@ -45,6 +52,7 @@ cd ../../aptos-go-sdk/v2
 CGO_ENABLED=1 go test -short ./confidentialasset/native/...
 ```
 
-## 与 TypeScript 的差异
+## Differences from TypeScript
 
-见 [`confidentialasset/README.md`](../../confidentialasset/README.md) 与 [`doc/SPEC.md`](../../confidentialasset/doc/SPEC.md)。
+See [`confidentialasset/README.md`](../../confidentialasset/README.md) and
+[`doc/SPEC.md`](../../confidentialasset/doc/SPEC.md).

@@ -28,7 +28,7 @@ File-level and API mapping vs **`@aptos-labs/confidential-asset`**: **[doc/TS_GO
 
 ## CI and local testing
 
-| 场景 | 命令 | 覆盖内容 |
+| Scenario | Command | Coverage |
 |------|------|----------|
 | **Confidential asset (v2)** nocgo job | `CGO_ENABLED=0 go test -short` on `confidentialasset/...` **excluding** `native` and `internal/rangeproof` | views, movearg, sigbcs, compile constraint tests |
 | **Confidential asset (v2)** cgo job | `CGO_ENABLED=1 go test -short ./confidentialasset/...` | `native` FFI smoke, `rangeproof`, etc. |
