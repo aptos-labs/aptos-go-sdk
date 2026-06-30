@@ -52,8 +52,8 @@ func TestRolloverPendingBalance_normalizeFirst(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(txs) != 1 {
-		t.Fatalf("expected one tx after normalize+rollover path, got %d", len(txs))
+	if len(txs) != 2 {
+		t.Fatalf("expected two txs (normalize + rollover) after normalize+rollover path, got %d", len(txs))
 	}
 }
 
