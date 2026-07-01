@@ -47,6 +47,51 @@ func TestNormalizeBalance_submit(t *testing.T) {
 	}
 }
 
+func TestWithdraw_wrongSigner(t *testing.T) {
+	nc, _, _ := newSubmitReadyNativeClient(t, func(context.Context, *aptos.ViewPayload, ...aptos.ViewOption) ([]any, error) {
+		return nil, nil
+	})
+	_, err := nc.Withdraw(context.Background(), wrongSigner{}, aptos.AccountOne, 10, aptos.AccountOne, testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected error for non-Account signer")
+	}
+}
+
+func TestWithdraw_notNormalized(t *testing.T) {
+	senderEK := senderEKFromTwistedHex(t)
+	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 100, isNormalized: false})
+	if err != nil {
+		t.Fatal(err)
+	}
+	nc, acct, _ := newSubmitReadyNativeClient(t, viewFn)
+	_, err = nc.Withdraw(context.Background(), acct, aptos.AccountOne, 10, aptos.AccountOne, testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected error: balance not normalized")
+	}
+}
+
+func TestTransfer_wrongSigner(t *testing.T) {
+	nc, _, _ := newSubmitReadyNativeClient(t, func(context.Context, *aptos.ViewPayload, ...aptos.ViewOption) ([]any, error) {
+		return nil, nil
+	})
+	recipientAcct, _ := account.NewEd25519()
+	_, err := nc.Transfer(context.Background(), wrongSigner{}, aptos.AccountOne, 10, recipientAcct.Address(), testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected error for non-Account signer")
+	}
+}
+
+func TestTransfer_zeroRecipient(t *testing.T) {
+	nc, acct, _ := newSubmitReadyNativeClient(t, func(context.Context, *aptos.ViewPayload, ...aptos.ViewOption) ([]any, error) {
+		return nil, nil
+	})
+	var zero aptos.AccountAddress
+	_, err := nc.Transfer(context.Background(), acct, aptos.AccountOne, 10, zero, testTwistedHex, "0xa")
+	if err == nil {
+		t.Fatal("expected error for zero recipient")
+	}
+}
+
 func TestWithdraw_submit(t *testing.T) {
 	senderEK := senderEKFromTwistedHex(t)
 	viewFn, err := cipherViewFunc8WithViews(senderEK, aptos.AccountOne, cipherViewOpts{amount: 100, isNormalized: true})
