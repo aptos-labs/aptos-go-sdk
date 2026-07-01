@@ -7,6 +7,7 @@ on:
     paths:
       - "v2/confidentialasset/**"
       - "v2/confidentialasset/native/**"
+      - "v2/examples/confidential_asset/**"
       - "v2/go.mod"
       - "v2/go.sum"
       - "mise.toml"
@@ -19,6 +20,7 @@ on:
     paths:
       - "v2/confidentialasset/**"
       - "v2/confidentialasset/native/**"
+      - "v2/examples/confidential_asset/**"
       - "v2/go.mod"
       - "v2/go.sum"
       - "mise.toml"
@@ -72,4 +74,4 @@ jobs:
         env:
           CGO_ENABLED: "1"
           CGO_LDFLAGS: "-L${{ github.workspace }}/v2/native/x86_64-unknown-linux-gnu"
-        run: go test -short -count=1 ./confidentialasset/...
+        run: go test -short -count=1 ./confidentialasset/... ./examples/confidential_asset/...

@@ -28,6 +28,9 @@ func (c *Client) FetchPublicFABalanceOctas(ctx context.Context, who aptos.Accoun
 		return 0, fmt.Errorf("confidentialasset: set Client.RESTBaseURL or use WithRESTBaseURL for FA gas balance lookup")
 	}
 	meta := strings.TrimSpace(faMetadataHex)
+	if !strings.HasPrefix(meta, "0x") || len(meta) < 3 {
+		return 0, fmt.Errorf("confidentialasset: faMetadataHex must be hex with 0x prefix, got %q", faMetadataHex)
+	}
 	url := fmt.Sprintf("%s/accounts/%s/balance/%s", c.RESTBaseURL, who.String(), meta)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {

@@ -26,7 +26,7 @@ type FakeClient struct {
 
 	// View function stubbing. viewResults is keyed by either the bare
 	// function name ("balance") or the fully-qualified name
-	// ("0x1::coin::balance"). ViewFunc, when set, takes precedence and is
+	// ("0x1::coin::balance"). viewFunc, when set, takes precedence and is
 	// consulted for every View call.
 	viewResults map[string][]any
 
