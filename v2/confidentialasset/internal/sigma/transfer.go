@@ -76,6 +76,12 @@ type TransferProofArgs struct {
 func ProveTransfer(a TransferProofArgs) (*Proof, error) {
 	ell := len(a.OldC)
 	n := len(a.TransferC)
+	if ell == 0 {
+		return nil, fmt.Errorf("transfer: no balance ciphertext chunks")
+	}
+	if n == 0 {
+		return nil, fmt.Errorf("transfer: no transfer ciphertext chunks")
+	}
 	if ell != len(a.OldD) || ell != len(a.NewC) || ell != len(a.NewD) {
 		return nil, fmt.Errorf("transfer: ell mismatch")
 	}

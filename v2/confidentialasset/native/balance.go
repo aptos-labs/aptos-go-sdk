@@ -165,6 +165,9 @@ func (c *Client) decryptAvailableAmountChunks(ctx context.Context, acct *account
 	if err != nil {
 		return pub, nil, nil, nil, err
 	}
+	if len(availC) > maxCipherChunks {
+		return pub, nil, nil, nil, fmt.Errorf("unexpected chunk count %d (max %d)", len(availC), maxCipherChunks)
+	}
 	chunks = make([]uint64, len(availC))
 	for i := range availC {
 		mg, err := ciphertextMGCompressed(availC[i], availD[i], modS)
@@ -174,6 +177,9 @@ func (c *Client) decryptAvailableAmountChunks(ctx context.Context, acct *account
 		v, err := decryptChunkWithSolver(solver, mg)
 		if err != nil {
 			return pub, nil, nil, nil, fmt.Errorf("chunk %d solve: %w", i, err)
+		}
+		if v >= (1 << confidentialChunkBits) {
+			return pub, nil, nil, nil, fmt.Errorf("chunk %d out of range: %d", i, v)
 		}
 		chunks[i] = v
 	}

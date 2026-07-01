@@ -41,17 +41,26 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 	}
 	var audPub []byte
 	var audNewD [][]byte
-	if h, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token); err == nil && h != "" {
-		raw, err := decodeHex32(h)
-		if err == nil && len(raw) == 32 {
-			var ap [32]byte
-			copy(ap[:], raw)
-			audEnc, err := ca.NewEncryptedAmountFromAmount(oldEnc.Amount, ap, newRand)
-			if err == nil {
-				_, audNewD = audEnc.RowsCD()
-				audPub = raw
-			}
+	audHex, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("normalize: auditor key: %w", err)
+	}
+	if audHex != "" {
+		raw, err := decodeHex32(audHex)
+		if err != nil {
+			return nil, fmt.Errorf("normalize: auditor key decode: %w", err)
 		}
+		if len(raw) != 32 {
+			return nil, fmt.Errorf("normalize: auditor key: expected 32 bytes, got %d", len(raw))
+		}
+		var ap [32]byte
+		copy(ap[:], raw)
+		audEnc, err := ca.NewEncryptedAmountFromAmount(oldEnc.Amount, ap, newRand)
+		if err != nil {
+			return nil, fmt.Errorf("normalize: auditor encrypt: %w", err)
+		}
+		_, audNewD = audEnc.RowsCD()
+		audPub = raw
 	}
 	ch, err := c.ChainID(ctx)
 	if err != nil {
@@ -110,11 +119,18 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 // Withdraw submits withdraw_to_raw.
 func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
 	if recipient == (aptos.AccountAddress{}) {
-		recipient = signer.Address()
+		return nil, fmt.Errorf("withdraw: recipient cannot be zero address; pass signer.Address() to withdraw to self")
 	}
 	acct, ok := signer.(*account.Account)
 	if !ok {
 		return nil, fmt.Errorf("withdraw: signer must be *account.Account")
+	}
+	norm, err := c.IsBalanceNormalized(ctx, acct.Address(), token)
+	if err != nil {
+		return nil, fmt.Errorf("withdraw: check normalized: %w", err)
+	}
+	if !norm {
+		return nil, fmt.Errorf("withdraw: balance not normalized; call NormalizeBalance first")
 	}
 	pub, chunks, oldC, oldD, err := c.decryptAvailableAmountChunks(ctx, acct, token, twistedHex)
 	if err != nil {
@@ -138,17 +154,26 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 	}
 	var audPub []byte
 	var audNewD [][]byte
-	if h, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token); err == nil && h != "" {
-		raw, err := decodeHex32(h)
-		if err == nil && len(raw) == 32 {
-			var ap [32]byte
-			copy(ap[:], raw)
-			audEnc, err := ca.NewEncryptedAmountFromAmount(rem, ap, newRand)
-			if err == nil {
-				_, audNewD = audEnc.RowsCD()
-				audPub = raw
-			}
+	audHexW, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("withdraw: auditor key: %w", err)
+	}
+	if audHexW != "" {
+		raw, err := decodeHex32(audHexW)
+		if err != nil {
+			return nil, fmt.Errorf("withdraw: auditor key decode: %w", err)
 		}
+		if len(raw) != 32 {
+			return nil, fmt.Errorf("withdraw: auditor key: expected 32 bytes, got %d", len(raw))
+		}
+		var ap [32]byte
+		copy(ap[:], raw)
+		audEnc, err := ca.NewEncryptedAmountFromAmount(rem, ap, newRand)
+		if err != nil {
+			return nil, fmt.Errorf("withdraw: auditor encrypt: %w", err)
+		}
+		_, audNewD = audEnc.RowsCD()
+		audPub = raw
 	}
 	ch, err := c.ChainID(ctx)
 	if err != nil {
@@ -212,9 +237,19 @@ func (c *Client) Transfer(ctx context.Context, signer aptos.TransactionSigner, t
 }
 
 func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex, memo string) (*aptos.Transaction, error) {
+	if recipient == (aptos.AccountAddress{}) {
+		return nil, fmt.Errorf("transfer: recipient cannot be zero address")
+	}
 	acct, ok := signer.(*account.Account)
 	if !ok {
 		return nil, fmt.Errorf("transfer: signer must be *account.Account")
+	}
+	norm, err := c.IsBalanceNormalized(ctx, acct.Address(), token)
+	if err != nil {
+		return nil, fmt.Errorf("transfer: check normalized: %w", err)
+	}
+	if !norm {
+		return nil, fmt.Errorf("transfer: balance not normalized; call NormalizeBalance first")
 	}
 	pub, chunks, oldC, oldD, err := c.decryptAvailableAmountChunks(ctx, acct, token, twistedHex)
 	if err != nil {
@@ -266,26 +301,34 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 	var newBalDAud [][][]byte
 	var xferDAud [][][]byte
 	hasEff := false
-	if h, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token); err == nil && h != "" {
-		raw, err := decodeHex32(h)
-		if err == nil && len(raw) == 32 {
-			var ap [32]byte
-			copy(ap[:], raw)
-			audKeys = append(audKeys, raw)
-			ne, err := ca.NewEncryptedAmountFromAmount(rem, ap, newBalRand)
-			if err != nil {
-				return nil, fmt.Errorf("auditor new-balance encryption: %w", err)
-			}
-			_, nd := ne.RowsCD()
-			newBalDAud = append(newBalDAud, nd)
-			te, err := ca.NewEncryptedTransferAmount(amountOctas, ap, xferRand)
-			if err != nil {
-				return nil, fmt.Errorf("auditor transfer encryption: %w", err)
-			}
-			_, td := te.RowsCD()
-			xferDAud = append(xferDAud, td)
-			hasEff = true
+	audHexT, err := c.GetEffectiveAuditorEncryptionKeyHex(ctx, token)
+	if err != nil {
+		return nil, fmt.Errorf("transfer: auditor key: %w", err)
+	}
+	if audHexT != "" {
+		raw, err := decodeHex32(audHexT)
+		if err != nil {
+			return nil, fmt.Errorf("transfer: auditor key decode: %w", err)
 		}
+		if len(raw) != 32 {
+			return nil, fmt.Errorf("transfer: auditor key: expected 32 bytes, got %d", len(raw))
+		}
+		var ap [32]byte
+		copy(ap[:], raw)
+		audKeys = append(audKeys, raw)
+		ne, err := ca.NewEncryptedAmountFromAmount(rem, ap, newBalRand)
+		if err != nil {
+			return nil, fmt.Errorf("auditor new-balance encryption: %w", err)
+		}
+		_, nd := ne.RowsCD()
+		newBalDAud = append(newBalDAud, nd)
+		te, err := ca.NewEncryptedTransferAmount(amountOctas, ap, xferRand)
+		if err != nil {
+			return nil, fmt.Errorf("auditor transfer encryption: %w", err)
+		}
+		_, td := te.RowsCD()
+		xferDAud = append(xferDAud, td)
+		hasEff = true
 	}
 	ch, err := c.ChainID(ctx)
 	if err != nil {

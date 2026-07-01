@@ -26,6 +26,9 @@ func BCSWithdrawSession(sender32, token32 [32]byte, numChunks uint64, hasAuditor
 }
 
 func computeBPowers(count int) []*big.Int {
+	if count == 0 {
+		return nil
+	}
 	const B = int64(1 << 16)
 	powers := make([]*big.Int, count)
 	powers[0] = big.NewInt(1)
@@ -66,6 +69,9 @@ type WithdrawProofArgs struct {
 // ProveWithdrawal is TS proveWithdrawal / proveNormalization (amount=0).
 func ProveWithdrawal(a WithdrawProofArgs) (*Proof, error) {
 	ell := len(a.OldC)
+	if ell == 0 {
+		return nil, fmt.Errorf("sigma withdraw: no ciphertext chunks")
+	}
 	if ell != len(a.OldD) || ell != len(a.NewC) || ell != len(a.NewD) || ell != len(a.NewAmountChunks) || ell != len(a.NewRandomness) {
 		return nil, fmt.Errorf("sigma withdraw: mismatched ell")
 	}

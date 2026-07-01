@@ -63,7 +63,13 @@ func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.Transacti
 	if err != nil {
 		return nil, fmt.Errorf("new twisted key: %w", err)
 	}
-
+	norm, err := c.IsBalanceNormalized(ctx, acct.Address(), token)
+	if err != nil {
+		return nil, fmt.Errorf("rotate: check normalized: %w", err)
+	}
+	if !norm {
+		return nil, fmt.Errorf("rotate: balance not normalized; call NormalizeBalance first")
+	}
 	_, dRows, err := c.FetchBalanceCipherChunks(ctx, signer.Address(), token, "get_available_balance")
 	if err != nil {
 		return nil, err
