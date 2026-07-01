@@ -138,6 +138,102 @@ func TestGetEffectiveAuditorEncryptionKeyHex_missingConfig(t *testing.T) {
 	}
 }
 
+func TestClient_views_viewError(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(_ context.Context, _ *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
+		return nil, fmt.Errorf("injected view error")
+	})
+	ctx := context.Background()
+	acct := aptos.AccountOne
+	token := aptos.AccountOne
+
+	if _, err := cc.HasUserRegistered(ctx, acct, token); err == nil {
+		t.Fatal("HasUserRegistered: expected error")
+	}
+	if _, err := cc.IsBalanceNormalized(ctx, acct, token); err == nil {
+		t.Fatal("IsBalanceNormalized: expected error")
+	}
+	if _, err := cc.IncomingTransfersPaused(ctx, acct, token); err == nil {
+		t.Fatal("IncomingTransfersPaused: expected error")
+	}
+	if _, err := cc.IsEmergencyPaused(ctx); err == nil {
+		t.Fatal("IsEmergencyPaused: expected error")
+	}
+	if _, err := cc.GetEncryptionKeyHex(ctx, acct, token); err == nil {
+		t.Fatal("GetEncryptionKeyHex: expected error")
+	}
+	if _, err := cc.GetMaxMemoBytes(ctx); err == nil {
+		t.Fatal("GetMaxMemoBytes: expected error")
+	}
+	if _, err := cc.GetEffectiveAuditorHint(ctx, acct, token); err == nil {
+		t.Fatal("GetEffectiveAuditorHint: expected error")
+	}
+	if _, err := cc.GetEffectiveAuditorEncryptionKeyHex(ctx, token); err == nil {
+		t.Fatal("GetEffectiveAuditorEncryptionKeyHex: expected error")
+	}
+}
+
+func TestClient_views_emptyResult(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(_ context.Context, _ *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
+		return []any{}, nil
+	})
+	ctx := context.Background()
+	acct := aptos.AccountOne
+	token := aptos.AccountOne
+
+	if _, err := cc.HasUserRegistered(ctx, acct, token); err == nil {
+		t.Fatal("HasUserRegistered: expected empty error")
+	}
+	if _, err := cc.IsBalanceNormalized(ctx, acct, token); err == nil {
+		t.Fatal("IsBalanceNormalized: expected empty error")
+	}
+	if _, err := cc.IncomingTransfersPaused(ctx, acct, token); err == nil {
+		t.Fatal("IncomingTransfersPaused: expected empty error")
+	}
+	if _, err := cc.IsEmergencyPaused(ctx); err == nil {
+		t.Fatal("IsEmergencyPaused: expected empty error")
+	}
+	if _, err := cc.GetEncryptionKeyHex(ctx, acct, token); err == nil {
+		t.Fatal("GetEncryptionKeyHex: expected empty error")
+	}
+	if _, err := cc.GetMaxMemoBytes(ctx); err == nil {
+		t.Fatal("GetMaxMemoBytes: expected empty error")
+	}
+}
+
+func TestGetEncryptionKeyHex_missingData(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(_ context.Context, payload *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
+		if payload.Function == "get_encryption_key" {
+			return []any{map[string]any{"other": "value"}}, nil
+		}
+		return testViewFunc(context.Background(), payload)
+	})
+	_, err := cc.GetEncryptionKeyHex(context.Background(), aptos.AccountOne, aptos.AccountOne)
+	if err == nil {
+		t.Fatal("expected error for missing data field")
+	}
+}
+
+func TestGetEncryptionKeyHex_wrongType(t *testing.T) {
+	t.Parallel()
+	cc, fc := newTestConfidentialClient()
+	fc.WithViewFunc(func(_ context.Context, payload *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
+		if payload.Function == "get_encryption_key" {
+			return []any{"not-a-map"}, nil
+		}
+		return testViewFunc(context.Background(), payload)
+	})
+	_, err := cc.GetEncryptionKeyHex(context.Background(), aptos.AccountOne, aptos.AccountOne)
+	if err == nil {
+		t.Fatal("expected error for non-map result")
+	}
+}
+
 func TestGetMaxMemoBytes_float64(t *testing.T) {
 	t.Parallel()
 	cc, fc := newTestConfidentialClient()

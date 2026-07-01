@@ -164,6 +164,161 @@ func TestProveTransfer_withEffectiveAuditor(t *testing.T) {
 	}
 }
 
+func TestProveTransfer_validationErrors(t *testing.T) {
+	t.Parallel()
+	var dk, sender, recipient, token [32]byte
+	dk[0] = 13
+	senderEK, err := ca.TwistedPublicKeyFromPrivateLE32(dk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	recipientEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{7})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var senderPub [32]byte
+	copy(senderPub[:], senderEK)
+
+	enc, err := ca.NewEncryptedAmountFromAmount(1000, senderPub, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	oldC, oldD := enc.RowsCD()
+	xferEnc, err := ca.NewEncryptedAmountFromAmount(100, senderPub, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tsC, tsDsid := xferEnc.RowsCD()
+	_, tsDrid := xferEnc.RowsCD()
+
+	t.Run("ell==0", func(t *testing.T) {
+		_, err := ProveTransfer(TransferProofArgs{
+			DK32:          dk,
+			Sender32:      sender,
+			Recipient32:   recipient,
+			Token32:       token,
+			SenderEK32:    senderEK,
+			RecipientEK32: recipientEK,
+			TransferC:     tsC,
+			TransferDSid:  tsDsid,
+			TransferDRid:  tsDrid,
+		})
+		if err == nil {
+			t.Fatal("expected ell==0 error")
+		}
+	})
+
+	t.Run("n==0", func(t *testing.T) {
+		_, err := ProveTransfer(TransferProofArgs{
+			DK32:          dk,
+			Sender32:      sender,
+			Recipient32:   recipient,
+			Token32:       token,
+			SenderEK32:    senderEK,
+			RecipientEK32: recipientEK,
+			OldC:          oldC,
+			OldD:          oldD,
+		})
+		if err == nil {
+			t.Fatal("expected n==0 error")
+		}
+	})
+
+	t.Run("ell_mismatch", func(t *testing.T) {
+		_, err := ProveTransfer(TransferProofArgs{
+			DK32:          dk,
+			Sender32:      sender,
+			Recipient32:   recipient,
+			Token32:       token,
+			SenderEK32:    senderEK,
+			RecipientEK32: recipientEK,
+			OldC:          oldC,
+			OldD:          oldD[:len(oldD)-1], // mismatch
+			NewC:          oldC,
+			NewD:          oldD,
+			TransferC:     tsC,
+			TransferDSid:  tsDsid,
+			TransferDRid:  tsDrid,
+		})
+		if err == nil {
+			t.Fatal("expected ell mismatch error")
+		}
+	})
+
+	t.Run("n_mismatch", func(t *testing.T) {
+		_, err := ProveTransfer(TransferProofArgs{
+			DK32:          dk,
+			Sender32:      sender,
+			Recipient32:   recipient,
+			Token32:       token,
+			SenderEK32:    senderEK,
+			RecipientEK32: recipientEK,
+			OldC:          oldC,
+			OldD:          oldD,
+			NewC:          oldC,
+			NewD:          oldD,
+			TransferC:     tsC,
+			TransferDSid:  tsDsid[:len(tsDsid)-1], // mismatch
+			TransferDRid:  tsDrid,
+		})
+		if err == nil {
+			t.Fatal("expected n mismatch error")
+		}
+	})
+
+	t.Run("effective_auditor_no_keys", func(t *testing.T) {
+		_, err := ProveTransfer(TransferProofArgs{
+			DK32:                dk,
+			Sender32:            sender,
+			Recipient32:         recipient,
+			Token32:             token,
+			SenderEK32:          senderEK,
+			RecipientEK32:       recipientEK,
+			OldC:                oldC,
+			OldD:                oldD,
+			NewC:                oldC,
+			NewD:                oldD,
+			TransferC:           tsC,
+			TransferDSid:        tsDsid,
+			TransferDRid:        tsDrid,
+			HasEffectiveAuditor: true,
+			AuditorEK32s:        nil, // no keys
+		})
+		if err == nil {
+			t.Fatal("expected effective auditor but no keys error")
+		}
+	})
+
+	t.Run("auditor_ciphertext_rows_mismatch", func(t *testing.T) {
+		audEK, err := ca.TwistedPublicKeyFromPrivateLE32([32]byte{99})
+		if err != nil {
+			t.Fatal(err)
+		}
+		_, err = ProveTransfer(TransferProofArgs{
+			DK32:                dk,
+			Sender32:            sender,
+			Recipient32:         recipient,
+			Token32:             token,
+			SenderEK32:          senderEK,
+			RecipientEK32:       recipientEK,
+			OldC:                oldC,
+			OldD:                oldD,
+			NewC:                oldC,
+			NewD:                oldD,
+			TransferC:           tsC,
+			TransferDSid:        tsDsid,
+			TransferDRid:        tsDrid,
+			HasEffectiveAuditor: true,
+			AuditorEK32s:        [][]byte{audEK},
+			NewBalanceDAud:      nil, // mismatch: should be len 1
+			TransferAmountDAud:  nil,
+		})
+		if err == nil {
+			t.Fatal("expected auditor ciphertext rows mismatch error")
+		}
+	})
+}
+
 func TestProveKeyRotation(t *testing.T) {
 	t.Parallel()
 	var oldDK, newDK, sender, token [32]byte

@@ -45,11 +45,8 @@ const (
 	startOldP = 3
 )
 
-func startOldR(ell int) int    { return startOldP + ell }
-func startNewP(ell int) int    { return startOldP + 2*ell }
-func startNewR(ell int) int    { return startOldP + 3*ell }
-func idxEkAud(ell int) int     { return startOldP + 4*ell }
-func startNewRAud(ell int) int { return startOldP + 4*ell + 1 }
+func startOldR(ell int) int { return startOldP + ell }
+func idxEkAud(ell int) int  { return startOldP + 4*ell }
 
 // WithdrawProofArgs matches TS WithdrawProofArgs (points from EncryptedAmount).
 type WithdrawProofArgs struct {

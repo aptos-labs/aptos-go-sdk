@@ -37,11 +37,6 @@ const (
 )
 
 func trStartOldR(ell int) int      { return trStartOldP + ell }
-func trStartNewP(ell int) int      { return trStartOldP + 2*ell }
-func trStartNewR(ell int) int      { return trStartOldP + 3*ell }
-func trStartP(ell int) int         { return trStartOldP + 4*ell }
-func trStartRSid(ell, n int) int   { return trStartOldP + 4*ell + n }
-func trStartRRid(ell, n int) int   { return trStartOldP + 4*ell + 2*n }
 func trIdxEkAudEff(ell, n int) int { return trStartOldP + 4*ell + 3*n }
 func trStartVolun(ell, n int, hasEff bool, numVolun int) int {
 	base := trStartOldP + 4*ell + 3*n
