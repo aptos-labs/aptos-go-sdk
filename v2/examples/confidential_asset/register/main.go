@@ -1,7 +1,7 @@
 // # Environment variables
 //
 //	APTOS_PRIVATE_KEY            Ed25519 account private key (required)
-//	APTOS_NETWORK                testnet or mainnet (required)
+//	APTOS_NETWORK                testnet, mainnet, devnet, or localnet (optional, default testnet)
 //	CONFIDENTIAL_DEPOSIT_OCTAS   Amount to deposit after registering (optional, default 800000)
 //	SKIP_CONFIDENTIAL_DEPOSIT    Set to 1 to skip the deposit step (optional)
 //

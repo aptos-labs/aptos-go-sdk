@@ -2,6 +2,7 @@ package confidentialasset
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2"
@@ -20,8 +21,11 @@ func TestClient_views(t *testing.T) {
 	}{
 		{"HasUserRegistered", func() error {
 			b, err := cc.HasUserRegistered(ctx, acct, token)
-			if err != nil || !b {
+			if err != nil {
 				return err
+			}
+			if !b {
+				return fmt.Errorf("HasUserRegistered: want true, got false")
 			}
 			return nil
 		}},
@@ -39,36 +43,51 @@ func TestClient_views(t *testing.T) {
 		}},
 		{"GetEncryptionKeyHex", func() error {
 			h, err := cc.GetEncryptionKeyHex(ctx, acct, token)
-			if err != nil || h == "" {
+			if err != nil {
 				return err
+			}
+			if h == "" {
+				return fmt.Errorf("GetEncryptionKeyHex: want non-empty hex, got empty")
 			}
 			return nil
 		}},
 		{"GetEffectiveAuditorHint", func() error {
 			h, err := cc.GetEffectiveAuditorHint(ctx, acct, token)
-			if err != nil || h == nil || !h.IsGlobal || h.Epoch != 42 {
+			if err != nil {
 				return err
+			}
+			if h == nil || !h.IsGlobal || h.Epoch != 42 {
+				return fmt.Errorf("GetEffectiveAuditorHint: want {IsGlobal:true Epoch:42}, got %+v", h)
 			}
 			return nil
 		}},
 		{"GetEffectiveAuditorEncryptionKeyHex", func() error {
 			h, err := cc.GetEffectiveAuditorEncryptionKeyHex(ctx, token)
-			if err != nil || h != "" {
+			if err != nil {
 				return err
+			}
+			if h != "" {
+				return fmt.Errorf("GetEffectiveAuditorEncryptionKeyHex: want empty, got %q", h)
 			}
 			return nil
 		}},
 		{"GetMaxMemoBytes", func() error {
 			n, err := cc.GetMaxMemoBytes(ctx)
-			if err != nil || n != 256 {
+			if err != nil {
 				return err
+			}
+			if n != 256 {
+				return fmt.Errorf("GetMaxMemoBytes: want 256, got %d", n)
 			}
 			return nil
 		}},
 		{"ChainID", func() error {
 			ch, err := cc.ChainID(ctx)
-			if err != nil || ch != 4 {
+			if err != nil {
 				return err
+			}
+			if ch != 4 {
+				return fmt.Errorf("ChainID: want 4, got %d", ch)
 			}
 			return nil
 		}},

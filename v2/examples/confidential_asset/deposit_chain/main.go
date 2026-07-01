@@ -19,7 +19,7 @@
 //
 //	APTOS_PRIVATE_KEY       Ed25519 account private key (required)
 //	TWISTED_PRIVATE_KEY_HEX Decryption key hex; derived from Ed25519 key when omitted (optional)
-//	APTOS_NETWORK           testnet or mainnet (required)
+//	APTOS_NETWORK           testnet, mainnet, devnet, or localnet (optional, default testnet)
 //
 // deposit_chain runs deposit → normalize (if needed) → rollover_pending_balance → prints confidential balance.
 package main
