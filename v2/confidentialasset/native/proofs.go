@@ -119,7 +119,7 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 // Withdraw submits withdraw_to_raw.
 func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
 	if recipient == (aptos.AccountAddress{}) {
-		return nil, fmt.Errorf("withdraw: recipient cannot be zero address; pass signer.Address() to withdraw to self")
+		recipient = signer.Address()
 	}
 	acct, ok := signer.(*account.Account)
 	if !ok {
