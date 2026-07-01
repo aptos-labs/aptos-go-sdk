@@ -108,7 +108,7 @@ func ViewRowToSlice(out []any) ([]any, error) {
 	if err := json.Unmarshal(raw, &arr); err != nil {
 		var obj map[string]any
 		if err2 := json.Unmarshal(raw, &obj); err2 != nil {
-			return nil, err
+			return nil, err2
 		}
 		arr = []any{obj}
 	}
