@@ -78,6 +78,9 @@ func loadAccount() (*account.Account, error) {
 
 func newClientPair() (aptos.Client, *confidentialasset.Client, aptos.NetworkConfig, error) {
 	net := networkFromEnv()
+	if u := strings.TrimSpace(os.Getenv("APTOS_NODE_URL")); u != "" {
+		net.NodeURL = strings.TrimSuffix(u, "/")
+	}
 	client, err := aptos.NewClient(net)
 	if err != nil {
 		return nil, nil, net, err

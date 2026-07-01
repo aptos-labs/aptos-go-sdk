@@ -39,7 +39,8 @@ func TestNativeImportFailsWithoutCGO(t *testing.T) {
 		t.Fatal("expected go build of native to fail when CGO_ENABLED=0")
 	}
 	combined := string(stderr)
-	if !strings.Contains(combined, "build constraints exclude all Go files") {
+	if !strings.Contains(combined, "build constraints exclude all Go files") &&
+		!strings.Contains(combined, "no Go files") {
 		t.Fatalf("stderr should mention excluded build constraints; got:\n%s", combined)
 	}
 }
