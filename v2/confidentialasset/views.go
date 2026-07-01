@@ -44,7 +44,10 @@ func (c *Client) HasUserRegistered(ctx context.Context, account, token aptos.Acc
 		return false, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return false, err
+	}
+	if len(arr) == 0 {
 		return false, fmt.Errorf("has_confidential_store: empty")
 	}
 	return viewBool(arr[0])
@@ -62,7 +65,10 @@ func (c *Client) IsBalanceNormalized(ctx context.Context, account, token aptos.A
 		return false, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return false, err
+	}
+	if len(arr) == 0 {
 		return false, fmt.Errorf("is_normalized: empty")
 	}
 	return viewBool(arr[0])
@@ -80,7 +86,10 @@ func (c *Client) IncomingTransfersPaused(ctx context.Context, account, token apt
 		return false, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return false, err
+	}
+	if len(arr) == 0 {
 		return false, fmt.Errorf("incoming_transfers_paused: empty")
 	}
 	return viewBool(arr[0])
@@ -98,7 +107,10 @@ func (c *Client) IsEmergencyPaused(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return false, err
+	}
+	if len(arr) == 0 {
 		return false, fmt.Errorf("is_emergency_paused: empty")
 	}
 	return viewBool(arr[0])
@@ -116,7 +128,10 @@ func (c *Client) GetEncryptionKeyHex(ctx context.Context, account, token aptos.A
 		return "", err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return "", err
+	}
+	if len(arr) == 0 {
 		return "", fmt.Errorf("get_encryption_key: empty")
 	}
 	m, ok := arr[0].(map[string]any)
@@ -181,7 +196,10 @@ func (c *Client) GetEffectiveAuditorEncryptionKeyHex(ctx context.Context, token 
 		return "", err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return "", err
+	}
+	if len(arr) == 0 {
 		return "", fmt.Errorf("get_effective_auditor_config: empty")
 	}
 	wrap, ok := arr[0].(map[string]any)
@@ -217,7 +235,10 @@ func (c *Client) GetMaxMemoBytes(ctx context.Context) (uint64, error) {
 		return 0, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return 0, err
+	}
+	if len(arr) == 0 {
 		return 0, fmt.Errorf("get_max_memo_bytes: empty")
 	}
 	switch v := arr[0].(type) {

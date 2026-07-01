@@ -1,8 +1,9 @@
 // # Environment variables
 //
-//	APTOS_PRIVATE_KEY       Ed25519 account private key (required)
-//	APTOS_NETWORK           testnet or mainnet (required)
-//	DEPOSIT_OCTAS           Amount to deposit after registering (optional, default 0)
+//	APTOS_PRIVATE_KEY            Ed25519 account private key (required)
+//	APTOS_NETWORK                testnet or mainnet (required)
+//	CONFIDENTIAL_DEPOSIT_OCTAS   Amount to deposit after registering (optional, default 800000)
+//	SKIP_CONFIDENTIAL_DEPOSIT    Set to 1 to skip the deposit step (optional)
 //
 // Registers confidential store when needed, then optionally deposits into confidential balance.
 // This example does not require CGO — run with: go run .
