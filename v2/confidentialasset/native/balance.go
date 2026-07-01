@@ -110,12 +110,9 @@ func decryptChunkedOctas(solver *aptosconfidential.Solver, modS *ristretto255.Sc
 	if len(c) == 0 {
 		return 0, nil
 	}
-	const maxUint64Chunks = 64 / confidentialChunkBits // 4: uint64 can hold at most 4 × 16-bit chunks
+	const maxUint64Chunks = 64 / confidentialChunkBits // 4: uint64 holds at most 4 × 16-bit chunks
 	if len(c) > maxCipherChunks {
 		return 0, fmt.Errorf("unexpected chunk count %d (max %d)", len(c), maxCipherChunks)
-	}
-	if len(c) > maxUint64Chunks {
-		return 0, fmt.Errorf("chunk count %d overflows uint64 (%d-bit chunks, max %d for uint64)", len(c), confidentialChunkBits, maxUint64Chunks)
 	}
 	var total uint64
 	for i := 0; i < len(c); i++ {
@@ -129,6 +126,12 @@ func decryptChunkedOctas(solver *aptosconfidential.Solver, modS *ristretto255.Sc
 		}
 		if part >= (1 << confidentialChunkBits) {
 			return 0, fmt.Errorf("chunk %d out of range: %d", i, part)
+		}
+		if i >= maxUint64Chunks {
+			if part != 0 {
+				return 0, fmt.Errorf("chunk %d value %d overflows uint64 (%d-bit chunks, max %d)", i, part, confidentialChunkBits, maxUint64Chunks)
+			}
+			continue
 		}
 		total += part << (confidentialChunkBits * uint(i))
 	}

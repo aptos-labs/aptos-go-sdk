@@ -25,7 +25,7 @@ func viewToJSONArray(out []any) ([]any, error) {
 	if err := json.Unmarshal(raw, &arr); err != nil {
 		var obj map[string]any
 		if err2 := json.Unmarshal(raw, &obj); err2 != nil {
-			return nil, fmt.Errorf("view JSON: %w", err)
+			return nil, fmt.Errorf("view JSON: %w", err2)
 		}
 		arr = []any{obj}
 	}
@@ -142,12 +142,15 @@ func (c *Client) GetEffectiveAuditorHint(ctx context.Context, account, token apt
 		return nil, err
 	}
 	arr, err := viewToJSONArray(out)
-	if err != nil || len(arr) == 0 {
+	if err != nil {
+		return nil, err
+	}
+	if len(arr) == 0 {
 		return nil, nil
 	}
 	root, ok := arr[0].(map[string]any)
 	if !ok {
-		return nil, nil
+		return nil, fmt.Errorf("get_effective_auditor_hint: unexpected response type %T", arr[0])
 	}
 	vec, _ := root["vec"].([]any)
 	if len(vec) == 0 {
