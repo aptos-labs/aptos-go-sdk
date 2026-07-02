@@ -1,4 +1,4 @@
-//go:build 386 || arm || riscv || ppc
+//go:build 386 || arm || riscv || ppc || wasm
 
 package util
 
