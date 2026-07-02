@@ -158,6 +158,16 @@ func TestSplitPathErrors(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for non-numeric segment")
 	}
+
+	_, err = SplitPath("m/44''/0'/0'/0'")
+	if err == nil {
+		t.Fatal("expected error for empty segment")
+	}
+
+	_, err = SplitPath("m/44'/4294967296'/0'/0'/0'")
+	if err == nil {
+		t.Fatal("expected error for out-of-range segment")
+	}
 }
 
 func TestDeriveEd25519PrivateKeyInvalidPath(t *testing.T) {
