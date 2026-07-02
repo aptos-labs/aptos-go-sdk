@@ -5,7 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
-# v2.3.0 (7/2/2026)
+# v2.2.0 (7/2/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `account.FromMnemonic` and `account.FromDerivationPath` for wallet import
@@ -22,16 +22,12 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Keep `MaxRetries` as a strict cap on error/status retries
 - [`Fix`] Fix 32-bit overflow in BCS length checks and `IntToU32` conversion on 32-bit systems
 - [`Perf`] Use a stoppable timer for retry backoff to avoid goroutine leaks on context cancellation
-- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.13.0 → v1.15.0
-
-# v2.2.0 (5/26/2026)
-
 - [`Security`] Upgrade Go toolchain from go1.25.0 to go1.25.10, resolving 18 stdlib CVEs
 - [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.52.0
 - [`Security`] Upgrade `github.com/decred/dcrd/dcrec/secp256k1/v4` v4.4.0 → v4.4.1
 - [`Dependency`] Upgrade `filippo.io/edwards25519` v1.1.1 → v1.2.0
-- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.11.0 → v1.14.0
-- [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.14.4 → v0.15.1
+- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.13.0 → v1.14.0
+- [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.14.4 → v0.16.0
 - [`Dependency`] Upgrade `golang.org/x/sys` v0.42.0 → v0.45.0
 
 # v2.1.0 (5/21/2026)
