@@ -5,10 +5,14 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v1.15.0 (7/2/2026)
+
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `NewEd25519AccountFromMnemonic` and `NewEd25519AccountFromDerivationPath` for wallet import
   - `crypto.ValidateMnemonic`, `crypto.DefaultDerivationPath`, and `crypto.Ed25519PrivateKeyFromDerivationPath`
   - SLIP-0010 hardened derivation on the standard Aptos path `m/44'/637'/0'/0'/0'`
+- [`Fix`] Fix 32-bit overflow in `IntToU32` — values above `math.MaxInt32` now return an error instead of wrapping on 32-bit systems
+- [`Fix`] Fix BCS deserializer uleb128 length conversion to safely reject values that overflow `int` on 32-bit systems
 
 # v1.14.0 (5/26/2026)
 

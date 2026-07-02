@@ -5,11 +5,24 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+# v2.3.0 (7/2/2026)
+
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `account.FromMnemonic` and `account.FromDerivationPath` for wallet import
   - Optional BIP-39 passphrase and SingleKey authentication scheme via `account.DerivationConfig`
   - `aptos.ValidateMnemonic`, `aptos.DefaultDerivationPath`, and `aptos.Ed25519PrivateKeyFromDerivationPath`
   - SLIP-0010 hardened derivation on the standard Aptos path `m/44'/637'/0'/0'/0'`
+- [`Feature`] Add automatic retry middleware to the node client with configurable backoff, rate-limit (429) handling, and `MaxRetries`
+- [`Feature`] Support legacy `MultiEd25519` transaction authenticators alongside fee-payer and multi-agent flows
+- [`Fix`] Fix AIP-80 private key export for `SingleSigner`-wrapped keys
+- [`Fix`] Guard `MultiEd25519TransactionAuthenticator` against nil sender authenticator
+- [`Fix`] Validate inner authenticator type in `MultiEd25519` BCS marshaling
+- [`Fix`] Make `FakeClient` view-result stubs return defensive copies to prevent mutation
+- [`Fix`] Honor explicit `MaxRetries == 0` in retry middleware to disable retries
+- [`Fix`] Keep `MaxRetries` as a strict cap on error/status retries
+- [`Fix`] Fix 32-bit overflow in BCS length checks and `IntToU32` conversion on 32-bit systems
+- [`Perf`] Use a stoppable timer for retry backoff to avoid goroutine leaks on context cancellation
+- [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.13.0 → v1.15.0
 
 # v2.2.0 (5/26/2026)
 
