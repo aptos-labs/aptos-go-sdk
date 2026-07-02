@@ -35,3 +35,13 @@ func TestEd25519PrivateKeyFromDerivationPathInvalidPath(t *testing.T) {
 		t.Fatal("expected error for invalid path")
 	}
 }
+
+func TestValidateMnemonic(t *testing.T) {
+	t.Parallel()
+	if !ValidateMnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about") {
+		t.Fatal("expected valid mnemonic")
+	}
+	if ValidateMnemonic("not a valid mnemonic phrase") {
+		t.Fatal("expected invalid mnemonic")
+	}
+}

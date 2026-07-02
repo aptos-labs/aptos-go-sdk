@@ -69,6 +69,25 @@ func main() {
 }
 ```
 
+### Import from Mnemonic
+
+Derive a Petra-compatible account from a BIP-39 mnemonic:
+
+```go
+import "github.com/aptos-labs/aptos-go-sdk/crypto"
+
+mnemonic := "word1 word2 ... word12"
+if !crypto.ValidateMnemonic(mnemonic) {
+    log.Fatal("invalid mnemonic")
+}
+
+// Default path: m/44'/637'/0'/0'/0'
+account, err := aptos.NewEd25519AccountFromMnemonic(mnemonic)
+
+// Or with a custom derivation path
+account, err = aptos.NewEd25519AccountFromDerivationPath(mnemonic, "m/44'/637'/1'/0'/0'")
+```
+
 ## Examples
 
 The `examples/` directory contains runnable examples that also serve as integration tests:

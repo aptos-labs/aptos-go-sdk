@@ -9,6 +9,11 @@ import (
 // DefaultDerivationPath is the standard Petra-style Aptos Ed25519 BIP-44 path.
 const DefaultDerivationPath = hd.DefaultDerivationPath
 
+// ValidateMnemonic reports whether the mnemonic is a valid BIP-39 phrase.
+func ValidateMnemonic(mnemonic string) bool {
+	return hd.ValidateMnemonic(mnemonic)
+}
+
 // Ed25519PrivateKeyFromDerivationPath derives a legacy Ed25519 private key from a
 // BIP-39 mnemonic and Aptos BIP-44 hardened path (e.g. m/44'/637'/0'/0'/0').
 func Ed25519PrivateKeyFromDerivationPath(mnemonic, path, passphrase string) (*Ed25519PrivateKey, error) {
