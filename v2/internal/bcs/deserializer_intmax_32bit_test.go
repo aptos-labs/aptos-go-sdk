@@ -1,4 +1,4 @@
-//go:build 386 || arm || mips || mipsle || wasm
+//go:build 386 || arm || riscv || ppc
 
 package bcs
 
