@@ -15,7 +15,7 @@ jobs:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           ref: ${{ env.GIT_SHA }}
 
@@ -35,7 +35,7 @@ jobs:
       # to the single source of truth (v2/go.mod), so bumping v2's
       # minimum Go version automatically updates CI.
       - name: Set up Go (pinned to v2/go.mod)
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: v2/go.mod
           cache: true
@@ -55,7 +55,7 @@ jobs:
 
       # Upload v2 coverage to Codecov
       - name: Upload v2 coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         with:
           files: ./v2/coverage.out
           flags: v2
@@ -67,7 +67,7 @@ jobs:
 
       # Upload v1 coverage to Codecov (if available)
       - name: Upload v1 coverage to Codecov
-        uses: codecov/codecov-action@v5
+        uses: codecov/codecov-action@0fb7174895f61a3b6b78fc075e0cd60383518dac # v5.5.5
         if: hashFiles('coverage-v1.out') != ''
         with:
           files: ./coverage-v1.out

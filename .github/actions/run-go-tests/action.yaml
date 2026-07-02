@@ -6,13 +6,13 @@ description: |
 runs:
   using: composite
   steps:
-    - uses: jdx/mise-action@v4
+    - uses: jdx/mise-action@e6a8b3978addb5a52f2b4cd9d91eafa7f0ab959d # v4.2.0
       with:
         install_args: "go"
         cache: true
     # Run a local testnet in the background. After this action runs the local testnet
     # should be up and queryable. This also installs node and pnpm for us.
-    - uses: aptos-labs/actions/run-local-testnet@main
+    - uses: aptos-labs/actions/run-local-testnet@fdd3a3a628c840d5c35086a87e9cc3141b635505 # main@2026-05-20
       with:
         PNPM_VERSION: 8.9.0
 
