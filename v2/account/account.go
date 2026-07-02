@@ -63,6 +63,11 @@ type AccountAddress = types.AccountAddress
 // DefaultDerivationPath is the standard Petra-style Aptos Ed25519 BIP-44 path.
 const DefaultDerivationPath = hd.DefaultDerivationPath
 
+// ValidateMnemonic reports whether the mnemonic is a valid BIP-39 phrase.
+func ValidateMnemonic(mnemonic string) bool {
+	return hd.ValidateMnemonic(mnemonic)
+}
+
 // DerivationConfig configures mnemonic-based account derivation.
 type DerivationConfig struct {
 	// Passphrase is the optional BIP-39 passphrase (sometimes called the 25th word).

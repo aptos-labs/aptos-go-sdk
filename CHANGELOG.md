@@ -5,6 +5,11 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
+  - `NewEd25519AccountFromMnemonic` and `NewEd25519AccountFromDerivationPath` for wallet import
+  - `crypto.ValidateMnemonic`, `crypto.DefaultDerivationPath`, and `crypto.Ed25519PrivateKeyFromDerivationPath`
+  - SLIP-0010 hardened derivation on the standard Aptos path `m/44'/637'/0'/0'/0'`
+
 # v1.14.0 (5/26/2026)
 
 - [`Security`] Upgrade Go toolchain from go1.24.2 to go1.25.10, resolving 37 stdlib CVEs (Go 1.24 is EOL)

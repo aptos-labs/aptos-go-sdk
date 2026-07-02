@@ -63,6 +63,11 @@ func TestFromDerivationPathSingleKey(t *testing.T) {
 	if legacy.Address() == singleKey.Address() {
 		t.Fatal("legacy and SingleKey accounts should have different addresses")
 	}
+	// Cross-SDK test vector verified against @aptos-labs/ts-sdk Account.fromDerivationPath({ legacy: false }).
+	wantSingleKeyAddress := "0x80ce9a268bbff003590bbe815d508f9619aa29ffe300fdacad9740a68773fb75"
+	if singleKey.Address().String() != wantSingleKeyAddress {
+		t.Errorf("SingleKey Address() = %s, want %s", singleKey.Address().String(), wantSingleKeyAddress)
+	}
 }
 
 func TestFromDerivationPathInvalidMnemonic(t *testing.T) {
@@ -108,5 +113,15 @@ func TestFromDerivationPathMultipleConfigs(t *testing.T) {
 	_, err := FromDerivationPath(testMnemonic, DefaultDerivationPath, &DerivationConfig{}, &DerivationConfig{})
 	if err == nil {
 		t.Fatal("expected error when multiple DerivationConfig values are provided")
+	}
+}
+
+func TestValidateMnemonic(t *testing.T) {
+	t.Parallel()
+	if !ValidateMnemonic(testMnemonic) {
+		t.Fatal("expected valid mnemonic")
+	}
+	if ValidateMnemonic("not a valid mnemonic phrase") {
+		t.Fatal("expected invalid mnemonic")
 	}
 }
