@@ -26,6 +26,12 @@
 //	// From AIP-80 formatted string
 //	account, err := account.FromAIP80("ed25519-priv-...")
 //
+//	// From BIP-39 mnemonic (Petra-style derivation path)
+//	account, err := account.FromMnemonic("word1 word2 ... word12")
+//
+//	// From mnemonic with a custom derivation path
+//	account, err := account.FromDerivationPath(mnemonic, "m/44'/637'/1'/0'/0'")
+//
 // # Using Accounts
 //
 // Accounts implement TransactionSigner and can be used directly with the client:
@@ -47,11 +53,28 @@ import (
 	"io"
 
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/crypto"
+	"github.com/aptos-labs/aptos-go-sdk/v2/internal/crypto/hd"
 	"github.com/aptos-labs/aptos-go-sdk/v2/internal/types"
 )
 
 // AccountAddress is re-exported for convenience.
 type AccountAddress = types.AccountAddress
+
+// DefaultDerivationPath is the standard Petra-style Aptos Ed25519 BIP-44 path.
+const DefaultDerivationPath = hd.DefaultDerivationPath
+
+// ValidateMnemonic reports whether the mnemonic is a valid BIP-39 phrase.
+func ValidateMnemonic(mnemonic string) bool {
+	return hd.ValidateMnemonic(mnemonic)
+}
+
+// DerivationConfig configures mnemonic-based account derivation.
+type DerivationConfig struct {
+	// Passphrase is the optional BIP-39 passphrase (sometimes called the 25th word).
+	Passphrase string
+	// SingleKey uses the SingleKey authentication scheme instead of legacy Ed25519.
+	SingleKey bool
+}
 
 // Account represents an on-chain account with signing capability.
 // It combines an AccountAddress with a Signer to allow both
@@ -198,6 +221,36 @@ func FromPrivateKeyHex(hexKey string) (*Account, error) {
 	}
 
 	return nil, errors.New("failed to parse private key: unsupported format")
+}
+
+// FromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic using
+// the default Aptos derivation path (m/44'/637'/0'/0'/0').
+func FromMnemonic(mnemonic string, cfg ...*DerivationConfig) (*Account, error) {
+	return FromDerivationPath(mnemonic, DefaultDerivationPath, cfg...)
+}
+
+// FromDerivationPath creates an account from a BIP-39 mnemonic and Aptos BIP-44 path.
+// Paths must use hardened segments, e.g. m/44'/637'/0'/0'/0'.
+func FromDerivationPath(mnemonic, path string, cfg ...*DerivationConfig) (*Account, error) {
+	if len(cfg) > 1 {
+		return nil, errors.New("only one DerivationConfig may be provided")
+	}
+
+	var config DerivationConfig
+	if len(cfg) > 0 && cfg[0] != nil {
+		config = *cfg[0]
+	}
+
+	key, err := crypto.Ed25519PrivateKeyFromDerivationPath(mnemonic, path, config.Passphrase)
+	if err != nil {
+		return nil, fmt.Errorf("failed to derive account from mnemonic: %w", err)
+	}
+
+	if config.SingleKey {
+		signer := crypto.NewSingleSigner(key)
+		return FromSigner(signer)
+	}
+	return FromSigner(key)
 }
 
 // FromAIP80 creates an account from an AIP-80 formatted private key string.

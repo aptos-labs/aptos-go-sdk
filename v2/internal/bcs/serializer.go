@@ -169,7 +169,7 @@ func (ser *Serializer) Uleb128(v uint32) {
 
 // WriteBytes serializes a byte slice with a ULEB128 length prefix.
 func (ser *Serializer) WriteBytes(v []byte) {
-	if len(v) > 0xFFFFFFFF {
+	if uint64(len(v)) > maxU32Length {
 		ser.SetError(ErrOverflow)
 		return
 	}
@@ -198,7 +198,7 @@ func (ser *Serializer) Struct(v Marshaler) {
 
 // SerializeSequence serializes a slice of Marshaler values with a length prefix.
 func SerializeSequence[T Marshaler](ser *Serializer, items []T) {
-	if len(items) > 0xFFFFFFFF {
+	if uint64(len(items)) > maxU32Length {
 		ser.SetError(ErrOverflow)
 		return
 	}
@@ -214,7 +214,7 @@ func SerializeSequence[T Marshaler](ser *Serializer, items []T) {
 
 // SerializeSequenceFunc serializes a slice using a custom serialization function.
 func SerializeSequenceFunc[T any](ser *Serializer, items []T, serialize func(*Serializer, T)) {
-	if len(items) > 0xFFFFFFFF {
+	if uint64(len(items)) > maxU32Length {
 		ser.SetError(ErrOverflow)
 		return
 	}

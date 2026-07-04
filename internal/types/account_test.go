@@ -258,3 +258,34 @@ func TestAccount_SignMessage(t *testing.T) {
 	assert.NotNil(t, signature)
 	assert.True(t, account.PubKey().Verify(message, signature))
 }
+
+func TestNewEd25519AccountFromMnemonic(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	account, err := NewEd25519AccountFromMnemonic(mnemonic)
+	require.NoError(t, err)
+	assert.Equal(t, "0xeb663b681209e7087d681c5d3eed12aaa8e1915e7c87794542c3f96e94b3d3bf", account.Address.String())
+}
+
+func TestNewEd25519AccountFromDerivationPath(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	account, err := NewEd25519AccountFromDerivationPath(mnemonic, crypto.DefaultDerivationPath)
+	require.NoError(t, err)
+	assert.Equal(t, "0xeb663b681209e7087d681c5d3eed12aaa8e1915e7c87794542c3f96e94b3d3bf", account.Address.String())
+}
+
+func TestNewEd25519AccountFromMnemonicCustomPath(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	account, err := NewEd25519AccountFromMnemonic(mnemonic, "m/44'/637'/1'/0'/0'")
+	require.NoError(t, err)
+	assert.Equal(t, "0xf867372dfec13fb6c0740d4b574363685e10e6f243e9554ffa8f6e698e940efa", account.Address.String())
+}
+
+func TestNewEd25519AccountFromMnemonicMultiplePaths(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	_, err := NewEd25519AccountFromMnemonic(mnemonic, crypto.DefaultDerivationPath, "m/44'/637'/1'/0'/0'")
+	require.Error(t, err)
+}

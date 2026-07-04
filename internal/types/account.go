@@ -63,6 +63,28 @@ func NewSecp256k1Account() (*Account, error) {
 	return NewAccountFromSigner(signer)
 }
 
+// NewEd25519AccountFromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic.
+// When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
+func NewEd25519AccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
+	if len(path) > 1 {
+		return nil, errors.New("only one derivation path may be provided")
+	}
+	derivationPath := crypto.DefaultDerivationPath
+	if len(path) > 0 {
+		derivationPath = path[0]
+	}
+	return NewEd25519AccountFromDerivationPath(mnemonic, derivationPath)
+}
+
+// NewEd25519AccountFromDerivationPath creates a legacy Ed25519 account from a mnemonic and path.
+func NewEd25519AccountFromDerivationPath(mnemonic, path string) (*Account, error) {
+	privateKey, err := crypto.Ed25519PrivateKeyFromDerivationPath(mnemonic, path, "")
+	if err != nil {
+		return nil, err
+	}
+	return NewAccountFromSigner(privateKey)
+}
+
 // MessageSigner extracts the message signer from the account for
 func (account *Account) MessageSigner() (crypto.MessageSigner, bool) {
 	ed25519PrivateKey, ok := account.Signer.(*crypto.Ed25519PrivateKey)

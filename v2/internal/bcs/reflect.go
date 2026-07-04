@@ -84,7 +84,7 @@ func marshalValue(ser *Serializer, v reflect.Value) error {
 
 func marshalSlice(ser *Serializer, v reflect.Value) error {
 	length := v.Len()
-	if length > 0xFFFFFFFF {
+	if uint64(length) > maxU32Length {
 		return ErrOverflow
 	}
 	ser.Uleb128(uint32(length))
@@ -268,8 +268,14 @@ func unmarshalSlice(des *Deserializer, v reflect.Value) error {
 		return des.err
 	}
 
-	slice := reflect.MakeSlice(v.Type(), int(length), int(length))
-	for i := 0; i < int(length); i++ {
+	lengthInt, err := uleb128ToInt(length)
+	if err != nil {
+		des.SetError(err)
+		return err
+	}
+
+	slice := reflect.MakeSlice(v.Type(), lengthInt, lengthInt)
+	for i := 0; i < lengthInt; i++ {
 		if err := unmarshalValue(des, slice.Index(i)); err != nil {
 			return err
 		}

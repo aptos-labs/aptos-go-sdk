@@ -145,7 +145,7 @@ func IntToU16(u int) (uint16, error) {
 
 // IntToU32 converts int to uint32 with bounds checking.
 func IntToU32(u int) (uint32, error) {
-	if u > math.MaxUint32 || u < 0 {
+	if u < 0 || uint64(u) > math.MaxUint32 {
 		return 0, fmt.Errorf("value %d out of uint32 range", u)
 	}
 	return uint32(u), nil

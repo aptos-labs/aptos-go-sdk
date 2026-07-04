@@ -12,6 +12,7 @@ require (
 	github.com/gtank/ristretto255 v0.1.2
 	github.com/hdevalence/ed25519consensus v0.2.0
 	github.com/stretchr/testify v1.11.1
+	github.com/tyler-smith/go-bip39 v1.1.0
 	github.com/valyala/fasthttp v1.69.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/metric v1.43.0

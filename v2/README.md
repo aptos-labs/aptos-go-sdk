@@ -85,6 +85,32 @@ address := signer.AuthKey().Address()
 err = client.Fund(ctx, address, 100_000_000)
 ```
 
+### Import from Mnemonic
+
+Derive a Petra-compatible account from a BIP-39 mnemonic:
+
+```go
+import (
+    "github.com/aptos-labs/aptos-go-sdk/v2/account"
+)
+
+mnemonic := "word1 word2 ... word12"
+if !account.ValidateMnemonic(mnemonic) {
+    return fmt.Errorf("invalid mnemonic")
+}
+
+// Legacy Ed25519 (default path m/44'/637'/0'/0'/0')
+acc, err := account.FromMnemonic(mnemonic)
+
+// SingleKey authentication scheme
+acc, err = account.FromDerivationPath(mnemonic, account.DefaultDerivationPath,
+    &account.DerivationConfig{SingleKey: true},
+)
+
+// With a BIP-39 passphrase
+acc, err = account.FromMnemonic(mnemonic, &account.DerivationConfig{Passphrase: "secret"})
+```
+
 ### Building Transactions
 
 Use the fluent transaction builder:

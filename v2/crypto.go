@@ -150,6 +150,16 @@ var GenerateEd25519PrivateKey = crypto.GenerateEd25519PrivateKey
 // GenerateSecp256k1Key generates a new random Secp256k1 private key.
 var GenerateSecp256k1Key = crypto.GenerateSecp256k1Key
 
+// ValidateMnemonic reports whether the mnemonic is a valid BIP-39 phrase.
+var ValidateMnemonic = crypto.ValidateMnemonic
+
+// DefaultDerivationPath is the standard Petra-style Aptos Ed25519 BIP-44 path.
+const DefaultDerivationPath = crypto.DefaultDerivationPath
+
+// Ed25519PrivateKeyFromDerivationPath derives a legacy Ed25519 private key from a
+// BIP-39 mnemonic and Aptos BIP-44 hardened path.
+var Ed25519PrivateKeyFromDerivationPath = crypto.Ed25519PrivateKeyFromDerivationPath
+
 // NewSingleSigner wraps a MessageSigner for transaction signing.
 // Use this for Secp256k1 keys or when you want to use SingleKeyScheme.
 var NewSingleSigner = crypto.NewSingleSigner
