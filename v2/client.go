@@ -48,8 +48,18 @@ type Client interface {
 	// AccountBalance returns the APT balance for an account.
 	AccountBalance(ctx context.Context, address AccountAddress, opts ...ResourceOption) (uint64, error)
 
+	// AccountBalanceOf returns an account's balance of an arbitrary asset,
+	// identified either by a coin type's struct id (e.g.
+	// "0x1::aptos_coin::AptosCoin") or a fungible asset metadata address
+	// (e.g. "0xa").
+	AccountBalanceOf(ctx context.Context, address AccountAddress, asset string, opts ...ResourceOption) (uint64, error)
+
 	// AccountModule returns the bytecode and ABI for a module.
 	AccountModule(ctx context.Context, address AccountAddress, moduleName string, opts ...ResourceOption) (*ModuleBytecode, error)
+
+	// AccountModules returns every Move module published under an address,
+	// following the node's pagination cursor until exhausted.
+	AccountModules(ctx context.Context, address AccountAddress, opts ...ResourceOption) ([]*ModuleBytecode, error)
 
 	// AccountTransactions returns transactions sent by an account.
 	AccountTransactions(ctx context.Context, address AccountAddress, start *uint64, limit *uint64) ([]*Transaction, error)
@@ -102,6 +112,11 @@ type Client interface {
 
 	// View executes a view function and returns the results.
 	View(ctx context.Context, payload *ViewPayload, opts ...ViewOption) ([]any, error)
+
+	// GetTableItem reads a single item from an on-chain Move table, decoding
+	// the value into result. Direct table reads are discouraged; prefer the
+	// indexer where possible.
+	GetTableItem(ctx context.Context, handle string, req TableItemRequest, result any, opts ...ResourceOption) error
 
 	// Block Operations
 

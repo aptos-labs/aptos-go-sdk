@@ -9,6 +9,7 @@ import (
 	"io"
 	"iter"
 	"log/slog"
+	"math"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -186,11 +187,17 @@ func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress,
 		return 0, errors.New("view function returned no values")
 	}
 
-	switch v := values[0].(type) {
+	return parseU64Balance(values[0])
+}
+
+// parseU64Balance converts a JSON-decoded balance value (a stringified u64 or,
+// defensively, a JSON number) into a uint64.
+func parseU64Balance(value any) (uint64, error) {
+	switch v := value.(type) {
 	case string:
 		return strconv.ParseUint(v, 10, 64)
 	case float64:
-		// JSON numbers decode to float64. The node *should* return APT
+		// JSON numbers decode to float64. The node *should* return
 		// balances as stringified u64 (and does today), but we accept a
 		// numeric response defensively. float64 can exactly represent
 		// integers only up to 2^53 — about 9.0×10^16 octas, i.e. ~90M
@@ -210,7 +217,7 @@ func (c *nodeClient) AccountBalance(ctx context.Context, address AccountAddress,
 		}
 		return uint64(v), nil
 	default:
-		return 0, fmt.Errorf("unexpected balance value type %T", values[0])
+		return 0, fmt.Errorf("unexpected balance value type %T", value)
 	}
 }
 
@@ -224,9 +231,14 @@ func (c *nodeClient) BuildTransaction(ctx context.Context, sender AccountAddress
 		opt(config)
 	}
 
-	// Get sequence number if not provided
+	// Orderless transactions are validated by a one-time nonce rather than the
+	// account's sequence number, so we wrap the payload and use u64::MAX as the
+	// sequence number without fetching the account.
 	var seqNum uint64
-	if config.SequenceNumber != nil {
+	if config.ReplayProtectionNonce != nil {
+		payload = wrapOrderless(payload, config.ReplayProtectionNonce)
+		seqNum = math.MaxUint64
+	} else if config.SequenceNumber != nil {
 		seqNum = *config.SequenceNumber
 	} else {
 		info, err := c.Account(ctx, sender)
@@ -968,15 +980,23 @@ func (c *nodeClient) postBCS(ctx context.Context, path string, body []byte, resu
 }
 
 func (c *nodeClient) doRequest(ctx context.Context, req *http.Request, result any) error {
+	_, err := c.doRequestReturningHeaders(ctx, req, result)
+	return err
+}
+
+// doRequestReturningHeaders is like doRequest but also returns the response
+// headers on success. It is used by paginated endpoints that carry their next
+// cursor in a response header (X-Aptos-Cursor).
+func (c *nodeClient) doRequestReturningHeaders(ctx context.Context, req *http.Request, result any) (http.Header, error) {
 	resp, err := c.httpClient.Do(ctx, req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
@@ -1000,16 +1020,16 @@ func (c *nodeClient) doRequest(ctx context.Context, req *http.Request, result an
 			apiErr.Message = string(body)
 		}
 
-		return apiErr
+		return nil, apiErr
 	}
 
 	if result != nil {
 		if err := json.Unmarshal(body, result); err != nil {
-			return fmt.Errorf("failed to unmarshal response: %w", err)
+			return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 		}
 	}
 
-	return nil
+	return resp.Header, nil
 }
 
 // isAPIError checks if err is an APIError and assigns it to target if so.

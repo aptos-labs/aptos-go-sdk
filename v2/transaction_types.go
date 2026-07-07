@@ -157,6 +157,9 @@ func serializePayload(ser *bcs.Serializer, payload Payload) {
 	case *ScriptPayload:
 		ser.Uleb128(PayloadVariantScript)
 		serializeScript(ser, p)
+	case *TransactionInnerPayload:
+		ser.Uleb128(PayloadVariantInner)
+		serializeInnerPayload(ser, p)
 	default:
 		ser.SetError(fmt.Errorf("unsupported payload type: %T", payload))
 	}
@@ -170,6 +173,8 @@ func deserializePayload(des *bcs.Deserializer) Payload {
 		return deserializeEntryFunction(des)
 	case PayloadVariantScript:
 		return deserializeScript(des)
+	case PayloadVariantInner:
+		return deserializeInnerPayload(des)
 	default:
 		des.SetError(fmt.Errorf("unknown payload variant: %d", variant))
 		return nil
