@@ -218,6 +218,50 @@ func TestCrossVersion_EntryFunction_BCS(t *testing.T) {
 		"v1 raw tx should contain the inner EntryFunction bytes")
 }
 
+// TestCrossVersion_OrderlessInnerPayload_BCS pins v2's orderless
+// (TransactionPayload::Payload, variant 4) wire format to v1's
+// production-validated implementation. A diff here means orderless
+// transactions built by v2 would be rejected or mis-decoded on chain.
+func TestCrossVersion_OrderlessInnerPayload_BCS(t *testing.T) {
+	t.Parallel()
+
+	nonce := uint64(0xdead_beef_0000_0001)
+
+	v1Inner := &v1.TransactionInnerPayload{
+		Payload: &v1.TransactionInnerPayloadV1{
+			Executable:  v1.TransactionExecutable{Inner: buildV1EntryFunction(t)},
+			ExtraConfig: v1.TransactionExtraConfig{Inner: &v1.TransactionExtraConfigV1{ReplayProtectionNonce: &nonce}},
+		},
+	}
+
+	v1Raw := &v1.RawTransaction{
+		Sender:                     newV1Address(t, sampleAddr),
+		SequenceNumber:             ^uint64(0), // u64::MAX for orderless
+		Payload:                    v1.TransactionPayload{Payload: v1Inner},
+		MaxGasAmount:               2_000_000,
+		GasUnitPrice:               100,
+		ExpirationTimestampSeconds: 1_700_000_000,
+		ChainId:                    4,
+	}
+	v2Raw := &v2.RawTransaction{
+		Sender:                     newV2Address(t, sampleAddr),
+		SequenceNumber:             ^uint64(0),
+		Payload:                    &v2.TransactionInnerPayload{Executable: buildV2EntryFunction(t), ReplayProtectionNonce: &nonce},
+		MaxGasAmount:               2_000_000,
+		GasUnitPrice:               100,
+		ExpirationTimestampSeconds: 1_700_000_000,
+		ChainID:                    4,
+	}
+
+	v1Bytes, err := v1bcs.Serialize(v1Raw)
+	require.NoError(t, err)
+	v2Bytes, err := v2bcs.Serialize(v2Raw)
+	require.NoError(t, err)
+
+	assert.Equal(t, v1Bytes, v2Bytes,
+		"orderless RawTransaction BCS must match between v1 and v2")
+}
+
 // TestCrossVersion_RawTransaction_BCS is the headline cross-version test:
 // build the same RawTransaction in v1 and v2 and assert byte equality.
 //

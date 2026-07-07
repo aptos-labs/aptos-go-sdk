@@ -174,6 +174,11 @@ type TransactionConfig struct {
 
 	// FeePayer is the fee payer address for sponsored transactions.
 	FeePayer *AccountAddress
+
+	// ReplayProtectionNonce, when set, builds an orderless transaction: the
+	// payload is wrapped in a TransactionInnerPayload carrying this nonce and
+	// the sequence number is set to u64::MAX.
+	ReplayProtectionNonce *uint64
 }
 
 // WithMaxGas sets the maximum gas amount.
@@ -240,6 +245,17 @@ func WithFeePayer(feePayer AccountAddress) TransactionOption {
 	}
 }
 
+// WithReplayProtectionNonce builds an orderless transaction protected by a
+// one-time nonce instead of the sender's sequence number. The nonce must be
+// unique per sender within the transaction's expiration window. BuildTransaction
+// wraps the payload in a TransactionInnerPayload and sets the sequence number to
+// u64::MAX automatically.
+func WithReplayProtectionNonce(nonce uint64) TransactionOption {
+	return func(c *TransactionConfig) {
+		c.ReplayProtectionNonce = &nonce
+	}
+}
+
 // ViewOption is a functional option for view function calls.
 type ViewOption func(*ViewConfig)
 
@@ -258,6 +274,14 @@ func AtLedgerVersion(version uint64) ViewOption {
 
 // ResourceOption is a functional option for resource queries.
 type ResourceOption func(*ResourceConfig)
+
+// AtResourceLedgerVersion queries a resource, module, table item, or balance at
+// a specific ledger version rather than the latest state.
+func AtResourceLedgerVersion(version uint64) ResourceOption {
+	return func(c *ResourceConfig) {
+		c.LedgerVersion = &version
+	}
+}
 
 // ResourceConfig holds configuration for resource queries.
 type ResourceConfig struct {
