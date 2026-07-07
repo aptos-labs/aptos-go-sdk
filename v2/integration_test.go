@@ -9,6 +9,7 @@ package aptos
 import (
 	"context"
 	"errors"
+	"math"
 	"net/http"
 	"os"
 	"strings"
@@ -742,6 +743,90 @@ func TestIntegration_TransferAPT(t *testing.T) {
 	assert.Less(t, gasPaid, transferAmount, "gas should be smaller than the transfer amount")
 
 	t.Logf("Transfer succeeded: hash=%s, gas_paid=%d octas", result.Hash, gasPaid)
+}
+
+// TestIntegration_OrderlessTransfer exercises the full orderless-transaction
+// lifecycle against a network with a faucet (intended for localnet via
+// APTOS_NETWORK=localnet). It submits a transfer built with
+// WithReplayProtectionNonce, which wraps the payload in a
+// TransactionInnerPayload and uses u64::MAX as the sequence number, then
+// verifies:
+//   - the transaction commits successfully and moves funds,
+//   - the committed record carries u64::MAX as its sequence number (the
+//     on-chain marker of an orderless transaction), and
+//   - replaying the exact same nonce is rejected (replay protection works).
+//
+// This is the on-chain counterpart to the BCS round-trip and cross-version
+// byte-equality tests: it proves the wire format the SDK produces is accepted
+// and validated by a real node.
+func TestIntegration_OrderlessTransfer(t *testing.T) {
+	skipIfShort(t)
+	t.Parallel()
+
+	cfg := testNetwork()
+	if cfg.Name != Localnet.Name {
+		t.Skip("orderless end-to-end test only runs against localnet (set APTOS_NETWORK=localnet)")
+	}
+	if cfg.FaucetURL == "" {
+		t.Skip("test requires a network with a faucet")
+	}
+
+	client := createTestClient(t)
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	sender, err := account.NewEd25519()
+	require.NoError(t, err, "failed to generate sender")
+	receiver, err := account.NewEd25519()
+	require.NoError(t, err, "failed to generate receiver")
+
+	const senderInitial = uint64(200_000_000) // 2 APT
+	const receiverInitial = uint64(100_000_000)
+	const transferAmount = uint64(50_000_000)
+
+	require.NoError(t, client.Fund(ctx, sender.Address(), senderInitial), "fund sender")
+	require.NoError(t, client.Fund(ctx, receiver.Address(), receiverInitial), "fund receiver")
+
+	receiverBalanceBefore, err := client.AccountBalance(ctx, receiver.Address())
+	require.NoError(t, err, "get receiver balance before")
+
+	receiverAddr := receiver.Address()
+	payload := &EntryFunctionPayload{
+		Module:   ModuleID{Address: AccountOne, Name: "aptos_account"},
+		Function: "transfer",
+		Args:     []any{receiverAddr, transferAmount},
+	}
+
+	// A unique nonce per run avoids collisions with prior runs against a
+	// long-lived localnet within the transaction's expiration window.
+	nonce := uint64(time.Now().UnixNano())
+
+	result, err := client.SignAndSubmitTransaction(ctx, sender, payload, WithReplayProtectionNonce(nonce))
+	require.NoError(t, err, "submit orderless transfer")
+	require.NotEmpty(t, result.Hash, "submit should return a hash")
+
+	committed, err := client.WaitForTransaction(ctx, result.Hash)
+	require.NoError(t, err, "wait for orderless transfer")
+	require.True(t, committed.Success, "orderless transfer should succeed: vm_status=%s", committed.VMStatus)
+	require.Equal(t, "user_transaction", committed.Type)
+
+	// The on-chain marker of an orderless transaction: the sequence number is
+	// u64::MAX rather than the sender's account sequence number.
+	assert.Equal(t, uint64(math.MaxUint64), committed.SequenceNumber,
+		"orderless transactions are recorded with u64::MAX as the sequence number")
+
+	receiverBalanceAfter, err := client.AccountBalance(ctx, receiver.Address())
+	require.NoError(t, err, "get receiver balance after")
+	assert.Equal(t, receiverBalanceBefore+transferAmount, receiverBalanceAfter,
+		"receiver balance should increase by exactly the transfer amount")
+
+	// Replay protection: resubmitting with the same nonce must be rejected.
+	// The failure may surface either at submission (mempool) or as a rejected
+	// build; either way the second attempt must not commit successfully.
+	_, replayErr := client.SignAndSubmitTransaction(ctx, sender, payload, WithReplayProtectionNonce(nonce))
+	assert.Error(t, replayErr, "replaying the same nonce must be rejected")
+
+	t.Logf("Orderless transfer succeeded: hash=%s, nonce=%d", result.Hash, nonce)
 }
 
 // TestIntegration_Mainnet tests connectivity to mainnet specifically.
