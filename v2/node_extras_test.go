@@ -82,6 +82,67 @@ func TestNodeClient_AccountBalanceOf_CoinType(t *testing.T) {
 	assert.Equal(t, uint64(7), bal)
 }
 
+func TestNodeClient_AccountBalanceOf_LedgerVersion(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "ledger_version=55", r.URL.RawQuery)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`"9"`))
+	}))
+
+	bal, err := client.AccountBalanceOf(context.Background(), AccountOne, "0xa", AtResourceLedgerVersion(55))
+	require.NoError(t, err)
+	assert.Equal(t, uint64(9), bal)
+}
+
+func TestNodeClient_AccountModules_LedgerVersion(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, "77", r.URL.Query().Get("ledger_version"))
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode([]ModuleBytecode{{Bytecode: "0x01", ABI: &ModuleABI{Name: "a"}}})
+	}))
+
+	modules, err := client.AccountModules(context.Background(), AccountOne, AtResourceLedgerVersion(77))
+	require.NoError(t, err)
+	require.Len(t, modules, 1)
+}
+
+func TestNodeClient_AccountBalanceOf_Error(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"message":"no such asset"}`, http.StatusNotFound)
+	}))
+
+	_, err := client.AccountBalanceOf(context.Background(), AccountOne, "0x1::aptos_coin::AptosCoin")
+	require.Error(t, err)
+}
+
+func TestNodeClient_AccountModules_Error(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"message":"boom"}`, http.StatusInternalServerError)
+	}))
+
+	_, err := client.AccountModules(context.Background(), AccountOne)
+	require.Error(t, err)
+}
+
+func TestNodeClient_GetTableItem_Error(t *testing.T) {
+	t.Parallel()
+	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, `{"message":"table item not found"}`, http.StatusNotFound)
+	}))
+
+	var out string
+	err := client.GetTableItem(context.Background(), "0xhandle", TableItemRequest{
+		KeyType:   "address",
+		ValueType: "u64",
+		Key:       "0x1",
+	}, &out)
+	require.Error(t, err)
+}
+
 func TestNodeClient_AccountModules_SinglePage(t *testing.T) {
 	t.Parallel()
 	client := newTestClient(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

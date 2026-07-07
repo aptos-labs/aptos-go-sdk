@@ -116,3 +116,134 @@ func TestBuildTransaction_OrderlessDoesNotDoubleWrap(t *testing.T) {
 	_, nested := inner.Executable.(*TransactionInnerPayload)
 	assert.False(t, nested, "an already-inner payload must not be wrapped again")
 }
+
+func TestWrapOrderless_SetsNonceOnExistingInnerWithoutOne(t *testing.T) {
+	t.Parallel()
+	// An inner payload that arrives without a nonce should have the supplied
+	// nonce applied in place, rather than being wrapped again.
+	inner := &TransactionInnerPayload{Executable: sampleEntryFunction()}
+	nonce := uint64(99)
+
+	wrapped := wrapOrderless(inner, &nonce)
+
+	assert.Same(t, inner, wrapped, "existing inner payload should be reused, not re-wrapped")
+	require.NotNil(t, inner.ReplayProtectionNonce)
+	assert.Equal(t, nonce, *inner.ReplayProtectionNonce)
+}
+
+func TestTransactionInnerPayload_PayloadType(t *testing.T) {
+	t.Parallel()
+	assert.Equal(t, "inner_payload", (&TransactionInnerPayload{}).payloadType())
+}
+
+func TestTransactionInnerPayload_ScriptExecutable_RoundTrip(t *testing.T) {
+	t.Parallel()
+	nonce := uint64(1)
+	txn := &RawTransaction{
+		Sender:         AccountOne,
+		SequenceNumber: math.MaxUint64,
+		Payload: &TransactionInnerPayload{
+			Executable: &ScriptPayload{
+				Code: []byte{0xa1, 0x02, 0x03},
+				Args: []any{uint64(7), AccountTwo},
+			},
+			ReplayProtectionNonce: &nonce,
+		},
+	}
+
+	raw, err := bcs.Serialize(txn)
+	require.NoError(t, err)
+
+	out := &RawTransaction{}
+	require.NoError(t, bcs.Deserialize(out, raw))
+
+	inner, ok := out.Payload.(*TransactionInnerPayload)
+	require.True(t, ok)
+	script, ok := inner.Executable.(*ScriptPayload)
+	require.True(t, ok, "executable should round-trip as a script, got %T", inner.Executable)
+	assert.Equal(t, []byte{0xa1, 0x02, 0x03}, script.Code)
+	require.Len(t, script.Args, 2)
+	assert.Equal(t, uint64(7), script.Args[0])
+	assert.Equal(t, AccountTwo, script.Args[1])
+}
+
+func TestTransactionInnerPayload_EmptyExecutable_RoundTrip(t *testing.T) {
+	t.Parallel()
+	txn := &RawTransaction{
+		Sender:         AccountOne,
+		SequenceNumber: math.MaxUint64,
+		Payload:        &TransactionInnerPayload{Executable: nil},
+	}
+
+	raw, err := bcs.Serialize(txn)
+	require.NoError(t, err)
+
+	out := &RawTransaction{}
+	require.NoError(t, bcs.Deserialize(out, raw))
+
+	inner, ok := out.Payload.(*TransactionInnerPayload)
+	require.True(t, ok)
+	assert.Nil(t, inner.Executable, "empty executable should round-trip as nil")
+}
+
+func TestTransactionInnerPayload_MultisigAddress_RoundTrip(t *testing.T) {
+	t.Parallel()
+	multisig := AccountThree
+	nonce := uint64(0x1234)
+	txn := &RawTransaction{
+		Sender:         AccountOne,
+		SequenceNumber: math.MaxUint64,
+		Payload: &TransactionInnerPayload{
+			Executable:            sampleEntryFunction(),
+			MultisigAddress:       &multisig,
+			ReplayProtectionNonce: &nonce,
+		},
+	}
+
+	raw, err := bcs.Serialize(txn)
+	require.NoError(t, err)
+
+	out := &RawTransaction{}
+	require.NoError(t, bcs.Deserialize(out, raw))
+
+	inner, ok := out.Payload.(*TransactionInnerPayload)
+	require.True(t, ok)
+	require.NotNil(t, inner.MultisigAddress)
+	assert.Equal(t, multisig, *inner.MultisigAddress)
+	require.NotNil(t, inner.ReplayProtectionNonce)
+	assert.Equal(t, nonce, *inner.ReplayProtectionNonce)
+}
+
+func TestSerializeExecutable_UnsupportedTypeErrors(t *testing.T) {
+	t.Parallel()
+	ser := bcs.NewSerializer()
+	// A nested inner payload is a Payload but not a valid executable.
+	serializeExecutable(ser, &TransactionInnerPayload{})
+	require.Error(t, ser.Error())
+	assert.Contains(t, ser.Error().Error(), "unsupported inner executable type")
+}
+
+func TestDeserializeInnerPayload_BadInnerVariant(t *testing.T) {
+	t.Parallel()
+	des := bcs.NewDeserializer([]byte{0x01}) // inner variant 1 is unknown
+	deserializeInnerPayload(des)
+	require.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown inner payload variant")
+}
+
+func TestDeserializeInnerPayload_BadExtraConfigVariant(t *testing.T) {
+	t.Parallel()
+	// inner variant 0, empty executable (2), then an unknown extra-config variant.
+	des := bcs.NewDeserializer([]byte{0x00, 0x02, 0x05})
+	deserializeInnerPayload(des)
+	require.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown extra config variant")
+}
+
+func TestDeserializeExecutable_BadVariant(t *testing.T) {
+	t.Parallel()
+	des := bcs.NewDeserializer([]byte{0x09}) // no such executable variant
+	assert.Nil(t, deserializeExecutable(des))
+	require.Error(t, des.Error())
+	assert.Contains(t, des.Error().Error(), "unknown inner executable variant")
+}
