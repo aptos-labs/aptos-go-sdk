@@ -295,6 +295,19 @@ func (c *FakeClient) AccountBalance(ctx context.Context, address aptos.AccountAd
 	return balance, nil
 }
 
+// AccountBalanceOf returns the configured balance for an account, ignoring the
+// asset. The stub does not track per-asset balances; configure balances with
+// WithBalance and use the same value for every asset.
+func (c *FakeClient) AccountBalanceOf(ctx context.Context, address aptos.AccountAddress, asset string, opts ...aptos.ResourceOption) (uint64, error) {
+	c.record("AccountBalanceOf", address, asset)
+	if err := c.getError("AccountBalanceOf"); err != nil {
+		return 0, err
+	}
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	return c.balances[address], nil
+}
+
 // BuildTransaction builds a transaction.
 func (c *FakeClient) BuildTransaction(ctx context.Context, sender aptos.AccountAddress, payload aptos.Payload, opts ...aptos.TransactionOption) (*aptos.RawTransaction, error) {
 	c.record("BuildTransaction", sender, payload)
@@ -599,6 +612,17 @@ func (c *FakeClient) AccountModule(ctx context.Context, address aptos.AccountAdd
 	}, nil
 }
 
+// AccountModules returns all modules published under an address.
+// The stub records the call, honors any configured error, and returns an
+// empty slice.
+func (c *FakeClient) AccountModules(ctx context.Context, address aptos.AccountAddress, opts ...aptos.ResourceOption) ([]*aptos.ModuleBytecode, error) {
+	c.record("AccountModules", address)
+	if err := c.getError("AccountModules"); err != nil {
+		return nil, err
+	}
+	return []*aptos.ModuleBytecode{}, nil
+}
+
 // AccountTransactions returns transactions sent by an account.
 func (c *FakeClient) AccountTransactions(ctx context.Context, address aptos.AccountAddress, start *uint64, limit *uint64) ([]*aptos.Transaction, error) {
 	c.record("AccountTransactions", address, start, limit)
@@ -624,6 +648,14 @@ func (c *FakeClient) EventsByCreationNumber(ctx context.Context, address aptos.A
 		return nil, err
 	}
 	return []aptos.Event{}, nil
+}
+
+// GetTableItem reads a single item from an on-chain Move table.
+// The stub records the call and honors any configured error; it does not
+// populate result.
+func (c *FakeClient) GetTableItem(ctx context.Context, handle string, req aptos.TableItemRequest, result any, opts ...aptos.ResourceOption) error {
+	c.record("GetTableItem", handle, req)
+	return c.getError("GetTableItem")
 }
 
 // Ensure FakeClient implements Client
