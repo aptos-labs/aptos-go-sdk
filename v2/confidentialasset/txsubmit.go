@@ -142,29 +142,52 @@ func (c *Client) SubmitWithSimulatedGas(ctx context.Context, signer aptos.Transa
 	return tx, nil
 }
 
-// Deposit submits confidential_asset::deposit (TS ConfidentialAssetTransactionBuilder.deposit).
-func (c *Client) Deposit(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildDepositPayload builds the confidential_asset::deposit entry-function payload without
+// signing or submitting it, so callers can run their own build/simulate/sign/submit pipeline
+// (mirrors the TS ConfidentialAssetTransactionBuilder.deposit split).
+func (c *Client) BuildDepositPayload(token aptos.AccountAddress, amountOctas uint64) (*aptos.EntryFunctionPayload, error) {
 	// Args must match native chain_flow + Move: address (metadata object id) + u64 octas (not BCS string).
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "deposit",
 		TypeArgs: nil,
 		Args:     []any{token, amountOctas},
+	}, nil
+}
+
+// Deposit submits confidential_asset::deposit (TS ConfidentialAssetTransactionBuilder.deposit).
+func (c *Client) Deposit(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildDepositPayload(token, amountOctas)
+	if err != nil {
+		return nil, err
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, "deposit", payload, faMetadataHex)
 }
 
-// RolloverPendingBalance submits rollover_pending_balance or rollover_pending_balance_and_pause.
-func (c *Client) RolloverPendingBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, withPauseIncoming bool, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildRolloverPendingBalancePayload builds the rollover_pending_balance(_and_pause) payload
+// without signing or submitting it.
+func (c *Client) BuildRolloverPendingBalancePayload(token aptos.AccountAddress, withPauseIncoming bool) (*aptos.EntryFunctionPayload, error) {
 	fn := "rollover_pending_balance"
 	if withPauseIncoming {
 		fn = "rollover_pending_balance_and_pause"
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: fn,
 		TypeArgs: nil,
 		Args:     []any{token},
+	}, nil
+}
+
+// RolloverPendingBalance submits rollover_pending_balance or rollover_pending_balance_and_pause.
+func (c *Client) RolloverPendingBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, withPauseIncoming bool, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildRolloverPendingBalancePayload(token, withPauseIncoming)
+	if err != nil {
+		return nil, err
+	}
+	fn := "rollover_pending_balance"
+	if withPauseIncoming {
+		fn = "rollover_pending_balance_and_pause"
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, fn, payload, faMetadataHex)
 }

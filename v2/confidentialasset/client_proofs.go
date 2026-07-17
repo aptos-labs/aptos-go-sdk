@@ -11,8 +11,9 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/sigma"
 )
 
-// RegisterBalance submits register_raw (sigma registration proof).
-func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildRegisterBalancePayload builds the register_raw entry-function payload (sigma registration
+// proof) without signing or submitting it.
+func (c *Client) BuildRegisterBalancePayload(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex string) (*aptos.EntryFunctionPayload, error) {
 	acct, ok := signer.(*account.Account)
 	if !ok {
 		return nil, fmt.Errorf("register: signer must be *account.Account for twisted key derivation")
@@ -35,7 +36,7 @@ func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSi
 	if err != nil {
 		return nil, err
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "register_raw",
 		TypeArgs: nil,
@@ -45,12 +46,21 @@ func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSi
 			movearg.VectorVectorU8(proof.Commitment),
 			movearg.VectorVectorU8(proof.Response),
 		},
+	}, nil
+}
+
+// RegisterBalance submits register_raw (sigma registration proof).
+func (c *Client) RegisterBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildRegisterBalancePayload(ctx, signer, token, twistedHex)
+	if err != nil {
+		return nil, err
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, "register_raw", payload, faMetadataHex)
 }
 
-// RotateEncryptionKey submits rotate_encryption_key_raw (sigma key rotation + re-encrypted D).
-func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, oldTwistedHex, newTwistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildRotateEncryptionKeyPayload builds the rotate_encryption_key_raw entry-function payload
+// (sigma key rotation + re-encrypted D) without signing or submitting it.
+func (c *Client) BuildRotateEncryptionKeyPayload(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, oldTwistedHex, newTwistedHex string) (*aptos.EntryFunctionPayload, error) {
 	acct, ok := signer.(*account.Account)
 	if !ok {
 		return nil, fmt.Errorf("rotate: signer must be *account.Account for twisted key derivation")
@@ -84,7 +94,7 @@ func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.Transacti
 	if err != nil {
 		return nil, err
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "rotate_encryption_key_raw",
 		TypeArgs: nil,
@@ -96,6 +106,14 @@ func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.Transacti
 			movearg.VectorVectorU8(kr.Proof.Commitment),
 			movearg.VectorVectorU8(kr.Proof.Response),
 		},
+	}, nil
+}
+
+// RotateEncryptionKey submits rotate_encryption_key_raw (sigma key rotation + re-encrypted D).
+func (c *Client) RotateEncryptionKey(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, oldTwistedHex, newTwistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildRotateEncryptionKeyPayload(ctx, signer, token, oldTwistedHex, newTwistedHex)
+	if err != nil {
+		return nil, err
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, "rotate_encryption_key_raw", payload, faMetadataHex)
 }

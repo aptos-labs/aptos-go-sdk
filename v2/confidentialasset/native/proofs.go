@@ -17,8 +17,9 @@ import (
 	"github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset/internal/sigma"
 )
 
-// NormalizeBalance submits normalize_raw.
-func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildNormalizeBalancePayload builds the normalize_raw entry-function payload without signing or
+// submitting it.
+func (c *Client) BuildNormalizeBalancePayload(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex string) (*aptos.EntryFunctionPayload, error) {
 	acct, ok := signer.(*account.Account)
 	if !ok {
 		return nil, fmt.Errorf("normalize: signer must be *account.Account")
@@ -99,7 +100,7 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 	if len(audNewD) > 0 {
 		newBalanceAArg = movearg.VectorVectorU8(audNewD)
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "normalize_raw",
 		TypeArgs: nil,
@@ -112,12 +113,21 @@ func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionS
 			movearg.VectorVectorU8(sigmaProof.Commitment),
 			movearg.VectorVectorU8(sigmaProof.Response),
 		},
+	}, nil
+}
+
+// NormalizeBalance submits normalize_raw.
+func (c *Client) NormalizeBalance(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildNormalizeBalancePayload(ctx, signer, token, twistedHex)
+	if err != nil {
+		return nil, err
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, "normalize_raw", payload, faMetadataHex)
 }
 
-// Withdraw submits withdraw_to_raw.
-func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+// BuildWithdrawPayload builds the withdraw_to_raw entry-function payload without signing or
+// submitting it.
+func (c *Client) BuildWithdrawPayload(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex string) (*aptos.EntryFunctionPayload, error) {
 	if recipient == (aptos.AccountAddress{}) {
 		recipient = signer.Address()
 	}
@@ -212,7 +222,7 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 	if len(audNewD) > 0 {
 		newBalanceAArg = movearg.VectorVectorU8(audNewD)
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "withdraw_to_raw",
 		TypeArgs: nil,
@@ -227,6 +237,14 @@ func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, t
 			movearg.VectorVectorU8(sigmaProof.Commitment),
 			movearg.VectorVectorU8(sigmaProof.Response),
 		},
+	}, nil
+}
+
+// Withdraw submits withdraw_to_raw.
+func (c *Client) Withdraw(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex string) (*aptos.Transaction, error) {
+	payload, err := c.BuildWithdrawPayload(ctx, signer, token, amountOctas, recipient, twistedHex)
+	if err != nil {
+		return nil, err
 	}
 	return c.SubmitWithSimulatedGas(ctx, signer, "withdraw_to_raw", payload, faMetadataHex)
 }
@@ -237,6 +255,16 @@ func (c *Client) Transfer(ctx context.Context, signer aptos.TransactionSigner, t
 }
 
 func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, faMetadataHex, memo string) (*aptos.Transaction, error) {
+	payload, err := c.BuildTransferPayload(ctx, signer, token, amountOctas, recipient, twistedHex, memo)
+	if err != nil {
+		return nil, err
+	}
+	return c.SubmitWithSimulatedGas(ctx, signer, "confidential_transfer_raw", payload, faMetadataHex)
+}
+
+// BuildTransferPayload builds the confidential_transfer_raw entry-function payload without
+// signing or submitting it. memo may be empty (matches Transfer's zero-memo behavior).
+func (c *Client) BuildTransferPayload(ctx context.Context, signer aptos.TransactionSigner, token aptos.AccountAddress, amountOctas uint64, recipient aptos.AccountAddress, twistedHex, memo string) (*aptos.EntryFunctionPayload, error) {
 	if recipient == (aptos.AccountAddress{}) {
 		return nil, fmt.Errorf("transfer: recipient cannot be zero address")
 	}
@@ -400,7 +428,7 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 	if hasEff && len(xferDAud) > 0 {
 		effD = xferDAud[len(xferDAud)-1]
 	}
-	payload := &aptos.EntryFunctionPayload{
+	return &aptos.EntryFunctionPayload{
 		Module:   c.ViewModule(),
 		Function: "confidential_transfer_raw",
 		TypeArgs: nil,
@@ -422,8 +450,7 @@ func (c *Client) transferWithMemo(ctx context.Context, signer aptos.TransactionS
 			movearg.VectorVectorU8(sigmaProof.Response),
 			memoArg(memo),
 		},
-	}
-	return c.SubmitWithSimulatedGas(ctx, signer, "confidential_transfer_raw", payload, faMetadataHex)
+	}, nil
 }
 
 func memoArg(memo string) any {
