@@ -236,7 +236,7 @@ func TestClient_IsAvailable_PropagatesError(t *testing.T) {
 func TestClient_GetNameInfo_ViewFuncRouting(t *testing.T) {
 	t.Parallel()
 	// Exercise WithViewFunc: route by function name dynamically.
-	fake := testutil.NewFakeClient().WithViewFunc(func(p *aptos.ViewPayload) ([]any, error) {
+	fake := testutil.NewFakeClient().WithViewFunc(func(_ context.Context, p *aptos.ViewPayload, _ ...aptos.ViewOption) ([]any, error) {
 		switch p.Function {
 		case "get_target_addr":
 			return []any{optionSome(aptos.AccountFour.String())}, nil

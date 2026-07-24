@@ -29,7 +29,9 @@ type FakeClient struct {
 	// ("0x1::coin::balance"). viewFunc, when set, takes precedence and is
 	// consulted for every View call.
 	viewResults map[string][]any
-	viewFunc    func(*aptos.ViewPayload) ([]any, error)
+
+	// viewFunc, when set, handles View calls instead of returning an empty result.
+	viewFunc func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error)
 
 	// Error simulation
 	errors map[string]error
@@ -113,6 +115,14 @@ func (c *FakeClient) WithGasEstimate(estimate *aptos.GasEstimate) *FakeClient {
 	return c
 }
 
+// WithViewFunc sets a custom View handler for tests.
+func (c *FakeClient) WithViewFunc(fn func(ctx context.Context, payload *aptos.ViewPayload, opts ...aptos.ViewOption) ([]any, error)) *FakeClient {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.viewFunc = fn
+	return c
+}
+
 // WithTransaction adds a transaction to the store.
 func (c *FakeClient) WithTransaction(txn *aptos.Transaction) *FakeClient {
 	c.mu.Lock()
@@ -141,15 +151,6 @@ func (c *FakeClient) WithViewResult(function string, result []any) *FakeClient {
 	// pointers) are still shared, so tests should avoid mutating elements
 	// after stubbing.
 	c.viewResults[function] = append([]any(nil), result...)
-	return c
-}
-
-// WithViewFunc sets a callback that is consulted for every View call. When
-// set it takes precedence over any results configured via WithViewResult.
-func (c *FakeClient) WithViewFunc(fn func(*aptos.ViewPayload) ([]any, error)) *FakeClient {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.viewFunc = fn
 	return c
 }
 
@@ -343,9 +344,10 @@ func (c *FakeClient) SimulateTransaction(ctx context.Context, txn *aptos.RawTran
 		return nil, err
 	}
 	return &aptos.SimulationResult{
-		Success:  true,
-		VMStatus: "Executed successfully",
-		GasUsed:  1000,
+		Success:      true,
+		VMStatus:     "Executed successfully",
+		GasUsed:      1000,
+		GasUnitPrice: 100,
 	}, nil
 }
 
@@ -504,7 +506,7 @@ func (c *FakeClient) View(ctx context.Context, payload *aptos.ViewPayload, opts 
 	c.mu.RUnlock()
 
 	if fn != nil {
-		return fn(payload)
+		return fn(ctx, payload, opts...)
 	}
 	if ok {
 		// Return a defensive (shallow) copy so callers can't mutate the

@@ -1,5 +1,5 @@
 [tools]
-go = "1.24.2"
+go = "1.25.10"
 golangci-lint = "2.12.1"
 gofumpt = "0.10.0"
 node = "20.14.0"
@@ -7,7 +7,7 @@ node = "20.14.0"
 [env]
 # GOTOOLCHAIN=auto so each go.mod controls its own toolchain version:
 #   * v1 (./go.mod) declares `toolchain go1.24.2` — Go uses the mise-pinned 1.24.2.
-#   * v2 (./v2/go.mod) declares `go 1.25.0` — Go fetches and uses 1.25.0.
+#   * v2 (./v2/go.mod) declares `toolchain go1.25.10` — Go fetches and uses 1.25.10.
 # This is required because v2 has advanced beyond v1's Go version. Using
 # GOTOOLCHAIN=local would block the v2 coverage job (the only CI job that
 # enters v2/) from compiling at all:
