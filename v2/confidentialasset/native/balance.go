@@ -110,11 +110,14 @@ func decryptChunkedOctas(solver *aptosconfidential.Solver, modS *ristretto255.Sc
 	if len(c) == 0 {
 		return 0, nil
 	}
-	const maxUint64Chunks = 64 / confidentialChunkBits // 4: uint64 holds at most 4 × 16-bit chunks
 	if len(c) > maxCipherChunks {
 		return 0, fmt.Errorf("unexpected chunk count %d (max %d)", len(c), maxCipherChunks)
 	}
-	var total uint64
+	// A balance is not guaranteed to be normalized here (get_pending_balance accumulates deposits
+	// homomorphically), so an individual chunk may exceed 16 bits. decryptChunkWithSolver recovers
+	// such chunks via a 32-bit solve; bound them at MaxChunkValue and let ChunksToAmountChecked do
+	// the overflow-safe reassembly so a >uint64 balance errors instead of silently wrapping.
+	parts := make([]uint64, len(c))
 	for i := 0; i < len(c); i++ {
 		mg, err := ciphertextMGCompressed(c[i], d[i], modS)
 		if err != nil {
@@ -124,18 +127,12 @@ func decryptChunkedOctas(solver *aptosconfidential.Solver, modS *ristretto255.Sc
 		if err != nil {
 			return 0, fmt.Errorf("chunk %d solve: %w", i, err)
 		}
-		if part >= (1 << confidentialChunkBits) {
+		if part >= ca.MaxChunkValue {
 			return 0, fmt.Errorf("chunk %d out of range: %d", i, part)
 		}
-		if i >= maxUint64Chunks {
-			if part != 0 {
-				return 0, fmt.Errorf("chunk %d value %d overflows uint64 (%d-bit chunks, max %d)", i, part, confidentialChunkBits, maxUint64Chunks)
-			}
-			continue
-		}
-		total += part << (confidentialChunkBits * uint(i))
+		parts[i] = part
 	}
-	return total, nil
+	return ca.ChunksToAmountChecked(parts)
 }
 
 // decryptAvailableAmountChunks decrypts get_available_balance ciphertext into per-chunk values (CGO).

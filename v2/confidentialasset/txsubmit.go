@@ -32,6 +32,13 @@ func (c *Client) FetchPublicFABalanceOctas(ctx context.Context, who aptos.Accoun
 		return 0, fmt.Errorf("confidentialasset: faMetadataHex must be hex with 0x prefix, got %q", faMetadataHex)
 	}
 	url := fmt.Sprintf("%s/accounts/%s/balance/%s", c.RESTBaseURL, who.String(), meta)
+	// Apply a default timeout when the caller's context has no deadline so a network
+	// stall can't hang the request indefinitely (common when callers pass context.Background()).
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return 0, err
