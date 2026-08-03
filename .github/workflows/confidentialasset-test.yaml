@@ -1,0 +1,77 @@
+# v2 confidentialasset: split CGO off (fast stub path) vs FFI-linked smoke (Rust static lib + CGO).
+# Root "Go Unit Tests" job still only runs v1 `go test ./...`; this workflow is the source of truth for confidentialasset.
+name: Confidential asset (v2)
+
+on:
+  pull_request:
+    paths:
+      - "v2/confidentialasset/**"
+      - "v2/confidentialasset/native/**"
+      - "v2/examples/confidential_asset/**"
+      - "v2/go.mod"
+      - "v2/go.sum"
+      - "mise.toml"
+      - ".github/workflows/confidentialasset-test.yaml"
+      - ".github/workflows/codecov.yaml"
+      - ".github/actions/setup-confidential-bindings/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "v2/confidentialasset/**"
+      - "v2/confidentialasset/native/**"
+      - "v2/examples/confidential_asset/**"
+      - "v2/go.mod"
+      - "v2/go.sum"
+      - "mise.toml"
+      - ".github/workflows/confidentialasset-test.yaml"
+      - ".github/workflows/codecov.yaml"
+      - ".github/actions/setup-confidential-bindings/**"
+
+jobs:
+  confidentialasset-nocgo:
+    name: v2 confidentialasset (CGO off)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: "go"
+          cache: true
+
+      - name: Checkout confidential-asset-bindings (go mod replace)
+        uses: ./.github/actions/setup-confidential-bindings
+        with:
+          repository: aptos-labs/confidential-asset-bindings
+          ref: main
+
+      - name: go test -short (CGO_ENABLED=0, exclude native)
+        working-directory: v2
+        env:
+          CGO_ENABLED: "0"
+        run: |
+          pkgs=$(go list ./confidentialasset/... | grep -v '/confidentialasset/native$' | grep -v '/internal/rangeproof$')
+          go test -short -count=1 $pkgs
+
+  confidentialasset-cgo-ffi:
+    name: v2 confidentialasset (CGO + FFI static lib)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: jdx/mise-action@v4
+        with:
+          install_args: "go"
+          cache: true
+
+      - name: Download FFI static library (v1.1.2 pre-built, no Rust toolchain needed)
+        working-directory: v2
+        run: go run github.com/aptos-labs/confidential-asset-bindings/bindings/go/aptosconfidential/tools/download@v1.1.2
+
+      - name: go test -short (CGO_ENABLED=1)
+        working-directory: v2
+        env:
+          CGO_ENABLED: "1"
+          CGO_LDFLAGS: "-L${{ github.workspace }}/v2/native/x86_64-unknown-linux-gnu"
+        run: go test -short -count=1 ./confidentialasset/... ./examples/confidential_asset/...

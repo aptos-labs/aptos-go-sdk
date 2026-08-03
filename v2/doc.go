@@ -42,6 +42,15 @@
 //	    log.Fatal(err)
 //	}
 //
+// # Confidential assets
+//
+// Confidential fungible assets (requires CGO + FFI for proofs/decrypt):
+//
+//	ca := confidentialasset.NewClient(client, confidentialasset.WithRESTBaseURL(restBase))
+//	tx, err := ca.Deposit(ctx, signer, token, amountOctas, faMetadataHex)
+//
+// See package confidentialasset and v2/examples/confidential_asset/ (per-command mains: balance, register, transfer, withdraw, deposit_chain).
+//
 // # Aptos Names Service
 //
 // Resolve human-readable names to addresses:

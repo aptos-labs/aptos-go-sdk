@@ -1,0 +1,37 @@
+name: "Setup confidential-asset-bindings for v2"
+description: |
+  Check out confidential-asset-bindings and point v2/go.mod replace at bindings/go
+  so CI can resolve github.com/aptos-labs/confidential-asset-bindings/bindings/go
+  before that module is published on the proxy.
+
+inputs:
+  repository:
+    description: "GitHub repo slug (owner/name) for confidential-asset-bindings checkout"
+    required: false
+    default: aptos-labs/confidential-asset-bindings
+  ref:
+    description: "Git ref (branch, tag, or SHA) to checkout"
+    required: false
+    default: main
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v6
+      with:
+        repository: ${{ inputs.repository }}
+        path: confidential-asset-bindings
+        ref: ${{ inputs.ref }}
+
+    - shell: bash
+      run: |
+        set -euo pipefail
+        ROOT="${GITHUB_WORKSPACE}"
+        BIND="${ROOT}/confidential-asset-bindings/bindings/go"
+        if [ ! -f "${BIND}/go.mod" ]; then
+          echo "::error::Expected ${BIND}/go.mod — ref ${{ inputs.ref }} on ${{ inputs.repository }} must include bindings/go."
+          exit 1
+        fi
+        cd "${ROOT}/v2"
+        go mod edit -replace "github.com/aptos-labs/confidential-asset-bindings/bindings/go=${BIND}"
+        go mod tidy

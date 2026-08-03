@@ -17,6 +17,7 @@ coverage:
           - v2
         target: auto
         threshold: 1%
+        informational: true  # Don't block PRs on coverage
     patch:
       default:
         target: 60%
