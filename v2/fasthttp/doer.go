@@ -35,24 +35,24 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"errors"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/valyala/fasthttp"
 )
 
-// errCancelled is a sentinel for "context cancelled mid-flight" so the caller
-// path can distinguish it from a network error and avoid double-releasing the
-// fasthttp response (a drainer goroutine takes ownership).
-var errCancelled = errors.New("fasthttpdoer: cancelled")
+type client interface {
+	Do(req *fasthttp.Request, resp *fasthttp.Response) error
+	DoDeadline(req *fasthttp.Request, resp *fasthttp.Response, deadline time.Time) error
+}
 
 // Doer is an [aptos.HTTPDoer] backed by fasthttp.
 //
 // The zero value is not usable; construct one with [New].
 type Doer struct {
-	client *fasthttp.Client
+	client client
 }
 
 // Option configures a [Doer].
@@ -131,7 +131,12 @@ func New(opts ...Option) *Doer {
 //     case and keeps overhead minimal under high concurrency.
 func (d *Doer) Do(ctx context.Context, req *http.Request) (*http.Response, error) {
 	freq := fasthttp.AcquireRequest()
-	defer fasthttp.ReleaseRequest(freq)
+	releaseRequest := true
+	defer func() {
+		if releaseRequest {
+			fasthttp.ReleaseRequest(freq)
+		}
+	}()
 
 	freq.SetRequestURI(req.URL.String())
 	freq.Header.SetMethod(req.Method)
@@ -151,26 +156,26 @@ func (d *Doer) Do(ctx context.Context, req *http.Request) (*http.Response, error
 
 	fresp := fasthttp.AcquireResponse()
 
-	err := d.executeWithContext(ctx, freq, fresp)
+	cleanupAsync, err := d.executeWithContext(ctx, freq, fresp)
+	if cleanupAsync {
+		// The request is still in flight. The drainer goroutine now owns both
+		// fasthttp objects and will release them after the client call returns.
+		releaseRequest = false
+		return nil, err
+	}
 	if err != nil {
-		// On error including ctx cancellation, fresp is released here unless
-		// it's owned by a drainer goroutine (see cancellation path).
-		if !errors.Is(err, errCancelled) {
-			fasthttp.ReleaseResponse(fresp)
-		}
-		if errors.Is(err, errCancelled) {
-			return nil, ctx.Err()
-		}
+		fasthttp.ReleaseResponse(fresp)
 		return nil, err
 	}
 
 	// Hold ownership of fresp until the caller closes the Response.Body so we
 	// can hand out fresp's internal []byte directly instead of copying it.
 	body := fresp.Body()
+	statusCode := fresp.StatusCode()
 
 	resp := &http.Response{
-		Status:        string(fresp.Header.StatusMessage()),
-		StatusCode:    fresp.StatusCode(),
+		Status:        strconv.Itoa(statusCode) + " " + string(fresp.Header.StatusMessage()),
+		StatusCode:    statusCode,
 		Proto:         "HTTP/1.1",
 		ProtoMajor:    1,
 		ProtoMinor:    1,
@@ -208,12 +213,17 @@ func (b *fasthttpBody) Close() error {
 }
 
 // executeWithContext runs the fasthttp request honoring ctx as cheaply as
-// possible. See [Doer.Do] for the three cases.
-func (d *Doer) executeWithContext(ctx context.Context, freq *fasthttp.Request, fresp *fasthttp.Response) error {
+// possible. The boolean result reports whether asynchronous cleanup owns freq
+// and fresp. See [Doer.Do] for the three cases.
+func (d *Doer) executeWithContext(
+	ctx context.Context,
+	freq *fasthttp.Request,
+	fresp *fasthttp.Response,
+) (bool, error) {
 	// Fast path: non-cancellable context (e.g. context.Background). No
 	// goroutine, no channel — direct synchronous call.
 	if ctx.Done() == nil {
-		return d.client.Do(freq, fresp)
+		return false, d.client.Do(freq, fresp)
 	}
 
 	// Fast path: deadline-bound context. fasthttp has a native API for this.
@@ -221,10 +231,18 @@ func (d *Doer) executeWithContext(ctx context.Context, freq *fasthttp.Request, f
 		err := d.client.DoDeadline(freq, fresp, deadline)
 		// If the deadline elapsed, surface ctx.Err so callers can distinguish
 		// cancellation from network timeouts via errors.Is(err, context.DeadlineExceeded).
-		if err != nil && ctx.Err() != nil {
-			return errCancelled
+		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return false, ctxErr
+			}
+			// DoDeadline and the context use independent timers, so the client
+			// may report its timeout just before the context timer publishes
+			// DeadlineExceeded.
+			if !time.Now().Before(deadline) {
+				return false, context.DeadlineExceeded
+			}
 		}
-		return err
+		return false, err
 	}
 
 	// Cancellable but no deadline: race the call against ctx.Done. On
@@ -239,9 +257,10 @@ func (d *Doer) executeWithContext(ctx context.Context, freq *fasthttp.Request, f
 		go func() {
 			<-errCh
 			fasthttp.ReleaseResponse(fresp)
+			fasthttp.ReleaseRequest(freq)
 		}()
-		return errCancelled
+		return true, ctx.Err()
 	case err := <-errCh:
-		return err
+		return false, err
 	}
 }

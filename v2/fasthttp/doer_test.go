@@ -10,6 +10,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	fasthttpclient "github.com/valyala/fasthttp"
 )
 
 func TestDoer_GET(t *testing.T) {
@@ -41,6 +43,9 @@ func TestDoer_GET(t *testing.T) {
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("StatusCode = %d, want 200", resp.StatusCode)
+	}
+	if resp.Status != "200 OK" {
+		t.Errorf("Status = %q, want %q", resp.Status, "200 OK")
 	}
 	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
 		t.Errorf("Content-Type = %q, want application/json", ct)
@@ -114,6 +119,118 @@ func TestDoer_ContextCancellation(t *testing.T) {
 	}
 	if elapsed > 250*time.Millisecond {
 		t.Errorf("Do took %v; expected to return promptly after ctx deadline", elapsed)
+	}
+}
+
+type blockingClient struct {
+	started     chan struct{}
+	finish      chan struct{}
+	observedURI chan string
+}
+
+func (c *blockingClient) Do(req *fasthttpclient.Request, _ *fasthttpclient.Response) error {
+	close(c.started)
+	<-c.finish
+	c.observedURI <- req.URI().String()
+	return nil
+}
+
+func (c *blockingClient) DoDeadline(
+	_ *fasthttpclient.Request,
+	_ *fasthttpclient.Response,
+	_ time.Time,
+) error {
+	panic("unexpected DoDeadline call")
+}
+
+func TestDoer_ContextCancellationWithoutDeadlineKeepsRequestAlive(t *testing.T) {
+	t.Parallel()
+
+	client := &blockingClient{
+		started:     make(chan struct{}),
+		finish:      make(chan struct{}),
+		observedURI: make(chan string, 1),
+	}
+	defer func() {
+		select {
+		case <-client.finish:
+		default:
+			close(client.finish)
+		}
+	}()
+	d := &Doer{client: client}
+	req, err := http.NewRequest(http.MethodGet, "http://example.com/v1", nil)
+	if err != nil {
+		t.Fatalf("NewRequest: %v", err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	result := make(chan error, 1)
+	go func() {
+		resp, doErr := d.Do(ctx, req)
+		if resp != nil {
+			_ = resp.Body.Close()
+		}
+		result <- doErr
+	}()
+
+	<-client.started
+	cancel()
+
+	select {
+	case doErr := <-result:
+		if !errors.Is(doErr, context.Canceled) {
+			t.Errorf("Do error = %v, want context.Canceled", doErr)
+		}
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("Do did not return promptly after cancellation")
+	}
+
+	close(client.finish)
+	select {
+	case got := <-client.observedURI:
+		if got != req.URL.String() {
+			t.Errorf("in-flight request URI = %q, want %q", got, req.URL.String())
+		}
+	case <-time.After(250 * time.Millisecond):
+		t.Fatal("in-flight request did not finish")
+	}
+}
+
+type deadlineClient struct {
+	deadlineReached <-chan struct{}
+}
+
+func (c *deadlineClient) Do(_ *fasthttpclient.Request, _ *fasthttpclient.Response) error {
+	panic("unexpected Do call")
+}
+
+func (c *deadlineClient) DoDeadline(
+	_ *fasthttpclient.Request,
+	_ *fasthttpclient.Response,
+	_ time.Time,
+) error {
+	<-c.deadlineReached
+	return fasthttpclient.ErrTimeout
+}
+
+func TestExecuteWithContext_DeadlineKeepsCallerOwnership(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	d := &Doer{client: &deadlineClient{deadlineReached: ctx.Done()}}
+	req := fasthttpclient.AcquireRequest()
+	defer fasthttpclient.ReleaseRequest(req)
+	resp := fasthttpclient.AcquireResponse()
+	defer fasthttpclient.ReleaseResponse(resp)
+
+	cleanupAsync, err := d.executeWithContext(ctx, req, resp)
+
+	if cleanupAsync {
+		t.Error("deadline path transferred resource ownership to asynchronous cleanup")
+	}
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("executeWithContext error = %v, want context.DeadlineExceeded", err)
 	}
 }
 

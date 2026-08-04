@@ -228,6 +228,7 @@ func BenchmarkHTTP_Default_Burst100(b *testing.B) {
 	c := newDefault()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
+	errCh := make(chan error, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
@@ -235,10 +236,20 @@ func BenchmarkHTTP_Default_Burst100(b *testing.B) {
 		for j := 0; j < 100; j++ {
 			go func() {
 				defer wg.Done()
-				_ = c.get(ctx, url)
+				if err := c.get(ctx, url); err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
 			}()
 		}
 		wg.Wait()
+		select {
+		case err := <-errCh:
+			b.Fatal(err)
+		default:
+		}
 	}
 }
 
@@ -248,6 +259,7 @@ func BenchmarkHTTP_Tuned_Burst100(b *testing.B) {
 	c := newTuned()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
+	errCh := make(chan error, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
@@ -255,10 +267,20 @@ func BenchmarkHTTP_Tuned_Burst100(b *testing.B) {
 		for j := 0; j < 100; j++ {
 			go func() {
 				defer wg.Done()
-				_ = c.get(ctx, url)
+				if err := c.get(ctx, url); err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
 			}()
 		}
 		wg.Wait()
+		select {
+		case err := <-errCh:
+			b.Fatal(err)
+		default:
+		}
 	}
 }
 
@@ -272,7 +294,9 @@ func BenchmarkHTTP2_NetHTTP_SmallResponse(b *testing.B) {
 	c := newTunedTLS()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
-	_ = c.get(ctx, url) // warm
+	if err := c.get(ctx, url); err != nil {
+		b.Fatal(err)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if err := c.get(ctx, url); err != nil {
@@ -287,7 +311,9 @@ func BenchmarkHTTP1TLS_NetHTTP_SmallResponse(b *testing.B) {
 	c := newTunedH1Only()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
-	_ = c.get(ctx, url)
+	if err := c.get(ctx, url); err != nil {
+		b.Fatal(err)
+	}
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		if err := c.get(ctx, url); err != nil {
@@ -330,14 +356,28 @@ func BenchmarkHTTP2_NetHTTP_Burst100(b *testing.B) {
 	c := newTunedTLS()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
+	errCh := make(chan error, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
 		wg.Add(100)
 		for j := 0; j < 100; j++ {
-			go func() { defer wg.Done(); _ = c.get(ctx, url) }()
+			go func() {
+				defer wg.Done()
+				if err := c.get(ctx, url); err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
+			}()
 		}
 		wg.Wait()
+		select {
+		case err := <-errCh:
+			b.Fatal(err)
+		default:
+		}
 	}
 }
 
@@ -347,13 +387,27 @@ func BenchmarkHTTP1TLS_NetHTTP_Burst100(b *testing.B) {
 	c := newTunedH1Only()
 	ctx := context.Background()
 	url := srv.URL + "/v1/"
+	errCh := make(chan error, 1)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		var wg sync.WaitGroup
 		wg.Add(100)
 		for j := 0; j < 100; j++ {
-			go func() { defer wg.Done(); _ = c.get(ctx, url) }()
+			go func() {
+				defer wg.Done()
+				if err := c.get(ctx, url); err != nil {
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
+			}()
 		}
 		wg.Wait()
+		select {
+		case err := <-errCh:
+			b.Fatal(err)
+		default:
+		}
 	}
 }
