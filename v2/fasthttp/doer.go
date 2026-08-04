@@ -123,9 +123,10 @@ func New(opts ...Option) *Doer {
 // with any net/http response.
 //
 // fasthttp does not natively accept a [context.Context]:
-//   - When ctx has a deadline, [fasthttp.Client.DoDeadline] enforces it.
-//   - When ctx is cancellable but has no deadline, the request is run on a
-//     goroutine and raced against ctx.Done.
+//   - When ctx has a deadline, [fasthttp.Client.DoDeadline] enforces it while
+//     the call is also raced against ctx.Done to support earlier cancellation.
+//   - When ctx is cancellable without a deadline, [fasthttp.Client.Do] is run
+//     on a goroutine and raced against ctx.Done.
 //   - When ctx is not cancellable (e.g. [context.Background]), the call is
 //     synchronous and allocates no extra goroutine. This is the common SDK
 //     case and keeps overhead minimal under high concurrency.
@@ -156,8 +157,8 @@ func (d *Doer) Do(ctx context.Context, req *http.Request) (*http.Response, error
 
 	fresp := fasthttp.AcquireResponse()
 
-	cleanupAsync, err := d.executeWithContext(ctx, freq, fresp)
-	if cleanupAsync {
+	cleanupDone, err := d.executeWithContext(ctx, freq, fresp)
+	if cleanupDone != nil {
 		// The request is still in flight. The drainer goroutine now owns both
 		// fasthttp objects and will release them after the client call returns.
 		releaseRequest = false
@@ -213,54 +214,94 @@ func (b *fasthttpBody) Close() error {
 }
 
 // executeWithContext runs the fasthttp request honoring ctx as cheaply as
-// possible. The boolean result reports whether asynchronous cleanup owns freq
-// and fresp. See [Doer.Do] for the three cases.
+// possible. A non-nil channel means asynchronous cleanup owns freq and fresp;
+// the channel closes after both are released. See [Doer.Do] for the cases.
 func (d *Doer) executeWithContext(
 	ctx context.Context,
 	freq *fasthttp.Request,
 	fresp *fasthttp.Response,
-) (bool, error) {
+) (<-chan struct{}, error) {
 	// Fast path: non-cancellable context (e.g. context.Background). No
 	// goroutine, no channel — direct synchronous call.
 	if ctx.Done() == nil {
-		return false, d.client.Do(freq, fresp)
+		return nil, d.client.Do(freq, fresp)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, err
 	}
 
-	// Fast path: deadline-bound context. fasthttp has a native API for this.
+	// Deadline-bound contexts use fasthttp's native deadline while still
+	// racing ctx.Done so an explicit cancel can return before that deadline.
 	if deadline, ok := ctx.Deadline(); ok {
-		err := d.client.DoDeadline(freq, fresp, deadline)
-		// If the deadline elapsed, surface ctx.Err so callers can distinguish
-		// cancellation from network timeouts via errors.Is(err, context.DeadlineExceeded).
-		if err != nil {
-			if ctxErr := ctx.Err(); ctxErr != nil {
-				return false, ctxErr
+		errCh := make(chan error, 1)
+		go func() { errCh <- d.client.DoDeadline(freq, fresp, deadline) }()
+
+		select {
+		case err := <-errCh:
+			return nil, deadlineError(ctx, deadline, err)
+		case <-ctx.Done():
+			// Prefer a completed client call so the caller can clean up
+			// synchronously when both events become ready together.
+			select {
+			case err := <-errCh:
+				return nil, deadlineError(ctx, deadline, err)
+			default:
 			}
-			// DoDeadline and the context use independent timers, so the client
-			// may report its timeout just before the context timer publishes
-			// DeadlineExceeded.
-			if !time.Now().Before(deadline) {
-				return false, context.DeadlineExceeded
-			}
+			return cleanupAfter(errCh, freq, fresp), ctx.Err()
 		}
-		return false, err
 	}
 
 	// Cancellable but no deadline: race the call against ctx.Done. On
-	// cancellation, hand the response slot to a drainer goroutine so it can be
-	// released when fasthttp finally returns. fasthttp's ReadTimeout /
+	// cancellation, hand both pooled objects to a drainer goroutine so they can
+	// be released when fasthttp finally returns. fasthttp's ReadTimeout /
 	// WriteTimeout cap how long that drainer can block.
 	errCh := make(chan error, 1)
 	go func() { errCh <- d.client.Do(freq, fresp) }()
 
 	select {
 	case <-ctx.Done():
-		go func() {
-			<-errCh
-			fasthttp.ReleaseResponse(fresp)
-			fasthttp.ReleaseRequest(freq)
-		}()
-		return true, ctx.Err()
+		select {
+		case err := <-errCh:
+			return nil, contextResult(ctx, err)
+		default:
+		}
+		return cleanupAfter(errCh, freq, fresp), ctx.Err()
 	case err := <-errCh:
-		return false, err
+		return nil, contextResult(ctx, err)
 	}
+}
+
+func contextResult(ctx context.Context, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
+	return err
+}
+
+func deadlineError(ctx context.Context, deadline time.Time, err error) error {
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return ctxErr
+	}
+	// DoDeadline and the context use independent timers, so the client may
+	// report its timeout just before the context timer publishes
+	// DeadlineExceeded.
+	if err != nil && !time.Now().Before(deadline) {
+		return context.DeadlineExceeded
+	}
+	return err
+}
+
+func cleanupAfter(
+	errCh <-chan error,
+	freq *fasthttp.Request,
+	fresp *fasthttp.Response,
+) <-chan struct{} {
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		<-errCh
+		fasthttp.ReleaseResponse(fresp)
+		fasthttp.ReleaseRequest(freq)
+	}()
+	return done
 }
