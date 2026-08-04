@@ -5,15 +5,24 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
-# v2.2.0 (7/2/2026)
+# v2.2.0 (8/4/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `account.FromMnemonic` and `account.FromDerivationPath` for wallet import
   - Optional BIP-39 passphrase and SingleKey authentication scheme via `account.DerivationConfig`
   - `aptos.ValidateMnemonic`, `aptos.DefaultDerivationPath`, and `aptos.Ed25519PrivateKeyFromDerivationPath`
   - SLIP-0010 hardened derivation on the standard Aptos path `m/44'/637'/0'/0'/0'`
+- [`Feature`] Add `confidentialasset` package for Aptos confidential fungible assets, aligned with `@aptos-labs/confidential-asset`
+  - Views, deposit/rollover, and sigma-only `register_raw` / `rotate_encryption_key_raw` work without CGO
+  - Decrypt and range-proof entry functions live in `confidentialasset/native` (requires CGO + `libaptos_confidential_asset_ffi`)
+  - Examples under `v2/examples/confidential_asset/`
+- [`Feature`] Add object helpers: `GetObjectCore`, `ObjectOwner`, `IsObjectOwner`, and `ObjectTransferPayload`
+- [`Feature`] Add orderless transaction support via `TransactionInnerPayload` and `WithReplayProtectionNonce`
+- [`Feature`] Add `GetTableItem`, `AccountBalanceOf`, and cursor-paginated `AccountModules` node APIs
+- [`Feature`] Add optional `v2/fasthttp` sub-module with a fasthttp-backed `HTTPDoer` for lower-allocation HTTP
 - [`Feature`] Add automatic retry middleware to the node client with configurable backoff, rate-limit (429) handling, and `MaxRetries`
 - [`Feature`] Support legacy `MultiEd25519` transaction authenticators alongside fee-payer and multi-agent flows
+- [`Fix`] Use SHA3-256 for signing domain prefixes and user transaction hashing; previously used SHA-256, causing `INVALID_SIGNATURE` on real submission
 - [`Fix`] Fix AIP-80 private key export for `SingleSigner`-wrapped keys
 - [`Fix`] Guard `MultiEd25519TransactionAuthenticator` against nil sender authenticator
 - [`Fix`] Validate inner authenticator type in `MultiEd25519` BCS marshaling
@@ -29,15 +38,14 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.13.0 → v1.14.0
 - [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.14.4 → v0.16.0
 - [`Dependency`] Upgrade `golang.org/x/sys` v0.42.0 → v0.45.0
+- [`Dependency`] Add `github.com/aptos-labs/confidential-asset-bindings/bindings/go` v1.1.2
+- [`Dependency`] Move `github.com/valyala/fasthttp` to optional `v2/fasthttp` sub-module
 
 # v2.1.0 (5/21/2026)
 
 - [`Fix`] Fix critical signing bug in transaction authentication
 - [`Fix`] Fix entry-function argument BCS encoding and ANS payloads
 - [`Fix`] Stringify `uint64` view function arguments correctly
-- [`Feature`] Add **`confidentialasset`** sub-package (`github.com/aptos-labs/aptos-go-sdk/v2/confidentialasset`) for Aptos confidential fungible assets, aligned with `@aptos-labs/confidential-asset`. Views, deposit/rollover, and sigma-only `register_raw` / `rotate_encryption_key_raw` work without CGO. Decrypt and range-proof entry functions (`normalize_raw`, `withdraw_to_raw`, `confidential_transfer_raw`, `GetBalance`) live in **`confidentialasset/native`** (requires CGO + `libaptos_confidential_asset_ffi`). Examples under `v2/examples/confidential_asset/`; FFI smoke runs in `native` CGO tests only.
-
-- [`Fix`] Use **SHA3-256** for signing domain prefixes (`APTOS::RawTransaction`, `APTOS::RawTransactionWithData`) and for user transaction hashing (`APTOS::Transaction` + variant + BCS). The code previously used **SHA-256**, which does not match Aptos core or the TypeScript SDK and caused **`INVALID_SIGNATURE`** on real transaction submission (simulation still succeeded).
 - [`Fix`] Increase default max gas amount by 10x from 200,000 to 2,000,000
 - [`Security`] Upgrade OpenTelemetry SDK from 1.39.0 to 1.43.0
 

@@ -5,7 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
-# v1.14.0 (7/2/2026)
+# v1.14.0 (8/4/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `NewEd25519AccountFromMnemonic` and `NewEd25519AccountFromDerivationPath` for wallet import
