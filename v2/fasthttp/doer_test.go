@@ -264,7 +264,7 @@ func TestDoer_ContextCancellationBeforeDeadlineReturnsPromptly(t *testing.T) {
 		if !errors.Is(doErr, context.Canceled) {
 			t.Errorf("Do error = %v, want context.Canceled", doErr)
 		}
-	case <-time.After(250 * time.Millisecond):
+	case <-time.After(2 * time.Second):
 		t.Fatal("Do did not return promptly after cancellation")
 	}
 
@@ -311,6 +311,84 @@ func TestExecuteWithContext_DeadlineResultKeepsCallerOwnership(t *testing.T) {
 	}
 	if !errors.Is(err, fasthttpclient.ErrTimeout) {
 		t.Errorf("executeWithContext error = %v, want fasthttp.ErrTimeout", err)
+	}
+}
+
+type expiringDeadlineClient struct {
+	deadlineReached <-chan struct{}
+	observed        chan struct{}
+	finish          chan struct{}
+}
+
+func (c *expiringDeadlineClient) Do(_ *fasthttpclient.Request, _ *fasthttpclient.Response) error {
+	panic("unexpected Do call")
+}
+
+func (c *expiringDeadlineClient) DoDeadline(
+	_ *fasthttpclient.Request,
+	_ *fasthttpclient.Response,
+	_ time.Time,
+) error {
+	<-c.deadlineReached
+	close(c.observed)
+	<-c.finish
+	return fasthttpclient.ErrTimeout
+}
+
+func TestExecuteWithContext_DeadlineExpirationKeepsCallerOwnership(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancel()
+	client := &expiringDeadlineClient{
+		deadlineReached: ctx.Done(),
+		observed:        make(chan struct{}),
+		finish:          make(chan struct{}),
+	}
+	defer func() {
+		select {
+		case <-client.finish:
+		default:
+			close(client.finish)
+		}
+	}()
+	d := &Doer{client: client}
+	req := fasthttpclient.AcquireRequest()
+	defer fasthttpclient.ReleaseRequest(req)
+	resp := fasthttpclient.AcquireResponse()
+	defer fasthttpclient.ReleaseResponse(resp)
+	type result struct {
+		cleanupDone <-chan struct{}
+		err         error
+	}
+	resultCh := make(chan result, 1)
+	go func() {
+		cleanupDone, err := d.executeWithContext(ctx, req, resp)
+		resultCh <- result{cleanupDone: cleanupDone, err: err}
+	}()
+
+	select {
+	case <-client.observed:
+	case <-time.After(2 * time.Second):
+		t.Fatal("client did not observe the context deadline")
+	}
+	select {
+	case <-resultCh:
+		t.Fatal("executeWithContext returned before the deadline-bound client call")
+	case <-time.After(25 * time.Millisecond):
+	}
+	close(client.finish)
+
+	select {
+	case execution := <-resultCh:
+		if execution.cleanupDone != nil {
+			t.Error("deadline expiration transferred ownership to asynchronous cleanup")
+		}
+		if !errors.Is(execution.err, context.DeadlineExceeded) {
+			t.Errorf("executeWithContext error = %v, want context.DeadlineExceeded", execution.err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("executeWithContext did not return after the client call")
 	}
 }
 

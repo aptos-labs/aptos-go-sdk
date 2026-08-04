@@ -240,6 +240,12 @@ func (d *Doer) executeWithContext(
 		case err := <-errCh:
 			return nil, deadlineError(ctx, deadline, err)
 		case <-ctx.Done():
+			// DoDeadline is already enforcing this same deadline. Wait for its
+			// result so the caller retains ownership for synchronous cleanup.
+			// Only an explicit early cancellation needs asynchronous cleanup.
+			if ctx.Err() == context.DeadlineExceeded {
+				return nil, deadlineError(ctx, deadline, <-errCh)
+			}
 			// Prefer a completed client call so the caller can clean up
 			// synchronously when both events become ready together.
 			select {
