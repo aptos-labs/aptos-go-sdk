@@ -14,6 +14,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.15.1 → v0.16.0
 - [`Dependency`] Upgrade `golang.org/x/sys` v0.45.0 → v0.48.0
 - [`Dependency`] Upgrade `github.com/valyala/fasthttp` v1.69.0 → v1.74.0 in the optional `v2/fasthttp` module
+- [`Test`] Query retained ledger versions in live-network integration tests instead of genesis (avoids 410 version_pruned on pruned testnet)
 - [`Breaking`] Minimum required Go version bumped from 1.25 to 1.26
 
 # v2.2.0 (8/4/2026)
