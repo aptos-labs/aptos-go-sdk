@@ -15,27 +15,19 @@ jobs:
     name: Generate Coverage Report
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ env.GIT_SHA }}
 
-      # Coverage is the only CI job that compiles inside v2/, which
-      # declares `go 1.25.0` in v2/go.mod. The rest of CI (lint, vet,
-      # unit tests) operates on v1 only and goes through mise — that's
-      # fine. Here we deliberately skip mise to avoid two competing Go
-      # installs on PATH/GOROOT (mise's 1.24.2 vs the one we need for
-      # v2), which produces:
-      #
-      #     compile: version "go1.24.2" does not match go tool version "go1.25.0"
-      #
-      # actions/setup-go gives us one full Go install (with the
-      # complete cmd/ tree, including `covdata` — needed for
-      # `go test -coverprofile` on the v2/examples/* package-mains
-      # that have no test files). go-version-file pins the version
-      # to the single source of truth (v2/go.mod), so bumping v2's
-      # minimum Go version automatically updates CI.
+      # Coverage is the only CI job that compiles inside v2/. The rest of
+      # CI (lint, vet, unit tests) operates on v1 only and goes through
+      # mise. Here we skip mise so coverage gets one full Go install
+      # (with the complete cmd/ tree, including `covdata` — needed for
+      # `go test -coverprofile` on the v2/examples/* package-mains that
+      # have no test files). go-version-file follows v2/go.mod, including
+      # its `toolchain` pin (currently go1.27.1).
       - name: Set up Go (pinned to v2/go.mod)
-        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
           go-version-file: v2/go.mod
           cache: true
@@ -53,8 +45,8 @@ jobs:
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
       # Run v1 SDK tests with coverage (optional, for overall repo coverage).
-      # v1's go.mod declares `go 1.24.0; toolchain go1.24.2`, but a newer
-      # Go (1.25.0 from the step above) is backward-compatible with v1.
+      # v1 and v2 now share `go 1.26.0` / `toolchain go1.27.1`, so the Go
+      # installed above is compatible with both modules.
       - name: Run v1 SDK tests with coverage
         run: |
           go test -race -coverprofile=coverage-v1.out -covermode=atomic ./...

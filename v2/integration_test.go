@@ -43,6 +43,68 @@ func skipIfShort(t *testing.T) {
 	}
 }
 
+// retainedLedgerVersion returns a ledger version the node still stores.
+// offset is added to OldestLedgerVersion and clamped to LedgerVersion.
+func retainedLedgerVersion(info NodeInfo, offset uint64) uint64 {
+	oldest := info.OldestLedgerVersion
+	latest := info.LedgerVersion
+	if oldest > latest {
+		return latest
+	}
+	if offset > latest-oldest {
+		return latest
+	}
+	return oldest + offset
+}
+
+func clampLookback(oldest, latest, lookback uint64) uint64 {
+	if oldest > latest {
+		return latest
+	}
+	if lookback >= latest-oldest {
+		return oldest
+	}
+	return latest - lookback
+}
+
+// retainedRecentLedgerVersion returns a recent ledger version the node still stores.
+func retainedRecentLedgerVersion(info NodeInfo, lookback uint64) uint64 {
+	return clampLookback(info.OldestLedgerVersion, info.LedgerVersion, lookback)
+}
+
+// retainedBlockHeight returns a block height the node still stores.
+// lookback is subtracted from BlockHeight and clamped to OldestBlockHeight.
+func retainedBlockHeight(info NodeInfo, lookback uint64) uint64 {
+	return clampLookback(info.OldestBlockHeight, info.BlockHeight, lookback)
+}
+
+func requireNodeInfo(t *testing.T, client Client, ctx context.Context) NodeInfo {
+	t.Helper()
+	info, err := client.Info(ctx)
+	require.NoError(t, err)
+	require.NotNil(t, info)
+	return *info
+}
+
+func TestRetainedLedgerVersion(t *testing.T) {
+	t.Parallel()
+	info := NodeInfo{OldestLedgerVersion: 1_000_000, LedgerVersion: 1_000_050}
+	assert.Equal(t, uint64(1_000_000), retainedLedgerVersion(info, 0))
+	assert.Equal(t, uint64(1_000_005), retainedLedgerVersion(info, 5))
+	assert.Equal(t, uint64(1_000_050), retainedLedgerVersion(info, 100))
+	assert.Equal(t, uint64(10), retainedLedgerVersion(NodeInfo{OldestLedgerVersion: 20, LedgerVersion: 10}, 0))
+	assert.Equal(t, uint64(1_000_000), retainedRecentLedgerVersion(NodeInfo{OldestLedgerVersion: 1_000_000, LedgerVersion: 1_000_050}, 100))
+	assert.Equal(t, uint64(1_000_040), retainedRecentLedgerVersion(NodeInfo{OldestLedgerVersion: 1_000_000, LedgerVersion: 1_000_050}, 10))
+}
+
+func TestRetainedBlockHeight(t *testing.T) {
+	t.Parallel()
+	info := NodeInfo{OldestBlockHeight: 1_000, BlockHeight: 1_010}
+	assert.Equal(t, uint64(1_005), retainedBlockHeight(info, 5))
+	assert.Equal(t, uint64(1_000), retainedBlockHeight(info, 50))
+	assert.Equal(t, uint64(5), retainedBlockHeight(NodeInfo{OldestBlockHeight: 10, BlockHeight: 5}, 1))
+}
+
 // testContext returns a context with a reasonable timeout for tests.
 func testContext(t *testing.T) context.Context {
 	t.Helper()
@@ -294,15 +356,10 @@ func TestIntegration_BlockByHeight(t *testing.T) {
 	client := createTestClient(t)
 	ctx := testContext(t)
 
-	// Get current block height
-	info, err := client.Info(ctx)
-	require.NoError(t, err)
+	info := requireNodeInfo(t, client, ctx)
 
-	// Fetch a recent block (a few blocks back to ensure it exists)
-	blockHeight := info.BlockHeight - 5
-	if blockHeight < 1 {
-		blockHeight = 1
-	}
+	// Fetch a recent block that has not been pruned
+	blockHeight := retainedBlockHeight(info, 5)
 
 	t.Run("without_transactions", func(t *testing.T) {
 		block, err := client.BlockByHeight(ctx, blockHeight, false)
@@ -334,15 +391,10 @@ func TestIntegration_BlockByVersion(t *testing.T) {
 	client := createTestClient(t)
 	ctx := testContext(t)
 
-	// Get current ledger version
-	info, err := client.Info(ctx)
-	require.NoError(t, err)
+	info := requireNodeInfo(t, client, ctx)
 
-	// Fetch a recent block by version
-	version := info.LedgerVersion - 100
-	if version < 1 {
-		version = 1
-	}
+	// Fetch a recent block by version that has not been pruned
+	version := retainedRecentLedgerVersion(info, 100)
 
 	block, err := client.BlockByVersion(ctx, version, false)
 	require.NoError(t, err, "failed to get block by version")
@@ -378,7 +430,8 @@ func TestIntegration_Transactions(t *testing.T) {
 	})
 
 	t.Run("transactions_from_version", func(t *testing.T) {
-		start := uint64(100)
+		info := requireNodeInfo(t, client, ctx)
+		start := retainedLedgerVersion(info, 0)
 		limit := uint64(5)
 		txns, err := client.Transactions(ctx, &start, &limit)
 		require.NoError(t, err, "failed to get transactions from version")
@@ -396,15 +449,17 @@ func TestIntegration_TransactionByVersion(t *testing.T) {
 	client := createTestClient(t)
 	ctx := testContext(t)
 
-	// Version 1 should always exist (genesis)
-	txn, err := client.TransactionByVersion(ctx, 1)
-	require.NoError(t, err, "failed to get transaction at version 1")
+	info := requireNodeInfo(t, client, ctx)
+	version := retainedLedgerVersion(info, 0)
 
-	assert.Equal(t, uint64(1), txn.Version)
+	txn, err := client.TransactionByVersion(ctx, version)
+	require.NoError(t, err, "failed to get transaction at oldest retained version %d", version)
+
+	assert.Equal(t, version, txn.Version)
 	assert.NotEmpty(t, txn.Hash)
 	assert.NotEmpty(t, txn.Type)
 
-	t.Logf("Transaction v1: type=%s, hash=%s", txn.Type, txn.Hash)
+	t.Logf("Transaction v%d: type=%s, hash=%s", version, txn.Type, txn.Hash)
 }
 
 // TestIntegration_TransactionByHash tests fetching a transaction by hash.
@@ -415,8 +470,11 @@ func TestIntegration_TransactionByHash(t *testing.T) {
 	client := createTestClient(t)
 	ctx := testContext(t)
 
+	info := requireNodeInfo(t, client, ctx)
+	version := retainedLedgerVersion(info, 0)
+
 	// First get a transaction by version to get its hash
-	txn, err := client.TransactionByVersion(ctx, 1)
+	txn, err := client.TransactionByVersion(ctx, version)
 	require.NoError(t, err)
 
 	// Then fetch by hash
@@ -435,7 +493,8 @@ func TestIntegration_TransactionsIterator(t *testing.T) {
 	client := createTestClient(t)
 	ctx := testContext(t)
 
-	start := uint64(1)
+	info := requireNodeInfo(t, client, ctx)
+	start := retainedLedgerVersion(info, 0)
 	var count int
 	var lastVersion uint64
 
