@@ -5,6 +5,13 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Security`] Upgrade Go toolchain from go1.25.10 to go1.27.1 (Go 1.25 is EOL)
+- [`Security`] Upgrade `golang.org/x/crypto` v0.52.0 → v0.57.0
+- [`Dependency`] Upgrade `github.com/stretchr/testify` v1.11.1 → v1.12.1
+- [`Dependency`] Upgrade `github.com/cucumber/godog` v0.15.1 → v0.16.0
+- [`Dependency`] Upgrade `github.com/coder/websocket` v1.8.14 → v1.8.15
+- [`Breaking`] Minimum required Go version bumped from 1.25 to 1.26
+
 # v1.14.0 (8/4/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
