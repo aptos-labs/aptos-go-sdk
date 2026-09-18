@@ -5,19 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
-- [`Security`] Upgrade Go toolchain from go1.25.10 to go1.27.1 (Go 1.25 is EOL)
-- [`Security`] Upgrade `golang.org/x/crypto` v0.52.0 → v0.57.0
-- [`Dependency`] Upgrade OpenTelemetry SDK v1.43.0 → v1.46.0
-- [`Dependency`] Upgrade `github.com/cloudflare/circl` v1.6.3 → v1.6.5
-- [`Dependency`] Upgrade `github.com/gtank/ristretto255` v0.1.2 → v0.2.0
-- [`Dependency`] Upgrade `github.com/stretchr/testify` v1.11.1 → v1.12.1
-- [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.15.1 → v0.16.0
-- [`Dependency`] Upgrade `golang.org/x/sys` v0.45.0 → v0.48.0
-- [`Dependency`] Upgrade `github.com/valyala/fasthttp` v1.69.0 → v1.74.0 in the optional `v2/fasthttp` module
-- [`Test`] Query retained ledger versions in live-network integration tests instead of genesis (avoids 410 version_pruned on pruned testnet)
-- [`Breaking`] Minimum required Go version bumped from 1.25 to 1.26
-
-# v2.2.0 (8/4/2026)
+# v2.2.0 (9/18/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `account.FromMnemonic` and `account.FromDerivationPath` for wallet import
@@ -43,15 +31,22 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Fix`] Keep `MaxRetries` as a strict cap on error/status retries
 - [`Fix`] Fix 32-bit overflow in BCS length checks and `IntToU32` conversion on 32-bit systems
 - [`Perf`] Use a stoppable timer for retry backoff to avoid goroutine leaks on context cancellation
-- [`Security`] Upgrade Go toolchain from go1.25.0 to go1.25.10, resolving 18 stdlib CVEs
-- [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.52.0
+- [`Security`] Upgrade Go toolchain from go1.25.0 to go1.27.1 (Go 1.25 is EOL)
+- [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.57.0
 - [`Security`] Upgrade `github.com/decred/dcrd/dcrec/secp256k1/v4` v4.4.0 → v4.4.1
 - [`Dependency`] Upgrade `filippo.io/edwards25519` v1.1.1 → v1.2.0
 - [`Dependency`] Upgrade `github.com/aptos-labs/aptos-go-sdk` v1.13.0 → v1.14.0
+- [`Dependency`] Upgrade OpenTelemetry SDK v1.43.0 → v1.46.0
+- [`Dependency`] Upgrade `github.com/cloudflare/circl` v1.6.3 → v1.6.5
+- [`Dependency`] Upgrade `github.com/gtank/ristretto255` v0.1.2 → v0.2.0
+- [`Dependency`] Upgrade `github.com/stretchr/testify` v1.11.1 → v1.12.1
 - [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.14.4 → v0.16.0
-- [`Dependency`] Upgrade `golang.org/x/sys` v0.42.0 → v0.45.0
+- [`Dependency`] Upgrade `golang.org/x/sys` v0.42.0 → v0.48.0
+- [`Dependency`] Upgrade `github.com/valyala/fasthttp` v1.69.0 → v1.74.0 in the optional `v2/fasthttp` module
 - [`Dependency`] Add `github.com/aptos-labs/confidential-asset-bindings/bindings/go` v1.1.2
 - [`Dependency`] Move `github.com/valyala/fasthttp` to optional `v2/fasthttp` sub-module
+- [`Test`] Query retained ledger versions in live-network integration tests instead of genesis (avoids 410 version_pruned on pruned testnet)
+- [`Breaking`] Minimum required Go version bumped from 1.25 to 1.26
 
 # v2.1.0 (5/21/2026)
 
