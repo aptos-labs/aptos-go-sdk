@@ -5,7 +5,7 @@ go 1.26.0
 toolchain go1.27.1
 
 require (
-	github.com/aptos-labs/aptos-go-sdk v1.13.0
+	github.com/aptos-labs/aptos-go-sdk v1.14.0
 	github.com/aptos-labs/confidential-asset-bindings/bindings/go v1.1.2
 	github.com/cloudflare/circl v1.6.5
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.4.1
