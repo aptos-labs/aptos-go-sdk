@@ -8,7 +8,7 @@ A modern, idiomatic Go SDK for the [Aptos blockchain](https://aptos.dev).
 ## Features
 
 - **Idiomatic Go**: Designed with Go best practices from the ground up
-- **Go 1.24+**: Leverages modern Go features including generics and iterators
+- **Go 1.26+**: Leverages modern Go features including generics and iterators
 - **Context-aware**: All operations accept `context.Context` for cancellation and timeouts
 - **Functional options**: Flexible configuration using the functional options pattern
 - **Comprehensive error handling**: Sentinel errors and typed errors with `errors.Is/As` support

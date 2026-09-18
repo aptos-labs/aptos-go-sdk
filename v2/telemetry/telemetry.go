@@ -19,7 +19,7 @@ const (
 	InstrumentationName = "github.com/aptos-labs/aptos-go-sdk/v2/telemetry"
 
 	// InstrumentationVersion is the version of this instrumentation.
-	InstrumentationVersion = "2.0.0"
+	InstrumentationVersion = "2.2.0"
 )
 
 // Metric names

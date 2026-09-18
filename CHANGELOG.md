@@ -5,14 +5,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
-- [`Security`] Upgrade Go toolchain from go1.25.10 to go1.27.1 (Go 1.25 is EOL)
-- [`Security`] Upgrade `golang.org/x/crypto` v0.52.0 → v0.57.0
-- [`Dependency`] Upgrade `github.com/stretchr/testify` v1.11.1 → v1.12.1
-- [`Dependency`] Upgrade `github.com/cucumber/godog` v0.15.1 → v0.16.0
-- [`Dependency`] Upgrade `github.com/coder/websocket` v1.8.14 → v1.8.15
-- [`Breaking`] Minimum required Go version bumped from 1.25 to 1.26
-
-# v1.14.0 (8/4/2026)
+# v1.14.0 (9/18/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
   - `NewEd25519AccountFromMnemonic` and `NewEd25519AccountFromDerivationPath` for wallet import
@@ -20,13 +13,16 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
   - SLIP-0010 hardened derivation on the standard Aptos path `m/44'/637'/0'/0'/0'`
 - [`Fix`] Fix 32-bit overflow in `IntToU32` — values above `math.MaxInt32` now return an error instead of wrapping on 32-bit systems
 - [`Fix`] Fix BCS deserializer uleb128 length conversion to safely reject values that overflow `int` on 32-bit systems
-- [`Security`] Upgrade Go toolchain from go1.24.2 to go1.25.10, resolving 37 stdlib CVEs (Go 1.24 is EOL)
-- [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.52.0
+- [`Security`] Upgrade Go toolchain from go1.24.2 to go1.27.1 (Go 1.24 and 1.25 are EOL)
+- [`Security`] Upgrade `golang.org/x/crypto` v0.46.0 → v0.57.0
 - [`Security`] Upgrade `github.com/decred/dcrd/dcrec/secp256k1/v4` v4.4.0 → v4.4.1
 - [`Dependency`] Upgrade `filippo.io/edwards25519` v1.1.1 → v1.2.0
 - [`Dependency`] Upgrade `github.com/hasura/go-graphql-client` v0.15.1 → v0.16.0
+- [`Dependency`] Upgrade `github.com/stretchr/testify` v1.11.1 → v1.12.1
+- [`Dependency`] Upgrade `github.com/cucumber/godog` v0.15.1 → v0.16.0
+- [`Dependency`] Upgrade `github.com/coder/websocket` v1.8.14 → v1.8.15
 - [`Dependency`] Upgrade `golang.org/x/sys` v0.39.0 → v0.45.0
-- [`Breaking`] Minimum required Go version bumped from 1.24 to 1.25
+- [`Breaking`] Minimum required Go version bumped from 1.24 to 1.26
 
 # v1.13.0 (5/5/2026)
 
