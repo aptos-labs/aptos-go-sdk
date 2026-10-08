@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Fix`] Point `ans.TestnetRouterAddress` at the redeployed testnet ANS contract (`0xb1ae…ecf4`)
+
 # v2.2.0 (9/18/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
