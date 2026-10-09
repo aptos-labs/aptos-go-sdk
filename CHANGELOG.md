@@ -5,6 +5,8 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Docs`] Consolidate `CLAUDE.md` into `AGENTS.md`, now the single source of agent guidance for v1 and v2, and remove `CLAUDE.md`
+
 # v1.14.0 (9/18/2026)
 
 - [`Feature`] Add BIP-39 mnemonic and BIP-44 derivation path support for Ed25519 accounts
