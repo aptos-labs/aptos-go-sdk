@@ -36,7 +36,7 @@ var (
 	RouterAddress = aptos.MustParseAddress("0x867ed1f6bf916171b1de3ee92849b8978b7d1b9e0a8cc982a3d19d535dfd9c0c")
 
 	// TestnetRouterAddress is the ANS router contract address on testnet.
-	TestnetRouterAddress = aptos.MustParseAddress("0x5f8fd2347449685cf41d4db97926ec3a096eaf381332be4f1318ad4d16a8497c")
+	TestnetRouterAddress = aptos.MustParseAddress("0xb1ae61606dfbe0ea5b5c45ffdb4fb08da0dba18c5125182ff63ab280a450ecf4")
 )
 
 // TLD is the top-level domain for Aptos names.
