@@ -2,7 +2,6 @@ package crypto
 
 import (
 	"bytes"
-	"strings"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -144,7 +143,9 @@ func TestSlhDsaSha2128sAnyKeyBCSAndAuthenticator(t *testing.T) {
 	t.Parallel()
 	key := testSlhDsaPrivateKey(t)
 	signer := NewSingleSigner(key)
-	assert.Equal(t, AnyPublicKeyVariantSlhDsaSha2128s, signer.PubKey().(*AnyPublicKey).Variant)
+	signerPubKey, ok := signer.PubKey().(*AnyPublicKey)
+	require.True(t, ok)
+	assert.Equal(t, AnyPublicKeyVariantSlhDsaSha2128s, signerPubKey.Variant)
 	assert.Equal(t, AnySignatureVariantSlhDsaSha2128s, signer.SignatureVariant())
 
 	msg := []byte(testSlhDsaMessageHex)
@@ -158,7 +159,7 @@ func TestSlhDsaSha2128sAnyKeyBCSAndAuthenticator(t *testing.T) {
 	require.NoError(t, err)
 	// AccountAuthenticator BCS starts with the SingleSender variant (2);
 	// inside, AnyPublicKey starts with variant 5 and AnySignature with 4.
-	require.True(t, len(authBytes) > 2)
+	require.Greater(t, len(authBytes), 2)
 	assert.Equal(t, byte(AccountAuthenticatorSingleSender), authBytes[0])
 	assert.Equal(t, byte(AnyPublicKeyVariantSlhDsaSha2128s), authBytes[1])
 
@@ -186,7 +187,7 @@ func TestSlhDsaSha2128sAuthKeyMatchesSingleSigner(t *testing.T) {
 	anyPub, err := ToAnyPublicKey(key.PublicKey())
 	require.NoError(t, err)
 	assert.Equal(t, signer.AuthKey(), anyPub.AuthKey())
-	assert.Equal(t, uint8(SingleKeyScheme), key.PublicKey().Scheme())
+	assert.Equal(t, SingleKeyScheme, key.PublicKey().Scheme())
 }
 
 func TestSlhDsaSha2128sMultiKey(t *testing.T) {
@@ -197,7 +198,9 @@ func TestSlhDsaSha2128sMultiKey(t *testing.T) {
 
 	slhAny, err := ToAnyPublicKey(slhKey.PublicKey())
 	require.NoError(t, err)
-	edAny, err := ToAnyPublicKey(edKey.PubKey().(*Ed25519PublicKey))
+	edPubKey, ok := edKey.PubKey().(*Ed25519PublicKey)
+	require.True(t, ok)
+	edAny, err := ToAnyPublicKey(edPubKey)
 	require.NoError(t, err)
 
 	multi := &MultiKey{PubKeys: []*AnyPublicKey{slhAny, edAny}, SignaturesRequired: 1}
@@ -226,7 +229,9 @@ func TestSlhDsaSha2128sAuthenticator(t *testing.T) {
 	sig, err := key.SignMessage(msg)
 	require.NoError(t, err)
 
-	auth := &SlhDsaSha2128sAuthenticator{PubKey: key.PublicKey(), Sig: sig.(*SlhDsaSha2128sSignature)}
+	slhSig, ok := sig.(*SlhDsaSha2128sSignature)
+	require.True(t, ok)
+	auth := &SlhDsaSha2128sAuthenticator{PubKey: key.PublicKey(), Sig: slhSig}
 	assert.True(t, auth.Verify(msg))
 	serialized, err := bcs.Serialize(auth)
 	require.NoError(t, err)
@@ -256,8 +261,8 @@ func TestSlhDsaSha2128sDerivationVectorsTS(t *testing.T) {
 	}
 
 	_, err = hd.DeriveSlhDsaSha2128sPrivateKey("m/0/1'", seed)
-	assert.Error(t, err, "non-hardened segments must be rejected")
+	require.Error(t, err, "non-hardened segments must be rejected")
 	assert.True(t, hd.IsValidSlhDsaHardenedPath(hd.DefaultDerivationPath))
 	assert.False(t, hd.IsValidSlhDsaHardenedPath("m/44'/637'/0'/0'/0"))
-	assert.False(t, strings.Contains(hd.Slip10SlhDsaSha2128sSeed, "ed25519"))
+	assert.NotContains(t, hd.Slip10SlhDsaSha2128sSeed, "ed25519")
 }
