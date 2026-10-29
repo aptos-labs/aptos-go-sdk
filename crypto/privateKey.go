@@ -13,14 +13,18 @@ import (
 type PrivateKeyVariant string
 
 const (
-	PrivateKeyVariantEd25519   PrivateKeyVariant = "ed25519"
-	PrivateKeyVariantSecp256k1 PrivateKeyVariant = "secp256k1"
+	PrivateKeyVariantEd25519        PrivateKeyVariant = "ed25519"
+	PrivateKeyVariantSecp256k1      PrivateKeyVariant = "secp256k1"
+	PrivateKeyVariantSlhDsaSha2128s PrivateKeyVariant = "slh-dsa-sha2-128s"
+	PrivateKeyVariantSecp256r1      PrivateKeyVariant = "secp256r1"
 )
 
 // AIP80Prefixes contains the AIP-80 compliant prefixes for each private key type
 var AIP80Prefixes = map[PrivateKeyVariant]string{
-	PrivateKeyVariantEd25519:   "ed25519-priv-",
-	PrivateKeyVariantSecp256k1: "secp256k1-priv-",
+	PrivateKeyVariantEd25519:        "ed25519-priv-",
+	PrivateKeyVariantSecp256k1:      "secp256k1-priv-",
+	PrivateKeyVariantSlhDsaSha2128s: "slh-dsa-sha2-128s-priv-",
+	PrivateKeyVariantSecp256r1:      "secp256r1-priv-",
 }
 
 // FormatPrivateKey formats a hex input to an AIP-80 compliant string
@@ -30,11 +34,10 @@ func FormatPrivateKey(privateKey any, keyType PrivateKeyVariant) (string, error)
 	var hexStr string
 	switch v := privateKey.(type) {
 	case string:
-		// Remove the prefix if it exists
-		if strings.HasPrefix(v, aip80Prefix) {
-			parts := strings.Split(v, "-")
-			v = parts[2]
-		}
+		// Remove the prefix if it exists. Prefixes may themselves contain
+		// hyphens (e.g. "slh-dsa-sha2-128s-priv-"), so strip by prefix rather
+		// than splitting on "-".
+		v = strings.TrimPrefix(v, aip80Prefix)
 
 		// If it's already a string, just ensure it's properly formatted
 		strBytes, err := util.ParseHex(v)
@@ -83,8 +86,7 @@ func ParsePrivateKey(value any, keyType PrivateKeyVariant, strict ...bool) ([]by
 			return bytes, nil
 		} else if strings.HasPrefix(v, aip80Prefix) {
 			// Parse for AIP-80 compliant String input
-			parts := strings.Split(v, "-")
-			return util.ParseHex(parts[2])
+			return util.ParseHex(strings.TrimPrefix(v, aip80Prefix))
 		}
 		return nil, errors.New("invalid hex string input while parsing private key. Must be AIP-80 compliant string")
 	case []byte:

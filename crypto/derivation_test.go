@@ -36,6 +36,31 @@ func TestEd25519PrivateKeyFromDerivationPathInvalidPath(t *testing.T) {
 	}
 }
 
+func TestSlhDsaSha2128sPrivateKeyFromDerivationPath(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	key, err := SlhDsaSha2128sPrivateKeyFromDerivationPath(mnemonic, hd.DefaultDerivationPath, "")
+	if err != nil {
+		t.Fatalf("SlhDsaSha2128sPrivateKeyFromDerivationPath() error = %v", err)
+	}
+	if len(key.Bytes()) != SlhDsaSha2128sPrivateKeyLength {
+		t.Fatalf("expected %d-byte key, got %d", SlhDsaSha2128sPrivateKeyLength, len(key.Bytes()))
+	}
+	key2, err := SlhDsaSha2128sPrivateKeyFromDerivationPath(mnemonic, hd.DefaultDerivationPath, "")
+	if err != nil {
+		t.Fatalf("second derivation error = %v", err)
+	}
+	if key.ToHex() != key2.ToHex() {
+		t.Fatal("derivation is not deterministic")
+	}
+	if _, err := SlhDsaSha2128sPrivateKeyFromDerivationPath(mnemonic, "m/44'/637'/0'/0'/0", ""); err == nil {
+		t.Fatal("expected error for non-hardened path")
+	}
+	if _, err := SlhDsaSha2128sPrivateKeyFromDerivationPath("invalid mnemonic", hd.DefaultDerivationPath, ""); err == nil {
+		t.Fatal("expected error for invalid mnemonic")
+	}
+}
+
 func TestValidateMnemonic(t *testing.T) {
 	t.Parallel()
 	if !ValidateMnemonic("abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about") {
