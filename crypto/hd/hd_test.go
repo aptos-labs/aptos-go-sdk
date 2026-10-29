@@ -1,6 +1,7 @@
 package hd
 
 import (
+	"encoding/hex"
 	"strings"
 	"testing"
 )
@@ -197,5 +198,104 @@ func TestDeriveEd25519PrivateKeyHardenedSegmentOverflow(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "index 2") || !strings.Contains(err.Error(), "2147483648") {
 		t.Fatalf("expected actionable segment error, got: %v", err)
+	}
+}
+
+func TestIsValidSlhDsaHardenedPath(t *testing.T) {
+	t.Parallel()
+	valid := []string{"m", "m/0'", DefaultDerivationPath, "m/0'/1'/2'/2'/1000000000'", "m/44'/637'/1'/0'/0'"}
+	for _, path := range valid {
+		if !IsValidSlhDsaHardenedPath(path) {
+			t.Errorf("expected valid SLH-DSA hardened path %q", path)
+		}
+	}
+	invalid := []string{"", "x", "m/", "m/0", "m/0'/1", "m/44'/637'/0'/0'/0", "m/'", "m/abc'", "m/2147483648'", "m/-1'", "n/0'", "m//0'"}
+	for _, path := range invalid {
+		if IsValidSlhDsaHardenedPath(path) {
+			t.Errorf("expected invalid SLH-DSA hardened path %q", path)
+		}
+	}
+}
+
+func TestDeriveSlhDsaSha2128sPrivateKeyTSVectors(t *testing.T) {
+	t.Parallel()
+	seed, err := hex.DecodeString("000102030405060708090a0b0c0d0e0f")
+	if err != nil {
+		t.Fatalf("hex.DecodeString() error = %v", err)
+	}
+	vectors := []struct{ path, want string }{
+		{"m", "53c14b2681fcca8600d3ac7ce3459d6ceece7abc0a3b4c0376fc845c1b6503d66c5107d9484171c02f9eb0409849fceb"},
+		{"m/0'", "473049c70d5414379363b94f52de6b194c9f1651cb6a11b80cfee19f6ca67975201cdbec137ff57e2e9cd434fca0680d"},
+		{"m/0'/1'/2'/2'/1000000000'", "c72d4e3fb352a785aa375be20e0767ae20edbce1e18de90e0ea6e9d1677d17e84a410bb833bf091655dfabde17cc2011"},
+	}
+	for _, v := range vectors {
+		got, err := DeriveSlhDsaSha2128sPrivateKey(v.path, seed)
+		if err != nil {
+			t.Fatalf("DeriveSlhDsaSha2128sPrivateKey(%q) error = %v", v.path, err)
+		}
+		if len(got) != SlhDsaSha2128sPrivateKeyLength {
+			t.Fatalf("DeriveSlhDsaSha2128sPrivateKey(%q) length = %d, want %d", v.path, len(got), SlhDsaSha2128sPrivateKeyLength)
+		}
+		if hex.EncodeToString(got) != v.want {
+			t.Errorf("DeriveSlhDsaSha2128sPrivateKey(%q) = %x, want %s", v.path, got, v.want)
+		}
+	}
+}
+
+func TestDeriveSlhDsaSha2128sPrivateKeyErrors(t *testing.T) {
+	t.Parallel()
+	seed, err := MnemonicToSeed(testMnemonic, "")
+	if err != nil {
+		t.Fatalf("MnemonicToSeed() error = %v", err)
+	}
+	for _, path := range []string{"", "m/0/1'", "not-a-path", "m/2147483648'", "m/abc'"} {
+		if _, err := DeriveSlhDsaSha2128sPrivateKey(path, seed); err == nil {
+			t.Errorf("expected error for path %q", path)
+		}
+	}
+	// Different paths and the master path must all derive distinct keys.
+	seen := map[string]string{}
+	for _, path := range []string{"m", DefaultDerivationPath, "m/44'/637'/1'/0'/0'"} {
+		got, err := DeriveSlhDsaSha2128sPrivateKey(path, seed)
+		if err != nil {
+			t.Fatalf("DeriveSlhDsaSha2128sPrivateKey(%q) error = %v", path, err)
+		}
+		if prev, dup := seen[hex.EncodeToString(got)]; dup {
+			t.Errorf("path %q derived the same key as %q", path, prev)
+		}
+		seen[hex.EncodeToString(got)] = path
+	}
+	if Slip10SlhDsaSha2128sSeed != "SLH-DSA-SHA2-128s seed" {
+		t.Errorf("unexpected SLIP-0010 seed string %q", Slip10SlhDsaSha2128sSeed)
+	}
+}
+
+func TestParseSegment(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		in      string
+		want    uint32
+		wantErr bool
+	}{
+		{"0", 0, false},
+		{"44", 44, false},
+		{"2147483647", 2147483647, false},
+		{"", 0, true},
+		{"abc", 0, true},
+		{"12a", 0, true},
+		{"2147483648", 0, true},
+	} {
+		got, err := parseSegment(tc.in)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("parseSegment(%q): expected error", tc.in)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("parseSegment(%q) error = %v", tc.in, err)
+		} else if got != tc.want {
+			t.Errorf("parseSegment(%q) = %d, want %d", tc.in, got, tc.want)
+		}
 	}
 }

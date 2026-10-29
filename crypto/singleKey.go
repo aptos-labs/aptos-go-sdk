@@ -44,6 +44,8 @@ func (key *SingleSigner) SignatureVariant() AnySignatureVariant {
 		sigType = AnySignatureVariantEd25519
 	case *Secp256k1PrivateKey:
 		sigType = AnySignatureVariantSecp256k1
+	case *SlhDsaSha2128sPrivateKey:
+		sigType = AnySignatureVariantSlhDsaSha2128s
 	}
 	return sigType
 }
@@ -122,6 +124,8 @@ func (key *SingleSigner) PubKey() PublicKey {
 		keyType = AnyPublicKeyVariantEd25519
 	case *Secp256k1PrivateKey:
 		keyType = AnyPublicKeyVariantSecp256k1
+	case *SlhDsaSha2128sPrivateKey:
+		keyType = AnyPublicKeyVariantSlhDsaSha2128s
 	}
 	return &AnyPublicKey{
 		Variant: keyType,
@@ -138,8 +142,15 @@ func (key *SingleSigner) PubKey() PublicKey {
 type AnyPublicKeyVariant uint32
 
 const (
-	AnyPublicKeyVariantEd25519   AnyPublicKeyVariant = 0 // AnyPublicKeyVariantEd25519 is the variant for [Ed25519PublicKey]
-	AnyPublicKeyVariantSecp256k1 AnyPublicKeyVariant = 1 // AnyPublicKeyVariantSecp256k1 is the variant for [Secp256k1PublicKey]
+	AnyPublicKeyVariantEd25519          AnyPublicKeyVariant = 0 // AnyPublicKeyVariantEd25519 is the variant for [Ed25519PublicKey]
+	AnyPublicKeyVariantSecp256k1        AnyPublicKeyVariant = 1 // AnyPublicKeyVariantSecp256k1 is the variant for [Secp256k1PublicKey]
+	AnyPublicKeyVariantSecp256r1        AnyPublicKeyVariant = 2 // AnyPublicKeyVariantSecp256r1 is reserved; no Secp256r1 key type in the v1 module
+	AnyPublicKeyVariantKeyless          AnyPublicKeyVariant = 3 // AnyPublicKeyVariantKeyless is reserved; no keyless key type in the v1 module
+	AnyPublicKeyVariantFederatedKeyless AnyPublicKeyVariant = 4 // AnyPublicKeyVariantFederatedKeyless is reserved; no federated keyless type in the v1 module
+	AnyPublicKeyVariantSlhDsaSha2128s   AnyPublicKeyVariant = 5 // AnyPublicKeyVariantSlhDsaSha2128s is the variant for [SlhDsaSha2128sPublicKey]
+
+	// AnyPublicKeyVariantSlhDsaSha2_128s is an alias matching the on-chain / TS naming.
+	AnyPublicKeyVariantSlhDsaSha2_128s = AnyPublicKeyVariantSlhDsaSha2128s
 )
 
 // AnyPublicKey is used by SingleSigner and MultiKey to allow for using different keys with the same structs
@@ -157,6 +168,8 @@ func ToAnyPublicKey(key VerifyingKey) (*AnyPublicKey, error) {
 		out.Variant = AnyPublicKeyVariantEd25519
 	case *Secp256k1PublicKey:
 		out.Variant = AnyPublicKeyVariantSecp256k1
+	case *SlhDsaSha2128sPublicKey:
+		out.Variant = AnyPublicKeyVariantSlhDsaSha2128s
 	case *AnyPublicKey:
 		// Passthrough for conversion
 		return key, nil
@@ -269,6 +282,8 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 		key.PubKey = &Ed25519PublicKey{}
 	case AnyPublicKeyVariantSecp256k1:
 		key.PubKey = &Secp256k1PublicKey{}
+	case AnyPublicKeyVariantSlhDsaSha2128s:
+		key.PubKey = &SlhDsaSha2128sPublicKey{}
 	default:
 		des.SetError(fmt.Errorf("unknown public key variant: %d", key.Variant))
 		return
@@ -285,8 +300,14 @@ func (key *AnyPublicKey) UnmarshalBCS(des *bcs.Deserializer) {
 type AnySignatureVariant uint32
 
 const (
-	AnySignatureVariantEd25519   AnySignatureVariant = 0 // AnySignatureVariantEd25519 is the variant for [Ed25519Signature]
-	AnySignatureVariantSecp256k1 AnySignatureVariant = 1 // AnySignatureVariantSecp256k1 is the variant for [Secp256k1Signature]
+	AnySignatureVariantEd25519        AnySignatureVariant = 0 // AnySignatureVariantEd25519 is the variant for [Ed25519Signature]
+	AnySignatureVariantSecp256k1      AnySignatureVariant = 1 // AnySignatureVariantSecp256k1 is the variant for [Secp256k1Signature]
+	AnySignatureVariantWebAuthn       AnySignatureVariant = 2 // AnySignatureVariantWebAuthn is reserved; no WebAuthn type in the v1 module
+	AnySignatureVariantKeyless        AnySignatureVariant = 3 // AnySignatureVariantKeyless is reserved; no keyless type in the v1 module
+	AnySignatureVariantSlhDsaSha2128s AnySignatureVariant = 4 // AnySignatureVariantSlhDsaSha2128s is the variant for [SlhDsaSha2128sSignature]
+
+	// AnySignatureVariantSlhDsaSha2_128s is an alias matching the on-chain / TS naming.
+	AnySignatureVariantSlhDsaSha2_128s = AnySignatureVariantSlhDsaSha2128s
 )
 
 // AnySignature is a wrapper around signatures signed with SingleSigner and verified with AnyPublicKey
@@ -365,6 +386,8 @@ func (e *AnySignature) UnmarshalBCS(des *bcs.Deserializer) {
 		e.Signature = &Ed25519Signature{}
 	case AnySignatureVariantSecp256k1:
 		e.Signature = &Secp256k1Signature{}
+	case AnySignatureVariantSlhDsaSha2128s:
+		e.Signature = &SlhDsaSha2128sSignature{}
 	default:
 		des.SetError(fmt.Errorf("unknown signature variant: %d", e.Variant))
 		return

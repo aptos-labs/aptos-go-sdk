@@ -289,3 +289,64 @@ func TestNewEd25519AccountFromMnemonicMultiplePaths(t *testing.T) {
 	_, err := NewEd25519AccountFromMnemonic(mnemonic, crypto.DefaultDerivationPath, "m/44'/637'/1'/0'/0'")
 	require.Error(t, err)
 }
+
+func TestGenerateSlhDsaSha2128sAccount(t *testing.T) {
+	t.Parallel()
+	message := []byte{0x12, 0x34}
+	account, err := NewSlhDsaSha2128sAccount()
+	require.NoError(t, err)
+	output, err := account.Sign(message)
+	require.NoError(t, err)
+	assert.Equal(t, crypto.AccountAuthenticatorSingleSender, output.Variant)
+	assert.True(t, output.Auth.Verify(message))
+	assert.Equal(t, account.AuthKey()[:], account.Address[:])
+
+	// MessageSigner and PrivateKeyString must expose the SLH-DSA key.
+	inner, ok := account.MessageSigner()
+	require.True(t, ok)
+	slhKey, ok := inner.(*crypto.SlhDsaSha2128sPrivateKey)
+	require.True(t, ok)
+	assert.Len(t, slhKey.Bytes(), crypto.SlhDsaSha2128sPrivateKeyLength)
+
+	privStr, err := account.PrivateKeyString()
+	require.NoError(t, err)
+	expected, err := slhKey.ToAIP80()
+	require.NoError(t, err)
+	assert.Equal(t, expected, privStr)
+	assert.Contains(t, privStr, "slh-dsa-sha2-128s-priv-0x")
+}
+
+func TestNewSlhDsaSha2128sAccountFromMnemonic(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	account, err := NewSlhDsaSha2128sAccountFromMnemonic(mnemonic)
+	require.NoError(t, err)
+
+	byPath, err := NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, crypto.DefaultDerivationPath)
+	require.NoError(t, err)
+	assert.Equal(t, byPath.Address, account.Address)
+
+	custom, err := NewSlhDsaSha2128sAccountFromMnemonic(mnemonic, "m/44'/637'/1'/0'/0'")
+	require.NoError(t, err)
+	assert.NotEqual(t, account.Address, custom.Address)
+
+	output, err := custom.Sign([]byte{0x12, 0x34})
+	require.NoError(t, err)
+	assert.True(t, output.Auth.Verify([]byte{0x12, 0x34}))
+}
+
+func TestNewSlhDsaSha2128sAccountFromMnemonicErrors(t *testing.T) {
+	t.Parallel()
+	const mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+	_, err := NewSlhDsaSha2128sAccountFromMnemonic(mnemonic, crypto.DefaultDerivationPath, "m/44'/637'/1'/0'/0'")
+	require.Error(t, err, "multiple paths must be rejected")
+
+	_, err = NewSlhDsaSha2128sAccountFromMnemonic("not a valid mnemonic phrase")
+	require.Error(t, err, "invalid mnemonic must be rejected")
+
+	_, err = NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, "m/44'/637'/0'/0'/0")
+	require.Error(t, err, "non-hardened path must be rejected for SLH-DSA")
+
+	_, err = NewSlhDsaSha2128sAccountFromDerivationPath("not a valid mnemonic phrase", crypto.DefaultDerivationPath)
+	require.Error(t, err)
+}
