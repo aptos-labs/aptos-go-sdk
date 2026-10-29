@@ -62,7 +62,7 @@ func TestNewSlhDsaSha2128sAccount(t *testing.T) {
 	require.NotNil(t, account)
 	assert.NotEqual(t, AccountAddress{}, account.Address)
 	// Address must be the SingleKey auth key of the SLH-DSA public key.
-	assert.Equal(t, account.AuthKey().Bytes(), []byte(account.Address[:]))
+	assert.Equal(t, account.AuthKey().Bytes(), account.Address[:])
 
 	msg := []byte("slh-dsa test")
 	auth, err := account.Signer.Sign(msg)
