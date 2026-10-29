@@ -353,25 +353,25 @@ func TestSlhDsaSha2128sSignatureHexAndAny(t *testing.T) {
 
 	// Unknown variants must be rejected on BCS decode.
 	badPub := &AnyPublicKey{}
-	assert.Error(t, bcs.Deserialize(badPub, []byte{0x09, 0x00}))
+	require.Error(t, bcs.Deserialize(badPub, []byte{0x09, 0x00}))
 	badSig := &AnySignature{}
-	assert.Error(t, bcs.Deserialize(badSig, []byte{0x09, 0x00}))
+	require.Error(t, bcs.Deserialize(badSig, []byte{0x09, 0x00}))
 }
 
 func TestSlhDsaSha2128sBCSErrorPaths(t *testing.T) {
 	t.Parallel()
 	// Truncated BCS public key (claims 32 bytes, supplies 1).
 	pub := &SlhDsaSha2128sPublicKey{}
-	assert.Error(t, bcs.Deserialize(pub, []byte{0x20, 0x01}))
+	require.Error(t, bcs.Deserialize(pub, []byte{0x20, 0x01}))
 	// BCS signature with a wrong-length payload.
 	sig := &SlhDsaSha2128sSignature{}
-	assert.Error(t, bcs.Deserialize(sig, []byte{0x01, 0x00}))
+	require.Error(t, bcs.Deserialize(sig, []byte{0x01, 0x00}))
 	// Truncated authenticator.
 	auth := &SlhDsaSha2128sAuthenticator{}
-	assert.Error(t, bcs.Deserialize(auth, []byte{0x20, 0x01}))
+	require.Error(t, bcs.Deserialize(auth, []byte{0x20, 0x01}))
 	// Empty input.
-	assert.Error(t, bcs.Deserialize(&SlhDsaSha2128sPublicKey{}, []byte{}))
-	assert.Error(t, bcs.Deserialize(&SlhDsaSha2128sSignature{}, []byte{}))
+	require.Error(t, bcs.Deserialize(&SlhDsaSha2128sPublicKey{}, []byte{}))
+	require.Error(t, bcs.Deserialize(&SlhDsaSha2128sSignature{}, []byte{}))
 }
 
 func TestSlhDsaSha2128sAuthenticatorAccessors(t *testing.T) {
