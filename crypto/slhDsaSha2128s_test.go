@@ -2,6 +2,7 @@ package crypto
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/aptos-labs/aptos-go-sdk/bcs"
@@ -265,4 +266,132 @@ func TestSlhDsaSha2128sDerivationVectorsTS(t *testing.T) {
 	assert.True(t, hd.IsValidSlhDsaHardenedPath(hd.DefaultDerivationPath))
 	assert.False(t, hd.IsValidSlhDsaHardenedPath("m/44'/637'/0'/0'/0"))
 	assert.NotContains(t, hd.Slip10SlhDsaSha2128sSeed, "ed25519")
+}
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) { return 0, errors.New("no randomness available") }
+
+func TestSlhDsaSha2128sGenerateAliasesAndErrors(t *testing.T) {
+	t.Parallel()
+	key, err := GenerateSlhDsaPrivateKey()
+	require.NoError(t, err)
+	assert.Len(t, key.Bytes(), SlhDsaSha2128sPrivateKeyLength)
+
+	_, err = GenerateSlhDsaSha2128sPrivateKey(failingReader{})
+	require.Error(t, err)
+
+	_, err = GenerateSlhDsaSha2128sPrivateKey(bytes.NewReader(make([]byte, 10)))
+	require.Error(t, err, "a reader with fewer than 48 bytes must fail")
+
+	fromSeeds, err := NewSlhDsaSha2128sPrivateKeyFromSeeds(key.Bytes())
+	require.NoError(t, err)
+	assert.Equal(t, key.PublicKey().Bytes(), fromSeeds.PublicKey().Bytes())
+
+	_, err = NewSlhDsaSha2128sPrivateKeyFromSeeds(make([]byte, 47))
+	require.Error(t, err)
+	_, err = NewSlhDsaSha2128sPrivateKeyFromSeeds(nil)
+	require.Error(t, err)
+}
+
+func TestSlhDsaSha2128sPrivateKeyClearAndFromHexErrors(t *testing.T) {
+	t.Parallel()
+	key := testSlhDsaPrivateKey(t)
+	key.Clear()
+	assert.Empty(t, key.Bytes())
+
+	require.Error(t, (&SlhDsaSha2128sPrivateKey{}).FromHex("not-a-hex-string"))
+	require.Error(t, (&SlhDsaSha2128sPrivateKey{}).FromHex("ed25519-priv-0x000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f202122232425262728292a2b2c2d2e2f"))
+	require.Error(t, (&SlhDsaSha2128sPrivateKey{}).FromHex("slh-dsa-sha2-128s-priv-0x00"))
+	// A plain (non-AIP-80) hex string must still parse.
+	plain := &SlhDsaSha2128sPrivateKey{}
+	require.NoError(t, plain.FromHex(testSlhDsaSeedsHex))
+	assert.Equal(t, testSlhDsaPublicHex, plain.PublicKey().ToHex())
+}
+
+func TestSlhDsaSha2128sPublicKeyFromHex(t *testing.T) {
+	t.Parallel()
+	key := testSlhDsaPrivateKey(t)
+	pub := key.PublicKey()
+
+	fromHex := &SlhDsaSha2128sPublicKey{}
+	require.NoError(t, fromHex.FromHex(testSlhDsaPublicHex))
+	assert.Equal(t, pub.Bytes(), fromHex.Bytes())
+	assert.Equal(t, pub.ToHex(), fromHex.ToHex())
+	assert.Equal(t, pub.AuthKey(), fromHex.AuthKey())
+
+	require.Error(t, fromHex.FromHex("0xzz"))
+	require.Error(t, fromHex.FromHex("0x00"))
+	require.Error(t, fromHex.FromBytes(nil))
+}
+
+func TestSlhDsaSha2128sSignatureHexAndAny(t *testing.T) {
+	t.Parallel()
+	key := testSlhDsaPrivateKey(t)
+	sigI, err := key.SignMessage([]byte(testSlhDsaMessageHex))
+	require.NoError(t, err)
+	sig, ok := sigI.(*SlhDsaSha2128sSignature)
+	require.True(t, ok)
+
+	fromHex := &SlhDsaSha2128sSignature{}
+	require.NoError(t, fromHex.FromHex(sig.ToHex()))
+	assert.Equal(t, sig.Bytes(), fromHex.Bytes())
+
+	require.Error(t, fromHex.FromHex("0xzz"))
+	require.Error(t, fromHex.FromHex("0x00"))
+
+	anySig := sig.ToAnySignature()
+	assert.Equal(t, AnySignatureVariantSlhDsaSha2128s, anySig.Variant)
+	assert.Equal(t, sig, anySig.Signature)
+
+	anyBytes, err := bcs.Serialize(anySig)
+	require.NoError(t, err)
+	anySig2 := &AnySignature{}
+	require.NoError(t, bcs.Deserialize(anySig2, anyBytes))
+	assert.Equal(t, anySig.Variant, anySig2.Variant)
+	assert.Equal(t, sig.Bytes(), anySig2.Signature.Bytes())
+
+	// Unknown variants must be rejected on BCS decode.
+	badPub := &AnyPublicKey{}
+	assert.Error(t, bcs.Deserialize(badPub, []byte{0x09, 0x00}))
+	badSig := &AnySignature{}
+	assert.Error(t, bcs.Deserialize(badSig, []byte{0x09, 0x00}))
+}
+
+func TestSlhDsaSha2128sBCSErrorPaths(t *testing.T) {
+	t.Parallel()
+	// Truncated BCS public key (claims 32 bytes, supplies 1).
+	pub := &SlhDsaSha2128sPublicKey{}
+	assert.Error(t, bcs.Deserialize(pub, []byte{0x20, 0x01}))
+	// BCS signature with a wrong-length payload.
+	sig := &SlhDsaSha2128sSignature{}
+	assert.Error(t, bcs.Deserialize(sig, []byte{0x01, 0x00}))
+	// Truncated authenticator.
+	auth := &SlhDsaSha2128sAuthenticator{}
+	assert.Error(t, bcs.Deserialize(auth, []byte{0x20, 0x01}))
+	// Empty input.
+	assert.Error(t, bcs.Deserialize(&SlhDsaSha2128sPublicKey{}, []byte{}))
+	assert.Error(t, bcs.Deserialize(&SlhDsaSha2128sSignature{}, []byte{}))
+}
+
+func TestSlhDsaSha2128sAuthenticatorAccessors(t *testing.T) {
+	t.Parallel()
+	key := testSlhDsaPrivateKey(t)
+	msg := []byte(testSlhDsaMessageHex)
+	sigI, err := key.SignMessage(msg)
+	require.NoError(t, err)
+	slhSig, ok := sigI.(*SlhDsaSha2128sSignature)
+	require.True(t, ok)
+
+	auth := &SlhDsaSha2128sAuthenticator{PubKey: key.PublicKey(), Sig: slhSig}
+	assert.Equal(t, key.PublicKey(), auth.PublicKey())
+	assert.Equal(t, slhSig, auth.Signature())
+	assert.True(t, auth.Verify(msg))
+
+	// VerifyingKey() must be the same key as PublicKey().
+	assert.Equal(t, key.PublicKey().Bytes(), key.VerifyingKey().Bytes())
+	// EmptySignature is an all-zero signature of the full length.
+	empty := key.EmptySignature()
+	assert.Len(t, empty.Bytes(), SlhDsaSha2128sSignatureLength)
+	assert.False(t, key.PublicKey().Verify(msg, empty))
 }
