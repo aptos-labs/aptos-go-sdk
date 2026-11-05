@@ -283,6 +283,16 @@ func (des *Deserializer) ReadBytes() []byte {
 		return nil
 	}
 
+	// Guard against a malicious length prefix before allocating: a tiny payload
+	// can claim a multi-gigabyte length, and allocating make([]byte, lengthInt)
+	// up front (before readBytes verifies the source actually has that many
+	// bytes) is an unbounded-allocation DoS. The value can't be valid if it
+	// exceeds the bytes left in the source.
+	if lengthInt > des.Remaining() {
+		des.setError("not enough bytes remaining to deserialize bytes")
+		return nil
+	}
+
 	dest := make([]byte, lengthInt)
 	des.readBytes("bytes", lengthInt, dest)
 	return dest
