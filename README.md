@@ -8,7 +8,7 @@
 
 A comprehensive Go SDK for building applications on the [Aptos blockchain](https://aptos.dev).
 
-> **Looking for v2?** The [Aptos Go SDK v2](v2/) is a modern, idiomatic rewrite with `context.Context` support, functional options, Go 1.24+ features, and a fluent transaction builder. **New projects should use v2.**
+> **Looking for v2?** The [Aptos Go SDK v2](v2/) is a modern, idiomatic rewrite with `context.Context` support, functional options, Go 1.26+ features, and a fluent transaction builder. **New projects should use v2.**
 >
 > ```bash
 > go get github.com/aptos-labs/aptos-go-sdk/v2
