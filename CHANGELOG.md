@@ -5,6 +5,12 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 
 # Unreleased
 
+- [`Feature`] Add SLH-DSA-SHA2-128s (post-quantum, AIP-137) signature support to the v1 module, modeled on aptos-ts-sdk#802
+  - `crypto.SlhDsaSha2128sPrivateKey` / `SlhDsaSha2128sPublicKey` / `SlhDsaSha2128sSignature` (48-byte seed-triple private key, 32-byte public key, 7,856-byte signature) via `github.com/cloudflare/circl/sign/slhdsa`, with deterministic signing
+  - `AnyPublicKey` variant 5 and `AnySignature` variant 4, usable with `SingleSigner`, `MultiKey`, multi-agent and fee-payer authenticators; address derived as the SingleKey auth key
+  - `NewSlhDsaSha2128sAccount`, `NewSlhDsaSha2128sAccountFromMnemonic`, and `NewSlhDsaSha2128sAccountFromDerivationPath`; HD derivation uses SLIP-0010 with the custom `"SLH-DSA-SHA2-128s seed"` HMAC key (hardened paths only), matching the TypeScript SDK test vectors
+  - AIP-80 private-key format `slh-dsa-sha2-128s-priv-0x...` (`PrivateKeyVariantSlhDsaSha2128s`)
+- [`Fix`] Fix `MultiKeyBitmap.ContainsKey` so set bits other than bit 7 of each byte are reported correctly; `MultiKey.Verify` previously skipped verification for most signer indices
 - [`Docs`] Consolidate `CLAUDE.md` into `AGENTS.md`, now the single source of agent guidance for v1 and v2, and remove `CLAUDE.md`
 
 # v1.14.0 (9/18/2026)

@@ -52,6 +52,22 @@ func NewSecp256k1Account() (*Account, error) {
 	return types.NewSecp256k1Account()
 }
 
+// NewSlhDsaSha2128sAccount creates an SLH-DSA-SHA2-128s (post-quantum) SingleKey account
+func NewSlhDsaSha2128sAccount() (*Account, error) {
+	return types.NewSlhDsaSha2128sAccount()
+}
+
+// NewSlhDsaSha2128sAccountFromMnemonic creates an SLH-DSA-SHA2-128s account from a BIP-39 mnemonic.
+// When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
+func NewSlhDsaSha2128sAccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
+	return types.NewSlhDsaSha2128sAccountFromMnemonic(mnemonic, path...)
+}
+
+// NewSlhDsaSha2128sAccountFromDerivationPath creates an SLH-DSA-SHA2-128s account from a mnemonic and fully hardened path.
+func NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, path string) (*Account, error) {
+	return types.NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, path)
+}
+
 // NewEd25519AccountFromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic.
 // When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
 func NewEd25519AccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {

@@ -63,6 +63,41 @@ func NewSecp256k1Account() (*Account, error) {
 	return NewAccountFromSigner(signer)
 }
 
+// NewSlhDsaSha2128sAccount creates an account with a new random SLH-DSA-SHA2-128s
+// (post-quantum, AIP-137) private key, wrapped as a SingleKey signer.
+func NewSlhDsaSha2128sAccount() (*Account, error) {
+	privateKey, err := crypto.GenerateSlhDsaSha2128sPrivateKey()
+	if err != nil {
+		return nil, err
+	}
+	signer := crypto.NewSingleSigner(privateKey)
+	return NewAccountFromSigner(signer)
+}
+
+// NewSlhDsaSha2128sAccountFromMnemonic creates an SLH-DSA-SHA2-128s account from
+// a BIP-39 mnemonic. When path is omitted, the default Aptos path
+// m/44'/637'/0'/0'/0' is used. Only fully hardened paths are supported.
+func NewSlhDsaSha2128sAccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
+	if len(path) > 1 {
+		return nil, errors.New("only one derivation path may be provided")
+	}
+	derivationPath := crypto.DefaultDerivationPath
+	if len(path) > 0 {
+		derivationPath = path[0]
+	}
+	return NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, derivationPath)
+}
+
+// NewSlhDsaSha2128sAccountFromDerivationPath creates an SLH-DSA-SHA2-128s account
+// from a mnemonic and a fully hardened derivation path.
+func NewSlhDsaSha2128sAccountFromDerivationPath(mnemonic, path string) (*Account, error) {
+	privateKey, err := crypto.SlhDsaSha2128sPrivateKeyFromDerivationPath(mnemonic, path, "")
+	if err != nil {
+		return nil, err
+	}
+	return NewAccountFromSigner(crypto.NewSingleSigner(privateKey))
+}
+
 // NewEd25519AccountFromMnemonic creates a legacy Ed25519 account from a BIP-39 mnemonic.
 // When path is omitted, the default Aptos path m/44'/637'/0'/0'/0' is used.
 func NewEd25519AccountFromMnemonic(mnemonic string, path ...string) (*Account, error) {
@@ -113,6 +148,8 @@ func (account *Account) PrivateKeyString() (string, error) {
 		case *crypto.Ed25519PrivateKey:
 			return innerSigner.ToAIP80()
 		case *crypto.Secp256k1PrivateKey:
+			return innerSigner.ToAIP80()
+		case *crypto.SlhDsaSha2128sPrivateKey:
 			return innerSigner.ToAIP80()
 		}
 	}

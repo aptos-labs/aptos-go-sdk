@@ -377,7 +377,7 @@ func (bm *MultiKeyBitmap) ContainsKey(index uint8) bool {
 	if int(numByte) >= len(bm.inner) {
 		return false
 	}
-	return (bm.inner[numByte] & (128 >> numBit)) == 1
+	return (bm.inner[numByte] & (128 >> numBit)) != 0
 }
 
 // AddKey adds the value to the map, returning an error if it is already added
