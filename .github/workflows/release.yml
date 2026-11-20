@@ -1,0 +1,179 @@
+# Gated release workflow for aptos-go-sdk.
+#
+# Go modules are published to proxy.golang.org by pushing a semver git tag
+# (`vX.Y.Z` for v1 at repo root, `v2/vX.Y.Z` for the v2 module). Because
+# proxy.golang.org caches tags permanently once requested, this workflow gates
+# tag creation behind the `go-release` GitHub Environment (wait timer +
+# required reviewer approval).
+#
+# Required `go-release` Environment variables / secrets:
+#   vars.GO_RELEASE_APP_ID            - GitHub App ID with contents:write and
+#                                       bypass permission on the `releases` tag ruleset
+#   secrets.GO_RELEASE_APP_PRIVATE_KEY - Private key for that GitHub App
+#
+# Tags are created via the GitHub Git Data API using the App token so GitHub
+# automatically signs the annotated tag object (satisfying `required_signatures`).
+
+name: Release Go Module
+
+on:
+  workflow_dispatch:
+    inputs:
+      module:
+        description: "Module to release (v1 = root, v2 = v2/)"
+        required: true
+        type: choice
+        options:
+          - v1
+          - v2
+      version:
+        description: "Semver without leading 'v' (e.g. 1.12.0 or 2.3.0)"
+        required: true
+        type: string
+      ref:
+        description: "Commit SHA or branch to tag (must be on main)"
+        required: false
+        default: main
+        type: string
+      dry_run:
+        description: "Dry run (verify only, do not create tag or GitHub Release)"
+        required: false
+        default: true
+        type: boolean
+
+permissions: {}
+
+concurrency:
+  group: go-release-${{ inputs.module }}-${{ inputs.version }}
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    name: Verify module & release inputs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.validate.outputs.tag }}
+      commit_sha: ${{ steps.validate.outputs.commit_sha }}
+      prerelease: ${{ steps.validate.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Validate version, tag, and main ancestry
+        id: validate
+        env:
+          MODULE: ${{ inputs.module }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9.]+)?$ ]]; then
+            echo "::error::Invalid semver '$VERSION' (expected MAJOR.MINOR.PATCH[-prerelease])"
+            exit 1
+          fi
+
+          MAJOR="${VERSION%%.*}"
+          if [[ "$MODULE" == "v2" ]]; then
+            if [[ "$MAJOR" != "2" ]]; then
+              echo "::error::Module v2 requires major version 2 (got $VERSION)"
+              exit 1
+            fi
+            TAG="v2/v${VERSION}"
+          else
+            if [[ "$MAJOR" != "0" && "$MAJOR" != "1" ]]; then
+              echo "::error::Module v1 requires major version 0 or 1 (got $VERSION)"
+              exit 1
+            fi
+            TAG="v${VERSION}"
+          fi
+
+          git fetch --no-tags origin main
+          COMMIT_SHA="$(git rev-parse HEAD)"
+          if ! git merge-base --is-ancestor "$COMMIT_SHA" FETCH_HEAD; then
+            echo "::error::Target commit $COMMIT_SHA is not an ancestor of origin/main."
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG} already exists on origin."
+            exit 1
+          fi
+
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE="true"
+          else
+            PRERELEASE="false"
+          fi
+
+          echo "Validated release: tag=${TAG}, commit=${COMMIT_SHA}, prerelease=${PRERELEASE}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          echo "commit_sha=${COMMIT_SHA}" >> "$GITHUB_OUTPUT"
+          echo "prerelease=${PRERELEASE}" >> "$GITHUB_OUTPUT"
+
+      - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
+        with:
+          install_args: "go"
+          cache: true
+
+      - name: Run go vet and short unit tests
+        env:
+          MODULE: ${{ inputs.module }}
+        run: |
+          set -euo pipefail
+          if [[ "$MODULE" == "v2" ]]; then
+            cd v2
+          fi
+          go vet ./...
+          go test -short ./...
+
+  tag-and-release:
+    name: Create signed tag & GitHub Release
+    runs-on: ubuntu-latest
+    needs: verify
+    if: inputs.dry_run == false
+    environment: go-release
+    permissions:
+      contents: read
+    steps:
+      - name: Mint release GitHub App token
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.GO_RELEASE_APP_ID }}
+          private-key: ${{ secrets.GO_RELEASE_APP_PRIVATE_KEY }}
+
+      - name: Create GitHub-signed annotated tag and publish Release
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.verify.outputs.tag }}
+          COMMIT_SHA: ${{ needs.verify.outputs.commit_sha }}
+          PRERELEASE: ${{ needs.verify.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          # Creating an annotated tag object via the Git Data API with a GitHub App
+          # token signs the tag automatically, satisfying `required_signatures`.
+          TAG_SHA=$(gh api "repos/${REPO}/git/tags" \
+            --method POST \
+            -f tag="${TAG}" \
+            -f message="Release ${TAG}" \
+            -f object="${COMMIT_SHA}" \
+            -f type="commit" \
+            --jq '.sha')
+
+          gh api "repos/${REPO}/git/refs" \
+            --method POST \
+            -f ref="refs/tags/${TAG}" \
+            -f sha="${TAG_SHA}"
+
+          gh api "repos/${REPO}/releases" \
+            --method POST \
+            -f tag_name="${TAG}" \
+            -f name="${TAG}" \
+            -F draft=false \
+            -F prerelease="${PRERELEASE}" \
+            -F generate_release_notes=true
