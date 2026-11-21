@@ -283,6 +283,15 @@ func (des *Deserializer) ReadBytes() []byte {
 		return nil
 	}
 
+	// A length-prefixed byte array cannot be longer than the bytes that remain in
+	// the buffer. The ULEB128 prefix is attacker-controlled (up to ~4.29e9), so
+	// allocating before this check lets a few header bytes drive a multi-GB
+	// allocation (OOM) regardless of how little payload actually follows.
+	if lengthInt > des.Remaining() {
+		des.setError("not enough bytes remaining to deserialize bytes: length %d, remaining %d", lengthInt, des.Remaining())
+		return nil
+	}
+
 	dest := make([]byte, lengthInt)
 	des.readBytes("bytes", lengthInt, dest)
 	return dest
@@ -356,6 +365,16 @@ func DeserializeSequenceWithFunction[T any](des *Deserializer, deserialize func(
 	lengthInt, err := uleb128ToInt(length)
 	if err != nil {
 		des.setError("%s", err.Error())
+		return nil
+	}
+
+	// Every sequence element consumes at least one byte, so a sequence cannot hold
+	// more elements than the bytes that remain. The ULEB128 count is attacker-
+	// controlled (up to ~4.29e9); allocating make([]T, length) before this check
+	// lets a few header bytes drive a huge allocation (OOM) or, for a large element
+	// type, a makeslice panic.
+	if lengthInt > des.Remaining() {
+		des.setError("not enough bytes remaining to deserialize sequence: length %d, remaining %d", lengthInt, des.Remaining())
 		return nil
 	}
 
