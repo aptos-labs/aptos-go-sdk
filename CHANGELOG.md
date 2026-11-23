@@ -8,6 +8,7 @@ adheres to the format set out by [Keep a Changelog](https://keepachangelog.com/e
 - [`Docs`] Consolidate `CLAUDE.md` into `AGENTS.md`, now the single source of agent guidance for v1 and v2, and remove `CLAUDE.md`
 - [`Security`] Upgrade Go toolchain from go1.27.1 to go1.27.4, clearing 15 stdlib advisories reported by `govulncheck` (fixed in go1.27.2–go1.27.4)
 - [`Security`] Upgrade `golang.org/x/crypto` v0.57.0 → v0.59.0, clearing GO-2026-5932 (`openpgp` unmaintained/unsafe-by-design; the SDK only uses `x/crypto/ed25519`)
+- [`Dependency`] Upgrade `golangci-lint` v2.13.2 → v2.15.0 in `mise.toml` (v2.13.2 cannot decode go1.27.4 export data, which broke the lint CI job after the toolchain bump)
 
 # v1.14.0 (9/18/2026)
 

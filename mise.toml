@@ -1,6 +1,6 @@
 [tools]
 go = "1.27.4"
-golangci-lint = "2.13.2"
+golangci-lint = "2.15.0"
 gofumpt = "0.12.0"
 node = "20.14.0"
 
