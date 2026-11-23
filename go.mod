@@ -2,7 +2,7 @@ module github.com/aptos-labs/aptos-go-sdk
 
 go 1.26.0
 
-toolchain go1.27.1
+toolchain go1.27.4
 
 require (
 	github.com/cucumber/godog v0.16.0
@@ -11,7 +11,7 @@ require (
 	github.com/hdevalence/ed25519consensus v0.2.0
 	github.com/stretchr/testify v1.12.1
 	github.com/tyler-smith/go-bip39 v1.1.0
-	golang.org/x/crypto v0.57.0
+	golang.org/x/crypto v0.59.0
 )
 
 require (
