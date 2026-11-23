@@ -25,7 +25,7 @@ jobs:
       # (with the complete cmd/ tree, including `covdata` — needed for
       # `go test -coverprofile` on the v2/examples/* package-mains that
       # have no test files). go-version-file follows v2/go.mod, including
-      # its `toolchain` pin (currently go1.27.1).
+      # its `toolchain` pin (currently go1.27.4).
       - name: Set up Go (pinned to v2/go.mod)
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
         with:
@@ -45,7 +45,7 @@ jobs:
           go test -race -coverprofile=coverage.out -covermode=atomic ./...
 
       # Run v1 SDK tests with coverage (optional, for overall repo coverage).
-      # v1 and v2 now share `go 1.26.0` / `toolchain go1.27.1`, so the Go
+      # v1 and v2 now share `go 1.26.0` / `toolchain go1.27.4`, so the Go
       # installed above is compatible with both modules.
       - name: Run v1 SDK tests with coverage
         run: |

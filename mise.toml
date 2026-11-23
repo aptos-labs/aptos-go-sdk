@@ -1,12 +1,12 @@
 [tools]
-go = "1.27.1"
+go = "1.27.4"
 golangci-lint = "2.13.2"
 gofumpt = "0.12.0"
 node = "20.14.0"
 
 [env]
 # GOTOOLCHAIN=auto so each go.mod's `toolchain` line is the source of truth.
-# Both modules currently declare `go 1.26.0` / `toolchain go1.27.1`. Using
+# Both modules currently declare `go 1.26.0` / `toolchain go1.27.4`. Using
 # GOTOOLCHAIN=local would fail if a local Go binary is older than that pin:
 #   go: go.mod requires go >= 1.26.0 (running go 1.25.x; GOTOOLCHAIN=local)
 # The version actually used in each tree remains deterministic — it's
