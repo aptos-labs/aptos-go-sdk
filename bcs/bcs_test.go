@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"math/big"
+	"runtime"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -777,4 +778,26 @@ func maxI256() *big.Int {
 // subtractOne returns n - 1
 func subtractOne(n *big.Int) *big.Int {
 	return new(big.Int).Sub(n, big.NewInt(1))
+}
+
+func TestReadBytesRejectsOversizedLengthWithoutAllocating(t *testing.T) {
+	// Regression: ReadBytes allocated make([]byte, length) from the untrusted
+	// ULEB128 length prefix before checking the source actually had that many
+	// bytes, so a tiny payload claiming a multi-GB length was an
+	// unbounded-allocation DoS. ULEB128 for 0x7FFFFFFF = FF FF FF FF 07.
+	payload := []byte{0xFF, 0xFF, 0xFF, 0xFF, 0x07}
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+
+	des := NewDeserializer(payload)
+	_ = des.ReadBytes()
+	err := des.Error()
+
+	runtime.ReadMemStats(&after)
+	allocated := int64(after.TotalAlloc - before.TotalAlloc)
+
+	assert.Error(t, err, "a length exceeding the input must error")
+	assert.Less(t, allocated, int64(10*1024*1024),
+		"must not allocate for an oversized length prefix (got %d bytes)", allocated)
 }
